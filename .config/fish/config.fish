@@ -8,6 +8,7 @@
 	abbr e "echo"
 	abbr u "update"
 	abbr py "python"
+	abbr dot "dotfiles"
 	abbr i "sudo apt install"
 	abbr s "sudo apt search"
 	abbr ss "sudo apt show"
