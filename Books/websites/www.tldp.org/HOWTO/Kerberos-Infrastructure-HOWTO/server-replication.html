@@ -1,0 +1,384 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Kerberos Server Replication</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Kerberos Infrastructure HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Time Synchronization"
+HREF="time-sync.html"><LINK
+REL="NEXT"
+TITLE="Client Configuration"
+HREF="client-configure.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Kerberos Infrastructure HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="time-sync.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="client-configure.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="server-replication"
+></A
+>5. Kerberos Server Replication</H1
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="replication"
+></A
+>5.1. Description of Replication</H2
+><P
+>&#13;Kerberos was designed to allow for a Master/Slave replication cluster.  While a Kerberos cluster can consist of any number of hosts, it is recommended that you have at least two.  A master which serves as the primary server and at least one slave which is available as a backup to the master.  The master and slave servers may be thought of as Primary and Secondary servers respectively.
+</P
+><P
+>&#13;Kerberos stores all of its information, both account and policy data, in application databases.  The Kerberos software distribution includes software for replicating, or copying, this data to other servers.
+</P
+><P
+>&#13;Kerberos client applications are designed to attempt authentication against secondary servers if the primary master is down.  Therefore you do not need to do any extra work during a system failure to fail over your Kerberos authentication service to the backup server.  However, the administrative features of Kerberos do not provide for automatic failover.
+</P
+><P
+>&#13;In the event that your primary server fails, <SPAN
+CLASS="application"
+>kadmind</SPAN
+> will be unavailable. Therefore, administrative functions will be unavailable until the primary server is restored or replace.  Specifically, principal management, key creation, and key changes, cannot be done during a primary server failure.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="implementation"
+></A
+>5.2. Implementation</H2
+><P
+>&#13;Server replication is handled by the <SPAN
+CLASS="application"
+>kprop</SPAN
+> command. <SPAN
+CLASS="application"
+>kprop</SPAN
+> must be run on the primary master KDC.  It should be run in a scheduled cron job to keep the principal database in sync across all servers.
+</P
+><P
+>&#13;The first step in setting up replication, is to set up ACLs for <SPAN
+CLASS="application"
+>kpropd</SPAN
+>.  The <SPAN
+CLASS="application"
+>kpropd</SPAN
+> acl filename is by default located at <TT
+CLASS="filename"
+>/var/Kerberos/krb5kdc/kpropd.acl</TT
+>.  In our example, it would have the following contents:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;host/kerberos1.gnud.ie@GNUD.IE
+host/kerberos2.gnud.ie@GNUD.IE
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;The <TT
+CLASS="filename"
+>kpropd.acl</TT
+> file should only exist on the slave Kerberos server. In Fedora derived GNU/Linux, <SPAN
+CLASS="application"
+>kadmin</SPAN
+> will not run on a Kerberos server on which <TT
+CLASS="filename"
+>/var/Kerberos/krb5kdc/kpropd.acl</TT
+> exists.
+</P
+><P
+>&#13;Next you'll need to create host keys for your master and slave Kerberos servers:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos1}bash# kadmin.local
+{Kerberos1}kadmin.local:  addprinc -randkey host/kerberos1.gnud.ie
+{Kerberos1}kadmin.local:  addprinc -randkey host/kerberos2.gnud.ie
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;The next step is to extract these keys to the keytab file.  The keytab file is a keyring which contains the cryptographic keys
+needed to authenticate with the KDC.  Extraction of keys to the keytab is done with the <SPAN
+CLASS="application"
+>ktadd</SPAN
+> sub command:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos1}kadmin.local:  ktadd host/kerberos1.gnud.ie
+{Kerberos1}kadmin.local:  ktadd host/kerberos2.gnud.ie
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;Finally, we want to copy the keytab over to the slave server so that it has the keys it needs available to authenticate.
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos2}bash# scp root@kerberos1.gnud.ie:/etc/krb5.keytab /etc
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;Here is a crontab entry from the master Kerberos server used to synchronize principal databases every fifteen minutes:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;15 * * * * /usr/local/bin/krb5prop.sh
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;Here are the contents of the <TT
+CLASS="filename"
+>krb5prop.sh</TT
+> script:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;#!/bin/sh
+
+/usr/Kerberos/sbin/kdb5_util dump /var/Kerberos/krb5kdc/slave_datatrans
+
+/usr/Kerberos/sbin/kprop -f /var/Kerberos/krb5kdc/slave_datatrans kerberos2.gnud.ie &#62; /dev/null
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;Initially running this command by hand, you should see something similar to the following:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos1}bash# /usr/Kerberos/sbin/kdb5_util dump /var/Kerberos/krb5kdc/slave_datatrans
+{Kerberos1}bash# /usr/Kerberos/sbin/kprop -d -f /var/Kerberos/krb5kdc/slave_datatrans kerberos2.gnud.ie
+3234 bytes sent.
+Database propagation to kerberos2.gnud.ie: SUCCEEDED
+{Kerberos1}bash#
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;The slave server will now synchronize its principal database with the master server.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="maintain"
+></A
+>5.3. Maintenance</H2
+><P
+>&#13;With these cron jobs in place principal propagation should be sufficiently automated as to require no maintenance.  At the time of a primary KDC failure, there is no need for human intervention unless the failure will last for an extended period of time.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="time-sync.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="client-configure.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Time Synchronization</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Client Configuration</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Sentry Firewall CD HOWTO: Setting Up a Firewall</TITLE>
+ <LINK HREF="Sentry-Firewall-CD-HOWTO-7.html" REL=next>
+ <LINK HREF="Sentry-Firewall-CD-HOWTO-5.html" REL=previous>
+ <LINK HREF="Sentry-Firewall-CD-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Sentry-Firewall-CD-HOWTO-7.html">Next</A>
+<A HREF="Sentry-Firewall-CD-HOWTO-5.html">Previous</A>
+<A HREF="Sentry-Firewall-CD-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Setting Up a Firewall</A></H2>
+
+<H2><A NAME="ss6.1">6.1 Starting the Firewall</A>
+</H2>
+
+<P>Ok, so the project is called the Sentry *Firewall* CD.  So where's the firewall?
+Well, it's important to note that this system is capable of quite a bit more than your
+standard bootable floppy or CD firewall.  In fact it is a pretty complete Linux system
+on a CD, and as with any Linux system the "firewall" is set up using scripts and various
+userland utilities such as ipchains or iptables.
+<P>IPChains or IPTables firewall scripts generally take the form of shell scripts
+that are customized by the user and run at boot-time.  If you already have a
+ruleset for your firewall simply edit the "rc.firewall" directive in your
+"sentry.conf" file to point to your firewall script on your floppy or on a
+remote HTTP(S)/FTP/SCP/SFTP server as explained above.  The firewall will
+then be run at boot time.
+<P>
+<P><BR>
+<H2><A NAME="ss6.2">6.2 Using FWBuilder with the Sentry Firewall CD</A>
+</H2>
+
+<P>FWBuilder(http://www.FWBuilder.org/) is a firewall configuration and management
+system.  The advantage to this application is that it provides a graphical user
+interface to develop and modify firewall rulesets on various platforms using
+various utilities.  The Firewall rulesets that are created with FWBuilder are
+completely compatible with the Sentry Firewall CD, and with just about any Linux
+firewall.
+<P>As with most Linux firewalls there are no X11 binaries or libraries on the Sentry
+Firewall CD, so you will need to develop the firewall ruleset on a separate workstation
+using fwbuilder and then upload the ruleset to the various firewalls/routers/nodes
+on the network.  The following are the basic steps required to get your new fwbuilder
+ruleset running on the Sentry CD:
+<P>
+<UL>
+<LI> Configure your new firewall to your liking with fwbuilder(duh).</LI>
+<LI> Save your firewall.  Choose File->Save As, and choose an appropriate name.
+The file will normally be saved as "whatever.xml".</LI>
+<LI> Compile the firewall.  Choose Rules->Compile.  The ruleset will be compiled
+and turned into a shell script called "whatever.fw".</LI>
+<LI>    You will then want to copy "whatever.fw" to your configuration floppy and use
+the "rc.firewall" configuration directive in your sentry.conf file to point to
+your new firewall script.  The firewall script will be copied to
+/etc/rc.d/rc.firewall during the configuration process and run at boot-time.</LI>
+</UL>
+<P>
+<P>Please note that it is not necessary to reboot the Sentry Firewall CD every time
+you update your firewall script.  You may simply upload the new script to the
+Sentry Firewall and run it.  But just make sure that you copy the final draft of
+your script to the configuration floppy so that it will be run at boot-time.
+<P>
+<P><BR>
+<H2><A NAME="ss6.3">6.3 Using Webmin with the Sentry Firewall CD</A>
+</H2>
+
+<P>As of version 1.5.0-rc3 Webmin(http://www.webmin.com/) is available on the CD.
+Among many of the other default modules available with webmin - of which not all
+have been fully tested - Webmin includes two modules for generating and managing
+your firewall setup.  These modules are located in the "Networking" section of the
+webmin interface.  In this section you will see the "Linux Firewall" and "Shorewall
+Firewall" modules, either of which are available for your use.
+<P>The addition of Webmin also adds four new configuration directives -
+<PRE>
+    start_webmin = &lt;enable | disable>           ## enable|disable webmin.  Default == disable.
+    webmin_config = &lt;path/to/config>            ## Main webmin config(/etc/webmin/config).
+    miniserv.conf = &lt;path/to/miniserv.conf>     ## Config file for webmin http(s) daemon.
+    miniserv.pem = &lt;path/to/miniserv.pem>       ## SSL cert for webmin http(s) daemon.
+                                                ## An SSL cert will be created by rc.webmin if
+                                                ## one is not specified.
+    miniserv.users = &lt;path/to/miniserv.users>   ## Password file used for webmin.
+                                                ## Default user:pass is sentry:SENTRY.
+                                                ## NOTE: If this file is not replaced webmin
+                                                ## will NOT start!
+</PRE>
+<P>
+<P><B>Note:</B> The modifications made by these web interface tools are, of course, not
+permanent. Any files altered will need to be placed on a floppy or on a remote server and
+declared in your sentry.conf file as explained in previous sections.
+<P>
+<P>Many of these web interface tools do not simply generate a firewall script, but rather
+set up a firewall and use the 'iptables-save' and 'iptables-restore' utilities to dump and
+load the firewall.  The file created by 'iptables-save' must be loaded using 'iptables-restore',
+it cannot be run like a shell script.  By default this file is placed in "/etc/rc.d/rc.firewall.save".
+Once you configure your firewall to your liking you will need to place the rc.firewall.save file on a
+floppy or a remote server and declare its location using the "rc.firewall.save" directive in the
+sentry.conf file.  With the sentrycd and sentyrcd-devel branches, the rc.firewall and rc.firewall.save
+files are normally run automatically at boot-time from rc.inet2.
+<P>
+<P>As of verions 1.5.0-rc3 the Shorewall(http://www.shorewall.net/) firewall scripts are available on
+the Sentry Firewall CD. Webmin also comes with a module to configure and set up Shorewall, although
+Shorewall can be configured manually as well.  Shorewall utilizes a number of configuration files
+located in /etc/shorewall. The sentry.conf file recognizes the "shorewall.conf" configuration directive,
+but if any of the other configuration files in /etc/shorewall need to be replaced you will need to do
+so manually using the "|=" configuration directive.
+<P>
+<P><BR>
+<H2><A NAME="ss6.4">6.4 Other Sample Firewall Scripts and Tools</A>
+</H2>
+
+<P> Sample firewall scripts can be found in the /SENTRY/scripts/firewall
+directory on the CD.  These are just a few firewall scripts I found on the
+Internet and have put here for your convenience.  If you do a search on
+<A HREF="http://www.google.com/">google</A>
+or
+<A HREF="http://www.freshmeat.net/">freshmeat.net</A>
+you will probably find several others pretty easily.
+<P>
+<P>I have also added "Easy Firewall Generator" (http://easyfwgen.morizot.net/) and
+"IPTables Script Generator" (http://iptables.linux.dk/) to the CD.  These are PHP
+scripts that can assist you in creating a ruleset for your Sentry Firewall CD system.
+In order to view these you will need to start the Apache web server on a running Sentry
+Firewall CD system, and then direct your browser to the IP address of your Sentry
+Firewall.  The scripts should be available in the "firewall" directory.
+<P>
+<P>Please note that these web-based scripts will often generate a script for you, but you
+will still need to take that generated script and place at on a floppy or on a remote
+server and edit the "rc.firewall" directive in the sentry.conf file to point to your
+new script.
+<P>
+<P><BR>
+<H2><A NAME="ss6.5">6.5 Links to Other Firewall Resources</A>
+</H2>
+
+<P>
+<A HREF="http://www.netfilter.org/documentation/index.html#HOWTO">Netfilter HOWTO</A><BR>
+<A HREF="http://www.netfilter.org/documentation/index.html#FAQ">Netfilter FAQ</A><BR>
+<A HREF="http://www.netfilter.org/documentation/index.html#tutorials">Netfilter Tutorials</A><P>
+<P>If there are any other resources you think I should add to this section, please email me at
+<A HREF="mailto:Obsid@Sentry.net">Obsid@Sentry.net</A>.
+<P>
+<P>
+<P>
+<P>
+<P><BR>
+<HR>
+<A HREF="Sentry-Firewall-CD-HOWTO-7.html">Next</A>
+<A HREF="Sentry-Firewall-CD-HOWTO-5.html">Previous</A>
+<A HREF="Sentry-Firewall-CD-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

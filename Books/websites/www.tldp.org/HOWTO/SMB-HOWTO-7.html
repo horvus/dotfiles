@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>SMB HOWTO: Sharing A Linux Drive With Windows Machines</TITLE>
+ <LINK HREF="SMB-HOWTO-8.html" REL=next>
+ <LINK HREF="SMB-HOWTO-6.html" REL=previous>
+ <LINK HREF="SMB-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="SMB-HOWTO-8.html">Next</A>
+<A HREF="SMB-HOWTO-6.html">Previous</A>
+<A HREF="SMB-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Sharing A Linux Drive With Windows Machines</A></H2>
+
+<P>As shown in the simple smb.conf above, sharing Linux drives with Windows users is easy.  However, like everything else with Samba, you can control things to a large degree.  Here are some examples:
+<P>To share a directory with the public, create a clone of the [tmp] section above by adding something like this to smb.conf:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+[public]
+   comment = Public Stuff
+   path = /home/public
+   public = yes
+   writable = yes
+   printable = no
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>To make the above directory readable by the public, but only writable by people in group staff, modify the entry like this:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+[public]
+   comment = Public Stuff
+   path = /home/public
+   public = yes
+   writable = yes
+   printable = no
+   write list = @staff
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>It used to be that easy; you would now be able to start Samba and browse 
+the shares from a Windows PC.  However, Microsoft has recently made life slightly more difficult for those using Samba.  Windows 98, Windows NT (service pack 3 or higher) and later builds of Windows 95  now use encrypted passwords by default.  Samba uses unencrypted passwords by default.  You can't browse servers when either the client or server is using encrypted passwords, because a connection cannot be made anonymously.
+<P>You can tell if you have a password type mismatch between client and server if when you try to connect to a share you see a dialog box which reads something like &quot;You are not authorized to access that account from this machine&quot;.
+<P>You can either configure your Samba server to use encrypted passwords, or configure the Windows machines to use unencrypted passwords.
+<P>To get Windows to work with encrypted SMB passwords:
+<P>Windows 95/98
+=============
+<P>Using the registry editor (regedit), create the registry setting
+HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\VxD\VNETSUP
+Add a new DWORD value:
+Value Name:  EnablePlainTextPassword
+Data:        0x01.
+<P>Windows NT
+==========
+<P>Using the registry editor (regedit), create the registry setting
+HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\Rdr\Parameters
+Add a new DWORD value:
+Value Name:  EnablePlainTextPassword
+Data:        0x01 
+<P>Windows 2000
+============
+<P>Using the registry editor (regedit), create the registry setting
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\LanmanWorkStation\Parameters
+Add a new DWORD value:
+Value Name: EnablePlainTextPassword
+Data: 0x01
+<P>Once these registry changes have been made, reboot the Windows machine and try to map a network drive on the Samba server again.  It should work as long as the Samba server is using plain text passwords.
+<P>To configure Samba to use encrypted passwords:
+<P>In the [global] section of /etc/smb.conf, add the following lines:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+encrypt passwords = yes
+smb passwd file = /etc/smbpasswd
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>You are highly encouraged to read the files ENCRYPTION.txt, Win95.txt and WinNT.txt in the Samba documentation before doing this!
+<P>If your clients and server are using encrypted passwords, you will not be able to browse the available shares on the server until an initial connection has been made with the appropriate authentication.  To get the initial connection, enter the share name manually in the Windows File Manager or Explorer dialog box, in the form '\\&lt;hostname&gt;\&lt;sharename&gt;'.  Log onto the server with a username and password that is valid on the server!
+<P>If you suspect that your NetBIOS name service is not correctly configured (perhaps because you get 'host not found' errors when trying to connect), try using just the IP address of the server:  '\\&lt;host ip address&gt;\&lt;sharename&gt;'.
+<P>In order to get filenames to appear correctly, you may also need to set some options in the appropriate share section.  These work for Windows 95/98/NT clients, but may need to be modified if you have Windows 3.X clients:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+    ; Mangle case = yes seems to give the correct filenames 
+    ; for Win95/98/NT.
+    mangle case = yes
+
+    ; If samba is case sensitive when looking for files
+    case sensitive = no
+
+    ; Default case of files that are created
+    default case = lower
+
+    ; Preserve case for all filenames
+    preserve case = yes
+
+    ; Preserve case for dos (8.3) filenames
+    short preserve case = no
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>For other tricks to play with drive shares, see the Samba documentation or man pages.
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+interfaces = 192.168.1.1/24
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>Note:  The bit after the / is a reference to the subnet mask.  &quot;24&quot; is the value to use for an unsegmented Class C network.  For more information on subnet calculations, you might want to see 
+<A HREF="http://www.ralphb.net/IPSubnet/">http://www.ralphb.net/IPSubnet/</A>.
+<P>There is a lot more to Samba configuration than this, but this will get you started.  If you want to do something more advanced, I refer you to the Samba Web site mentioned above.
+<P>
+<P>
+<HR>
+<A HREF="SMB-HOWTO-8.html">Next</A>
+<A HREF="SMB-HOWTO-6.html">Previous</A>
+<A HREF="SMB-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

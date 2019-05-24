@@ -1,0 +1,196 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Root RAID HOWTO cookbook: Building the RAID file system.</TITLE>
+ <LINK HREF="Root-RAID-HOWTO-7.html" REL=next>
+ <LINK HREF="Root-RAID-HOWTO-5.html" REL=previous>
+ <LINK HREF="Root-RAID-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Root-RAID-HOWTO-7.html">Next</A>
+<A HREF="Root-RAID-HOWTO-5.html">Previous</A>
+<A HREF="Root-RAID-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Building the RAID file system.</A></H2>
+
+<P>This description is for my RAID systems described in the system
+specs.  Your system may have a different RAID architecture, so
+modify as appropriate. Please read the man pages and 
+QuickStart.RAID that come with the raidtools-0.42 
+<H2><A NAME="raid5configuration"></A> <A NAME="ss6.1">6.1 /etc/raid5.conf </A>
+</H2>
+
+<P>
+<PRE>
+        # raid-5 configuration
+        raiddev                 /dev/md0
+        raid-level              5
+        nr-raid-disks           4
+        chunk-size              32
+
+        # Parity placement algorithm
+        parity-algorithm        left-symmetric
+
+        # Spare disks for hot reconstruction
+        #nr-spare-disks         0
+
+        device                  /dev/sda3
+        raid-disk               0
+
+        device                  /dev/sdb3
+        raid-disk               1
+
+        device                  /dev/sdc3
+        raid-disk               2
+
+        device                  /dev/sdd3
+        raid-disk               3
+</PRE>
+<H2><A NAME="raid1configuration"></A> <A NAME="ss6.2">6.2 /etc/raid1.conf </A>
+</H2>
+
+<P>
+<PRE>
+        # raid-1 configuration
+        raiddev                 /dev/md0
+        raid-level              1
+        nr-raid-disks           2
+        nr-spare-disks          0
+
+        device                  /dev/hda4
+        raid-disk               0
+
+        device                  /dev/hdc4
+        raid-disk               1
+</PRE>
+<H2><A NAME="ss6.3">6.3 Step by Step procedures for building production RAID file system.</A>
+</H2>
+
+<P>For my RAID5 system I did a complete install of:
+<PRE>
+        Slackware-3.4           any current distribution should work OK
+        linuxthreads-0.71
+        raidtools-0.42
+        linux-2.0.33 with raid145 patch and Gadi's patch
+</PRE>
+<P>Create and format the raid device.
+<PRE>
+        mkraid /etc/raid5.conf
+        mdcreate raid5 /dev/md0 /dev/sda3 /dev/sdb3 /dev/sdc3 /dev/sdd3
+        mdadd -ar
+        mke2fs /dev/md0
+        mkdir /md
+        mount -t ext2 /dev/md0 /md
+</PRE>
+
+Create the reference files that reboot will use,
+this may be different on your system.
+<PRE>
+        cat /proc/mdstat | grep md0 > /dosa/raidboot/raidgood.ref
+        cat /proc/mdstat | grep md0 > /dosb/raidboot/raidgood.ref
+</PRE>
+
+Use Slackware-3.4 or another distribution to build your OS
+<PRE>
+        setup
+</PRE>
+
+Specify '/md' as the target, and the source whatever your normally use.
+Select and install the disksets of interest except for the kernel.
+Configure the system, but skip the section on lilo and kernel booting.
+Exit setup.
+<P>Install 'pthreads'
+<PRE>
+        cd /usr/src/linuxthreads-0.71
+</PRE>
+
+edit the Makefile and specify
+<PRE>
+        BUILDIR=/md
+
+        make
+        make install
+</PRE>
+
+Install 'raidtools'
+<PRE>
+        cd /usr/src/raidtools-0.42
+        configure --sbindir=/md/sbin --prefix=/md/usr
+</PRE>
+
+fix the raidtools make install error
+<PRE>
+        cd /md/sbin
+        rm mdrun
+        rm mdstop
+        ln -s mdadd mdrun
+        ln -s mdadd mdstop
+</PRE>
+
+Create /dev/mdx
+<PRE>
+        cp -a /dev/md* /md/dev
+</PRE>
+
+Add the system configuration from the current system (ignore errors).
+<PRE>
+        cp -dp /etc/* mnt/etc
+        cp -dp /etc/rc.d/* mnt/etc/rc.d         (include the new rc.6)
+        mkdir  mnt/lib/modules
+        cp -a  /lib/modules/2.x.x mnt/lib/modules &lt;--- your current 2.x.x
+</PRE>
+
+Edit the following files to correct them for your file system
+<PRE>
+        cd /md
+
+Non-network
+        etc/fstab       correct for real root and raid devices.
+        etc/mdtab       should work OK
+Network
+        etc/hosts
+        etc/resolv.conf 
+        etc/hosts.equiv         and related files
+        etc/rc.d/rc.inet1       correct ip#, mask, gateway, etc...
+        etc/rc.d/rc.S           remove entire section on file system status
+                from:
+                        # Test to see if the root partition isread-only
+                to but not including:
+                        # remove /etc/mtab* so that mount will .....
+                                This avoids the annoying warning that
+                                the ramdisk is mounted rw.
+        etc/rc.d/rc.xxxxx       others as required
+        root/.rhosts            if present
+        home/xxxx/xxxx          others as required
+
+    WARNING:    The above procedure moves your password and shadow
+                files onto the new file system!!!!!
+
+    WARNING:    You may not wish to do this for security reasons.
+</PRE>
+
+Create any directories for mounting /dev/disk... as may be required
+that are unique to your system.  Mine need:
+<PRE>
+        cd /md          &lt;--- new file system root
+        mkdir dosa                      dos partition mount point
+        mkdir dosb                      dos mirror mount point
+</PRE>
+
+The new file system is complete. Make sure and save the md reference
+status to the 'real' root device and you are ready to boot.
+<P>mount the dos partitions on dosa and dosb
+<PRE>
+        cat /proc/mdstat | grep md0 > /dosa/raidboot/raidgood.ref
+        cat /proc/mdstat | grep md0 > /dosb/raidboot/raidgood.ref
+
+        mdstop /dev/md0
+</PRE>
+<P>
+<HR>
+<A HREF="Root-RAID-HOWTO-7.html">Next</A>
+<A HREF="Root-RAID-HOWTO-5.html">Previous</A>
+<A HREF="Root-RAID-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

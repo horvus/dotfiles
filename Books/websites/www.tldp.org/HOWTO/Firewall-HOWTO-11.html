@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Firewall and Proxy Server HOWTO: The SOCKS Proxy Server</TITLE>
+ <LINK HREF="Firewall-HOWTO-12.html" REL=next>
+ <LINK HREF="Firewall-HOWTO-10.html" REL=previous>
+ <LINK HREF="Firewall-HOWTO.html#toc11" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Firewall-HOWTO-12.html">Next</A>
+<A HREF="Firewall-HOWTO-10.html">Previous</A>
+<A HREF="Firewall-HOWTO.html#toc11">Contents</A>
+<HR>
+<H2><A NAME="s11">11. The SOCKS Proxy Server</A></H2>
+
+<P>
+<H2><A NAME="ss11.1">11.1 Setting up the Proxy Server</A>
+</H2>
+
+<P>The SOCKS proxy server available from 
+<B>http://www.socks.nec.com/</B>.  
+<P>Uncompressed and untar the files into a directory on your system, and follow the instructions on how to make it.  I had a couple problems when I made it.  Make sure that your Makefiles are correct.
+<P>One important thing to note is that the proxy server needs to be added to /etc/inetd.conf.  You must add a line:
+<P>
+<PRE>
+  socks  stream  tcp  nowait  nobody  /usr/local/etc/sockd  sockd
+</PRE>
+<P>to tell the server to run when requested.
+<P>
+<H2><A NAME="ss11.2">11.2 Configuring the Proxy Server</A>
+</H2>
+
+<P> 
+The SOCKS program needs two separate configuration files.  One to tell the access allowed, and one to route the requests to the appropriate proxy server.  The access file should be housed on the server.  The routing file should be housed on every UNIX machine.  The DOS and, presumably, Macintosh computers will do their own routing.
+<P>
+<H3>The Access File</H3>
+
+<P>With socks4.2 Beta, the access file is called &quot;sockd.conf&quot;.It should contain 2 lines, a permit and a deny line.   Each line will have three entries:
+<P>
+<UL>
+<LI>The Identifier (permit/deny)</LI>
+<LI>The IP address</LI>
+<LI>The address modifier</LI>
+</UL>
+<P>The identifier is either permit or deny.  You should have both a permit and a deny line.
+<P>The IP address holds a four byte address in typical IP dot notation. I.E. 
+192.168.1.0.
+<P>The address modifier is also a typical IP address four byte number. It works like a netmask.  Envision this number to be 32 bits (1s or 0s). If the bit is a 1, the corresponding bit of the address that it is checking must match the corresponding bit in the IP address field. For instance, if the line is:
+<P>
+<PRE>
+    permit 192.168.1.23 255.255.255.255
+</PRE>
+<P>it will permit only the IP address that matches every bit in 192.168.1.23, eg, only 192.168.1.3.  The line:
+<P>
+<PRE>
+    permit 192.168.1.0 255.255.255.0
+</PRE>
+<P>will permit every number within group 192.168.1.0 through 192.168.1.255, the whole C Class domain.   One should not have the line:
+<P>
+<PRE>
+    permit 192.168.1.0 0.0.0.0
+</PRE>
+<P>as this will permit every address, regardless.
+<P>So, first permit every address you want to permit, and then deny the rest.  To allow everyone in the domain 192.168.1.xxx, the lines:
+<P>
+<PRE>
+    permit 192.168.1.0 255.255.255.0
+    deny 0.0.0.0 0.0.0.0
+</PRE>
+<P>will work nicely.  Notice the first &quot;0.0.0.0&quot; in the deny line.  With a modifier of 0.0.0.0, the IP address field does not matter.  All 0's is the norm because it is easy to type.
+<P>More than one entry of each is allowed.
+<P>Specific users can also be granted or denied access.  This is done via ident authentication.  Not all systems support ident, including Trumpet Winsock, so I will not go into it here.  The documentation with socks is 
+quite adequate on this subject.
+<P>
+<H3>The Routing File</H3>
+
+<P> 
+The routing file in SOCKS is poorly named &quot;socks.conf&quot;.  I say &quot;poorly named&quot; because it is so close to the name of the access file that it is easy to get the two confused.
+<P>The routing file is there to tell the SOCKS clients when to use socks and when not to.  For instance, in our network, 192.168.1.3 will not need to use socks to talk with 192.168.1.1, firewall.  It has a direct connection in via Ethernet.  It defines 127.0.0.1, the loopback, automatically.  Of course you do not need SOCKS to talk to yourself. There are three entries:
+<P>
+<P>
+<UL>
+<LI>deny</LI>
+<LI>direct</LI>
+<LI>sockd</LI>
+</UL>
+<P>Deny tells SOCKS when to reject a request.  This entry has the same three fields as in sockd.conf, identifier, address and modifier. Generally, since this is also handled by sockd.conf, the access file, the modifier field is set to 0.0.0.0.  If you want to preclude yourself from calling any place, you can do it here.
+<P>The direct entry tells which addresses to not use socks for.  These are all the addresses that can be reached without the proxy server. Again we have the three fields, identifier, address and modifier.  Our example would have
+<P>
+<PRE>
+    direct 192.168.1.0 255.255.255.0
+</PRE>
+<P>Thus going direct for any on our protected network.
+<P>The sockd entry tells the computer which host has the socks server daemon on it.  The syntax is:
+<P>
+<PRE>
+  sockd @=&lt;serverlist> &lt;IP address> &lt;modifier>
+</PRE>
+<P>Notice the @= entry.  This allows you to set the IP addresses of a list of proxy servers.  In our example, we only use one proxy server. But, you can have many to allow a greater load and for redundancy in case of failure.
+<P>The IP address and modifier fields work just like in the other examples.  You specify which addresses go where through these. 6.2.3.  DNS from behind a Firewall
+<P>Setting up Domain Name service from behind a firewall is a relatively simple task.  You need merely to set up the DNS on the firewalling machine.  Then, set each machine behind the firewall to use this DNS.
+<P>
+<H2><A NAME="ss11.3">11.3 Working With a Proxy Server</A>
+</H2>
+
+<P>
+<H3>Unix</H3>
+
+<P> 
+To have your applications work with the proxy server, they need to be &quot;sockified&quot;.  You will need two different telnets, one for direct communication, one for communication via the proxy server.  SOCKS comes with instructions on how to SOCKify a program, as well as a couple pre-SOCKified programs.  If you use the SOCKified version to go somewhere direct, SOCKS will automatically switch over to the direct version for you.  Because of this, we want to rename all the programs on our protected network and replace them with the SOCKified programs. &quot;Finger&quot; becomes &quot;finger.orig&quot;, &quot;telnet&quot; becomes &quot;telnet.orig&quot;, etc. You must tell SOCKS about each of these via the include/socks.h file.
+<P>Certain programs will handle routing and sockifying itself.  Netscape is one of these.  You can use a proxy server under Netscape by entering the server's address (192.168.1.1 in our case) in the SOCKs field under Proxies.  Each application will need at least a little messing with, regardless of how it handles a proxy server.
+<P>
+<H3>MS Windows with Trumpet Winsock</H3>
+
+<P> 
+Trumpet Winsock comes with built in proxy server capabilities.  In the &quot;setup&quot; menu, enter the IP address of the server, and the addresses of all the computers reachable directly.  Trumpet will then handle all outgoing packets.
+<P>
+<H3>Getting the Proxy Server to work with UDP Packets</H3>
+
+<P> 
+The SOCKS package works only with TCP packets, not UDP.  This makes it quite a bit less useful.  Many useful programs, such as talk and Archie, use UDP.  There is a package designed to be used as a proxy server for UDP packets called UDPrelay, by Tom Fitzgerald &lt;fitz@wang.com&gt;.  Unfortunately, at the time of this writing, it is not compatible with Linux.
+<P>
+<H2><A NAME="ss11.4">11.4 Drawbacks with Proxy Servers</A>
+</H2>
+
+<P> 
+The proxy server is, above all, a <CODE>security device</CODE>.  Using it to increase internet access with limited IP addresses will have many drawbacks.  A proxy server will allow greater access from inside the protected network to the outside, but will keep the inside completely inaccessible from the outside.  This means no servers, talk or archive connections, or direct mailing to the inside computers.  These drawbacks might seem slight, but think of it this way:
+<P>
+<UL>
+<LI>You have left a report you are doing on your computer inside a firewall protected network.  You are at home, and decide that you would like to go over it.  You can not.  You can not reach your computer because it is behind the firewall.  You try to log into <CODE>firewall</CODE> first, but since everyone has proxy server access, no one has set up an account for you on it.
+
+<P>
+</LI>
+<LI>Your daughter goes to college.  You want to email her.  You have some private things to talk about, and would rather have your mail sent directly to your machine.  You trust your systems administrator completely, but still, this is private mail.
+
+<P>
+</LI>
+<LI>The inability to use UDP packets represents a big drawback with the proxy servers.  I imagine UDP capabilities will be coming shortly. </LI>
+</UL>
+<P>FTP causes another problem with a proxy server.  When getting or doing an <CODE>ls</CODE>, the FTP server opens a socket on the client machine and sends the information through it.  A proxy server will not allow this, so FTP doesn't particularly work.
+<P>And, proxy servers run slow.  Because of the greater overhead, almost any other means of getting this access will be faster.
+<P>Basically, if you have the IP addresses, and you are not worried about security, do not use a firewall and/or proxy servers.  If you do not have the IP addresses, but you are also not worried about security, you might also want to look into using an IP emulator, like Term, Slirp or TIA.  Term is available from  <CODE><B>ftp://sunsite.unc.edu</B></CODE>, Slirp is available from <CODE><B>ftp://blitzen.canberra.edu.au/pub/slirp</B></CODE>, and TIA is available from marketplace.com.  These packages will run faster, allow better connections, and provide a greater level of access to the inside network from the internet.  Proxy servers are good for those networks which have a lot of hosts that will want to connect to the internet on the fly, with one setup and little work after that.
+<P>
+<HR>
+<A HREF="Firewall-HOWTO-12.html">Next</A>
+<A HREF="Firewall-HOWTO-10.html">Previous</A>
+<A HREF="Firewall-HOWTO.html#toc11">Contents</A>
+</BODY>
+</HTML>

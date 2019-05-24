@@ -1,0 +1,796 @@
+<HTML
+><HEAD
+><TITLE
+>Authentication with PPP</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Point-to-Point Protocol"
+HREF="x-087-2-ppp.html"><LINK
+REL="PREVIOUS"
+TITLE="General Security Considerations"
+HREF="x7037.html"><LINK
+REL="NEXT"
+TITLE="Debugging Your PPP Setup"
+HREF="x7261.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x7037.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. The Point-to-Point Protocol</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x7261.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-PPP.AUTHENTICATION"
+>8.8. Authentication with PPP</A
+></H1
+><P
+>&#13;
+
+
+
+
+With PPP, each system may require its peer to authenticate itself
+using one of two authentication protocols: the
+<I
+CLASS="EMPHASIS"
+>Password Authentication Protocol</I
+> (PAP), and the
+<I
+CLASS="EMPHASIS"
+>Challenge Handshake Authentication Protocol</I
+>
+(CHAP).  When a connection is established, each end can request the
+other to authenticate itself, regardless of whether it is the caller
+or the callee.  In the description that follows, we will loosely talk
+of &#8220;client&#8221; and &#8220;server&#8221; when we want to
+distinguish between the system sending authentication requests and the
+system responding to them. A PPP daemon can ask its peer for
+authentication by sending yet another LCP configuration request
+identifying the desired authentication protocol.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN7101"
+>8.8.1. PAP Versus CHAP</A
+></H2
+><P
+>PAP, which is offered by many Internet Service Providers, works
+basically the same way as the normal login procedure. The client
+authenticates itself by sending a username and a (optionally
+encrypted) password to the server, which the server compares to its
+secrets database.<A
+NAME="X-087-2-FNPP11"
+HREF="#FTN.X-087-2-FNPP11"
+>[1]</A
+>
+This technique is vulnerable to eavesdroppers, who may try to obtain the
+password by listening in on the serial line, and to repeated trial and error
+attacks.</P
+><P
+>CHAP does not have these deficiencies. With CHAP, the server sends a randomly
+generated &#8220;challenge&#8221; string to the client, along with its
+hostname. The client uses the hostname to look up the appropriate secret,
+combines it with the challenge, and encrypts the string using a one-way
+hashing function. The result is returned to the server along with the client's
+hostname. The server now performs the same computation, and acknowledges the
+client if it arrives at the same result.</P
+><P
+>CHAP also doesn't require the client to authenticate itself only at
+startup time, but sends challenges at regular intervals to make sure
+the client hasn't been replaced by an intruder, for instance by
+switching phone lines, or because of a modem configuration error that
+causes the PPP daemon not to notice that the original phone call has
+dropped out and someone else has dialed in.</P
+><P
+> 
+ 
+<B
+CLASS="COMMAND"
+>pppd</B
+> keeps the secret keys for PAP and CHAP in two
+separate files called <TT
+CLASS="FILENAME"
+>/etc/ppp/pap-secrets</TT
+> and
+<TT
+CLASS="FILENAME"
+>/etc/ppp/chap-secrets</TT
+>.  By entering
+a remote host in one or the other file, you have fine control over
+whether PAP or CHAP is used to authenticate yourself with your peer,
+and vice versa.</P
+><P
+>By default, <B
+CLASS="COMMAND"
+>pppd</B
+> doesn't require authentication from the
+remote host, but it will agree to authenticate itself when requested by the
+remote host. Since CHAP is so much stronger than PAP, <B
+CLASS="COMMAND"
+>pppd</B
+>
+tries to use the former whenever possible.  If the peer does not support it, or
+if <B
+CLASS="COMMAND"
+>pppd</B
+> can't find a CHAP secret for the remote system in
+its <TT
+CLASS="FILENAME"
+>chap-secrets</TT
+> file, it reverts to PAP. If it doesn't
+have a PAP secret for its peer either, it refuses to authenticate
+altogether. As a consequence, the connection is shut down.</P
+><P
+>You can modify this behavior in several ways. When given
+the <TT
+CLASS="OPTION"
+>auth</TT
+> keyword, <B
+CLASS="COMMAND"
+>pppd</B
+>
+requires the peer to authenticate itself. <B
+CLASS="COMMAND"
+>pppd</B
+>
+agrees to use either CHAP or PAP as long as it has a secret for the
+peer in its CHAP or PAP database. There are other options to turn a
+particular authentication protocol on or off, but I won't describe
+them here.</P
+><P
+> 
+If all systems you talk to with PPP agree to authenticate themselves with
+you, you should put the <TT
+CLASS="OPTION"
+>auth</TT
+> option in the global
+<TT
+CLASS="FILENAME"
+>/etc/ppp/options</TT
+> file and define passwords for each
+system in the <TT
+CLASS="FILENAME"
+>chap-secrets</TT
+> file. If a system doesn't
+support CHAP, add an entry for it to the <TT
+CLASS="FILENAME"
+>pap-secrets</TT
+>
+file. That way, you can make sure no unauthenticated system connects to your
+host.</P
+><P
+>The next two sections discuss the two PPP secrets files,
+<TT
+CLASS="FILENAME"
+>pap-secrets</TT
+> and <TT
+CLASS="FILENAME"
+>chap-secrets</TT
+>.
+They are located in <TT
+CLASS="FILENAME"
+>/etc/ppp</TT
+> and contain triplets
+of clients, servers, and passwords, optionally followed by a list of IP
+addresses.  The interpretation of the client and server fields is
+different for CHAP and PAP, and also depends on whether we authenticate
+ourselves with the peer, or whether we require the server to authenticate
+itself with us.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN7136"
+>8.8.2. The CHAP Secrets File</A
+></H2
+><P
+>&#13;
+ 
+
+When it has to authenticate itself with a server using CHAP,
+<B
+CLASS="COMMAND"
+>pppd</B
+> searches the <TT
+CLASS="FILENAME"
+>chap-secrets</TT
+>
+file for an entry with the client field equal to the local hostname, and
+the server field equal to the remote hostname sent in the CHAP challenge.
+When requiring the peer to authenticate itself, the roles are simply reversed:
+<B
+CLASS="COMMAND"
+>pppd</B
+> then looks for an entry with the client field
+equal to the remote hostname (sent in the client's CHAP response), and the
+server field equal to the local hostname.</P
+><P
+>The following is a sample <TT
+CLASS="FILENAME"
+>chap-secrets</TT
+> file for
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+>:<A
+NAME="X-087-2-FNPP12"
+HREF="#FTN.X-087-2-FNPP12"
+>[2]</A
+>&#13;</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># CHAP secrets for vlager.vbrew.com
+#
+# client         server           secret                addrs
+#---------------------------------------------------------------------
+vlager.vbrew.com  c3po.lucas.com   "Use The Source Luke" vlager.vbrew.com
+c3po.lucas.com    vlager.vbrew.com "arttoo! arttoo!"     c3po.lucas.com
+*                 vlager.vbrew.com "TuXdrinksVicBitter"  pub.vbrew.com</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>When <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> establishes a PPP
+connection with <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> asks
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> to authenticate itself by
+sending a CHAP challenge. <B
+CLASS="COMMAND"
+>pppd</B
+> on
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> then scans
+<TT
+CLASS="FILENAME"
+>chap-secrets</TT
+> for an entry with the client field equal to
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager.vbrew.com</SPAN
+> and the server field
+equal to <SPAN
+CLASS="SYSTEMITEM"
+>c3po.lucas.com</SPAN
+>, and finds
+the first line shown in the example.<A
+NAME="X-087-2-FNPP13"
+HREF="#FTN.X-087-2-FNPP13"
+>[3]</A
+>
+It then produces the CHAP response from the challenge string and the secret
+(<TT
+CLASS="LITERAL"
+>Use The Source Luke</TT
+>), and sends it off to
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>.</P
+><P
+><B
+CLASS="COMMAND"
+>pppd</B
+> also composes a CHAP challenge for
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> containing a unique challenge
+string and its fully qualified hostname,
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager.vbrew.com</SPAN
+>.
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> constructs a CHAP response in
+the way we discussed, and returns it to
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+>. <B
+CLASS="COMMAND"
+>pppd</B
+> then
+extracts the client hostname
+(<SPAN
+CLASS="SYSTEMITEM"
+>c3po.vbrew.com</SPAN
+>) from the response and
+searches the <TT
+CLASS="FILENAME"
+>chap-secrets</TT
+> file for a line matching
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> as a client and
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> as the server. The second line
+does this, so <B
+CLASS="COMMAND"
+>pppd</B
+> combines the CHAP challenge and the
+secret <TT
+CLASS="LITERAL"
+>arttoo! arttoo!</TT
+>, encrypts them, and compares
+the result to <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>'s CHAP response.</P
+><P
+>&#13;
+
+The optional fourth field lists the IP addresses that are acceptable
+for the client named in the first field. The addresses can be given
+in dotted quad notation or as hostnames that are looked up with the
+resolver.  For instance, if <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>
+asks to use an IP address during IPCP negotiation that is not in this
+list, the request is rejected, and IPCP is shut down. In the
+sample file shown above, <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>
+is therefore limited to using its own IP address. If the address field is
+empty, any addresses are allowed; a value of
+&#8220;<TT
+CLASS="LITERAL"
+>-</TT
+>&#8221; prevents the use of IP with that client
+altogether.</P
+><P
+>The third line of the sample <TT
+CLASS="FILENAME"
+>chap-secrets</TT
+> file
+allows any host to establish a PPP link with
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> because a client or server field
+of <TT
+CLASS="LITERAL"
+>*</TT
+> is a wildcard matching any hostname. The only
+requirements are that the connecting host must know the secret and that it must use
+the IP address associated with
+<SPAN
+CLASS="SYSTEMITEM"
+>pub.vbrew.com</SPAN
+>. Entries with wildcard
+hostnames may appear anywhere in the secrets file, since
+<B
+CLASS="COMMAND"
+>pppd</B
+> will always use the best match it can find for
+the server/client pair.</P
+><P
+><B
+CLASS="COMMAND"
+>pppd</B
+> may need some help forming hostnames. As explained
+before, the remote hostname is always provided by the peer in the CHAP
+challenge or response packet.  The local hostname is obtained by calling
+the <TT
+CLASS="FUNCTION"
+>gethostname(2)</TT
+> function by default. If you have
+set the system name to your unqualified hostname, you also have to provide
+<B
+CLASS="COMMAND"
+>pppd</B
+> with the domain name using the
+<TT
+CLASS="OPTION"
+>domain</TT
+> option:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>pppd &#8230; domain vbrew.com</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This provision appends the Brewery's domain name to <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> for all authentication related
+activities.  Other options that modify
+<B
+CLASS="COMMAND"
+>pppd</B
+>&#8201;'s idea of the local hostname are
+<TT
+CLASS="OPTION"
+>usehostname</TT
+> and <TT
+CLASS="OPTION"
+>name</TT
+>.  When you give
+the local IP address on the command line using
+<B
+CLASS="COMMAND"
+><TT
+CLASS="REPLACEABLE"
+><I
+>local</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>remote</I
+></TT
+></B
+> and <TT
+CLASS="REPLACEABLE"
+><I
+>local</I
+></TT
+> as a name instead of a dotted
+quad, <B
+CLASS="COMMAND"
+>pppd</B
+> uses this as the local hostname.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN7224"
+>8.8.3. The PAP Secrets File</A
+></H2
+><P
+>&#13;
+ 
+The PAP secrets file is very similar to CHAP's. The first two
+fields always contain a username and a server name; the third holds the
+PAP secret.  When the remote host sends its authentication information,
+<B
+CLASS="COMMAND"
+>pppd</B
+> uses the entry that has a server field equal to the
+local hostname, and a user field equal to the username sent in the request.
+When it is necessary for us to send our credentials to the peer,
+<B
+CLASS="COMMAND"
+>pppd</B
+> uses the secret that has a user field equal to the
+local username and the server field equal to the remote hostname.</P
+><P
+>A sample PAP secrets file might look like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/ppp/pap-secrets
+#
+# user          server          secret          addrs
+vlager-pap      c3po            cresspahl       vlager.vbrew.com
+c3po            vlager          DonaldGNUth     c3po.lucas.com</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The first line is used to authenticate ourselves when talking to
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>.  The second line describes
+how a user named <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> has
+to authenticate itself with us.</P
+><P
+>The name <SPAN
+CLASS="SYSTEMITEM"
+>vlager-pap</SPAN
+> in the first column
+is the username we send to <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>.
+By default, <B
+CLASS="COMMAND"
+>pppd</B
+> picks the local hostname as the username,
+but you can also specify a different name by giving the <TT
+CLASS="OPTION"
+>user</TT
+>
+option followed by that name.</P
+><P
+>When picking an entry from the <TT
+CLASS="FILENAME"
+>pap-secrets</TT
+> file
+to identify us to a remote host, <B
+CLASS="COMMAND"
+>pppd</B
+>
+must know the remote host's name.  As it has no way of finding that
+out, you must specify it on the command line using the
+<TT
+CLASS="OPTION"
+>remotename</TT
+> keyword followed by the peer's
+hostname. To use the above entry for authentication with
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>, for example, we must add the
+following option to <B
+CLASS="COMMAND"
+>pppd</B
+>&#8201;'s command line:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>pppd ... remotename c3po user vlager-pap</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>In the fourth field of the PAP secrets file (and all following fields), you can specify what IP addresses are allowed for that
+particular host, just as in the CHAP secrets file. The peer will be
+allowed to request only addresses from that list. In the sample file,
+the entry that <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> will use
+when it dials in&#8212;the line where <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> is the client&#8212;allows it to use
+its real IP address and no other.</P
+><P
+>Note that PAP is a rather weak authentication method, you should
+use CHAP instead whenever possible. We will therefore not cover PAP in greater
+detail here;  if you are interested in using it, you will find more PAP
+features in the <TT
+CLASS="FILENAME"
+>pppd(8)</TT
+> manual page.
+
+
+
+&#13;</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP11"
+HREF="x-087-2-ppp.authentication.html#X-087-2-FNPP11"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#8220;Secret&#8221; is just the PPP name for passwords. PPP secrets
+don't have the same length limitation as Linux login passwords.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP12"
+HREF="x-087-2-ppp.authentication.html#X-087-2-FNPP12"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The double quotes are not part of the secret; they merely serve to protect the
+whitespace within it.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP13"
+HREF="x-087-2-ppp.authentication.html#X-087-2-FNPP13"
+>[3]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>This hostname is taken from the CHAP challenge.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x7037.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x7261.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>General Security Considerations</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ppp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Debugging Your PPP Setup</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

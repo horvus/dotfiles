@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The Linux BootPrompt-HowTo: Hard Disks</TITLE>
+ <LINK HREF="BootPrompt-HOWTO-8.html" REL=next>
+ <LINK HREF="BootPrompt-HOWTO-6.html" REL=previous>
+ <LINK HREF="BootPrompt-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="BootPrompt-HOWTO-8.html">Next</A>
+<A HREF="BootPrompt-HOWTO-6.html">Previous</A>
+<A HREF="BootPrompt-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Hard Disks</A></H2>
+
+<P>This section lists all the boot args associated with standard
+MFM/RLL, ST-506, XT, and IDE disk drive devices.
+Note that both the IDE and the generic ST-506 HD driver
+both accept the `hd=' option.
+<P>
+<H2><A NAME="ss7.1">7.1 IDE Disk/CD-ROM Driver Parameters</A>
+</H2>
+
+<P>The IDE driver accepts a number of parameters, which range
+from disk geometry specifications, to support for advanced or
+broken controller chips. The following is a summary of
+some of the more common boot arguments. For full details, you
+<EM>really</EM> should consult the file <CODE>ide.txt</CODE> in the
+<CODE>linux/Documentation</CODE> directory, from which this
+summary was extracted.
+<P>
+<HR>
+<PRE>
+
+ "hdx="  is recognized for all "x" from "a" to "h", such as "hdc".
+ "idex=" is recognized for all "x" from "0" to "3", such as "ide1".
+
+ "hdx=noprobe"          : drive may be present, but do not probe for it
+ "hdx=none"             : drive is NOT present, ignore cmos and do not probe
+ "hdx=nowerr"           : ignore the WRERR_STAT bit on this drive
+ "hdx=cdrom"            : drive is present, and is a cdrom drive
+ "hdx=cyl,head,sect"    : disk drive is present, with specified geometry
+ "hdx=autotune"         : driver will attempt to tune interface speed
+                                to the fastest PIO mode supported,
+                                if possible for this drive only.
+                                Not fully supported by all chipset types,
+                                and quite likely to cause trouble with
+                                older/odd IDE drives.
+
+ "idex=noprobe"         : do not attempt to access/use this interface
+ "idex=base"            : probe for an interface at the addr specified,
+                                where "base" is usually 0x1f0 or 0x170
+                                and "ctl" is assumed to be "base"+0x206
+ "idex=base,ctl"        : specify both base and ctl
+ "idex=base,ctl,irq"    : specify base, ctl, and irq number
+ "idex=autotune"        : driver will attempt to tune interface speed
+                                to the fastest PIO mode supported,
+                                for all drives on this interface.
+                                Not fully supported by all chipset types,
+                                and quite likely to cause trouble with
+                                older/odd IDE drives.
+ "idex=noautotune"      : driver will NOT attempt to tune interface speed
+                                This is the default for most chipsets,
+                                except the cmd640.
+ "idex=serialize"       : do not overlap operations on idex and ide(x^1)
+</PRE>
+<HR>
+<P>The following are valid ONLY on ide0,
+and the defaults for the base,ctl ports must not be altered.
+<P>
+<HR>
+<PRE>
+
+ "ide0=dtc2278"         : probe/support DTC2278 interface
+ "ide0=ht6560b"         : probe/support HT6560B interface
+ "ide0=cmd640_vlb"      : *REQUIRED* for VLB cards with the CMD640 chip
+                          (not for PCI -- automatically detected)
+ "ide0=qd6580"          : probe/support qd6580 interface
+ "ide0=ali14xx"         : probe/support ali14xx chipsets (ALI M1439/M1445)
+ "ide0=umc8672"         : probe/support umc8672 chipsets
+</PRE>
+<HR>
+<P>During the install of some PCMCIA systems, you may be able
+to get detection of your CD-ROM by using:
+<HR>
+<PRE>
+
+ "ide2=0x180,0x386"     : probe typical PCMCIA IDE interface location
+</PRE>
+<HR>
+<P>Everything else is rejected with a "BAD OPTION" message.
+Also note that there is an implied <CODE>ide0=0x1f0 ide1=0x170</CODE>
+in the absence of any other ide boot args.
+<P>
+<H2><A NAME="ss7.2">7.2 Old MFM/RLL/Standard ST-506 Disk Driver Options (`hd=')</A>
+</H2>
+
+<P>The standard disk driver can accept geometry arguments for
+the disks similar to the IDE driver. Note however that it
+only expects three values (C/H/S) -- any more or any less
+and it will silently ignore you. Also, it only accepts
+`hd=' as an argument, i.e. `hda=', `hdb=' and so on are
+not valid here. The format is as follows:
+<P>
+<HR>
+<PRE>
+        hd=cyls,heads,sects
+</PRE>
+<HR>
+<P>If there are two disks installed, the above is repeated
+with the geometry parameters of the second disk.
+<P>
+<H2><A NAME="ss7.3">7.3 XT Disk Driver Options (`xd=', `xd_geo=')</A>
+</H2>
+
+<P>If you are unfortunate enough to be using one of these old
+8 bit cards that move data at a whopping 125kB/s then here
+is the scoop.  The probe code for these cards looks for an installed
+BIOS, and if none is present, the probe will not find your card. Or,
+if the signature string of your BIOS is not recognized then it
+will also not be found. In either case, you will then have to use a
+boot argument of the form:
+<P>
+<HR>
+<PRE>
+        xd=type,irq,iobase,dma_chan
+</PRE>
+<HR>
+<P>The <CODE>type</CODE> value specifies the particular manufacturer of the
+card, and are as follows: 0=generic; 1=DTC; 2,3,4=Western Digital,
+5,6,7=Seagate; 8=OMTI. The only difference between multiple types
+from the same manufacturer is the BIOS string used for detection,
+which is not used if the type is specified.
+<P>The <CODE>xd_setup()</CODE> function does no checking on the values, and
+assumes that you entered all four values. Don't disappoint it.
+Here is an example usage for a WD1002 controller with the BIOS
+disabled/removed, using the `default' XT controller parameters:
+<P>
+<HR>
+<PRE>
+        xd=2,5,0x320,3
+</PRE>
+<HR>
+<P>If the disk geometry that the kernel prints out comes out all
+wrong to what you know the disk is set up as, you can override
+that as well, with:
+<P>
+<HR>
+<PRE>
+        xd_geo=cyl_xda,head_xda,sec_xda
+</PRE>
+<HR>
+<P>Add another comma and another three CHS values if you are
+silly enough to have two disks on the old hunk of scrap...
+<P>
+<HR>
+<A HREF="BootPrompt-HOWTO-8.html">Next</A>
+<A HREF="BootPrompt-HOWTO-6.html">Previous</A>
+<A HREF="BootPrompt-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

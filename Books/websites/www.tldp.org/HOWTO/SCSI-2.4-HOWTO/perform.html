@@ -1,0 +1,371 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Performance, Test and Debugging tools</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux 2.4 SCSI subsystem HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Troubleshooting"
+HREF="trouble.html"><LINK
+REL="NEXT"
+TITLE="Compile options and System calls including ioctls"
+HREF="compileopt.html"></HEAD
+><BODY
+CLASS="appendix"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux 2.4 SCSI subsystem HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="trouble.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="compileopt.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="appendix"
+><H1
+><A
+NAME="perform"
+></A
+>Appendix D. Performance, Test and Debugging tools</H1
+><DIV
+CLASS="formalpara"
+><P
+><B
+>scu. </B
+>
+The SCSI Command Utility (SCU) implements various SCSI commands necessary
+for normal maintenance and diagnostics of SCSI peripherals. Some of its
+features include: formatting, scanning for (and reassigning) bad blocks,
+downloading new firmware, executing diagnostics and obtaining
+performance information. It is available on several Unix platforms
+(and NT), however it is only currently available in binary form. See
+<A
+HREF="http://www.bit-net.com/~rmiller/scu.html"
+TARGET="_top"
+>&#13;www.bit-net.com/~rmiller/scu.html</A
+> for more details.
+</P
+></DIV
+><DIV
+CLASS="formalpara"
+><P
+><B
+>dd. </B
+>
+Very useful for testing the streaming performance of disks and cdroms/dvds.
+See <B
+CLASS="command"
+>man dd</B
+> for more details. Here is an example for
+timing how long a disk takes to read 1 GB (10**9 bytes) starting from block 0:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;$ time dd if=/dev/sda of=/dev/null bs=512 count=1953126
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+If the raw device <TT
+CLASS="filename"
+>/dev/raw/raw1</TT
+> is bound to
+<TT
+CLASS="filename"
+>/dev/sda</TT
+> then the above line is equivalent to:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;$ time dd if=/dev/raw/raw1 of=/dev/null bs=512 count=1953126
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+This may be slower than expected since one 512 byte sector is being read
+at a time. Changing the last 2 arguments to "bs=8k count=122071" should
+give better timings for the "raw" dd.
+</P
+></DIV
+><DIV
+CLASS="formalpara"
+><P
+><B
+>dt. </B
+>
+The Data Test (DT) program is modelled on dd's syntax but dt can do a
+lot more than sequential copies. It is a comprehensive data test program
+for SCSI devices such as disks, tapes and cdrom/dvds. It is available on
+several Unix platforms (and NT), and its source is available (unlike its
+stable mate "scu" discussed earlier). See 
+<A
+HREF="http://www.bit-net.com/~rmiller/dt.html"
+TARGET="_top"
+>&#13;www.bit-net.com/~rmiller/dt.html</A
+> for more details.
+</P
+></DIV
+><DIV
+CLASS="formalpara"
+><P
+><B
+>lmdd. </B
+>
+This command is part of the lmbench suite of programs and is a variant of the
+<B
+CLASS="command"
+>dd</B
+> command. It has been tailored for IO measurements
+and outputs timing and throughput numbers on completion. Hence the
+<B
+CLASS="command"
+>time</B
+> command and a calculator are not needed.
+</P
+></DIV
+><DIV
+CLASS="formalpara"
+><P
+><B
+>blockdev. </B
+>
+Fetches the sector size, the number of sectors and read ahead status
+of a block device (typically a disk). Can also be used to flush buffers
+and reread the partition table. See <B
+CLASS="command"
+>man blockdev</B
+>.
+</P
+></DIV
+><DIV
+CLASS="formalpara"
+><P
+><B
+>sg_dd. </B
+>
+This command is part of the sg_utils package (see 
+<A
+HREF="refs.html#W4"
+>W4</A
+>) and is another variant of the
+<B
+CLASS="command"
+>dd</B
+> command in which either the input and/or
+output file is a sg or a raw device. The block size argument ("bs") must
+match that of the physical device in question. The "skip" and "seek" arguments
+can be up to 2**31 - 1 on a 32 bit architecture allowing 1TB disks to be
+accessed (2G * 512). The Linux system command llseek() is used to seek with
+a 64 bit file read/write offset. The <B
+CLASS="command"
+>lmdd</B
+> does not
+handle the &#62; 2GB case and the <B
+CLASS="command"
+>dd</B
+> command gets creative
+with multiple relative seeks. <B
+CLASS="command"
+>sg_dd</B
+> has
+a "bpt" (blocks per transfer) argument that controls the number of blocks
+read or written in each IO transaction.
+</P
+></DIV
+><P
+>&#13;There are other programs in the sg_utils package to scan the SCSI bus
+(<B
+CLASS="command"
+>sg_scan</B
+> and <B
+CLASS="command"
+>sg_map</B
+>), to measure
+SCSI bus throughput (<B
+CLASS="command"
+>sg_rbuf</B
+> and <B
+CLASS="command"
+>sg_turs
+</B
+>), show data from the SCSI inquiry command
+(<B
+CLASS="command"
+>sg_inq</B
+>) and spin up (or down) media
+(<B
+CLASS="command"
+>sg_start</B
+>).
+</P
+><DIV
+CLASS="formalpara"
+><P
+><B
+>dd_rescue + scsiinfo. </B
+>
+This dd variant is designed to rescue damaged media such as SCSI (or IDE)
+disks and CDROMs (see <A
+HREF="refs.html#W6"
+>W6</A
+>). The <B
+CLASS="command"
+>&#13;scsiinfo</B
+> utility for displaying and changing mode page
+information is also at that site.
+</P
+></DIV
+><DIV
+CLASS="formalpara"
+><P
+><B
+>sard. </B
+>
+This utility is modelled on System V Release 4's <B
+CLASS="command"
+>sar -d</B
+> for
+producing IO statistics for mounted devices and partitions. It has been
+developed by Stephen Tweedie and includes the sard utility and a required
+kernel patch which expands the output of <TT
+CLASS="filename"
+>/proc/partitions</TT
+>
+. It can be found at 
+<A
+HREF="ftp://ftp.uk.linux.org/pub/linux/sct/fs/profiling"
+TARGET="_top"
+>&#13;ftp.uk.linux.org/pub/linux/sct/fs/profiling</A
+>. It collects statistics
+at a relatively low level (e.g. SCSI mid level) compared to programs
+like <B
+CLASS="command"
+>vmstat</B
+> (see "man vmstat").
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="trouble.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="compileopt.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Troubleshooting</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Compile options and System calls including ioctls</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

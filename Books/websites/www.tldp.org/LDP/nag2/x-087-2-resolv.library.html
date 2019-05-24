@@ -1,0 +1,1211 @@
+<HTML
+><HEAD
+><TITLE
+>The Resolver Library</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Name Service and Resolver Configuration"
+HREF="x-087-2-resolv.html"><LINK
+REL="PREVIOUS"
+TITLE="Name Service and Resolver Configuration"
+HREF="x-087-2-resolv.html"><LINK
+REL="NEXT"
+TITLE="How DNS Works"
+HREF="x-087-2-resolv.howdnsworks.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-resolv.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Name Service and Resolver Configuration</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-resolv.howdnsworks.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-RESOLV.LIBRARY"
+>6.1. The Resolver Library</A
+></H1
+><P
+>The term <I
+CLASS="EMPHASIS"
+>resolver</I
+> refers not to a special
+application, but to the resolver library. This is a collection of
+functions that can be found in the standard C library. The central
+routines are <TT
+CLASS="FUNCTION"
+>gethostbyname(2)</TT
+> and
+<TT
+CLASS="FUNCTION"
+>gethostbyaddr&#8201;(2)</TT
+>, which look up all IP addresses
+associated with a host name, and vice versa. They may be configured to
+simply look up the information in <TT
+CLASS="FILENAME"
+>hosts</TT
+>, to query
+a number of DNS name servers, or to use the <I
+CLASS="EMPHASIS"
+>hosts</I
+>
+database of Network Information Service (NIS).</P
+><P
+>The resolver functions read configuration files when they are
+invoked. From these configuration files, they determine what databases
+to query, in which order, and other details relevant to how you've
+configured your environment.  The older Linux standard library, libc,
+used <TT
+CLASS="FILENAME"
+>/etc/host.conf</TT
+> as its master configuration
+file, but Version 2 of the GNU standard library, glibc, uses
+<TT
+CLASS="FILENAME"
+>/etc/nsswitch.conf</TT
+>. We'll describe each in turn,
+since both are commonly used.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-RESOLV.HOST-CONF"
+>6.1.1. The host.conf File</A
+></H2
+><P
+>The <TT
+CLASS="FILENAME"
+>/etc/host.conf</TT
+> tells the older Linux standard library
+resolver functions which services to use, and in what order.</P
+><P
+>Options in <TT
+CLASS="FILENAME"
+>host.conf</TT
+> must appear on separate lines.
+Fields may be separated by white space (spaces or tabs). A hash sign
+(<SPAN
+CLASS="SYSTEMITEM"
+>#</SPAN
+>) introduces a comment that extends
+to the next newline. The following options are available:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>order</SPAN
+></DT
+><DD
+><P
+> This
+option determines the order in which the resolving services are
+tried. Valid options are <SPAN
+CLASS="SYSTEMITEM"
+>bind</SPAN
+>
+for querying the name server, <TT
+CLASS="FILENAME"
+>hosts</TT
+> for lookups
+in <TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+>, and <SPAN
+CLASS="SYSTEMITEM"
+>nis</SPAN
+> for NIS lookups. Any or all of them
+may be specified. The order in which they appear on the line
+determines the order in which the respective services are tried.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>multi</SPAN
+></DT
+><DD
+><P
+><TT
+CLASS="LITERAL"
+>multi</TT
+> takes <SPAN
+CLASS="SYSTEMITEM"
+>on</SPAN
+> or
+<SPAN
+CLASS="SYSTEMITEM"
+>off</SPAN
+> as options. This determines if a
+host in <TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+> is allowed to have several IP
+addresses, which is usually referred to as being &#8220;multi-homed.&#8221;
+The default is off. This flag has no effect on DNS or NIS queries.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>nospoof</SPAN
+></DT
+><DD
+><P
+>&#13;
+
+
+As we'll explain in the section <A
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-RESOLV.DNS.IN-ADDR"
+>Section 6.2.4</A
+>,&#8221; DNS allows you to find the
+hostname belonging to an IP address by using the <SPAN
+CLASS="SYSTEMITEM"
+>in-addr.arpa</SPAN
+> domain. Attempts by name
+servers to supply a false hostname are called
+<I
+CLASS="EMPHASIS"
+>spoofing</I
+>. To guard against this, the resolver can
+be configured to check whether the original IP address is in fact
+associated with the obtained hostname. If not, the name is rejected
+and an error is returned. This behavior is turned on by setting
+<SPAN
+CLASS="SYSTEMITEM"
+>nospoof</SPAN
+> on.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>alert</SPAN
+></DT
+><DD
+><P
+>This option takes <SPAN
+CLASS="SYSTEMITEM"
+>on</SPAN
+> or
+<SPAN
+CLASS="SYSTEMITEM"
+>off</SPAN
+> as arguments. If it is turned on,
+any spoof attempts will cause the resolver to log a message to the
+<B
+CLASS="COMMAND"
+>syslog</B
+> facility.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>trim</SPAN
+></DT
+><DD
+><P
+>This option takes an argument specifying a domain name that will be
+removed from hostnames before lookup. This is useful for
+<TT
+CLASS="FILENAME"
+>hosts</TT
+> entries, for which you might only want to
+specify hostnames without a local domain. If you specify your local
+domain name here, it will be removed from a lookup of a host with the
+local domain name appended, thus allowing the lookup in
+<TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+> to succeed. The domain name you add
+must end with the (.) character (e.g.,
+:<TT
+CLASS="LITERAL"
+>linux.org.au.</TT
+>) if <TT
+CLASS="LITERAL"
+>trim</TT
+> is to
+work correctly.</P
+><P
+><SPAN
+CLASS="SYSTEMITEM"
+>trim</SPAN
+> options accumulate; you
+can consider your host as being local to several domains.</P
+></DD
+></DL
+></DIV
+></P
+><P
+>A sample file for <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> is shown in
+<A
+HREF="x-087-2-resolv.library.html#X-087-2-DNS-HOST.CONF.FILE"
+>Example 6-1</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-DNS-HOST.CONF.FILE"
+></A
+><P
+><B
+>Example 6-1. Sample host.conf File</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/host.conf
+# We have named running, but no NIS (yet)
+order   bind,hosts
+# Allow multiple addrs
+multi   on
+# Guard against spoof attempts
+nospoof on
+# Trim local domain (not really necessary).
+trim    vbrew.com.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-RESOLV.ENVIRON"
+>6.1.1.1. Resolver environment variables</A
+></H3
+><P
+>The settings from <TT
+CLASS="FILENAME"
+>host.conf</TT
+> may be overridden using a
+number of environment variables:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>RESOLV_HOST_CONF</SPAN
+></DT
+><DD
+><P
+>&#13;This variable specifies a file to be read instead of
+<TT
+CLASS="FILENAME"
+>/etc/host.conf</TT
+>.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>RESOLV_SERV_ORDER</SPAN
+></DT
+><DD
+><P
+>&#13;This variable overrides the <SPAN
+CLASS="SYSTEMITEM"
+>order</SPAN
+> option given in
+<TT
+CLASS="FILENAME"
+>host.conf</TT
+>. Services are given as <SPAN
+CLASS="SYSTEMITEM"
+>hosts</SPAN
+>, <SPAN
+CLASS="SYSTEMITEM"
+>bind</SPAN
+>, and <SPAN
+CLASS="SYSTEMITEM"
+>nis</SPAN
+>, separated by a space, comma, colon,
+or semicolon.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>RESOLV_SPOOF_CHECK</SPAN
+></DT
+><DD
+><P
+>&#13;This variable determines the measures taken against spoofing. It is
+completely disabled by <SPAN
+CLASS="SYSTEMITEM"
+>off</SPAN
+>.
+The values <SPAN
+CLASS="SYSTEMITEM"
+>warn</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>warn off</SPAN
+> enable spoof
+checking by turning logging on and off, respectively. A value of
+<SPAN
+CLASS="SYSTEMITEM"
+>*</SPAN
+> turns on spoof checks, but
+leaves the logging facility as defined in
+<TT
+CLASS="FILENAME"
+>host.conf</TT
+>.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>RESOLV_MULTI</SPAN
+></DT
+><DD
+><P
+> 
+This variable uses a value of <SPAN
+CLASS="SYSTEMITEM"
+>on</SPAN
+> or <SPAN
+CLASS="SYSTEMITEM"
+>off</SPAN
+> to override the <SPAN
+CLASS="SYSTEMITEM"
+>multi</SPAN
+> options from
+<TT
+CLASS="FILENAME"
+>host.conf</TT
+>.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>RESOLV_OVERRIDE_TRIM_DOMAINS</SPAN
+></DT
+><DD
+><P
+> 
+This variable specifies a list of trim domains that override those
+given in <TT
+CLASS="FILENAME"
+>host.conf</TT
+>.  Trim domains were explained
+earlier when we discussed the <SPAN
+CLASS="SYSTEMITEM"
+>trim</SPAN
+> keyword.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>RESOLV_ADD_TRIM_DOMAINS</SPAN
+></DT
+><DD
+><P
+> 
+This variable specifies a list of trim domains that are added to those
+given in <TT
+CLASS="FILENAME"
+>host.conf</TT
+>.</P
+></DD
+></DL
+></DIV
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-RESOLV.NSSWITCH-CONF"
+>6.1.2. The nsswitch.conf File</A
+></H2
+><P
+>Version 2 of the GNU standard library includes a more powerful and
+flexible replacement for the older <TT
+CLASS="FILENAME"
+>host.conf</TT
+>
+mechanism. The concept of the name service has been extended to
+include a variety of different types of information. Configuration
+options for all of the different functions that query these databases
+have been brought back into a single configuration file; the
+<TT
+CLASS="FILENAME"
+>nsswitch.conf</TT
+> file.</P
+><P
+>The <TT
+CLASS="FILENAME"
+>nsswitch.conf</TT
+> file allows the system
+administrator to configure a wide variety of different
+databases. We'll limit our discussion to options that relate to host
+and network IP address resolution. You can easily find more
+information about the other features by reading the GNU standard
+library documentation.</P
+><P
+>Options in <TT
+CLASS="FILENAME"
+>nsswitch.conf</TT
+> must appear on separate
+lines.  Fields may be separated by whitespace (spaces or tabs). A hash
+sign (<SPAN
+CLASS="SYSTEMITEM"
+>#</SPAN
+>) introduces a comment
+that extends to the next newline. Each line describes a particular
+service; hostname resolution is one of these. The first field in each
+line is the name of the database, ending with a colon. The database
+name associated with host address resolution is <SPAN
+CLASS="SYSTEMITEM"
+>hosts</SPAN
+>. A related database is <SPAN
+CLASS="SYSTEMITEM"
+>networks</SPAN
+>, which is used for resolution of
+network names into network addresses. The remainder of each line
+stores options that determine the way lookups for that database
+are performed.</P
+><P
+>The following options are available:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>dns</SPAN
+></DT
+><DD
+><P
+>&#13;Use the Domain Name System (DNS) service to resolve the address. This makes
+sense only for host address resolution, not network address
+resolution. This mechanism uses the
+<TT
+CLASS="FILENAME"
+>/etc/resolv.conf</TT
+> file that we'll describe later
+in the chapter. </P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>files</SPAN
+></DT
+><DD
+><P
+>Search a local file for the host or network name and its corresponding address.
+This option uses the traditional <TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+> and
+<TT
+CLASS="FILENAME"
+>/etc/network</TT
+> files.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>nis</SPAN
+> or <SPAN
+CLASS="SYSTEMITEM"
+>nisplus</SPAN
+></DT
+><DD
+><P
+>&#13;Use the Network Information System (NIS) to resolve the host or
+network address.  NIS and NIS+ are discussed in detail in <A
+HREF="x-087-2-nis.html"
+>Chapter 13</A
+>.</P
+></DD
+></DL
+></DIV
+></P
+><P
+>The order in which the services to be queried are listed determines the
+order in which they are queried when attempting to resolve a name.
+The query-order list is in the service description in the
+<TT
+CLASS="FILENAME"
+>/etc/nsswitch.conf</TT
+> file. The services are queried
+from left to right and by default searching stops when a resolution is
+successful.</P
+><P
+>A simple example of host and network database specification that would
+mimic our configuration using the older libc standard library is shown
+in <A
+HREF="x-087-2-resolv.library.html#X-087-2-DNS-NSSWITCH.CONF.FILE"
+>Example 6-2</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-DNS-NSSWITCH.CONF.FILE"
+></A
+><P
+><B
+>Example 6-2. Sample nsswitch.conf File</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/nsswitch.conf
+#
+# Example configuration of GNU Name Service Switch functionality.
+# Information about this file is available in the `libc6-doc' package.
+
+hosts:          dns files
+networks:       files&#13;</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>This example causes the system to look up hosts first in the Domain
+Name System, and the <TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+> file, if that
+can't find them. Network name lookups would be attempted using only
+the <TT
+CLASS="FILENAME"
+>/etc/networks</TT
+> file.</P
+><P
+> You are able to control the lookup
+behavior more precisely using &#8220;action items&#8221; that describe
+what action to take given the result of the previous lookup
+attempt. Action items appear between service specifications, and are
+enclosed within square brackets, <SPAN
+CLASS="SYSTEMITEM"
+>[
+]</SPAN
+>. The general syntax of the action statement is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>[ [!] <TT
+CLASS="REPLACEABLE"
+><I
+>status</I
+></TT
+> = <TT
+CLASS="REPLACEABLE"
+><I
+>action</I
+></TT
+> ... ]</PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>There are two possible actions:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>return</SPAN
+></DT
+><DD
+><P
+>Controls returns to the program that attempted the name resolution. If a lookup attempt was successful, the resolver will return with the details,
+otherwise it will return a zero result.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>continue</SPAN
+></DT
+><DD
+><P
+>The resolver will move on to the next service in the list and attempt
+resolution using it.</P
+></DD
+></DL
+></DIV
+>
+
+The optional (!) character specifies that the status value should
+be inverted before testing; that is, it means &#8220;not.&#8221;</P
+><P
+>The available status values on which we can act are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>success</SPAN
+></DT
+><DD
+><P
+>The requested entry was found without error. The default action for
+this status is <SPAN
+CLASS="SYSTEMITEM"
+>return</SPAN
+>.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>notfound</SPAN
+></DT
+><DD
+><P
+>There was no error in the lookup, but the target host or network could not be
+found. The default action for this status is
+<SPAN
+CLASS="SYSTEMITEM"
+>continue</SPAN
+>.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>unavail</SPAN
+></DT
+><DD
+><P
+>The service queried was unavailable. This could mean that the
+<TT
+CLASS="FILENAME"
+>hosts</TT
+> or <TT
+CLASS="FILENAME"
+>networks</TT
+> file was unreadable
+for the <SPAN
+CLASS="SYSTEMITEM"
+>files</SPAN
+> service or that a
+name server or NIS server did not respond for the
+<SPAN
+CLASS="SYSTEMITEM"
+>dns</SPAN
+> or
+<SPAN
+CLASS="SYSTEMITEM"
+>nis</SPAN
+> services.
+The default action for this status is
+<SPAN
+CLASS="SYSTEMITEM"
+>continue</SPAN
+>.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>tryagain</SPAN
+></DT
+><DD
+><P
+>This status means the service is temporarily unavailable. For the
+<SPAN
+CLASS="SYSTEMITEM"
+>files</SPAN
+> files service, this would
+usually indicate that the relevant file was locked by some
+process. For other services, it may mean the server was temporarily
+unable to accept connections. The default action for this status is
+<SPAN
+CLASS="SYSTEMITEM"
+>continue</SPAN
+>.</P
+></DD
+></DL
+></DIV
+></P
+><P
+>A simple example of how you might use this mechanism is shown in
+<A
+HREF="x-087-2-resolv.library.html#X-087-2-DNS-NSSWITCH.CONF.FILE.EXTENDED"
+>Example 6-3</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-DNS-NSSWITCH.CONF.FILE.EXTENDED"
+></A
+><P
+><B
+>Example 6-3. Sample nsswitch.conf File Using an Action Statement</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/nsswitch.conf
+#
+# Example configuration of GNU Name Service Switch functionality.
+# Information about this file is available in the `libc6-doc' package.
+
+hosts:          dns [!UNAVAIL=return] files
+networks:       files&#13;</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>This example attempts host resolution using the Domain Name Service
+system. If the return status is anything other than unavailable, the
+resolver returns whatever it has found. If, and only if, the DNS
+lookup attempt returns an unavailable status, the resolver attempts to
+use the local <TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+>. This means that we
+should use the <TT
+CLASS="FILENAME"
+>hosts</TT
+> file only if our name server
+is unavailable for some reason.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-RESOLV.RESOLV"
+>6.1.3. Configuring Name Server Lookups Using resolv.conf</A
+></H2
+><P
+>When configuring the resolver library to use the BIND name service for host
+lookups, you also have to tell it which name servers to use. There is a
+separate file for this called <TT
+CLASS="FILENAME"
+>resolv.conf</TT
+>. If this file
+does not exist or is empty, the resolver assumes the name server is on your
+local host.</P
+><P
+>To run a name server on your local host, you have to set it up separately,
+as will be explained in the following section. If you are on a local network
+and have the opportunity to use an existing name server, this should always
+be preferred. If you use a dialup IP connection to the Internet, you
+would normally specify the name server of your service provider in the
+<TT
+CLASS="FILENAME"
+>resolv.conf</TT
+> file.</P
+><P
+>The most important option in <TT
+CLASS="FILENAME"
+>resolv.conf</TT
+> is
+<SPAN
+CLASS="SYSTEMITEM"
+>name server</SPAN
+>, which gives the IP address
+of a name server to use. If you specify several name servers by giving the
+<SPAN
+CLASS="SYSTEMITEM"
+>name server</SPAN
+> option several times, they
+are tried in the order given. You should therefore put the most reliable
+server first. The current implementation allows you to have up to three
+<SPAN
+CLASS="SYSTEMITEM"
+>name server</SPAN
+> statements in
+<TT
+CLASS="FILENAME"
+>resolv.conf</TT
+>. If no
+<SPAN
+CLASS="SYSTEMITEM"
+>name server</SPAN
+> option is given, the resolver
+attempts to connect to the name server on the local host.</P
+><P
+>&#13;
+Two other options, <SPAN
+CLASS="SYSTEMITEM"
+>domain</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>search</SPAN
+>, let you use shortcut names
+for hosts in your local domain. Usually, when just telnetting to another
+host in your local domain, you don't want to type in the fully qualified
+hostname, but use a name like <SPAN
+CLASS="SYSTEMITEM"
+>gauss</SPAN
+> 
+on the command line and have the resolver tack on the
+<SPAN
+CLASS="SYSTEMITEM"
+>mathematics.groucho.edu</SPAN
+> part.</P
+><P
+>This is just the <SPAN
+CLASS="SYSTEMITEM"
+>domain</SPAN
+>
+statement's purpose. It lets you specify a default domain name to be
+appended when DNS fails to look up a hostname. For instance, when
+given the name <SPAN
+CLASS="SYSTEMITEM"
+>gauss</SPAN
+>, the
+resolver fails to find <SPAN
+CLASS="SYSTEMITEM"
+>gauss.</SPAN
+> in DNS, because there is no such
+top-level domain. When given <SPAN
+CLASS="SYSTEMITEM"
+>mathematics.groucho.edu</SPAN
+> as a default
+domain, the resolver repeats the query for <SPAN
+CLASS="SYSTEMITEM"
+>gauss</SPAN
+> with the default domain appended,
+this time succeeding.</P
+><P
+>That's just fine, you may think, but as soon you get out of the Math
+department's domain, you're back to those fully qualified domain names.
+Of course, you would also want to have shorthands like
+<SPAN
+CLASS="SYSTEMITEM"
+>quark.physics</SPAN
+> for hosts in the
+Physics department's domain.</P
+><P
+>This is when the <I
+CLASS="EMPHASIS"
+>search list</I
+> comes in.  A search
+list can be specified using the <SPAN
+CLASS="SYSTEMITEM"
+>search</SPAN
+> option, which is a generalization
+of the <SPAN
+CLASS="SYSTEMITEM"
+>domain</SPAN
+> statement.
+Where the latter gives a single default domain, the former specifies a
+whole list of them, each to be tried in turn until a lookup
+succeeds. This list must be separated by blanks or tabs.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>search</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>domain</SPAN
+> statements are mutually exclusive
+and may not appear more than once. If neither option is given, the resolver
+will try to guess the default domain from the local hostname using the
+<TT
+CLASS="FUNCTION"
+>getdomainname(2)</TT
+> system call. If the local hostname
+doesn't have a domain part, the default domain will be assumed to be the
+root domain.</P
+><P
+>If you decide to put a <SPAN
+CLASS="SYSTEMITEM"
+>search</SPAN
+> statement
+into <TT
+CLASS="FILENAME"
+>resolv.conf</TT
+>, you should be careful about what
+domains you add to this list. Resolver libraries prior to BIND 4.9 used to
+construct a default search list from the domain name when no search list was
+given. This default list was made up of the default domain itself, plus all
+of its parent domains up to the root. This caused some problems because DNS
+requests wound up at name servers that were never meant to see them.</P
+><P
+>Assume you're at the Virtual Brewery and want to log in to <SPAN
+CLASS="SYSTEMITEM"
+>foot.groucho.edu</SPAN
+>. By a slip
+of your fingers, you mistype <SPAN
+CLASS="SYSTEMITEM"
+>foot</SPAN
+> as <SPAN
+CLASS="SYSTEMITEM"
+>foo</SPAN
+>, which doesn't exist. GMU's name
+server will therefore tell you that it knows no such host. With the
+old-style search list, the resolver would now go on trying the name
+with <SPAN
+CLASS="SYSTEMITEM"
+>vbrew.com</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>com</SPAN
+> appended. The latter is
+problematic because <SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu.com</SPAN
+> might actually be a valid
+domain name.  Their name server might then even find <SPAN
+CLASS="SYSTEMITEM"
+>foo</SPAN
+> in their domain, pointing you to one
+of their hosts&#8212;which clearly was not intended.</P
+><P
+>For some applications, these bogus host lookups can be a security problem.
+Therefore, you should usually limit the domains on your search list to your
+local organization, or something comparable. At the Mathematics department of
+Groucho Marx University, the search list would commonly be set to
+<SPAN
+CLASS="SYSTEMITEM"
+>maths.groucho.edu</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+>.</P
+><P
+>If default domains sound confusing to you, consider this sample
+<TT
+CLASS="FILENAME"
+>resolv.conf</TT
+> file for the Virtual Brewery:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/resolv.conf
+# Our domain
+domain         vbrew.com
+#
+# We use vlager as central name server:
+name server     172.16.1.1</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>When resolving the name <SPAN
+CLASS="SYSTEMITEM"
+>vale</SPAN
+>, the
+resolver looks up <SPAN
+CLASS="SYSTEMITEM"
+>vale</SPAN
+> and,
+failing this, <SPAN
+CLASS="SYSTEMITEM"
+>vale.vbrew.com</SPAN
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-RESOLV.ROBUSTNESS"
+>6.1.4. Resolver Robustness</A
+></H2
+><P
+>When running a LAN inside a larger network, you definitely should use
+central name servers if they are available. The name servers develop
+rich caches that speed up repeat queries, since all queries are
+forwarded to them. However, this scheme has a drawback: when a fire
+destroyed the backbone cable at Olaf's university, no more work was
+possible on his department's LAN because the resolver could no longer
+reach any of the name servers. This situation caused difficulties with
+most network services, such as X terminal logins and printing.</P
+><P
+>Although it is not very common for campus backbones to go down in flames,
+one might want to take precautions against cases like this.</P
+><P
+>One option is to set up a local name server that resolves hostnames from your
+local domain and forwards all queries for other hostnames to the main servers.
+Of course, this is applicable only if you are running your own domain.</P
+><P
+>Alternatively, you can maintain a backup host table for your domain or LAN in
+<TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+>. This is very simple to do. You simply ensure
+that the resolver library queries DNS first, and the hosts file next. In an
+<TT
+CLASS="FILENAME"
+>/etc/host.conf</TT
+> file you'd use
+&#8220;<SPAN
+CLASS="SYSTEMITEM"
+>order bind,hosts</SPAN
+>&#8221;,
+and in an <TT
+CLASS="FILENAME"
+>/etc/nsswitch.conf</TT
+> file you'd use
+&#8220;<SPAN
+CLASS="SYSTEMITEM"
+>hosts: dns files</SPAN
+>&#8221;,
+to make the resolver fall back to the hosts file if the central name server is
+unreachable.
+
+ 
+ </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-resolv.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-resolv.howdnsworks.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Name Service and Resolver Configuration</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-resolv.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>How DNS Works</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

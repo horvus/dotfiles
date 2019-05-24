@@ -1,0 +1,135 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Oracle Database HOWTO: Automatic Startup and Shutdown</TITLE>
+ <LINK HREF="Oracle-7-HOWTO-7.html" REL=next>
+ <LINK HREF="Oracle-7-HOWTO-5.html" REL=previous>
+ <LINK HREF="Oracle-7-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Oracle-7-HOWTO-7.html">Next</A>
+<A HREF="Oracle-7-HOWTO-5.html">Previous</A>
+<A HREF="Oracle-7-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Automatic Startup and Shutdown</A></H2>
+
+<H2><A NAME="ss6.1">6.1 <CODE>dbstart</CODE> &amp; <CODE>dbstop</CODE></A>
+</H2>
+
+<P>The automatic startup and shutdown of the Oracle database can be achieved (in 7.3.3.0.0) with the files <CODE>dbstart</CODE> and <CODE>dbshut</CODE> both provided by Oracle.  These files rely on the existance of the file <CODE>/etc/oratab</CODE> to work (although by altering the <CODE>dbshut</CODE> and <CODE>dbstart</CODE> files this can be moved). 
+<P>The format of the <CODE>/etc/oratab</CODE> file is as follows:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+SID:ORACLE_HOME:AUTO
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>An example:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+orcl:/home/oracle/7.3.3.0.0:Y
+leaveup:/home/oracle/7.3.2.1.0:N
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<H2><A NAME="ss6.2">6.2 <CODE>init.d</CODE> &amp; <CODE>rc.d</CODE></A>
+</H2>
+
+<P>To start and stop the database when the machine comes up and goes down by modifying the startup routines for the Linux machine.  This is quite easy, although I should point out here that this may change depending on which flavour of Linux (slackware, debian, redhat, etc).  I will show examples which work for Redhat Linux 5.0.  To modify these for your own flavour of Linux, please see your Linux documentation sets.  (Although it should hold true for any Sys V type UNIX).
+<P>Firstly, we need to create the script which will run <CODE>dbshut</CODE> and <CODE>dbstart</CODE> in the <CODE>/etc/rc.d/init.d</CODE> directory.  Create the following file as <CODE>/etc/rc.d/init.d/oracle</CODE>:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+#
+# /etc/rc.d/init.d/oracle
+# Description: Starts and stops the Oracle database and listeners
+# See how we were called.
+case "$1" in
+  start)
+        echo -n "Starting Oracle Databases: "
+        echo "----------------------------------------------------" >> /var/log/oracle
+        date +"! %T %a %D : Starting Oracle Databases as part of system up." >> /var/log/oracle
+        echo "----------------------------------------------------" >> /var/log/oracle
+        su - oracle -c dbstart >> /var/log/oracle
+        echo "Done."
+        echo -n "Starting Oracle Listeners: "
+        su - oracle -c "lsnrctl start" >> /var/log/oracle
+        echo "Done."
+        echo ""
+        echo "----------------------------------------------------" >> /var/log/oracle
+        date +"! %T %a %D : Finished." >> /var/log/oracle
+        echo "----------------------------------------------------" >> /var/log/oracle
+        touch /var/lock/subsys/oracle
+        ;;
+  stop)
+        echo -n "Shutting Down Oracle Listeners: "
+        echo "----------------------------------------------------" >> /var/log/oracle
+        date +"! %T %a %D : Shutting Down Oracle Databases as part of system down." >> /var/log/oracle
+        echo "----------------------------------------------------" >> /var/log/oracle
+        su - oracle -c "lsnrctl stop" >> /var/log/oracle
+        echo "Done."
+        rm -f /var/lock/subsys/oracle
+        echo -n "Shutting Down Oracle Databases: "
+        su - oracle -c dbshut >> /var/log/oracle
+        echo "Done."
+        echo ""
+        echo "----------------------------------------------------" >> /var/log/oracle
+        date +"! %T %a %D : Finished." >> /var/log/oracle
+        echo "----------------------------------------------------" >> /var/log/oracle
+        ;;
+  restart)
+        echo -n "Restarting Oracle Databases: "
+        echo "----------------------------------------------------" >> /var/log/oracle
+        date +"! %T %a %D : Restarting Oracle Databases as part of system up." >> /var/log/oracle
+        echo "----------------------------------------------------" >> /var/log/oracle
+        su - oracle -c dbstop >> /var/log/oracle
+        su - oracle -c dbstart >> /var/log/oracle
+        echo "Done."
+        echo -n "Restarting Oracle Listeners: "
+        su - oracle -c "lsnrctl stop" >> /var/log/oracle
+        su - oracle -c "lsnrctl start" >> /var/log/oracle
+        echo "Done."
+        echo ""
+        echo "----------------------------------------------------" >> /var/log/oracle
+        date +"! %T %a %D : Finished." >> /var/log/oracle
+        echo "----------------------------------------------------" >> /var/log/oracle
+        touch /var/lock/subsys/oracle
+        ;;
+  *)
+        echo "Usage: oracle {start|stop|restart}"
+        exit 1
+esac
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>It is worth checking that this file actually correctly stops and starts the databases for your system.  Check the log file, <CODE>/var/log/oracle</CODE> for error messages.
+<P>Once this script is working we need to create start and kill symbolic links in the appropriate runlevel directories <CODE>/etc/rc.d/rcX.d</CODE>.
+<P>The following commands will ensure that the databases will come up in runlevels 2,3 and 4:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+$ ln -s ../init.d/oracle /etc/rc.d/rc2.d/S99oracle
+$ ln -s ../init.d/oracle /etc/rc.d/rc3.d/S99oracle
+$ ln -s ../init.d/oracle /etc/rc.d/rc4.d/S99oracle
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>To stop the databases on reboot or restart we need the following links:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+$ ln -s ../init.d/oracle /etc/rc.d/rc0.d/K01oracle          # Halting
+$ ln -s ../init.d/oracle /etc/rc.d/rc6.d/K01oracle          # Rebooting
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<HR>
+<A HREF="Oracle-7-HOWTO-7.html">Next</A>
+<A HREF="Oracle-7-HOWTO-5.html">Previous</A>
+<A HREF="Oracle-7-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

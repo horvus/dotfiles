@@ -1,0 +1,269 @@
+<HTML
+><HEAD
+><TITLE
+>Inside Speech Recognition</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Speech Recognition HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Speech Recognition Software"
+HREF="software.html"><LINK
+REL="NEXT"
+TITLE="Publications"
+HREF="publications.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Speech Recognition HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="software.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="publications.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INSIDE">6. Inside Speech Recognition</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="RECOGNIZERS">6.1. How Recognizers Work</H2
+><P
+> 
+Recognition systems can be broken down into two main types.  Pattern
+Recognition systems compare patterns to known/trained patterns to
+determine a match.  Acoustic Phonetic systems use knowledge of the
+human body (speech production, and hearing) to compare speech features
+(phonetics such as vowel sounds).  Most modern systems focus on the
+pattern recognition approach because it combines nicely with current
+computing techniques and tends to have higher accuracy.</P
+><P
+>Most recognizers can be broken down into the following steps:</P
+><P
+>    <P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>        Audio recording and Utterance detection
+        </P
+></LI
+><LI
+><P
+>        Pre-Filtering (pre-emphasis, normalization, banding, etc.)
+        </P
+></LI
+><LI
+><P
+>        Framing and Windowing  (chopping the data into a usable format)
+        </P
+></LI
+><LI
+><P
+>        Filtering (further filtering of each window/frame/freq. band)
+        </P
+></LI
+><LI
+><P
+>        Comparison and Matching (recognizing the utterance)
+        </P
+></LI
+><LI
+><P
+>        Action (Perform function associated with the recognized pattern)
+        </P
+></LI
+></OL
+></P
+><P
+>        
+Although each step seems simple, each one can involve a multitude of
+different (and sometimes completely opposite) techniques. </P
+><P
+>(1) Audio/Utterance Recording: can be accomplished in a number of ways.  
+Starting points can be found by comparing ambient audio levels (acoustic
+energy in some cases) with the sample just recorded.  Endpoint detection
+is harder because speakers tend to leave "artifacts" including 
+breathing/sighing,teeth chatters, and echoes. </P
+><P
+>(2) Pre-Filtering: is accomplished in a variety of ways, depending on 
+other features of the recognition system.  The most common methods are 
+the "Bank-of-Filters" method which utilizes a series of audio filters to
+prepare the sample, and the Linear Predictive Coding method which uses 
+a prediction function to calculate differences (errors).  Different
+forms of spectral analysis are also used.</P
+><P
+>(3) Framing/Windowing involves separating the sample data into 
+specific sizes.  This is often rolled into step 2 or step 4.  This step
+also involves preparing the sample boundaries for analysis (removing 
+edge clicks, etc.)</P
+><P
+>(4) Additional Filtering is not always present.  It is the final 
+preparation for each window before comparison and matching.  Often this
+consists of time alignment and normalization.</P
+><P
+>There are a huge number of techniques available for (5), Comparison 
+and Matching.  Most involve comparing the current window with known 
+samples.  There are methods that use Hidden Markov Models (HMM), 
+frequency analysis, differential analysis, linear algebra 
+techniques/shortcuts, spectral distortion,  and time distortion methods.
+All these methods are used to generate a probability and accuracy match.</P
+><P
+>(6) Actions can be just about anything the developer wants. *GRIN*</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DIGITALAUDIO">6.2. Digital Audio Basics</H2
+><P
+>Audio is inherently an analog phenomenon.  Recording a digital sample
+is done by converting the analog signal from the microphone to an 
+digital signal through the A/D converter in the sound card.  When a
+microphone is operating, sound waves vibrate the magnetic element in
+the microphone, causing an electrical current to the sound card (think 
+of a speaker working in reverse).  Basically, the A/D converter records
+the value of the electrical voltage at specific intervals.</P
+><P
+>There are two important factors during this process.  First is the
+"sample rate", or how often to record the voltage values.  Second, is
+the "bits per sample", or how accurate the value is recorded.  A third
+item is the number of channels (mono or stereo), but for most ASR 
+applications mono is sufficient.  Most applications use pre-set values
+for these parameters and user's shouldn't change them unless the 
+documentation suggests it.  Developers should experiment with different
+values to determine what works best with their algorithms.</P
+><P
+>So what is a good sample rate for ASR?  Because speech is relatively
+low bandwidth (mostly between 100Hz-8kHz), 8000 samples/sec (8kHz) is 
+sufficient for most basic ASR.  But, some people prefer 16000 
+samples/sec (16kHz) because it provides more accurate high frequency
+information.  If you have the processing power, use 16kHz.  For most
+ASR applications, sampling rates higher than about 22kHz is a waste.</P
+><P
+>And what is a good value for "bits per sample"?  8 bits per sample
+will record values between 0 and 255, which means that the position
+of the microphone element is in one of 256 positions.  16 bits per
+sample divides the element position into 65536 possible values.
+Similar to sample rate, if you have enough processing power and
+memory, go with 16 bits per sample.  For comparison, an audio
+Compact Disc is encoded with 16 bits per sample at about 44kHz.</P
+><P
+>The encoding format used should be simple - linear signed or 
+unsigned.  Using a U-Law/A-Law algorithm or some other compression 
+scheme is usually not worth it, as it will cost you in computing power,
+and not gain you much.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="software.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="publications.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Speech Recognition Software</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Publications</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

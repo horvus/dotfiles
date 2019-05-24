@@ -1,0 +1,270 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Basic NTP configuration</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Keeping Time"
+HREF="keeping-time.html"><LINK
+REL="PREVIOUS"
+TITLE="NTP - Network Time Protocol"
+HREF="ntp.html"><LINK
+REL="NEXT"
+TITLE="NTP Toolkit"
+HREF="ntp-toolkit.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="ntp.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 14. Keeping Time</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="ntp-toolkit.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BASIC-NTP-CONFIG"
+></A
+>14.6. Basic NTP configuration</H1
+><P
+>The NTP program is configured using either the 
+	<TT
+CLASS="FILENAME"
+>/etc/ntp.conf	</TT
+> or <TT
+CLASS="FILENAME"
+>/etc/xntp.conf</TT
+> 
+	file depending on what distribution of Linux you have.  I won't go 
+	into too much detail on how to configure NTP.  Instead I'll just 
+	cover the basics.</P
+><P
+>An example of a basic ntp.conf file would look like:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+># --- GENERAL CONFIGURATION ---
+server  aaa.bbb.ccc.ddd
+server  127.127.1.0
+fudge   127.127.1.0 stratum 10
+
+# Drift file.
+
+driftfile /etc/ntp/drift</TT
+>
+	</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>The most basic ntp.conf file will simply list 2 servers, one 
+	that it wishes to synchronize with, and a pseudo IP address for
+	itself (in this case 127.127.1.0). The pseudo IP is used in case of 
+	network problems or if the remote NTP server goes down. NTP will 
+	synchronize against itself until the it can start synchronizing with 
+	the remote server again.  It is recommended that you list at 
+	least 2 remote servers that you can synchronize against.  One will 
+	act as a primary server and the other as a backup.</P
+><P
+>You should also list a location for a drift file.  Over time
+	NTP will "learn" the system clock's error rate and automatically 
+	adjust for it.</P
+><P
+>The restrict option can be used to provide better control and
+	security over what NTP can do, and who can effect it.  For example:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+># Prohibit general access to this service.
+restrict default ignore
+
+# Permit systems on this network to synchronize with this
+# time service. But not modify our time.
+restrict aaa.bbb.ccc.ddd nomodify
+
+# Allow the following unrestricted access to ntpd
+
+restrict aaa.bbb.ccc.ddd
+restrict 127.0.0.1</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	It is advised that you wait until you have NTP working properly before
+	adding the restrict option.  You can accidental restrict yourself from
+	synchronizing and waste time debugging why.
+	</P
+><P
+>NTP slowly corrects your systems time.  Be patient!  A simple test
+	is to change your system clock by 10 minutes before you go to bed and then
+	check it when you get up.  The time should be correct.</P
+><P
+>Many people get the idea that instead of running the NTP
+	daemon, they should just setup a <B
+CLASS="COMMAND"
+>cron</B
+> job 
+	job to periodically run the <B
+CLASS="COMMAND"
+>ntpdate</B
+> command.
+	There are 2 main disadvantages of using using this method.</P
+><P
+>The first is that <B
+CLASS="COMMAND"
+>ntpdate</B
+> does a "brute force"
+	method of changing the time.  So if your computer's time is off my 5 
+	minutes, it immediately corrects it.  In some environments, this can 
+	cause problems if time drastically changes.  For example, if you are 
+	using time sensitive security software, you can inadvertently kill
+	someones access.  The NTP daemon slowly changes the time to avoid 
+	causing this kind of disruption.</P
+><P
+>The other reason is that the NTP daemon can be configured to
+	try to learn your systems <I
+CLASS="GLOSSTERM"
+>time drift</I
+> and 
+	then automatically adjust for it.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="ntp.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="ntp-toolkit.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>NTP - Network Time Protocol</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="keeping-time.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>NTP Toolkit</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

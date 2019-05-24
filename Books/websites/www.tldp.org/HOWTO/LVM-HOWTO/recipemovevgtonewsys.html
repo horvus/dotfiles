@@ -1,0 +1,452 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Moving a volume group to another system</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Recipes"
+HREF="recipes.html"><LINK
+REL="PREVIOUS"
+TITLE="Removing an Old Disk"
+HREF="removeadisk.html"><LINK
+REL="NEXT"
+TITLE="Splitting a volume group"
+HREF="recipesplitvg.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="removeadisk.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. Recipes</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="recipesplitvg.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="recipemovevgtonewsys"
+></A
+>13.6. Moving a volume group to another system</H1
+><P
+>&#13;        It is quite easy to move a whole volume group to another system if,
+        for example, a user department acquires a new server. To do this we
+        use the vgexport and vgimport commands.
+      </P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          vgexport/vgimport is not necessary to move drives
+          from one system to another.  It is an administrative policy
+          tool to prevent access to volumes in the time it takes to
+          move them.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1325"
+></A
+>13.6.1. Unmount the file system</H2
+><P
+>&#13;          First, make sure that no users are accessing files on the active
+          volume, then unmount it
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># unmount /mnt/design/users</B
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1330"
+></A
+>13.6.2. Mark the volume group inactive</H2
+><P
+>&#13;          Marking the volume group inactive removes it from the kernel and
+          prevents any further activity on it.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgchange -an design</B
+>
+<TT
+CLASS="computeroutput"
+>vgchange -- volume group "design" successfully deactivated</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1336"
+></A
+>13.6.3. Export the volume group</H2
+><P
+>&#13;          It is now necessary to export the volume group. This prevents it
+          from being accessed on the ``old'' host system and prepares it
+          to be removed.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgexport design</B
+>
+<TT
+CLASS="computeroutput"
+>vgexport -- volume group "design" successfully exported</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          When the machine is next shut down, the disk can be unplugged
+          and then connected to it's new machine
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1342"
+></A
+>13.6.4. Import the volume group</H2
+><P
+>&#13;          When plugged into the new system it becomes /dev/sdb so an
+          initial pvscan shows:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvscan</B
+>
+<TT
+CLASS="computeroutput"
+>pvscan -- reading all physical volumes (this may take a while...)
+pvscan -- inactive PV "/dev/sdb1"  is in EXPORTED VG "design" [996 MB / 996 MB free]
+pvscan -- inactive PV "/dev/sdb2"  is in EXPORTED VG "design" [996 MB / 244 MB free]
+pvscan -- total: 2 [1.95 GB] / in use: 2 [1.95 GB] / in no VG: 0 [0]</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          We can now import the volume group (which also activates it) and
+          mount the file system.
+        </P
+><P
+>&#13;          If you are importing on an LVM 2 system, run:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgimport design</B
+>
+<TT
+CLASS="computeroutput"
+>  Volume group "vg" successfully imported</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+><P
+>&#13;          If you are importing on an LVM 1 system, add the PVs that need to be imported:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgimport design /dev/sdb1 /dev/sdb2</B
+>
+<TT
+CLASS="computeroutput"
+>vgimport -- doing automatic backup of volume group "design"
+vgimport -- volume group "design" successfully imported and activated</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1356"
+></A
+>13.6.5. Activate the volume group</H2
+><P
+>&#13;          You must activate the volume group before you can access it.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgchange -ay design</B
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1361"
+></A
+>13.6.6. Mount the file system</H2
+><P
+>&#13;          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># mkdir -p /mnt/design/users
+# mount /dev/design/users /mnt/design/users</B
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          The file system is now available for use.
+        </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="removeadisk.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="recipesplitvg.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Removing an Old Disk</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="recipes.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Splitting a volume group</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,742 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Installing and Configuring XFree-PrefBusID</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="XFree Local Multi-User HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Setting up the X servers"
+HREF="x_servers.html"><LINK
+REL="PREVIOUS"
+TITLE="Do I need a modified X server?"
+HREF="mod_x_server.html"><LINK
+REL="NEXT"
+TITLE="Creating symbolic links"
+HREF="sym_links.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>XFree Local Multi-User HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="mod_x_server.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Setting up the X servers</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sym_links.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="mod_xserver_prefbusid"
+></A
+>4.2. Installing and Configuring XFree-PrefBusID</H1
+><P
+></P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Install the modified XFree server.</P
+><P
+></P
+><UL
+><LI
+><P
+>Install an already built, but not packaged, modified X server and create the necessary symbolic links. You can get such binaries from the Backstreet Ruby home page, at <A
+HREF="http://startx.times.lv"
+TARGET="_top"
+>http://startx.times.lv</A
+>.</P
+></LI
+><LI
+><P
+>Help us (as well other people using your distribution) in building an rpm or binary for your distribution (we lack systems installed with all available distributions, so we are not able to build packages for every distribution).</P
+></LI
+><LI
+><P
+>To patch and rebuild XFree from source using the instructions on the Backstreet Ruby page. Go to the Documentation section, at <A
+HREF="http://startx.times.lv"
+TARGET="_top"
+>http://startx.times.lv</A
+> (or some of the mirrors) -&#62; Documentation -&#62; Quick XFree.</P
+></LI
+></UL
+></LI
+><LI
+><P
+>Find the BusID of your graphic cards</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>For AGP cards, something similar to "1:0:0"</P
+><P
+>For PCI cards, something similar to "0:xx:0"</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+></P
+><UL
+><LI
+><P
+>In most cases you will find the BusID already set in the device section of the XFree configuration file.</P
+><P
+>(Virtually always in case XFree is configured for Xinerama.)</P
+></LI
+><LI
+><P
+>If it is missing you can use <B
+CLASS="command"
+>lspci</B
+>, <B
+CLASS="command"
+>XFree86 -scanpci -verbose</B
+>  or other similar tools that came with your distribution.</P
+><P
+>With <B
+CLASS="command"
+>lspci</B
+> look for "VGA compatible controller"  or other similar tools that came with your distribution.<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>root@svetljo mnt]# lspci | grep "VGA compatible controller"
+00:0d.0 VGA compatible controller: nVidia Corporation NV17 [GeForce4 MX 420] (rev a3)
+01:00.0 VGA compatible controller: ATI Technologies Inc Radeon RV200 QW [Radeon 7500]
+[root@svetljo mnt]#</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>With <B
+CLASS="command"
+>XFree86 -scanpci -verbose</B
+> , or in case XFree is already running <B
+CLASS="command"
+>XFree86 :1 -scanpci -verbose</B
+> and look for your graphic cards:<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>[root@svetljo mnt]# XFree86 :1 -scanpci -verbose
+......
+(0:13:0) unknown card (0x1462/0x8852) using a nVidia Corporation NV17 [GeForce4 MX 420]
+......
+(1:0:0) unknown card (0x1002/0x0f2a) using a ATI Technologies Inc Radeon RV200 QW [Radeon 7500]</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></LI
+></UL
+></LI
+><LI
+><P
+>Configure XFree-PrefBusID. You have the following choices with the same effect:
+	      <P
+></P
+><UL
+><LI
+><P
+>Use the XFree config file option <SPAN
+CLASS="QUOTE"
+>"SingleCard"</SPAN
+> , requires as argument a boolean value(true/false), added in patch version 3</P
+><P
+>For use in multi-user environment set to true, for standard XFree behavior(single X server allowed)  to false or comment out/ delete the line.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This functionality is inlcuded the xorg-x11 packages for Mandrake and in Debian Sid XFree86 packages.</P
+></TD
+></TR
+></TABLE
+></DIV
+></LI
+><LI
+><P
+>Use the XFree config file option <SPAN
+CLASS="QUOTE"
+>"PrefBusID"</SPAN
+>  , requires as argument a valid BusID, added in patch version 2</P
+><P
+>For use in multi-user environment include the option with a valid BusID, for standard XFree behavior(single X server allowed)  comment out or delete.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This functionality is inlcuded the xorg-x11 packages for Mandrake and in Debian Sid XFree86 packages, but the option name is changed to <SPAN
+CLASS="QUOTE"
+>"IsolateDevice"</SPAN
+></P
+></TD
+></TR
+></TABLE
+></DIV
+></LI
+><LI
+><P
+>Use the XFree command line option <B
+CLASS="command"
+>-prefbusid x:x:x</B
+> , requires as argument a valid BusID, initial release of the patch</P
+><P
+>For use in multi-user environment pass the option with a valid BusID to XFree at start-up, for standard XFree behavior(single X server allowed)  don't specify the option.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This functionality is inlcuded the xorg-x11 packages for Mandrake and in Debian Sid XFree86 packages, but the option name is changed to <B
+CLASS="command"
+>-isolateDevice x:x:x</B
+></P
+></TD
+></TR
+></TABLE
+></DIV
+></LI
+></UL
+>
+	    </P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+></P
+><UL
+><LI
+><P
+>For Mandrake and Debian  users:</P
+><P
+>the XFree configuration files are normally /etc/X11/XF86Config-4 </P
+></LI
+><LI
+><P
+>For Red Hat, Gentoo, SuSE users:</P
+><P
+>the XFree configuration files are normally /etc/X11/XF86Config </P
+></LI
+></UL
+></TD
+></TR
+></TABLE
+></DIV
+><P
+></P
+><UL
+><LI
+><P
+> using the  <SPAN
+CLASS="QUOTE"
+>"SingleCard"</SPAN
+> option</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>Section "ServerLayout"
+        Identifier     "X0"
+        Screen      0  "Screen0" 0 0
+        InputDevice    "Mouse0" "CorePointer"
+        InputDevice    "Keyboard0" "CoreKeyboard"
+        Option         "SingleCard" "true"
+EndSection 
+Section "ServerLayout"
+        Identifier     "X1"
+        Screen      0  "Screen1" 0 0
+        InputDevice    "Mouse1" "CorePointer"
+        InputDevice    "Keyboard0" "CoreKeyboard"
+        Option         "SingleCard" "true"
+EndSection  </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The BusID have to be specified in the <SPAN
+CLASS="QUOTE"
+>"Device"</SPAN
+> Section of the XFree configuration file.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;Section "Device"
+    Identifier  "nv"
+    VendorName  ""
+    BoardName   ""
+    Driver      "nvidia"
+    # Clock lines
+
+    # Uncomment following option if you see a big white block
+    # instead of the cursor!
+    #    Option      "sw_cursor"
+    Option	"NoLogo" "On"
+    BusID       "PCI:0:13:0"
+EndSection
+	      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></TD
+></TR
+></TABLE
+></DIV
+></LI
+><LI
+><P
+> using the  <SPAN
+CLASS="QUOTE"
+>"PrefBusID/IsolateDevice"</SPAN
+> option (requires as argument a valid BusID)</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;Section "ServerLayout"
+        Identifier     "X0"
+        Screen      0  "Screen0" 0 0
+        InputDevice    "Mouse0" "CorePointer"
+        InputDevice    "Keyboard0" "CoreKeyboard"
+        Option "PrefBusID" "1:0:0"
+EndSection 
+Section "ServerLayout"
+        Identifier     "X1"
+        Screen      0  "Screen1" 0 0
+        InputDevice    "Mouse1" "CorePointer"
+        InputDevice    "Keyboard0" "CoreKeyboard"
+        Option "PrefBusID" "0:13:0"
+EndSection 
+	    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+> or for Debian Sid's XFree86 and Mandrake's xorg-x11 </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;Section "ServerLayout"
+        Identifier     "X0"
+        Screen      0  "Screen0" 0 0
+        InputDevice    "Mouse0" "CorePointer"
+        InputDevice    "Keyboard0" "CoreKeyboard"
+        Option "IsolateDevice" "1:0:0"
+EndSection 
+Section "ServerLayout"
+        Identifier     "X1"
+        Screen      0  "Screen1" 0 0
+        InputDevice    "Mouse1" "CorePointer"
+        InputDevice    "Keyboard0" "CoreKeyboard"
+        Option "IsolateDevice" "0:13:0"
+EndSection 
+	    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+> using the  <SPAN
+CLASS="QUOTE"
+>"-prefbusid"</SPAN
+> option at XFree start-up (requires as argument a valid BusID)</P
+><P
+> or for Debian Sid's XFree86 and Mandrake's xorg-x11 use <SPAN
+CLASS="QUOTE"
+>"-isolateDevice"</SPAN
+> instead </P
+><DIV
+CLASS="caution"
+><P
+></P
+><TABLE
+CLASS="caution"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/caution.gif"
+HSPACE="5"
+ALT="Caution"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Caution</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>For the older(version 1) Preferred Bus ID XFree Server only this choice is valid.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>For example on command line <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>[root@svetljo mnt]# startx -- /usr/X11R6/bin/X0 :0 -prefbusid 1:0:0 vt7</PRE
+></FONT
+></TD
+></TR
+></TABLE
+> , or from a display manager (gdm): <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>..............................
+# Definition of the standard X server.
+[server-Standard]
+name=Standard server
+command=/usr/X11R6/bin/X0 :0 -layout first-Xserver -deferglyphs 16 -ac -prefbusid 1:0:0 vt7
+flexible=true
+
+[server-Second]
+name=Second server
+command=/usr/X11R6/bin/X1 :1 -layout second-Xserver -deferglyphs 16 -prefbusid 0:13:0 vt17
+flexible=true
+.............................. </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>  and for xdm/kdm <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>:0 local /bin/nice -n -10 /usr/X11R6/bin/X0 :0 -deferglyphs 16 -prefbusid 1:0:0 vt7
+:1 local /bin/nice -n -10 /usr/X11R6/bin/X1 :1 -xf86config /etc/X11/XF86Config-4.TNT2 -prefbusid 0:13:0 vt17</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></LI
+></UL
+></LI
+></OL
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="mod_x_server.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sym_links.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Do I need a modified X server?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x_servers.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Creating symbolic links</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

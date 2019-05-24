@@ -1,0 +1,340 @@
+<!DOCTYPE HTML>
+<HTML lang="en-US">
+<HEAD>
+<TITLE>Introduction to Inodes!</TITLE>
+<meta name="keywords" content="unix, ext2, bfs, ext3, inode, file system, Linux">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<META NAME="Description" CONTENT="Introduction to Inodes"  >
+
+<link rel="canonical" href="Inodes.html">
+<link href="rgrymoire.css" rel="stylesheet" type="text/css"> 
+<meta name=viewport content="width=device-width, initial-scale=1">
+<!-- INCLUDE AutoAd -->
+<script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-3246203470757260",
+              enable_page_level_ads: true
+         });
+</script>
+    </HEAD>
+<BODY>
+<h1><a name="Inodes_-_an_Introduction">Inodes - an Introduction</a></h1>
+<!-- INCLUDE Navigation -->
+<div class="topnav" id="myTopnav">
+    <a href = "../index.html">Home</a> 
+    <div class="dropdown">
+        <button class="dropbtn">Unix/Linux <span>&#9660;</span></button>
+        <div class="dropdown-content">
+            <a href = "index.html">Index</a>
+            <a href = "Quote.html">Quotes</a> 
+            <a href = "Sh.html">Bourne Shell</a> 
+            <a href = "Csh.html">C Shell</a> 
+            <a href = "Permissions.html">File Permissions</a> 
+            <a href = "Regular.html">Regular Expressions</a> 
+            <a href = "Grep.html">grep</a> 
+            <a href = "Awk.html">awk</a> 
+            <a href = "Sed.html">sed</a> 
+            <a href = "Find.html">find</a> 
+            <a href = "Tar.html">tar</a> 
+            <a href = "Inodes.html">inodes</a> 
+        </div>
+    </div>
+    <div class="dropdown">
+        <button class="dropbtn">Security <span>&#9660;</span></button>
+        <div class="dropdown-content">
+            <a href = "../Security/index.html">Index</a>
+            <a href = "../Security/IPv6.html">IPv6</a> 
+            <a href = "../Security/Wireless.html">Wireless</a> 
+            <a href = "../Security/Hardware.html">Hardware</a> 
+        </div>
+    </div>
+    <div class="dropdown">
+        <button class="dropbtn">Misc <span>&#9660;</span></button>
+        <div class="dropdown-content">
+            <a href = "../index.html">Index</a>
+            <a href = "../Spam/index.html">spam</a> 
+            <a href = "../Deception/index.html">Deception</a> 
+            <a href = "../Postscript/Halftones.html">PostScript Halftones</a> 
+            <a href = "../Privacy/BillOfRights.html">Bill of Rights</a> 
+        </div>
+    </div>
+    <div class="dropdown">
+        <button class="dropbtn">References <span>&#9660;</span></button>
+        <div class="dropdown-content">
+            <a href = "../References.html">Index</a>
+            <a href = "CshTop10.txt">Top 10 reasons to avoid CSH</a> 
+            <a href = "SedChart.pdf">sed Chart</a> 
+            <a href = "AwkRef.html">awk Reference</a> 
+        </div>
+    </div>
+    <a href = "../magic.html">Magic</a> 
+    <a href = "../Search.html">Search</a> 
+    <a href = "../About.html">About</a> 
+    <a href = "donate.html">Donate</a>  
+
+  <a href="javascript:void(0);" style="font-size:15px;" class="icon" onclick="myFunction()">&#9776;</a>
+        <script>
+            function myFunction() {
+            var x = document.getElementById("myTopnav");
+            if (x.className === "topnav") {
+	            x.className += " responsive";
+            } else {
+	            x.className = "topnav";
+            }
+            }
+        </script>
+
+</div>
+<div id="centerDoc">
+<p>
+<!-- hhmts start -->
+Last modified: Sat Jan 26 10:11:41 2019
+<!-- hhmts end -->
+
+<p>
+We are used to thinking about a directory containing files.
+This is really an illusion. Directories do not contain files.
+The data of the files is not stored in the directory.
+<p>
+A directory is really just a file. It's a special file with special rules (you can't just type "cp /dev/null directory" to erase it. It's got special bits to make sure
+a mere mortal can't mess it up.  Because if a file system gets corrupted, then you can say goodbye to your data. 
+On older UNIX systems, you actually could "read" the contents, using 
+'cat .', of a directory. But let
+me get back to that in a second...
+<p>
+A Unix file is "stored" in two different parts of the disk - the data blocks and the inodes.
+(I won't get into superblocks and other esoteric information.)
+The data blocks contain the "contents" of the file. 
+The
+information <b>about</b> the file is stored elsewhere - in the inode.
+<p> Both the inodes and data blocks are stored in a "filesystem" which
+is how a disk partition is organized. But these inodes are strange and
+confusing. Let me give you an introduction.
+<h2><a name="ls_-i.22_lists_the_inode_of_a_file">"ls -i" lists the inode of a file</a></h2>
+<p>
+Normal Unix/Linux/MacOS users aren't even aware that inodes exist. But there's an easy way to discover them - using the "ls -i" command. Let's look at the root file system:
+<pre>
+% cd /
+% ls -i
+2637825 bin     983041 etc	       1572865 lib	   2981889 media  2531329 root	 106497 selinux    81921 usr
+ 196609 boot         2 home	       1761281 lib64	   2129921 mnt	     6416 run	2457601 srv	  425985 var
+</pre>
+The "-i" option lists the inode number before the filename. The numbers look like large numbers, except for "home."
+Now let's get more information, and list some more files by added "-a" and "-l" options:
+<pre>
+% ls -lai | tail -7
+total 132
+      2 drwxr-xr-x  24 root root   4096 Feb 26 13:31 .
+      2 drwxr-xr-x  24 root root   4096 Feb 26 13:31 ..
+2637825 drwxr-xr-x   2 root root   4096 Jan 14 19:02 bin
+ 196609 drwxr-xr-x   3 root root   4096 Feb 24 10:41 boot
+      3 drwxr-xr-x  16 root root   4460 Mar  5 09:35 dev
+ 983041 drwxr-xr-x 206 root root  12288 Mar  5 07:45 etc
+      2 drwxr-xr-x  14 root root   4096 Dec 29 09:24 home
+</pre>
+<p>That's interesting - three of the files have the inode value of "2". 
+But as you shall see, this makes perfect sense. 
+<p>As Unix systems can support many different types of file systems,
+in the
+<a href="https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout#Special_inodes">"classic"</a>
+filesystem, inode #2 is always the root file system. If you want to
+look for a file, you start with inode #2 and work down into the
+directory structure.
+Normally the ".." directory points to the parent directory, but since "/" is the top of the tree, the parent of "/" is "/".
+<p>
+The "dev" directory has the inode "3". I suspect that when the filesystem was created, the "/dev" directory was the first file to be created.
+<p>But, you may wonder, why does "home" have the inode of "2"? You have sharp eyes.
+<p>The reason is simple. It happens to be a different partition, and "/home" is the root of that partition.
+<P>Inodes are always unique, but <b>unique per partition</b>. To uniquely identify a file, you need the inode and the device (the disk partition).
+<h2><a name="What_is_in_an_inode.3F">What is in an inode?</a></h2>
+<p>Before I said the data blocks contain the contents of the file.
+The inode contains the following pieces of information
+<ul>
+<li>        Mode/permission (protection)
+<li>        Owner ID
+<li>        Group ID
+<li>        Size of file
+<li>        Number of hard links to the file
+<li>        Time last accessed
+<li>        Time last modified
+<li>        Time inode last modified
+</ul>
+<p>
+As I said, a file system is divided into two parts - the inodes and data blocks.
+Once created, the number of blocks of each type is fixed.
+You can't increase the number of inodes on a
+partition, or increase the number of disk blocks. (See the manual
+pages on making and tuning file systems - mkfs.ext2).
+<p>
+Notice something missing? Where is the NAME of the file. Or the Path?
+It's NOT in the inode. It's NOT in the data blocks. It's _in_ the
+directory. That's right. A "file" is really in three (or more) places
+on the disk.
+<p>
+You see, the directory is just a table that contains the filenames in
+the directory, and the matching inode. Think of it as a table, and the
+first two entries are always "." and ".." The first points to the
+inode of the current directory, and the second points to the inode of
+the parent directory. By Definition. As spoken by the Gods of Unix. Verily.
+<p>
+This inode-magic is how you can create a "hard link" - having two or more names for the same
+file.  Think of a directory as a table, which contains the name and the inode of each file in the directory.
+This is an important point - the name of the file is only used in directory. You can have another directory "containing" the same file, but it can have a different name.
+<p>
+When you create a hard link, it just created a new name in the table, along with the inode,
+<b>without moving the file</b>.  When you move a file (or rename
+it), you don't copy the data. That would be Slow. You just create the
+(name,inode) entry in a new directory, and delete the old entry in the table inside the old directory
+entry. In other words, moving a gigabyte file takes very little time. 
+In the same way, you can move/rename directories very easily.
+That's why "mv /usr /Old_usr" is so fast, even though "/usr" may contain (for example)
+57981 files.
+<p>
+You can see this "inode" stuff if you use the "ls -i" option. It lists
+the inode number. find(1) can use it as well. Let's also use the "-d"
+option to list information about the directory, rather than the
+contents of the directory.
+<p>First - let's make a new directory using
+<pre>
+cd /tmp
+mkdir junk
+cd junk
+</pre>
+<p>
+If you do a
+<pre>
+        ls -id ..
+        cd ..
+        ls -id .
+</pre>
+<p>
+You will get results that look like this
+<pre>
+/tmp/junk$ ls -id ..
+327681 ..
+/tmp/junk$ cd ..
+/tmp$ ls -id .
+327681 .
+</pre>
+You will see that the these two "files" point to the same inode - which has the number 327681.
+<p>Now let's get more information from this directory.
+<pre>
+$ ls -lad /tmp/junk
+drwxrwxr-x 2 barnett barnett 4096 Mar  5 10:42 /tmp/junk
+</pre>
+The second field has the value of "2"  - which indicates that there are two hard links to this file.
+This makes sense because directories always have at least two names, as this shows.
+<pre>
+/tmp/junk$ cd /tmp
+/tmp$ ls -iad junk  # look at the file /tmp/junk
+435297 junk
+/tmp$ cd junk
+/tmp/junk$ ls -iad . # look at the file "." in the /tmp/junk directory
+435297 .
+</pre>
+<p>
+Puzzle time!  I'm on a system, and I type two commands. Here are the commands and the results:
+<pre>
+% cd
+% ls -ld . ..
+drwxr-xr-x   66 barnett  users       12288 Mar  7 18:43 .
+drwxr-xr-x    6 root     root         4096 Feb 19  2012 ..
+</pre>
+<p>
+You should now know how many directories I have in my home directory,
+and how many other users have home directories on my system.
+<p>
+I'll give you a minute.
+<p>Remember, the file ".." always points to the parent directory. And remember that when I create a directory, the kernel creates the files "." and ".." inside the directory.
+<p>Therefore every time I create a directory "underneath" my current
+directory, the new directory has an entry ".." - which is the parent
+directory.
+<p>This means that since I have 66 "copies" or hard links to my home
+directory, that I must have 64 sub-directories underneath. We have to
+subtract 2 from the total, because we always start with 2 links.
+<p>
+How many other directories are the the /home directory (my parent
+directory?)  The answer is 3, so there are three other "users" who
+have home directories. That's not quite accurate as users much have an
+entry in the <i>/etc/passwd</i> file. In any case, because of the "6"
+value for the directory ".." we know there are 4 directories above my
+home directory, because we always subtract 2 for the directory itself,
+and we subtract one more for my directory - which leaves 3.
+<h2><a name="Using_inodes" href="Inodes.html#TOC">Using inodes</a></h2>
+<p>
+Inodes can be very useful to "ferret out" information about a file
+system.  As I described above, it can tell you about different
+directories on a computer, and how many there should be. It might even
+help locate a hidden directory. Let's start with some simpler cases.
+<h2><a name="Finding_files_by_inodes" href="Inodes.html#TOC">Finding files by inodes</a></h2>
+<p> If you know the inode, you can find it using the find command.
+<pre>
+$ find . -inum 435304 -print
+</pre>
+<h2><a name="Deleting_files_with_strange_names" href="Inodes.html#TOC">Deleting files with strange names</a></h2>
+<p>
+Sometimes files are created with strange characters in the filename. The Unix file system will allow any character as part of a filename except for a null (ASCII 000) or a "/". Every other character is allowed.
+<p>
+Hackers can create files with characters that make it difficult to see the directory or file. They can create the directory ".. " with a space at the end, or create a file that has a backspace in the name, using 
+<pre>
+touch `printf "aa\bb"`
+</pre>
+<p> Now what what happens when you use the "ls" command:
+<pre>
+$ ls
+aa?b
+$ ls | grep 'a'
+ab
+</pre>
+<p>
+Note that when "ls" sends the result to a terminal, it places a "?" in the filename to show an unprintable character.
+<p>
+You can get rid of this file by using "rm -i *" and it will prompt you before it deletes each file.
+But you can also use "find" to remove the file, once you know the inode number.
+<pre>
+$ ls -i
+435304 aa?b
+$ find . -inum 435304 -delete
+</pre>
+<h2><a name="Checking_the_percentage_of_used_inodes_in_a_partition" href="Inodes.html#TOC">Checking the percentage of used inodes in a partition</a></h2>
+<p>I think we are all familiar with the problem of filling up a disk. The Unix command "df"
+will display each partition, and give a percentage of the disk blocks that are used.
+<p>It's also possible that there may be plenty of data blocks, but the number of inodes can be used up. And if this happens, no more new files can be created.
+The command "df -i" will display the percentage (and total) number of inodes on each partition.
+
+<h2><a name="The_stat.282.29_system_call">The stat(2) system call</a></h2>
+Here's the actual contents of the inode, according to the stat(2) manual page:
+<pre>
+           struct stat {
+               dev_t     st_dev;     /* ID of device containing file */
+               ino_t     st_ino;     /* inode number */
+               mode_t    st_mode;    /* protection */
+               nlink_t   st_nlink;   /* number of hard links */
+               uid_t     st_uid;     /* user ID of owner */
+               gid_t     st_gid;     /* group ID of owner */
+               dev_t     st_rdev;    /* device ID (if special file) */
+               off_t     st_size;    /* total size, in bytes */
+               blksize_t st_blksize; /* blocksize for file system I/O */
+               blkcnt_t  st_blocks;  /* number of 512B blocks allocated */
+               time_t    st_atime;   /* time of last access */
+               time_t    st_mtime;   /* time of last modification */
+               time_t    st_ctime;   /* time of last status change */
+           };
+
+</pre>
+<p>
+
+
+      <a href="http://validator.w3.org/check?uri=http%3A%2F%2Fwww.grymoire.com%2FUnix%2FInodes.html"><img
+          src="http://www.w3.org/Icons/valid-html401"
+          alt="Valid HTML 5" height="31" width="88"></a>
+
+
+
+</div>
+</BODY>
+</html>
+
+
+

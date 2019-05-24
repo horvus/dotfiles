@@ -1,0 +1,556 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Design</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Pocket Linux Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Hosting Applications"
+HREF="a.html"><LINK
+REL="PREVIOUS"
+TITLE="Analysis"
+HREF="x1829.html"><LINK
+REL="NEXT"
+TITLE="Construction"
+HREF="x1950.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Pocket Linux Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1829.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Appendix A. Hosting Applications</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1950.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN1841"
+></A
+>A.2. Design</H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1843"
+></A
+>A.2.1. Support for audio hardware</H2
+><P
+>There is a vast proliferation of audio hardware on the market and
+      each sound card has its own particular configuration. For details on how
+      to set up a particular sound card we can turn to the Sound-HOWTO
+      available from <A
+HREF="http://www.tldp.org"
+TARGET="_top"
+>The Linux Documentation
+      Project</A
+>. In a broader sense, however, we can treat a sound card
+      like any other piece of new hardware. To add new hardware to a GNU/Linux
+      system we will need configure the kernel to recognize it and configure
+      <TT
+CLASS="filename"
+>/dev</TT
+> files on the root disk to access it.</P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1848"
+></A
+>A.2.1.1. Kernel support for audio</H3
+><P
+>In order to support sound cards, a new kernel will have to be
+        built. It is very important that audio hardware support be configured
+        as built-in, because Pocket Linux is not set up to handle kernel
+        modules.</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1851"
+></A
+>A.2.1.2. Root disk support for audio</H3
+><P
+>Searching <TT
+CLASS="filename"
+>devices.txt</TT
+> for the keyword
+        "sound" will list quite a few possible audio devices, but usually only
+        <TT
+CLASS="filename"
+>/dev/dsp</TT
+> and <TT
+CLASS="filename"
+>/dev/mixer</TT
+> are
+        required to get sound from a PC. These two files control the digital
+        audio output and mixer controls, respectively.</P
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1857"
+></A
+>A.2.2. Creating space for the program</H2
+><P
+>Probably the easiest way to create more space for the mp3blaster
+      program is to mount an additional storage device. There are several
+      choices for mount points. So far <TT
+CLASS="filename"
+>/usr</TT
+>,
+      <TT
+CLASS="filename"
+>/home</TT
+> and <TT
+CLASS="filename"
+>/opt</TT
+> are all empty
+      directories and any one of them could be used to mount a floppy, CD-ROM
+      or additional compressed ramdisk image. The <TT
+CLASS="filename"
+>/usr</TT
+>
+      directory is a logical choice for a place to put an application, but
+      what about the choice of media? Mp3blaster and its required libraries
+      are too big to fit on a 1.44M floppy and burning a CD-ROM seems like a
+      lot of work for one little program. So given these constraints, the best
+      choice would be to put the program on a compressed floppy.</P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1864"
+></A
+>A.2.2.1. Mounting additional compressed floppies</H3
+><P
+>Mounting CDs and uncompressed diskettes is easy, but what about
+        loading compressed images from floppy into ramdisk? It will have to be
+        done manually, because automatic mounting of compressed floppies only
+        works for the root diskette. And using <B
+CLASS="command"
+>mount
+        /dev/fd0</B
+> will not work because there is no filesystem on the
+        diskette, there are only the contents of a gzip file. The actual
+        filesystem is contained inside the gzip file. So how can we mount the
+        filesystem buried beneath the gzip file? This puzzle can be solved by
+        examining at the steps used to create the familiar compressed root
+        disk floppy.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>A ramdisk is created, mounted and filled with files.</P
+></LI
+><LI
+><P
+>The ramdisk device is unmounted.</P
+></LI
+><LI
+><P
+>The contents of the ramdisk are dumped to an image file
+            using <B
+CLASS="command"
+>dd</B
+>.</P
+></LI
+><LI
+><P
+>The image file is compressed with
+            <B
+CLASS="command"
+>gzip</B
+>.</P
+></LI
+><LI
+><P
+>The compressed image file is written to floppy with
+            <B
+CLASS="command"
+>dd</B
+>.</P
+></LI
+></OL
+><P
+>If that is how the compressed image makes its way from ramdisk
+        to compressed floppy, then going from compressed floppy to ramdisk
+        should be as simple as running through the steps in reverse.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>The compressed image file is read from floppy with
+            <B
+CLASS="command"
+>dd</B
+>.</P
+></LI
+><LI
+><P
+>The image file is uncompressed with
+            <B
+CLASS="command"
+>gunzip</B
+>.</P
+></LI
+><LI
+><P
+>The contents of the image file are dumped into ramdisk using
+            <B
+CLASS="command"
+>dd</B
+>.</P
+></LI
+><LI
+><P
+>The ramdisk device is mounted.</P
+></LI
+><LI
+><P
+>The files are available.</P
+></LI
+></OL
+><P
+>We can cut out the intermediate image file by using a pipe to
+        combine <B
+CLASS="command"
+>dd</B
+> and <B
+CLASS="command"
+>gunzip</B
+> like this:
+        <B
+CLASS="command"
+>dd if=/dev/fd0 | gunzip -cq &#62; /dev/ram1</B
+>. Now the
+        compressed floppy goes straight into ramdisk, decompressing on the
+        fly.</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1901"
+></A
+>A.2.2.2. Root disk support for additional ramdisks</H3
+><P
+>We already have kernel support for ramdisks, because we are
+        using a compressed root disk, but we will need to create more ramdisks
+        in <TT
+CLASS="filename"
+>/dev</TT
+>. Typically the kernel supports eight
+        ramdisks on <TT
+CLASS="filename"
+>/dev/ram0</TT
+> through
+        <TT
+CLASS="filename"
+>/dev/ram7</TT
+> with <TT
+CLASS="filename"
+>ram0</TT
+> being
+        used for the rootdisk. The <TT
+CLASS="filename"
+>devices.txt</TT
+> file
+        included in the Linux source code documentation will be helpful for
+        matching devices to their major and minor numbers.</P
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1909"
+></A
+>A.2.3. Accessing audio files</H2
+><P
+>The sample mp3 file that we will be using in our example is small
+      enough to fit on an uncompressed floppy disk so that there is no need to
+      burn a CD. However, serious music lovers may want to have the capability
+      to mount a custom CD-ROM full of tunes and that option will require
+      support for additional hardware.</P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1912"
+></A
+>A.2.3.1. CD-ROM hardware support</H3
+><P
+>Most modern CD-ROM drives will use IDE devices like
+        <TT
+CLASS="filename"
+>/dev/hdc</TT
+> or <TT
+CLASS="filename"
+>/dev/hdd</TT
+>. To
+        support these CD-ROM drives we will have to configure IDE support in
+        the kernel and create the appropriate device files on the root
+        disk.</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1917"
+></A
+>A.2.3.2. CD-ROM filesystem support</H3
+><P
+>CD-ROMs have different filesystems than hard disks and floppies.
+        Most CD burning applications use a filesystem called ISO-9660 and have
+        the capability to support Joliet or Rockridge extensions. We will have
+        to include support for these filesystems in the kernel in order to
+        mount CD-ROMs.</P
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1920"
+></A
+>A.2.4. Other required files</H2
+><P
+>We will want to have all of mp3blaster's required libraries and
+      other supporting files available as part of the compressed
+      <TT
+CLASS="filename"
+>/usr</TT
+> image so that mp3blaster can run correctly.
+      The familiar <B
+CLASS="command"
+>ldd</B
+> command can be used to determine
+      which libraries mp3blaster requires. Any additional libraries can be
+      placed in <TT
+CLASS="filename"
+>/usr/lib</TT
+>. Even though some of the
+      libraries may appear in <TT
+CLASS="filename"
+>/lib</TT
+> on the development
+      system, they can still go in <TT
+CLASS="filename"
+>/usr/lib</TT
+> on the Pocket
+      Linux system. The dynamic linker, <TT
+CLASS="filename"
+>ld-linux.so</TT
+>, is
+      smart enough to look in both places when loading libraries.</P
+><P
+>Because mp3blaster uses the curses (or ncurses) screen control
+      library there is one additional file we need. The curses library needs
+      to know the characteristics of the terminal it is controlling and it
+      gets that information from the terminfo database. The terminfo database
+      consists of all the files under the
+      <TT
+CLASS="filename"
+>/usr/share/terminfo</TT
+> directory and is very large
+      compared to our available disk space. But, since Pocket Linux only
+      supports the PC console, we only have one terminal type to worry about
+      and therefore need only one file. The piece of the terminfo database we
+      need is the file <TT
+CLASS="filename"
+>/usr/share/terminfo/l/linux</TT
+>,
+      because we are using a "Linux" terminal. For more information about the
+      subject of curses, see John Strang's book entitled "Programming with
+      Curses" available from <A
+HREF="http://www.oreilly.com"
+TARGET="_top"
+>O'Reilly
+      publishing</A
+>.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1933"
+></A
+>A.2.5. Summary of tasks</H2
+><P
+>Between sound cards, ramdisks, CD-ROMs and terminfo there is quite
+      a bit to keep track of. So let's take a moment to organize and summarize
+      the tasks necessary to make the pocket jukebox a reality.</P
+><P
+></P
+><UL
+><LI
+><P
+>Create a new kernel disk that includes built-in support for
+          audio hardware, IDE devices and CD-ROM filesystems.</P
+></LI
+><LI
+><P
+>Create the appropriate <TT
+CLASS="filename"
+>/dev</TT
+> files on the
+          root disk to support audio hardware, additional ramdisks and IDE
+          CD-ROMs.</P
+></LI
+><LI
+><P
+>Install the <B
+CLASS="command"
+>gunzip</B
+> utility to enable
+          decompression of the usr image.</P
+></LI
+><LI
+><P
+>Create a startup script to load a compressed image from floppy
+          into a ramdisk and mount the ramdisk on
+          <TT
+CLASS="filename"
+>/usr</TT
+>.</P
+></LI
+><LI
+><P
+>Create a compressed floppy that holds the mp3blaster program,
+          its required libraries and terminfo files.</P
+></LI
+></UL
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1829.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1950.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Analysis</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="a.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Construction</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

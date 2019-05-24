@@ -1,0 +1,1658 @@
+<HTML
+><HEAD
+><TITLE
+>Functions to query libiptc</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Querying libiptc HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="How to create your program(s)"
+HREF="howtoprg.html"><LINK
+REL="NEXT"
+TITLE="Functions to modify firewalling rules and statistics"
+HREF="mfunction.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Querying libiptc HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="howtoprg.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="mfunction.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="QFUNCTION">11. Functions to query libiptc</H1
+><P
+>This section explains which functions allow you to query libiptc. We will use
+the header file of <EM
+>libiptc</EM
+>, 
+file <TT
+CLASS="FILENAME"
+>usr/local/include/libiptc/libiptc.h</TT
+>, 
+containing prototypes of each function as a reference to develop our explanation. </P
+><P
+>I have also included a brief description (when available) taken from 
+<A
+HREF="http://netfilter.samba.org/documentation/HOWTO/"
+TARGET="_top"
+>Linux netfilter Hacking HOWTO</A
+> within each function explanation.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN233">11.1. iptc_init</H2
+><P
+><B
+>Name: </B
+>iptc_init</P
+><P
+><B
+>Usage: </B
+>Takes a snapshot of the rules.</P
+><P
+><B
+>Prototype: </B
+>iptc_handle_t iptc_init(const char *tablename)</P
+><P
+><B
+>Description: </B
+>This function must be called as initiator before any other function can be
+called.</P
+><P
+><B
+>Parameters: </B
+><EM
+>tablename</EM
+> is the name of the table we need to query 
+and/or modify; this could be <EM
+>filter</EM
+>, 
+<EM
+>mangle</EM
+>, <EM
+>nat</EM
+>, etc.</P
+><P
+><B
+>Returns: </B
+>Pointer to a structure of type <EM
+>iptc_handle_t</EM
+> that must 
+be used as main parameter for the rest of functions we will call 
+from <EM
+>libiptc</EM
+>. <EM
+>iptc_init</EM
+> returns the 
+pointer to the structure or NULL if it fails. If this happens you can invoke 
+<EM
+>iptc_strerror</EM
+> to get information about the error. 
+See below.</P
+><P
+>Have a look at this section of code in file <TT
+CLASS="FILENAME"
+>iptables-save.c</TT
+>
+for how to invoke this function:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>  h = iptc_init(tablename);
+  if (!h)
+    exit_error(OTHER_PROBLEM, "Can't initialize: %s\n",iptc_strerror(errno));</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN260">11.2. iptc_strerror</H2
+><P
+><B
+>Name: </B
+>iptc_strerror</P
+><P
+><B
+>Usage: </B
+>Translates error numbers into more human-readable form.</P
+><P
+><B
+>Prototype: </B
+>const char *iptc_strerror(int err)</P
+><P
+><B
+>Description: </B
+>This function returns a more meaningful explanation of a failure code in 
+the iptc library.  If a function fails, it will always set 
+<EM
+>errno</EM
+>. This value can be passed to 
+<EM
+>iptc_strerror()</EM
+> to yield an error message.</P
+><P
+><B
+>Parameters: </B
+><EM
+>err</EM
+> is an integer indicating the error number.</P
+><P
+><B
+>Returns: </B
+>Char pointer containing the error description.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN279">11.3. iptc_first_chain</H2
+><P
+><B
+>Name: </B
+>iptc_first_chain</P
+><P
+><B
+>Usage: </B
+>Iterator functions to run through the chains.</P
+><P
+><B
+>Prototype: </B
+>const char *iptc_first_chain(iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function returns the first chain name in the table.</P
+><P
+><B
+>Parameters: </B
+>Pointer to a structure of type <EM
+>iptc_handle_t</EM
+> that was
+obtained by a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Char pointer to the name of the chain.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN297">11.4. iptc_next_chain</H2
+><P
+><B
+>Name: </B
+>iptc_next_chain</P
+><P
+><B
+>Usage: </B
+>Iterator functions to run through the chains.</P
+><P
+><B
+>Prototype: </B
+>const char *iptc_next_chain(iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function returns the next chain name in the table; NULL means 
+no more chains.</P
+><P
+><B
+>Parameters: </B
+>Pointer to a structure of type <EM
+>iptc_handle_t</EM
+> that was
+obtained by a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Char pointer to the name of the chain.</P
+><P
+>These two previous functions allow to us to iterate through the chains of the table
+getting the name of each of the chains; <EM
+>iptc_first_chain</EM
+> 
+returns the name of the first chain of the table; <EM
+>iptc_next_chain</EM
+>
+returns the name of next chains and NULL when the function reaches the end.</P
+><P
+>We can create <EM
+>Program #1</EM
+> to exercise our understanding of 
+these previous four functions:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>/*
+ * How to use libiptc- program #1
+ * /usr/local/src/p1.c
+ */
+
+#include &#60;getopt.h&#62;
+#include &#60;sys/errno.h&#62;
+#include &#60;stdio.h&#62;
+#include &#60;fcntl.h&#62;
+#include &#60;stdlib.h&#62;
+#include &#60;string.h&#62;
+#include &#60;dlfcn.h&#62;
+#include &#60;time.h&#62;
+#include "libiptc/libiptc.h"
+#include "iptables.h"
+
+int main(void)
+{
+  iptc_handle_t h;
+  const char *chain = NULL;
+  const char *tablename = "filter";
+
+  program_name = "p1";
+  program_version = NETFILTER_VERSION;
+
+  h = iptc_init(tablename);
+  if ( !h )   {
+     printf("Error initializing: %s\n", iptc_strerror(errno));
+    exit(errno);
+  }
+
+  for (chain = iptc_first_chain(&#38;h); chain; chain = iptc_next_chain(&#38;h))  {
+    printf("%s\n", chain);
+  }
+
+  exit(0);
+
+} /* main */</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Write this program and save it as <TT
+CLASS="FILENAME"
+>p1.c</TT
+>
+in <TT
+CLASS="FILENAME"
+>/usr/local/src</TT
+>.</P
+><P
+>Now write this <SPAN
+CLASS="QUOTE"
+>"bash"</SPAN
+> script to simplify the compiling process:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#!/bin/bash
+
+gcc -Wall -Wunused -DNETFILTER_VERSION=\"1.2.6\" -rdynamic -o $1 $1.c \
+/usr/local/lib/iptables.o /usr/local/lib/libiptc.a -ldl</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Save it as <TT
+CLASS="FILENAME"
+>ipt-cc</TT
+> and do not forget to 
+<EM
+>chmod 0700 ipt-cc</EM
+>.</P
+><P
+>Now compile your <EM
+>p1</EM
+> program:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>./ipt-cc p1</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>And run it:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>./p1</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You will get:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>INPUT
+FORWARD
+OUTPUT</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>These are the three built-in iptables chains.</P
+><P
+>Now create some new chains using iptables and run your program again:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>iptables -N chain_1</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -N chain_2</B
+>
+bash# <B
+CLASS="COMMAND"
+>./p1</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You will get:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>INPUT
+FORWARD
+OUTPUT
+chain_1
+chain_2</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Try to generate an error initializing tablename to <EM
+>myfilter</EM
+> 
+instead of <EM
+>filter</EM
+>. When you compile and execute your program 
+again, you will get:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><EM
+>Error initializing: Table does not exist (do you need to insmod?)</EM
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><EM
+>iptables</EM
+> informs you that <EM
+>myfilter</EM
+> does 
+not exist as a table.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN355">11.5. iptc_is_chain</H2
+><P
+><B
+>Name: </B
+>iptc_is_chain</P
+><P
+><B
+>Usage: </B
+>Check if a chain exists.</P
+><P
+><B
+>Prototype: </B
+>int iptc_is_chain(const char *chain, const iptc_handle_t handle)</P
+><P
+><B
+>Description: </B
+>This function checks to see if the chain described in the parameter
+<EM
+>chain</EM
+> exists in the table.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer containing the name of
+the chain we want to check to. <EM
+>handle</EM
+> is a pointer to a 
+structure of type <EM
+>iptc_handle_t</EM
+> that was
+obtained by a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>integer value 1 (true) if the chain exists; integer value 0 (false) 
+if the chain does not exist.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN376">11.6. iptc_builtin</H2
+><P
+><B
+>Name: </B
+>iptc_builtin</P
+><P
+><B
+>Usage: </B
+>Is this a built-in chain?</P
+><P
+><B
+>Prototype: </B
+>int iptc_builtin(const char *chain, const iptc_handle_t handle)</P
+><P
+><B
+>Description: </B
+>This function is used to check if a given chain name is a built-in 
+chain or not.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer containing the name of
+the chain we want to check to. <EM
+>handle</EM
+> is a pointer to a 
+structure of type <EM
+>iptc_handle_t</EM
+> that was
+obtained by a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if the given chain name is the name 
+of a builtin chain; returns integer value 0 (false) is not.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN396">11.7. iptc_first_rule</H2
+><P
+><B
+>Name: </B
+>iptc_first_rule</P
+><P
+><B
+>Usage: </B
+>Get first rule in the given chain.</P
+><P
+><B
+>Prototype: </B
+>const struct ipt_entry *iptc_first_rule(const char *chain, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function returns a pointer to the first rule in the given chain
+name; NULL for an empty chain.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer containing the name of
+the chain we want to get the rules to. <EM
+>handle</EM
+> is a 
+pointer to a structure of type <EM
+>iptc_handle_t</EM
+> that was
+obtained by a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns a pointer to an <EM
+>ipt_entry</EM
+> structure 
+containing information about the first rule of the chain. See below
+for an explanation of this structure.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN417">11.8. iptc_next_rule</H2
+><P
+><B
+>Name: </B
+>iptc_next_rule</P
+><P
+><B
+>Usage: </B
+>Get the next rule in the given chain.</P
+><P
+><B
+>Prototype: </B
+>const struct ipt_entry *iptc_next_rule(const struct ipt_entry *prev, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function returns a pointer to the next rule in the given chain
+name; NULL means the end of the chain.</P
+><P
+><B
+>Parameters: </B
+><EM
+>prev</EM
+> is a pointer to a structure of type 
+<EM
+>ipt_entry</EM
+> that must be obtained first by a previous call to 
+the function <EM
+>iptc_first_rule</EM
+>. In order to get the second 
+and subsequent rules you have to pass a pointer to the structure containing the 
+information about the previous rule of the chain. <EM
+>handle</EM
+> is 
+a pointer to a structure of type <EM
+>iptc_handle_t</EM
+> that was 
+obtained by a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns a pointer to an <EM
+>ipt_entry</EM
+> structure 
+containing information about the next rule of the chain. See below
+for an explanation of this structure.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN440">11.9. iptc_get_target</H2
+><P
+><B
+>Name: </B
+>iptc_get_target</P
+><P
+><B
+>Usage: </B
+>Get a pointer to the target name of this entry.</P
+><P
+><B
+>Prototype: </B
+>const char *iptc_get_target(const struct ipt_entry *e, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function gets the target of the given rule.  If it is an extended
+target, the name of that target is returned.  If it is a jump to another chain, 
+the name of that chain is returned.  If it is a verdict (eg. DROP), that name 
+is returned.  If it has no target (an accounting-style rule), then the empty 
+string is returned. Note that this function should be used instead of using 
+the value of the <EM
+>verdict</EM
+> field of the 
+<EM
+>ipt_entry</EM
+> structure directly, as it offers the above further 
+interpretations of the standard verdict.</P
+><P
+><B
+>Parameters: </B
+><EM
+>e</EM
+> is a pointer to a structure of type 
+<EM
+>ipt_entry</EM
+> that must be obtained first by a previous call to 
+the function <EM
+>iptc_first_rule</EM
+> or the function 
+<EM
+>iptc_next_rule</EM
+>. <EM
+>handle</EM
+> is 
+a pointer to a structure of type <EM
+>iptc_handle_t</EM
+> that was 
+obtained by a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns a char pointer to the target name. See <EM
+>Description</EM
+> 
+above for more information.</P
+><P
+>Now it is time to explain the <EM
+>ipt_entry</EM
+> structure; these pieces
+of code are taken from <EM
+>iptables</EM
+> package sources:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>/* Internet address. */
+struct in_addr {
+  __u32  s_addr;
+};
+
+/* Yes, Virginia, you have to zero the padding. */
+struct ipt_ip {
+  /* Source and destination IP addr */
+  struct in_addr src, dst;
+  /* Mask for src and dest IP addr */
+  struct in_addr smsk, dmsk;
+  char iniface[IFNAMSIZ], outiface[IFNAMSIZ];
+  unsigned char iniface_mask[IFNAMSIZ], outiface_mask[IFNAMSIZ];
+
+  /* Protocol, 0 = ANY */
+  u_int16_t proto;
+
+  /* Flags word */
+  u_int8_t flags;
+  /* Inverse flags */
+  u_int8_t invflags;
+};
+
+struct ipt_counters
+{
+  u_int64_t pcnt, bcnt;      /* Packet and byte counters */
+};
+
+/* This structure defines each of the firewall rules.  Consists of 3
+   parts which are 1) general IP header stuff 2) match specific
+   stuff 3) the target to perform if the rule matches */
+struct ipt_entry
+{
+  struct ipt_ip ip;
+
+  /* Mark with fields that we care about. */
+  unsigned int nfcache;
+
+  /* Size of ipt_entry + matches */
+  u_int16_t target_offset;
+  /* Size of ipt_entry + matches + target */
+  u_int16_t next_offset;
+
+  /* Back pointer */
+  unsigned int comefrom;
+
+  /* Packet and byte counters. */
+  struct ipt_counters counters;
+
+  /* The matches (if any), then the target. */
+  unsigned char elems[0];
+};</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>An <EM
+>ipt_entry</EM
+> structure contains:</P
+><P
+></P
+><UL
+><LI
+><P
+>An <EM
+>ipt_ip</EM
+> structure containing (for the rule) the 
+source address and netmask <EM
+>(ip.src.s_addr, ip.smsk.s_addr)</EM
+>, 
+the destination address and netmask <EM
+>(ip.dst.s_addr, ip.dmsk.s_addr)</EM
+>, 
+the protocol <EM
+>(ip.proto)</EM
+>, a flags field <EM
+>(invflags)</EM
+> 
+to check for inverse <EM
+>(!)</EM
+> selections 
+<EM
+>(eg. ! 192.168.2.0/24, ! eth0, ! tcp, etc)</EM
+>, the input 
+interface <EM
+>(iniface)</EM
+>, the output interface 
+<EM
+>(outiface)</EM
+>, the input <EM
+>(iniface_mask)</EM
+> 
+and output <EM
+>(outiface_mask)</EM
+> interface masks and the 
+<EM
+>flags</EM
+> field to check for fragmented packets.</P
+></LI
+><LI
+><P
+>An <EM
+>ipt_counters</EM
+> structure containing the packet 
+<EM
+>(pcnt)</EM
+> and byte <EM
+>(bcnt)</EM
+> counter 
+of the rule. This information is important for bandwidth measurement.</P
+></LI
+><LI
+><P
+><EM
+>target_offset</EM
+> that is used to get the target information 
+of the rule.</P
+></LI
+><LI
+><P
+>Unknown fields: <EM
+>nfcache, comefrom, elems, next_offset</EM
+>.
+If someone can give me a feedback about these fields I would be grateful.</P
+></LI
+></UL
+><P
+>A simple way to work with all this information is to borrow
+some functions from <TT
+CLASS="FILENAME"
+>iptables-save.c</TT
+> by Paul 
+Russell and Harald Welte.</P
+><P
+>Here is another sample program <EM
+>Program #2</EM
+> written with 
+a lot of help from Russell-Welte:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>/* 
+ * How to use libiptc- program #2
+ * /usr/local/src/p1.c
+ */
+
+#include &#60;getopt.h&#62;
+#include &#60;sys/errno.h&#62;
+#include &#60;stdio.h&#62;
+#include &#60;fcntl.h&#62;
+#include &#60;stdlib.h&#62;
+#include &#60;string.h&#62;
+#include &#60;dlfcn.h&#62;
+#include &#60;time.h&#62;
+#include "libiptc/libiptc.h"
+#include "iptables.h"
+
+<EM
+>/* Here begins some of the code taken from iptables-save.c **************** */</EM
+>
+#define IP_PARTS_NATIVE(n)      \
+(unsigned int)((n)&#62;&#62;24)&#38;0xFF,   \
+(unsigned int)((n)&#62;&#62;16)&#38;0xFF,   \
+(unsigned int)((n)&#62;&#62;8)&#38;0xFF,    \
+(unsigned int)((n)&#38;0xFF)
+
+#define IP_PARTS(n) IP_PARTS_NATIVE(ntohl(n))
+
+/* This assumes that mask is contiguous, and byte-bounded. */
+static void
+print_iface(char letter, const char *iface, const unsigned char *mask,
+      int invert)
+{
+  unsigned int i;
+
+  if (mask[0] == 0)
+    return;
+
+  printf("-%c %s", letter, invert ? "! " : "");
+
+  for (i = 0; i &#60; IFNAMSIZ; i++) {
+    if (mask[i] != 0) {
+      if (iface[i] != '\0')
+        printf("%c", iface[i]);
+    } else {
+      /* we can access iface[i-1] here, because 
+       * a few lines above we make sure that mask[0] != 0 */
+      if (iface[i-1] != '\0')
+        printf("+");
+      break;
+    }
+  }
+
+  printf(" ");
+}
+
+/* These are hardcoded backups in iptables.c, so they are safe */
+struct pprot {
+  char *name;
+  u_int8_t num;
+};
+
+/* FIXME: why don't we use /etc/protocols ? */
+static const struct pprot chain_protos[] = {
+  { "tcp", IPPROTO_TCP },
+  { "udp", IPPROTO_UDP },
+  { "icmp", IPPROTO_ICMP },
+  { "esp", IPPROTO_ESP },
+  { "ah", IPPROTO_AH },
+};
+
+static void print_proto(u_int16_t proto, int invert)
+{
+  if (proto) {
+    unsigned int i;
+    const char *invertstr = invert ? "! " : "";
+
+    for (i = 0; i &#60; sizeof(chain_protos)/sizeof(struct pprot); i++)
+      if (chain_protos[i].num == proto) {
+        printf("-p %s%s ",
+               invertstr, chain_protos[i].name);
+        return;
+      }
+
+    printf("-p %s%u ", invertstr, proto);
+  }
+}
+
+static int print_match(const struct ipt_entry_match *e,
+      const struct ipt_ip *ip)
+{
+  struct iptables_match *match
+    = find_match(e-&#62;u.user.name, TRY_LOAD);
+
+  if (match) {
+    printf("-m %s ", e-&#62;u.user.name);
+
+    /* some matches don't provide a save function */
+    if (match-&#62;save)
+      match-&#62;save(ip, e);
+  } else {
+    if (e-&#62;u.match_size) {
+      fprintf(stderr,
+        "Can't find library for match `%s'\n",
+        e-&#62;u.user.name);
+      exit(1);
+    }
+  }
+  return 0;
+}
+
+/* print a given ip including mask if neccessary */
+static void print_ip(char *prefix, u_int32_t ip, u_int32_t mask, int invert)
+{
+  if (!mask &#38;&#38; !ip)
+    return;
+
+  printf("%s %s%u.%u.%u.%u",
+    prefix,
+    invert ? "! " : "",
+    IP_PARTS(ip));
+
+  if (mask != 0xffffffff) 
+    printf("/%u.%u.%u.%u ", IP_PARTS(mask));
+  else
+    printf(" ");
+}
+
+/* We want this to be readable, so only print out neccessary fields.
+ * Because that's the kind of world I want to live in.  */
+static void print_rule(const struct ipt_entry *e, 
+    iptc_handle_t *h, const char *chain, int counters)
+{
+  struct ipt_entry_target *t;
+  const char *target_name;
+
+  /* print counters */
+  if (counters)
+    printf("[%llu:%llu] ", e-&#62;counters.pcnt, e-&#62;counters.bcnt);
+
+  /* print chain name */
+  printf("-A %s ", chain);
+
+  /* Print IP part. */
+  print_ip("-s", e-&#62;ip.src.s_addr,e-&#62;ip.smsk.s_addr,
+      e-&#62;ip.invflags &#38; IPT_INV_SRCIP);  
+
+  print_ip("-d", e-&#62;ip.dst.s_addr, e-&#62;ip.dmsk.s_addr,
+      e-&#62;ip.invflags &#38; IPT_INV_DSTIP);
+
+  print_iface('i', e-&#62;ip.iniface, e-&#62;ip.iniface_mask,
+        e-&#62;ip.invflags &#38; IPT_INV_VIA_IN);
+
+  print_iface('o', e-&#62;ip.outiface, e-&#62;ip.outiface_mask,
+        e-&#62;ip.invflags &#38; IPT_INV_VIA_OUT);
+
+  print_proto(e-&#62;ip.proto, e-&#62;ip.invflags &#38; IPT_INV_PROTO);
+
+  if (e-&#62;ip.flags &#38; IPT_F_FRAG)
+    printf("%s-f ",
+           e-&#62;ip.invflags &#38; IPT_INV_FRAG ? "! " : "");
+
+  /* Print matchinfo part */
+  if (e-&#62;target_offset) {
+    IPT_MATCH_ITERATE(e, print_match, &#38;e-&#62;ip);
+  }
+
+  /* Print target name */  
+  target_name = iptc_get_target(e, h);
+  if (target_name &#38;&#38; (*target_name != '\0'))
+    printf("-j %s ", target_name);
+
+  /* Print targinfo part */
+  t = ipt_get_target((struct ipt_entry *)e);
+  if (t-&#62;u.user.name[0]) {
+    struct iptables_target *target
+      = find_target(t-&#62;u.user.name, TRY_LOAD);
+
+    if (!target) {
+      fprintf(stderr, "Can't find library for target `%s'\n",
+        t-&#62;u.user.name);
+      exit(1);
+    }
+
+    if (target-&#62;save)
+      target-&#62;save(&#38;e-&#62;ip, t);
+    else {
+      /* If the target size is greater than ipt_entry_target
+       * there is something to be saved, we just don't know
+       * how to print it */
+      if (t-&#62;u.target_size != 
+          sizeof(struct ipt_entry_target)) {
+        fprintf(stderr, "Target `%s' is missing "
+            "save function\n",
+          t-&#62;u.user.name);
+        exit(1);
+      }
+    }
+  }
+  printf("\n");
+}
+<EM
+>/* Here ends some of the code taken from iptables-save.c ****************** */</EM
+>
+
+int main(void)
+{
+  iptc_handle_t h;
+  const struct ipt_entry *e;
+  const char *chain = NULL;
+  const char *tablename = "filter";
+  const int counters = 1;
+
+  program_name = "p2";
+  program_version = NETFILTER_VERSION;
+
+  /* initialize */
+  h = iptc_init(tablename);
+  if ( !h )   {
+     printf("Error initializing: %s\n", iptc_strerror(errno));
+    exit(errno);
+  }
+
+  /* print chains and their rules */
+  for (chain = iptc_first_chain(&#38;h); chain; chain = iptc_next_chain(&#38;h))  {
+    printf("%s\n", chain);
+    for (e = iptc_first_rule(chain, &#38;h); e; e = iptc_next_rule(e, &#38;h))  {
+      print_rule(e, &#38;h, chain, counters);
+    }
+  }
+
+  exit(0);
+
+} /* main */</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>The function <EM
+>print_rule</EM
+> borrowed from 
+<TT
+CLASS="FILENAME"
+>iptables-save.c</TT
+> prints the information 
+about a rule into a readable form using:</P
+><P
+></P
+><UL
+><LI
+><P
+><EM
+>print_ip</EM
+> to print the addresses, </P
+></LI
+><LI
+><P
+><EM
+>print_iface</EM
+> to print the interfaces, </P
+></LI
+><LI
+><P
+><EM
+>print_proto</EM
+> to print the protocols, </P
+></LI
+><LI
+><P
+><EM
+>iptc_get_target</EM
+> to get and print the targets 
+(using <EM
+>save</EM
+>).</P
+></LI
+></UL
+><P
+>In <EM
+>main</EM
+> we iterate through each chain and 
+for each one we iterate through each rule printing it.</P
+><P
+>The arguments of <EM
+>print_rule</EM
+> are:</P
+><P
+></P
+><UL
+><LI
+><P
+>e = pointer to an <EM
+>ipt_entry</EM
+> structure containing 
+information about the rule.</P
+></LI
+><LI
+><P
+>h = pointer to an <EM
+>iptc_handle_t</EM
+> structure returned by 
+<EM
+>iptc_init</EM
+>.</P
+></LI
+><LI
+><P
+>chain = name of the chain.</P
+></LI
+><LI
+><P
+>counters = 0: do not print counters; 1: print them.</P
+></LI
+></UL
+><P
+>OK, compile and run program <EM
+>p2</EM
+>:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>./ipt-cc p2</B
+>
+bash# <B
+CLASS="COMMAND"
+>./p2</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You will get:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>INPUT
+FORWARD
+OUTPUT
+chain_1
+chain_2</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now modify the environment using <EM
+>iptables</EM
+> to add some rules:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>iptables -A INPUT -p tcp -i eth0 -s ! 192.168.1.1 --dport 20 -j ACCEPT</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A chain_1 -p udp -o eth1 -s 192.168.2.0/24 --sport 33 -j DROP</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now if you run again <EM
+>p2</EM
+> you will get:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>INPUT
+[0:0] -A INPUT -s ! 192.168.1.1 -i eth0 -p tcp -m tcp --dport 20 -j ACCEPT
+FORWARD
+OUTPUT
+chain_1
+[0:0] -A chain_1 -s 192.168.2.0/255.255.255.0 -o eth1 -p udp -m udp --sport 33 -j DROP
+chain_2</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>We have now rules printed for <EM
+>INPUT</EM
+> and 
+<EM
+>chain_1</EM
+> chains. The numbers in the
+brackets at left are packet and byte counters respectively.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN556">11.10. iptc_get_policy</H2
+><P
+><B
+>Name: </B
+>iptc_get_policy</P
+><P
+><B
+>Usage: </B
+>Get the policy of a given built-in chain.</P
+><P
+><B
+>Prototype: </B
+>const char *iptc_get_policy(const char *chain, struct ipt_counters *counter, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function gets the policy of a built-in chain, and fills in the
+<EM
+>counters</EM
+> argument with the hit statistics on 
+that policy.</P
+><P
+><B
+>Parameters: </B
+>You have to pass as arguments the name of the built-in chain you want 
+to get the policy to, a pointer to an <EM
+>ipt_counters</EM
+>
+structure to be filled by the function and the 
+<EM
+>iptc_handle_t</EM
+> structure identifying the table we are 
+working to. The <EM
+>ipt_counters</EM
+> structure was explained
+in previous section; do not forget that <EM
+>iptc_handle_t</EM
+>
+must be obtained by a previous call to the function <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns a char pointer to the policy name.</P
+><P
+>Using pieces of programs 1 and 2 we can write <EM
+>program #3</EM
+>:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>/* 
+ * How to use libiptc- program #3
+ * /usr/local/src/p3.c
+ */
+
+#include &#60;getopt.h&#62;
+#include &#60;sys/errno.h&#62;
+#include &#60;stdio.h&#62;
+#include &#60;fcntl.h&#62;
+#include &#60;stdlib.h&#62;
+#include &#60;string.h&#62;
+#include &#60;dlfcn.h&#62;
+#include &#60;time.h&#62;
+#include "libiptc/libiptc.h"
+#include "iptables.h"
+
+int main(void)
+{
+  iptc_handle_t h;
+  const char *chain = NULL;
+  const char *policy = NULL;
+  const char *tablename = "filter";
+  struct ipt_counters counters;
+
+  program_name = "p3";
+  program_version = NETFILTER_VERSION;
+
+  /* initialize */
+  h = iptc_init(tablename);
+  if ( !h )   {
+     printf("Error initializing: %s\n", iptc_strerror(errno));
+    exit(errno);
+  }
+
+  /* print built-in chains, their policies and counters */
+  printf("BUILT-IN   POLICY  PKTS-BYTES\n");
+  printf("-----------------------------\n");
+  for (chain = iptc_first_chain(&#38;h); chain; chain = iptc_next_chain(&#38;h))  {
+    if ( !iptc_builtin(chain, h) )
+      continue;
+    if ( (policy = iptc_get_policy(chain, &#38;counters, &#38;h)) )
+      printf("%-10s %-10s [%llu:%llu]\n", 
+             chain, policy, counters.pcnt, counters.bcnt);
+  }
+
+  exit(0);
+
+} /* main */</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>OK, compile and run program <EM
+>p3</EM
+>:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>./ipt-cc p3</B
+>
+bash# <B
+CLASS="COMMAND"
+>./p3</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You will get something like this:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>BUILT-IN  POLICY  PKTS-BYTES
+----------------------------
+INPUT     ACCEPT     [0:0]
+FORWARD   ACCEPT     [0:0]
+OUTPUT    ACCEPT     [0:0]</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN588">11.11. iptc_read_counter</H2
+><P
+><B
+>Name: </B
+>iptc_read_counter</P
+><P
+><B
+>Usage: </B
+>Read counters of a rule in a chain.</P
+><P
+><B
+>Prototype: </B
+>struct ipt_counters *iptc_read_counter(const ipt_chainlabel chain,
+unsigned int rulenum, iptc_handle_t *handle);</P
+><P
+><B
+>Description: </B
+>This function read and returns packet and byte counters of the entry 
+rule in chain <EM
+>chain</EM
+> positioned at 
+<EM
+>rulenum</EM
+>. Counters are returned in a pointer to a 
+type structure <EM
+>ipt_counters</EM
+>. Rule numbers start at 
+1 for the first rule.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be readed; <EM
+>rulenum</EM
+> is an integer value defined the 
+position in the chain of rules of the rule which counters will be read.
+<EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous call to 
+<EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns a pointer to an <EM
+>ipt_counters</EM
+> structure 
+containing the byte and packet counters readed. </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="howtoprg.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="mfunction.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>How to create your program(s)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Functions to modify firewalling rules and statistics</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

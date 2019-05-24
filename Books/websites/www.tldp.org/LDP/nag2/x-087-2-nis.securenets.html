@@ -1,0 +1,407 @@
+<HTML
+><HEAD
+><TITLE
+>NIS Server Security</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Network Information System"
+HREF="x-087-2-nis.html"><LINK
+REL="PREVIOUS"
+TITLE="Running an NIS Server"
+HREF="x-087-2-nis.server.html"><LINK
+REL="NEXT"
+TITLE="Setting Up an NIS Client with GNU libc"
+HREF="x-087-2-nis.yp.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.server.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. The Network Information System</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.yp.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NIS.SECURENETS"
+>13.5. NIS Server Security</A
+></H1
+><P
+>&#13;
+NIS used to have a major security flaw: it left your password file
+readable by virtually anyone in the entire Internet, which made for
+quite a number of possible intruders. As long as an intruder knew your
+NIS domain name and the address of your server, he could simply send
+it a request for the <TT
+CLASS="FILENAME"
+>passwd.byname</TT
+> map and
+instantly receive all your system's encrypted passwords. With a fast
+password-cracking program like <B
+CLASS="COMMAND"
+>crack</B
+> and a good
+dictionary, guessing at least a few of your users' passwords is rarely
+a problem.</P
+><P
+>&#13;
+
+This is what the <I
+CLASS="EMPHASIS"
+>securenets</I
+> option is all
+about. It simply restricts access to your NIS server to certain hosts,
+based on their IP addresses or network numbers. The latest version of
+<B
+CLASS="COMMAND"
+>ypserv</B
+> implements this feature in two ways. The
+first relies on a special configuration file called
+<TT
+CLASS="FILENAME"
+>/etc/ypserv.securenets</TT
+> and the second
+conveniently uses the <TT
+CLASS="FILENAME"
+>/etc/hosts.allow</TT
+> and
+<TT
+CLASS="FILENAME"
+>/etc/hosts.deny</TT
+> files we already encountered in
+<A
+HREF="x-087-2-appl.html"
+>Chapter 12</A
+>.<A
+NAME="X-087-2-FNNI06"
+HREF="#FTN.X-087-2-FNNI06"
+>[1]</A
+>
+Thus, to restrict access to hosts from within the Brewery, their
+network manager would add the following line to
+<TT
+CLASS="FILENAME"
+>hosts.allow&#8201;</TT
+>:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ypserv: 172.16.2.</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This would let all hosts from IP network <SPAN
+CLASS="SYSTEMITEM"
+>172.16.2.0</SPAN
+> access the NIS server.  To
+shut out all other hosts, a corresponding entry in
+<TT
+CLASS="FILENAME"
+>hosts.deny</TT
+> would have to read:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ypserv: ALL</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>IP numbers are not the only way you can specify hosts or networks in
+<TT
+CLASS="FILENAME"
+>hosts.allow</TT
+> and <TT
+CLASS="FILENAME"
+>hosts.deny</TT
+>. Please
+refer to the <TT
+CLASS="FILENAME"
+>hosts_access(5)</TT
+> manual page on your system
+for details.  However, be warned that you <I
+CLASS="EMPHASIS"
+>cannot</I
+> use host
+or domain names for the <SPAN
+CLASS="SYSTEMITEM"
+>ypserv</SPAN
+> entry.
+If you specify a hostname, the server tries to resolve this hostname&#8212;but
+the resolver in turn calls <B
+CLASS="COMMAND"
+>ypserv</B
+>, and you fall into an
+endless loop.</P
+><P
+> 
+To configure <SPAN
+CLASS="SYSTEMITEM"
+>securenets</SPAN
+> security
+using the <TT
+CLASS="FILENAME"
+>/etc/ypserv.securenets</TT
+> method, you need
+to create its configuration file, <TT
+CLASS="FILENAME"
+>/etc/ypserv.securenets</TT
+>.
+This configuration file is simple
+in structure. Each line describes a host or network of hosts that will be
+allowed access to the server. Any address not described by an entry in this
+file will be refused access. A line beginning with a # will be
+treated as a comment. Example 13-1 shows what a simple <TT
+CLASS="FILENAME"
+>/etc/ypserv.securenets</TT
+>
+would look like:</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-NIS.SECURENETS.FILE"
+></A
+><P
+><B
+>Example 13-1. Sample ypserv.securenets File</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># allow connections from local host -- necessary
+host 127.0.0.1
+# same as 255.255.255.255 127.0.0.1
+#
+# allow connections from any host on the Virtual Brewery network
+255.255.255.0   172.16.1.0
+#</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The first entry on each line is the netmask to use for the entry, with
+<SPAN
+CLASS="SYSTEMITEM"
+>host</SPAN
+> being treated as a special
+keyword meaning &#8220;netmask 255.255.255.255.&#8221; The second entry
+on each line is the IP address to which to apply the netmask.</P
+><P
+>A third option is to use the secure portmapper instead of the
+<TT
+CLASS="OPTION"
+>securenets</TT
+> option in
+<B
+CLASS="COMMAND"
+>ypserv</B
+>. The secure portmapper
+(<TT
+CLASS="FILENAME"
+>portmap-5.0</TT
+>) uses the <TT
+CLASS="FILENAME"
+>hosts.allow</TT
+> scheme as well, but
+offers this for all RPC servers, not just <B
+CLASS="COMMAND"
+>ypserv</B
+>.<A
+NAME="X-087-2-FNNI07"
+HREF="#FTN.X-087-2-FNNI07"
+>[2]</A
+>
+However, you should not use both the <TT
+CLASS="OPTION"
+>securenets</TT
+> option and the secure
+portmapper at the same time, because of the overhead this
+authorization incurs.</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNI06"
+HREF="x-087-2-nis.securenets.html#X-087-2-FNNI06"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> To
+enable use of the <TT
+CLASS="FILENAME"
+>/etc/hosts.allow</TT
+> method, you may
+have to recompile the server. Please read the instructions in the
+<TT
+CLASS="FILENAME"
+>README</TT
+> included in the distribution.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNI07"
+HREF="x-087-2-nis.securenets.html#X-087-2-FNNI07"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The secure portmapper is available via anonymous FTP from
+<SPAN
+CLASS="SYSTEMITEM"
+>ftp.win.tue.nl</SPAN
+> below the
+<TT
+CLASS="FILENAME"
+>/pub/security/</TT
+> directory.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.server.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.yp.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Running an NIS Server</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Setting Up an NIS Client with GNU libc</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

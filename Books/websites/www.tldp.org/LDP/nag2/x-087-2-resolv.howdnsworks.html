@@ -1,0 +1,1093 @@
+<HTML
+><HEAD
+><TITLE
+>How DNS Works</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Name Service and Resolver Configuration"
+HREF="x-087-2-resolv.html"><LINK
+REL="PREVIOUS"
+TITLE="The Resolver Library"
+HREF="x-087-2-resolv.library.html"><LINK
+REL="NEXT"
+TITLE="Running named"
+HREF="x-087-2-resolv.named.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-resolv.library.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Name Service and Resolver Configuration</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-resolv.named.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-RESOLV.HOWDNSWORKS"
+>6.2. How DNS Works</A
+></H1
+><P
+>DNS organizes hostnames in a domain hierarchy. A
+<I
+CLASS="EMPHASIS"
+>domain</I
+> is a collection of sites that are related
+in some sense&#8212;because they form a proper network (e.g.,
+all machines on a campus, or all hosts on BITNET), because they all
+belong to a certain organization (e.g., the U.S. government), or
+because they're simply geographically close. For instance,
+universities are commonly grouped in the <SPAN
+CLASS="SYSTEMITEM"
+>edu</SPAN
+> domain, with each university or
+college using a separate <I
+CLASS="EMPHASIS"
+>subdomain</I
+>, below which
+their hosts are subsumed. Groucho Marx University have the
+<SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+> domain, while the
+LAN of the Mathematics department is assigned <SPAN
+CLASS="SYSTEMITEM"
+>maths.groucho.edu</SPAN
+>. Hosts on the
+departmental network would have this domain name tacked onto their
+hostname, so <SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+> would be
+known as <SPAN
+CLASS="SYSTEMITEM"
+>erdos.maths.groucho.edu</SPAN
+>.  This is called
+the <I
+CLASS="EMPHASIS"
+>fully qualified domain name</I
+> (FQDN), which
+uniquely identifies this host worldwide.</P
+><P
+><A
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-RESOLV.FIG.DNS"
+>Figure 6-1</A
+> shows a section of the namespace.
+The entry at the root of this tree, which is denoted by a single dot, is quite
+appropriately called the <I
+CLASS="EMPHASIS"
+>root domain</I
+> and encompasses all
+other domains. To indicate that a hostname is a fully qualified domain name,
+rather than a name relative to some (implicit) local domain, it is
+sometimes written with a trailing dot. This dot signifies that the name's
+last component is the root domain.
+ </P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-RESOLV.FIG.DNS"
+></A
+><P
+><B
+>Figure 6-1. A part of the domain namespace</B
+></P
+><P
+><IMG
+SRC="lag2_0601.jpg"></P
+></DIV
+><P
+>&#13;Depending on its location in the name hierarchy, a domain may be
+called top-level, second-level, or third-level. More levels of
+subdivision occur, but they are rare. This list details several
+top-level domains you may see frequently:</P
+><DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN4957"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Domain</TH
+><TH
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>edu</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>(Mostly U.S.) educational institutions like universities.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>com</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Commercial organizations and companies.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>org</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Non-commercial organizations. Private UUCP networks are often in this domain.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>net</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Gateways and other administrative hosts on a network.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>mil</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>U.S. military institutions.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>gov</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>U.S. government institutions.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>uucp</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Officially, all site names formerly used as UUCP names without domains have been moved to this domain.</P
+></TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+><P
+>Historically, the first four of these were assigned to the U.S., but
+recent changes in policy have meant that these domains, named global
+Top Level Domains (gTLD), are now considered global in nature.
+Negotiations are currently underway to broaden the range of gTLDs,
+which may result in increased choice in the future.</P
+><P
+>Outside the U.S., each country generally uses a top-level domain of
+its own named after the two-letter country code defined in ISO-3166.
+Finland, for instance, uses the <SPAN
+CLASS="SYSTEMITEM"
+>fi</SPAN
+> domain; <SPAN
+CLASS="SYSTEMITEM"
+>fr</SPAN
+> is used by France, <SPAN
+CLASS="SYSTEMITEM"
+>de</SPAN
+> by Germany, and <SPAN
+CLASS="SYSTEMITEM"
+>au</SPAN
+> by Australia. Below this top-level
+domain, each country's NIC is free to organize hostnames in whatever
+way they want. Australia has second-level domains similar to the
+international top-level domains, named <SPAN
+CLASS="SYSTEMITEM"
+>com.au</SPAN
+> and <SPAN
+CLASS="SYSTEMITEM"
+>edu.au</SPAN
+>. Other countries, like Germany,
+don't use this extra level, but have slightly long names that refer
+directly to the organizations running a particular domain. It's not
+uncommon to see hostnames like <SPAN
+CLASS="SYSTEMITEM"
+>ftp.informatik.uni-erlangen.de</SPAN
+>. Chalk
+that up to German efficiency.</P
+><P
+>Of course, these national domains do not imply that a host below that
+domain is actually located in that country; it means only that the
+host has been registered with that country's NIC. A Swedish manufacturer
+might have a branch in Australia and still have all its hosts
+registered with the <SPAN
+CLASS="SYSTEMITEM"
+>se</SPAN
+> top-level domain.</P
+><P
+>Organizing the namespace in a hierarchy of domain names nicely solves
+the problem of name uniqueness; with DNS, a hostname has to be unique
+only within its domain to give it a name different from all other
+hosts worldwide. Furthermore, fully qualified names are easy to
+remember.  Taken by themselves, these are already very good reasons to
+split up a large domain into several subdomains.</P
+><P
+>&#13;
+
+DNS does even more for you than this. It also allows you to delegate
+authority over a subdomain to its administrators.  For example, the
+maintainers at the Groucho Computing Center might create a subdomain
+for each department; we already encountered the <SPAN
+CLASS="SYSTEMITEM"
+>math</SPAN
+> and <SPAN
+CLASS="SYSTEMITEM"
+>physics</SPAN
+> subdomains above. When they find
+the network at the Physics department too large and chaotic to manage
+from outside (after all, physicists are known to be an unruly bunch of
+people), they may simply pass control of the <SPAN
+CLASS="SYSTEMITEM"
+>physics.groucho.edu</SPAN
+> domain to the
+administrators of this network. These administrators are free to use
+whatever hostnames they like and assign them IP addresses from their
+network in whatever fashion they desire, without outside interference.</P
+><P
+> To this end,
+the namespace is split up into <I
+CLASS="EMPHASIS"
+>zones</I
+>, each rooted
+at a domain. Note the subtle difference between a
+<I
+CLASS="EMPHASIS"
+>zone</I
+> and a <I
+CLASS="EMPHASIS"
+>domain</I
+>: the
+domain <SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+>
+encompasses all hosts at Groucho Marx University, while the zone
+<SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+> includes only the
+hosts that are managed by the Computing Center directly; those at the
+Mathematics department, for example. The hosts at the Physics
+department belong to a different zone, namely <SPAN
+CLASS="SYSTEMITEM"
+>physics.groucho.edu</SPAN
+>.  In <A
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-RESOLV.FIG.DNS"
+>Figure 6-1</A
+>, the start of a zone is marked by a
+small circle to the right of the domain name.</P
+><P
+></P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-RESOLV.DNS.LOOKUPS"
+>6.2.1. Name Lookups with DNS</A
+></H2
+><P
+>At first glance, all this domain and zone fuss seems to make name
+resolution an awfully complicated business. After all, if no central
+authority controls what names are assigned to which hosts, how is a
+humble application supposed to know?</P
+><P
+>Now comes the really ingenious part about DNS. If you want to find the
+IP address of <SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+>, DNS
+says, &#8220;Go ask the people who manage it, and they will tell
+you.&#8221;</P
+><P
+> In fact, DNS is
+a giant distributed database. It is implemented by so-called name
+servers that supply information on a given domain or set of
+domains. For each zone there are at least two, or at most a few, name
+servers that hold all authoritative information on hosts in that
+zone. To obtain the IP address of <SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+>, all you have to do is contact the
+name server for the <SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+> zone, which will then return
+the desired data.</P
+><P
+>&#13;Easier said than done, you might think. So how do I know how to reach
+the name server at Groucho Marx University? In case your computer isn't
+equipped with an address-resolving oracle, DNS provides for this, too.
+When your application wants to look up information on
+<SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+>, it contacts a local name
+server, which conducts a so-called iterative query for it. It starts off
+by sending a query to a name server for the root domain, asking for the address
+of <SPAN
+CLASS="SYSTEMITEM"
+>erdos.maths.groucho.edu</SPAN
+>. The root
+name server recognizes that this name does not belong to its zone of authority,
+but rather to one below the <SPAN
+CLASS="SYSTEMITEM"
+>edu</SPAN
+> domain.
+Thus, it tells you to contact an <SPAN
+CLASS="SYSTEMITEM"
+>edu</SPAN
+>
+zone name server for more information and encloses a list of all
+<SPAN
+CLASS="SYSTEMITEM"
+>edu</SPAN
+> name servers along with their
+addresses. Your local name server will then go on and query one of those,
+for instance, <SPAN
+CLASS="SYSTEMITEM"
+>a.isi.edu</SPAN
+>. In a manner
+similar to the root name server,
+<SPAN
+CLASS="SYSTEMITEM"
+>a.isi.edu</SPAN
+> knows that the
+<SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+> people run a zone of
+their own, and points you to their servers. The local name server will then
+present its query for <SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+> to one
+of these, which will finally recognize the name as belonging to its zone,
+and return the corresponding IP address.
+</P
+><P
+>This looks like a lot of traffic being generated for looking up a
+measly IP address, but it's really only miniscule compared to the amount
+of data that would have to be transferred if we were still stuck with
+<TT
+CLASS="FILENAME"
+>HOSTS.TXT</TT
+>. There's still room for improvement with this
+scheme, however.</P
+><P
+>To improve response time during future queries, the name server stores
+the information obtained in its local <I
+CLASS="EMPHASIS"
+>cache</I
+>. So
+the next time anyone on your local network wants to look up the
+address of a host in the <SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+> domain, your name server will
+go directly to the <SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+> name server.<A
+NAME="X-087-2-FNIS06"
+HREF="#FTN.X-087-2-FNIS06"
+>[1]</A
+></P
+><P
+> Of course, the name server will not
+keep this information forever; it will discard it after some time. The
+expiration interval is called the <I
+CLASS="EMPHASIS"
+>time to live</I
+>,
+or TTL. Each datum in the DNS database is assigned such a TTL by
+administrators of the responsible zone.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-RESOLV.DNS.AUTH"
+>6.2.2. Types of Name Servers</A
+></H2
+><P
+>Name servers that hold all information on hosts within a zone are
+called <I
+CLASS="EMPHASIS"
+>authoritative</I
+> for this zone, and sometimes are
+referred to as <I
+CLASS="EMPHASIS"
+>master name servers</I
+>. Any query for a host
+within this zone will end up at one of these master name servers.</P
+><P
+>&#13;
+
+
+Master servers must be fairly well synchronized. Thus, the zone's
+network administrator must make one the <I
+CLASS="EMPHASIS"
+>primary</I
+>
+server, which loads its zone information from data files, and make
+the others <I
+CLASS="EMPHASIS"
+>secondary</I
+> servers, which transfer the
+zone data from the primary server at regular intervals.</P
+><P
+>Having several name servers distributes workload; it also provides
+backup. When one name server machine fails in a benign way, like
+crashing or losing its network connection, all queries will fall back
+to the other servers. Of course, this scheme doesn't protect you from
+server malfunctions that produce wrong replies to all DNS requests,
+such as from software bugs in the server program itself.</P
+><P
+>&#13;You can also run a name server that is not authoritative for any
+domain.<A
+NAME="X-087-2-FNIS07"
+HREF="#FTN.X-087-2-FNIS07"
+>[2]</A
+> This is useful, as the name server will still be able to
+conduct DNS queries for the applications running on the local network
+and cache the information. Hence it is called a
+<I
+CLASS="EMPHASIS"
+>caching-only</I
+> server.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-RESOLV.DNS.RECORDS"
+>6.2.3. The DNS Database</A
+></H2
+><P
+>We have seen that DNS not only deals with IP addresses of hosts, but
+also exchanges information on name servers. DNS databases may
+have, in fact, many different types of entries.</P
+><P
+> A
+single piece of information from the DNS database is called a
+<I
+CLASS="EMPHASIS"
+>resource record</I
+> (RR). Each record has a type
+associated with it describing the sort of data it represents, and a
+class specifying the type of network it applies to. The latter
+accommodates the needs of different addressing schemes, like
+
+
+IP addresses (the IN class), Hesiod addresses (used by MIT's
+Kerberos system), and a few more. The prototypical resource record
+type is the A record, which associates a fully qualified domain name
+with an IP address.</P
+><P
+>&#13;
+
+A host may be known by more than one name. For example you might have
+a server that provides both FTP and World Wide Web servers, which you
+give two names: <SPAN
+CLASS="SYSTEMITEM"
+>ftp.machine.org</SPAN
+> and <SPAN
+CLASS="SYSTEMITEM"
+>www.machine.org</SPAN
+>. However, one of these
+names must be identified as the official or
+<I
+CLASS="EMPHASIS"
+>canonical</I
+> hostname, while the others are simply
+aliases referring to the official hostname. The difference is that the
+canonical hostname is the one with an associated A record, while the
+others only have a record of type CNAME that points to the canonical
+hostname.</P
+><P
+>We will not go through all record types here, but we will give you a brief
+example. <A
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-RESOLV.FIG.HOSTS"
+>Example 6-4</A
+> shows a part of the
+domain database that is loaded into the name servers for the
+<SPAN
+CLASS="SYSTEMITEM"
+>physics.groucho.edu</SPAN
+> zone.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-RESOLV.FIG.HOSTS"
+></A
+><P
+><B
+>Example 6-4. An Excerpt from the named.hosts File for the Physics Department</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>; Authoritative Information on physics.groucho.edu.
+@  IN  SOA niels.physics.groucho.edu. janet.niels.physics.groucho.edu. {
+                  1999090200       ; serial no
+                  360000           ; refresh
+                  3600             ; retry
+                  3600000          ; expire
+                  3600             ; default ttl
+                }
+;
+; Name servers
+              IN    NS       niels
+              IN    NS       gauss.maths.groucho.edu.
+gauss.maths.groucho.edu. IN A 149.76.4.23
+;
+; Theoretical Physics (subnet 12)
+niels         IN    A        149.76.12.1
+              IN    A        149.76.1.12
+name server    IN    CNAME    niels
+otto          IN    A        149.76.12.2
+quark         IN    A        149.76.12.4
+down          IN    A        149.76.12.5
+strange       IN    A        149.76.12.6
+...
+; Collider Lab. (subnet 14)
+boson         IN    A        149.76.14.1
+muon          IN    A        149.76.14.7
+bogon         IN    A        149.76.14.12
+...</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;
+
+
+Apart from the A and CNAME records, you can see a special record at the top
+of the file, stretching several lines. This is the SOA resource record
+signaling the <I
+CLASS="EMPHASIS"
+>Start of Authority</I
+>, which holds general
+information on the zone the server is authoritative for. The SOA record
+comprises, for instance, the default time to live for all records.</P
+><P
+>Note that all names in the sample file that do not end with a dot
+should be interpreted relative to the <SPAN
+CLASS="SYSTEMITEM"
+>physics.groucho.edu</SPAN
+> domain. The special
+name (<SPAN
+CLASS="SYSTEMITEM"
+>@</SPAN
+>) used in the
+<TT
+CLASS="LITERAL"
+>SOA</TT
+> record refers to the domain name by itself.</P
+><P
+> We have seen
+earlier that the name servers for the <SPAN
+CLASS="SYSTEMITEM"
+>groucho.edu</SPAN
+> domain somehow have to know
+about the <SPAN
+CLASS="SYSTEMITEM"
+>physics</SPAN
+> zone so
+that they can point queries to their name servers. This is usually
+achieved by a pair of records: the NS record that gives the server's
+FQDN, and an A record that associates an address with that name. Since
+these records are what holds the namespace together, they are
+frequently called <I
+CLASS="EMPHASIS"
+>glue records</I
+>. They are the only
+instances of records in which a parent zone actually holds information
+on hosts in the subordinate zone. The glue records pointing to the
+name servers for <SPAN
+CLASS="SYSTEMITEM"
+>physics.groucho.edu</SPAN
+> are shown in <A
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-RESOLV.FIG.NSPTR"
+>Example 6-5</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-RESOLV.FIG.NSPTR"
+></A
+><P
+><B
+>Example 6-5. An Excerpt from the named.hosts File for GMU</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+> ; Zone data for the groucho.edu zone.
+ @  IN  SOA vax12.gcc.groucho.edu. joe.vax12.gcc.groucho.edu. {
+                      1999070100       ; serial no
+                      360000           ; refresh
+                      3600             ; retry
+                      3600000          ; expire
+                      3600             ; default ttl
+               }
+ ....
+ ;
+ ; Glue records for the physics.groucho.edu zone
+ physics        IN     NS        niels.physics.groucho.edu.
+                IN     NS        gauss.maths.groucho.edu.
+ niels.physics  IN     A         149.76.12.1
+ gauss.maths    IN     A         149.76.4.23
+ ...</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-RESOLV.DNS.IN-ADDR"
+>6.2.4. Reverse Lookups</A
+></H2
+><P
+>Finding the IP address belonging to a host is certainly the most
+common use for the Domain Name System, but sometimes you'll want to
+find the canonical hostname corresponding to an address. Finding this
+hostname is called <I
+CLASS="EMPHASIS"
+>reverse mapping</I
+>, and is used
+by several network services to verify a client's identity. When using
+a single <TT
+CLASS="FILENAME"
+>hosts</TT
+> file, reverse lookups simply
+involve searching the file for a host that owns the IP address in
+question. With DNS, an exhaustive search of the namespace is out of
+the question.  Instead, a special domain, <SPAN
+CLASS="SYSTEMITEM"
+>in-addr.arpa</SPAN
+>, has been created that
+contains the IP addresses of all hosts in a reversed dotted quad
+notation.  For instance, an IP address of <SPAN
+CLASS="SYSTEMITEM"
+>149.76.12.4</SPAN
+> corresponds to the name
+<SPAN
+CLASS="SYSTEMITEM"
+>4.12.76.149.in-addr.arpa</SPAN
+>. The
+resource-record type linking these names to their canonical hostnames
+is PTR.</P
+><P
+>&#13;
+
+
+
+
+Creating a zone of authority usually means that its administrators
+have full control over how they assign addresses to names.  Since they
+usually have one or more IP networks or subnets at their hands,
+there's a one-to-many mapping between DNS zones and IP networks. The
+Physics department, for instance, comprises the subnets <SPAN
+CLASS="SYSTEMITEM"
+>149.76.8.0</SPAN
+>, <SPAN
+CLASS="SYSTEMITEM"
+>149.76.12.0</SPAN
+>, and <SPAN
+CLASS="SYSTEMITEM"
+>149.76.14.0</SPAN
+>.</P
+><P
+>Consequently, new zones in the <SPAN
+CLASS="SYSTEMITEM"
+>in-addr.arpa</SPAN
+> domain have to be created
+along with the <SPAN
+CLASS="SYSTEMITEM"
+>physics</SPAN
+> zone,
+and delegated to the network administrators at the department:
+<SPAN
+CLASS="SYSTEMITEM"
+>8.76.149.in-addr.arpa</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>12.76.149.in-addr.arpa</SPAN
+>, and
+<SPAN
+CLASS="SYSTEMITEM"
+>14.76.149.in-addr.arpa</SPAN
+>.
+Otherwise, installing a new host at the Collider Lab would require
+them to contact their parent domain to have the new address entered
+into their <SPAN
+CLASS="SYSTEMITEM"
+>in-addr.arpa</SPAN
+> zone
+file.</P
+><P
+>The zone database for subnet 12 is shown in
+<A
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-RESOLV.FIG.SUBNET12"
+>Example 6-6</A
+>. The corresponding glue records
+in the database of their parent zone are shown in
+<A
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-RESOLV.FIG.GROUCHO-REV"
+>Example 6-7</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-RESOLV.FIG.SUBNET12"
+></A
+><P
+><B
+>Example 6-6. An Excerpt from the named.rev File for Subnet 12</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+> ; the 12.76.149.in-addr.arpa domain.
+ @  IN  SOA  niels.physics.groucho.edu. janet.niels.physics.groucho.edu. {
+                      1999090200 360000 3600 3600000 3600
+            }
+ 2        IN     PTR       otto.physics.groucho.edu.
+ 4        IN     PTR       quark.physics.groucho.edu.
+ 5        IN     PTR       down.physics.groucho.edu.
+ 6        IN     PTR       strange.physics.groucho.edu.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-RESOLV.FIG.GROUCHO-REV"
+></A
+><P
+><B
+>Example 6-7. An Excerpt from the named.rev File for Network 149.76</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+> ; the 76.149.in-addr.arpa domain.
+ @  IN  SOA vax12.gcc.groucho.edu. joe.vax12.gcc.groucho.edu. {
+                      1999070100 360000 3600 3600000 3600
+                  }
+ ...
+ ; subnet 4: Mathematics Dept.
+ 1.4        IN     PTR      sophus.maths.groucho.edu.
+ 17.4       IN     PTR      erdos.maths.groucho.edu.
+ 23.4       IN     PTR      gauss.maths.groucho.edu.
+ ...
+ ; subnet 12: Physics Dept, separate zone
+ 12         IN     NS       niels.physics.groucho.edu.
+            IN     NS       gauss.maths.groucho.edu.
+ niels.physics.groucho.edu. IN  A 149.76.12.1
+ gauss.maths.groucho.edu. IN  A   149.76.4.23
+ ...</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;<SPAN
+CLASS="SYSTEMITEM"
+>in-addr.arpa</SPAN
+> system zones can
+only be created as supersets of IP networks. An even more severe
+restriction is that these networks' netmasks have to be on byte
+boundaries. All subnets at Groucho Marx University have a netmask of
+<SPAN
+CLASS="SYSTEMITEM"
+>255.255.255.0</SPAN
+>, hence an
+<SPAN
+CLASS="SYSTEMITEM"
+>in-addr.arpa</SPAN
+> zone could be
+created for each subnet. However, if the netmask were <SPAN
+CLASS="SYSTEMITEM"
+>255.255.255.128</SPAN
+> instead, creating zones
+for the subnet <SPAN
+CLASS="SYSTEMITEM"
+>149.76.12.128</SPAN
+>
+would be impossible, because there's no way to tell DNS that the
+<SPAN
+CLASS="SYSTEMITEM"
+>12.76.149.in-addr.arpa</SPAN
+> domain
+has been split into two zones of authority, with hostnames ranging from
+<SPAN
+CLASS="SYSTEMITEM"
+>1</SPAN
+> through
+<SPAN
+CLASS="SYSTEMITEM"
+>127</SPAN
+>, and
+<SPAN
+CLASS="SYSTEMITEM"
+>128</SPAN
+> through
+<SPAN
+CLASS="SYSTEMITEM"
+>255</SPAN
+>, respectively.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNIS06"
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-FNIS06"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> If information weren't cached, then DNS
+would be as inefficient as any other method because each query would
+involve the root name servers.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNIS07"
+HREF="x-087-2-resolv.howdnsworks.html#X-087-2-FNIS07"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Well, almost. A name server has to provide at least name service for
+<SPAN
+CLASS="SYSTEMITEM"
+>localhost</SPAN
+> and reverse lookups of
+<SPAN
+CLASS="SYSTEMITEM"
+>127.0.0.1</SPAN
+>.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-resolv.library.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-resolv.named.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Resolver Library</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-resolv.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Running named</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

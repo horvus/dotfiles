@@ -1,0 +1,475 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux PCMCIA HOWTO: Resolving installation and configuration problems</TITLE>
+ <LINK HREF="PCMCIA-HOWTO-4.html" REL=next>
+ <LINK HREF="PCMCIA-HOWTO-2.html" REL=previous>
+ <LINK HREF="PCMCIA-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="PCMCIA-HOWTO-4.html">Next</A>
+<A HREF="PCMCIA-HOWTO-2.html">Previous</A>
+<A HREF="PCMCIA-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Resolving installation and configuration problems</A></H2>
+
+<P>This section describes some of the most common failure modes for the
+PCMCIA subsystem.  Try to match your symptoms against the examples.
+This section only describes general failures that are not specific
+to a particular client driver or type of card.
+<P>Before trying to diagnose a problem, you have to know where your
+system log is kept (see 
+<A HREF="PCMCIA-HOWTO-2.html#distributions">Notes about specific Linux distributions</A>).  You should also be familiar with
+basic diagnostic tools like <CODE>dmesg</CODE> and <CODE>lsmod</CODE>.  Also, be aware
+that most driver components (including all the kernel modules) have
+their own individual man pages. 
+<P>In 3.1.15 and later releases, the <CODE>debug-tools</CODE> subdirectory of the
+PCMCIA source tree has a few scripts to help diagnose some of the most
+common configuration problems.  The <CODE>test_setup</CODE> script checks your
+PCMCIA installation for completeness.  The <CODE>test_network</CODE> and
+<CODE>test_modem</CODE> scripts will try to diagnose problems with PCMCIA
+network and modem cards.  These scripts can be particularly helpful if
+you are unfamiliar with Linux and are not sure how to approach a
+problem.
+<P>Try to define your problem as narrowly as possible.  If you have
+several cards, try each card in isolation, and in different
+combinations.  Try cold Linux boots, versus warm boots from Windows.
+Compare booting with cards inserted, versus inserting cards after
+boot.  If you normally use your laptop docked, try it undocked.  And
+sometimes, two sockets will behave differently.
+<P>For debugging problems in the device configuration scripts, it may be
+useful to start <CODE>cardmgr</CODE> with the ``<CODE>-v</CODE>'' option.  With a
+3.1.23 or later PCMCIA package, this will cause most important script
+actions to be recorded in the system log.
+<P>It is nearly impossible to debug driver problems encountered when
+attempting to install Linux via a PCMCIA device.  Even if you can
+identify the problem based on its symptoms, installation disks are
+difficult to modify, especially without access to a running Linux
+system.  Customization of installation disks is completely dependent
+on the choice of Linux distribution, and is beyond the scope of this
+document.  In general, the best course of action is to install Linux
+using some other means, obtain the latest drivers, and then debug the
+problem if it persists.
+<P>
+<H2><A NAME="ss3.1">3.1 Base PCMCIA kernel modules do not load</A>
+</H2>
+
+<P>Symptoms:
+<UL>
+<LI>Kernel version mismatch errors are reported when the PCMCIA
+startup script runs.</LI>
+<LI>After startup, <CODE>lsmod</CODE> does not show any PCMCIA modules.</LI>
+<LI><CODE>cardmgr</CODE> reports ``<CODE>no pcmcia driver in
+/proc/devices</CODE>'' in the system log.</LI>
+</UL>
+<P>Kernel modules contain version information that is checked against the
+current kernel when a module is loaded.  The type of checking depends
+on the setting of the <CODE>CONFIG_MODVERSIONS</CODE> kernel option.  If this
+is false, then the kernel version number is compiled into each module,
+and <CODE>insmod</CODE> checks this for a match with the running kernel.  If
+<CODE>CONFIG_MODVERSIONS</CODE> is true, then each symbol exported by the
+kernel is given a sort of checksum.  These codes are all compared
+against the corresponding codes compiled into a module.  The intent
+was for this to make modules less version-dependent, because the
+checksums would only change if a kernel interface changed, and would
+generally stay the same across minor kernel updates.  In practice, the
+checksums have turned out to be even more restrictive, because many
+kernel interfaces depend on compile-time kernel option settings.
+Also, the checksums turned out to be an excessively pessimistic judge
+of compatibility.
+<P>The practical upshot of this is that kernel modules are closely tied
+to both the kernel version, and the setting of many kernel
+configuration options.  Generally, a set of modules compiled for one
+2.2.19 kernel will not load against some other 2.2.19 kernel unless
+special care is taken to ensure that the two were built with similar
+configurations.  This makes distribution of precompiled kernel modules
+a tricky business.
+<P>You have several options:
+<P>
+<UL>
+<LI>If you obtained precompiled drivers as part of a Linux
+distribution, verify that you are using an unmodified kernel as
+supplied with that distribution.  If you intend to use precompiled
+modules, you generally must stick with the corresponding kernel.</LI>
+<LI>If you have reconfigured or upgraded your kernel, you will
+probably need to compile and install the PCMCIA package from scratch.
+This is easily done if you already have the kernel source tree
+installed.  See 
+<A HREF="PCMCIA-HOWTO-2.html#compile">Compilation and installation</A>
+for detailed instructions.</LI>
+<LI>In some cases, incompatibilities in other system components can 
+prevent correct loading of kernel modules.  If you have upgraded your
+own kernel, pay attention to the ``minimal requirements'' for module
+utilities and binutils listed in the <CODE>Documentation/Changes</CODE>
+file in the kernel source code tree.  
+</LI>
+</UL>
+<P>
+<H2><A NAME="ss3.2">3.2 Some client driver modules do not load</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>The base modules (<CODE>pcmcia_core</CODE>, <CODE>ds</CODE>, <CODE>i82365</CODE>) load correctly.</LI>
+<LI>Inserting a card gives a high beep + low beep pattern.</LI>
+<LI><CODE>cardmgr</CODE> reports version mismatch errors in the system log.</LI>
+</UL>
+<P>Some of the driver modules require kernel services that may or may not
+be present, depending on kernel configuration.  For instance, the SCSI
+card drivers require that the kernel be configured with SCSI support,
+and the network drivers require a networking kernel.  If a kernel
+lacks a necessary feature, <CODE>insmod</CODE> may report undefined symbols
+and refuse to load a particular module. Note that <CODE>insmod</CODE> error
+messages do not distinguish between version mismatch errors and
+missing symbol errors.
+<P>Specifically:
+<UL>
+<LI>The serial client driver <CODE>serial_cs</CODE> requires the kernel
+serial driver to be enabled with <CODE>CONFIG_SERIAL</CODE>.  This driver may
+be built as a module.</LI>
+<LI>Support for multiport serial cards or multifunction cards that
+include serial or modem devices requires <CODE>CONFIG_SERIAL_SHARE_IRQ</CODE>
+to be enabled.</LI>
+<LI>The SCSI client drivers require that <CODE>CONFIG_SCSI</CODE> be
+enabled, along with the appropriate top level driver options
+(<CODE>CONFIG_BLK_DEV_SD</CODE>, <CODE>CONFIG_BLK_DEV_SR</CODE>, etc for 2.2 and later
+kernels).  These may be built as modules.</LI>
+<LI>The network client drivers require that <CODE>CONFIG_INET</CODE> is
+enabled.  Kernel networking support cannot be compiled as a module.</LI>
+<LI>The token-ring client requires that the kernel be compiled with
+<CODE>CONFIG_TR</CODE> enabled.</LI>
+</UL>
+<P>There are two ways to proceed:
+<UL>
+<LI>Rebuild your kernel with the necessary features enabled.</LI>
+<LI>If the features have been compiled as modules, then modify
+<CODE>/etc/pcmcia/config</CODE> to preload these modules.</LI>
+</UL>
+<P>The <CODE>/etc/pcmcia/config</CODE> file can specify that additional
+modules need to be loaded for a particular client.  For example, for
+the serial driver, one would use:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+device "serial_cs"
+  class "serial" module "misc/serial", "serial_cs"
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Module paths are specified relative to the top-level module directory
+for the current kernel version; if no relative path is given, then the
+path defaults to the <CODE>pcmcia</CODE> subdirectory.
+<P>
+<H2><A NAME="irqscan"></A> <A NAME="ss3.3">3.3 ISA interrupt scan failures</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>The system locks up when the PCMCIA drivers are loaded, even
+with no cards present.</LI>
+<LI>The system log shows a successful host controller probe just
+before the lock-up, but does not show interrupt probe results.</LI>
+</UL>
+<P>After identifying the host controller type, the socket driver probes
+for free ISA bus interrupts.  The probe involves programming the
+controller for each apparently free interrupt, then generating a
+``soft'' interrupt, to see if the interrupt can be detected correctly.
+In some cases, probing a particular interrupt can interfere with
+another system device.   
+<P>The reason for the probe is to identify interrupts which appear to be
+free (i.e., are not reserved by any other Linux device driver), yet
+are either not physically wired to the host controller, or are
+connected to another device that does not have a driver.
+<P>In the system log, a successful probe might look like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Intel PCIC probe:
+  TI 1130 CardBus at mem 0x10211000, 2 sockets
+  ...
+  ISA irqs (scanned) = 5,7,9,10 status change on irq 10
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>There are two ways to proceed:
+<UL>
+<LI>The ISA interrupt probe can be restricted to a list of
+interrupts using the <CODE>irq_list</CODE> parameter for the socket drivers.
+For example, ``<CODE>irq_list=5,9,10</CODE>'' would limit the scan to three
+interrupts.  All 16-bit PCMCIA devices will be restricted to using
+these interrupts (assuming they pass the probe).  You may need to use
+trial and error to find out which interrupts can be safely probed.</LI>
+<LI>The interrupt probe can be disabled entirely by loading the
+socket driver with the ``do_scan=0'' option.  In this case, a default
+interrupt list will be used, which just avoids interrupts already
+allocated for other devices.</LI>
+</UL>
+<P>In either case, the probe options can be specified using the
+<CODE>PCIC_OPTS</CODE> definition in the PCMCIA startup script, for example:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+PCIC_OPTS="irq_list=5,9,10"
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>It should be noted that <CODE>/proc/interrupts</CODE> is completely
+useless when it comes to diagnosing interrupt probe problems.  The
+probe is sensible enough to never attempt to use an interrupt that is
+already in use by another Linux driver.  So, the PCMCIA drivers are
+already using all the information in <CODE>/proc/interrupts</CODE>.
+Depending on system design, an inactive device can still occupy an
+interrupt and cause trouble if it is probed for PCMCIA.
+<P>
+<H2><A NAME="ioscan"></A> <A NAME="ss3.4">3.4 IO port scan failures</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>The system locks up when <CODE>cardmgr</CODE> is first started.  For
+3.1.24, the lockup happens even with no cards present; for 3.1.25, a
+card must be inserted.</LI>
+<LI>The system log shows a successful host controller probe,
+including interrupt probe results, but does not show IO probe
+results.  </LI>
+<LI>In some cases, the IO probe will succeed, but report large
+numbers of random exclusions.</LI>
+</UL>
+<P>When <CODE>cardmgr</CODE> processes IO port ranges listed in
+<CODE>/etc/pcmcia/config.opts</CODE>, the kernel probes these ranges to
+detect latent devices that occupy IO space but are not associated
+with a Linux driver.  The probe is read-only, but in rare cases,
+reading from a device may interfere with an important system function,
+resulting in a lock-up.
+<P>Your system user's guide may include a map of system devices, showing
+their IO and memory ranges.  These can be explicitly excluded in
+<CODE>config.opts</CODE>.
+<P>Alternatively, if the probe is unreliable on your system, it can be
+disabled by setting <CODE>CORE_OPTS</CODE> to ``<CODE>probe_io=0</CODE>''.  In this
+case, you should be very careful to specify only genuinely available
+ranges of ports in <CODE>config.opts</CODE>, instead of using the default
+settings.
+<P>
+<H2><A NAME="ss3.5">3.5 Memory probe failures</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>The core drivers load correctly when no cards are present, with
+no errors in the system log.</LI>
+<LI>The system freezes and/or reboots as soon as any card is
+inserted, before any beeps are heard.</LI>
+</UL>
+<P>Or alternately:
+<UL>
+<LI>All card insertions generate a high beep followed by a low beep.</LI>
+<LI>All cards are identified as ``anonymous memory cards''.</LI>
+<LI>The system log reports that various memory ranges have been
+excluded.</LI>
+</UL>
+<P>The core modules perform a memory scan at the time of first 16-bit
+card insertion.  This scan can potentially interfere with other memory
+mapped devices.  Also, pre-3.0.0 driver packages perform a more
+aggressive scan than more recent drivers.  The memory window is
+defined in <CODE>/etc/pcmcia/config.opts</CODE>.  The default window is
+large, so it may help to restrict the scan to a narrower range.
+Reasonable ranges to try include 0xd0000-0xdffff, 0xc0000-0xcffff,
+0xc8000-0xcffff, or 0xd8000-0xdffff.
+<P>If you have DOS or Windows PCMCIA drivers, you may be able to deduce
+what memory region those drivers use.  Note that DOS memory addresses
+are often specified in ``segment'' form, which leaves off the final
+hex digit (so an absolute address of 0xd0000 might be given as
+0xd000).  Be sure to add the extra digit back when making changes to
+<CODE>config.opts</CODE>.  
+<P>Changing BIOS settings affecting how devices are mapped can sometimes
+be useful.  Try changing settings for BIOS shadowing, or "Plug and
+Play OS support".
+<P>In unusual cases, a memory probe failure can indicate a timing
+register setup problem with the host controller.  See the 
+<A HREF="PCMCIA-HOWTO-2.html#startup">Startup options</A> section for information about
+dealing with common timing problems.  This really only applies to
+ISA-to-PCMCIA bus bridges.
+<P>
+<UL>
+<LI><CODE>cs: warning: no high memory space available!</CODE></LI>
+</UL>
+<P>CardBus bridges can allocate memory windows outside of the 640KB-1MB
+``memory hole'' in the ISA bus architecture.  It is generally a good
+idea to configure CardBus bridges to use high memory windows, because
+these are unlikely to conflict with other devices.  Also, CardBus
+cards may require large memory windows, which may be difficult or
+impossible to fit into low memory.  Card Services will preferentially
+allocate windows in high memory for CardBus bridges, if both low and
+high memory windows are defined in <CODE>config.opts</CODE>.  The default
+<CODE>config.opts</CODE> includes several candidate high memory windows, one
+of which will work in most cases.
+<P>
+<H2><A NAME="ss3.6">3.6 Failure to detect card insertions and removals</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>Cards are detected and configured properly if present at boot
+time. </LI>
+<LI>The drivers do not respond to insertion and removal events,
+either by recording events in the system log, or by beeping.</LI>
+</UL>
+<P>In most cases, the socket driver (<CODE>i82365</CODE> or <CODE>tcic</CODE>) will
+automatically probe and select an appropriate interrupt to signal card
+status changes.  The automatic interrupt probe doesn't work on some
+Intel-compatible controllers, including Cirrus chips and the chips
+used in some IBM ThinkPads.  If a device is inactive at probe time,
+its interrupt may also appear to be available.  In these cases, the
+socket driver may pick an interrupt that is used by another device.
+<P>With the <CODE>i82365</CODE> and <CODE>tcic</CODE> drivers, the <CODE>irq_list</CODE> option
+can be used to limit the interrupts that will be tested.  This list
+limits the set of interrupts that can be used by PCMCIA cards as well
+as for monitoring card status changes.  The <CODE>cs_irq</CODE> option can
+also be used to explicitly set the interrupt to be used for monitoring
+card status changes.
+<P>If you can't find an interrupt number that works, there is also a
+polled status mode: both <CODE>i82365</CODE> and <CODE>tcic</CODE> will accept a
+<CODE>poll_interval=100</CODE> option, to poll for card status changes once
+per second.  This option should also be used if your system has a
+shortage of interrupts available for use by PCMCIA cards.  Especially
+for systems with more than one host controller, there is little
+point in dedicating interrupts for monitoring card status changes.
+<P>All these options should be set in the <CODE>PCIC_OPTS=</CODE> line in either
+<CODE>/etc/rc.d/rc.pcmcia</CODE> or <CODE>/etc/sysconfig/pcmcia</CODE>,
+depending on your site setup.
+<P>
+<H2><A NAME="ss3.7">3.7 Interrupt delivery problems</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>Cards appear to be configured successfully, but don't work.</LI>
+<LI>Serial and modem cards may respond very sluggishly.</LI>
+<LI>Network cards may report ``interrupt(s) dropped'', and/or
+transmit timeouts.</LI>
+</UL>
+<P>The most simple interrupt delivery problems are due to conflicts with
+other system devices.  These can generally be resolved by excluding
+problem interrupts in <CODE>/etc/pcmcia/config.opts</CODE>.  To test, just
+exclude interrupts one by one until either the problem is fixed or you
+run out of interrupts.  If no interrupts work, then device conflicts
+are probably not the problem.
+<P>For CardBus bridges, a variety of other interrupt delivery issues may
+come into play.  For a complete discussion, see 
+<A HREF="PCMCIA-HOWTO-5.html#irqmode">PCI interrupt delivery problems</A>.
+<P>
+<H2><A NAME="ss3.8">3.8 System resource starvation</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>When a card is inserted, it is identified correctly but cannot
+be configured (high/low beep pattern).</LI>
+<LI>One of the following messages will appear in the system log:
+<BLOCKQUOTE><CODE>
+<PRE>
+RequestIO: Resource in use
+RequestIRQ: Resource in use
+RequestWindow: Resource in use
+GetNextTuple: No more items
+could not allocate nn IO ports for CardBus socket n
+could not allocate nnK memory for CardBus socket n
+could not allocate interrupt for CardBus socket n
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>Interrupt starvation often indicates a problem with the interrupt
+probe (see 
+<A HREF="#irqscan">Interrupt scan failures</A>).  In
+some cases, the probe will seem to work, but only report one or two
+available interrupts.  Check your system log to see if the scan
+results look sensible.  Disabling the probe and selecting interrupts
+manually should help.
+<P>If the interrupt probe is not working properly, the socket driver may
+allocate an interrupt for monitoring card insertions, even when
+interrupts are too scarce for this to be a good idea.  You can switch
+the controller to polled mode by setting <CODE>PCIC_OPTS</CODE> to
+``<CODE>poll_interval=100</CODE>'.  Or, if you have a CardBus controller and
+an older version of the PCMCIA drivers, try ``<CODE>pci_csc=1</CODE>'', which
+selects a PCI interrupt (if available) for card status changes.
+<P>In some cases, kernel misconfiguration can also produce an apparent
+interrupt shortage.  On 2.4 and later kernels, if <CODE>CONFIG_ISA</CODE>
+is not enabled, then the PCMCIA drivers will assume no ISA bus
+interrupts are available.
+<P>IO port starvation is fairly uncommon, but sometimes happens with
+cards that require large, contiguous, aligned regions of IO port
+space, or that only recognize a few specific IO port positions.  The
+default IO port ranges in <CODE>/etc/pcmcia/config.opts</CODE> are
+normally sufficient, but may be extended.  If this is the problem,
+try uncommenting the ``<CODE>include port 0x1000-0x17ff</CODE>'' line in
+<CODE>config.opts</CODE>.  In rare cases, starvation may indicate that the IO
+port probe failed (see 
+<A HREF="#ioscan">IO port scan failures</A>).
+<P>Memory starvation is also uncommon with the default memory window
+settings in <CODE>config.opts</CODE>.  CardBus cards may require larger memory
+regions than typical 16-bit cards.  Since CardBus memory windows can
+be mapped anywhere in the host's PCI address space (rather than just
+in the 640K-1MB ``hole'' in PC systems), it is helpful to specify
+large memory windows in high memory, such as 0xa0000000-0xa0ffffff.
+<P>
+<H2><A NAME="ss3.9">3.9 Resource conflict only with two cards inserted</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>Two cards each work fine when used separately.</LI>
+<LI>When both cards are inserted, only one works.</LI>
+</UL>
+<P>This usually indicates a resource conflict with a system device that
+Linux does not know about.  PCMCIA devices are dynamically configured,
+so, for example, interrupts are allocated as needed, rather than
+specifically assigned to particular cards or sockets.  Given a list of
+resources that appear to be available, cards are assigned resources in
+the order they are configured.  In this case, the card configured last
+is being assigned a resource that in fact is not free.
+<P>Check the system log to see what resources are used by the non-working
+card.  Exclude these in <CODE>/etc/pcmcia/config.opts</CODE>, and restart
+the <CODE>cardmgr</CODE> daemon to reload the resource database.
+<P>
+<H2><A NAME="ss3.10">3.10 Device configuration does not complete</A>
+</H2>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>When a card is inserted, exactly one high beep is heard.</LI>
+<LI>Subsequent card insertions and removals may be ignored.</LI>
+</UL>
+<P>This indicates that the card was identified successfully, however,
+<CODE>cardmgr</CODE> has been unable to complete the configuration process for
+some reason.  The most likely reason is that a step in the card setup
+script has blocked.  A good example would be the network script
+blocking if a network card is inserted with no actual network hookup
+present.
+<P>To pinpoint the problem, you can manually run a setup script to see
+where it is blocking.  The scripts are in the <CODE>/etc/pcmcia</CODE>
+directory.  They take two parameters: a device name, and an action.
+The <CODE>cardmgr</CODE> daemon records the configuration commands in the
+system log.  For example, if the system log shows that the command
+``./network start eth0'' was the last command executed by
+<CODE>cardmgr</CODE>, the following command would trace the script:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+sh -x /etc/pcmcia/network start eth0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<HR>
+<A HREF="PCMCIA-HOWTO-4.html">Next</A>
+<A HREF="PCMCIA-HOWTO-2.html">Previous</A>
+<A HREF="PCMCIA-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

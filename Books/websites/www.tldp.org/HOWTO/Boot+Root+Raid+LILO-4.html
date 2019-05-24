@@ -1,0 +1,203 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Boot + Root + Raid + Lilo : Software Raid mini-HOWTO: Upgrading from non-raid to RAID1/4/5</TITLE>
+ <LINK HREF="Boot+Root+Raid+LILO-5.html" REL=next>
+ <LINK HREF="Boot+Root+Raid+LILO-3.html" REL=previous>
+ <LINK HREF="Boot+Root+Raid+LILO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Boot+Root+Raid+LILO-5.html">Next</A>
+<A HREF="Boot+Root+Raid+LILO-3.html">Previous</A>
+<A HREF="Boot+Root+Raid+LILO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Upgrading from non-raid to RAID1/4/5</A></H2>
+
+<P>Upgrading a non-raid system to raid is fairly easy and consists
+of several discrete steps described below. The description is for a system
+with a boot partition, root partition and swap partition.
+<PRE>
+OLD disk in the existing system:
+
+    /dev/hda1     boot, may be dos+lodlin or lilo
+    /dev/hda2     root
+    /dev/hda3     swap
+</PRE>
+
+We will add an additional disk and convert the entire system to RAID1. You
+could easily add several disks and make a RAID5 set instead using the same
+procedure.
+<P>
+<H2><A NAME="ss4.1">4.1 Step 1 - prepare a new kernel</A>
+</H2>
+
+<P>Download a clean kernel, raidtools-0.90 (or the most recent version), and
+the kernel patch to upgrade the kernel to 0.90 raid. 
+<P>Compile and install the raidtools and READ the documentation.
+<P>Compile and install the
+kernel to support all the flavors (0/1/4/5 ?) of raid that you will be using.
+Make sure to specify autostart of raid devices in the kernel configuration.
+Test that the kernel boots properly and examine /proc/mdstat to see
+that the raid flavors you will use are supported by the new kernel.
+<P>
+<H2><A NAME="ss4.2">4.2 Step 2 - set up raidtab for your new raid.</A>
+</H2>
+
+<P>The new disk will be added to an additional IDE controller as the master
+device, thus becomming /dev/hdc
+<P>
+<PRE>
+    /dev/hdc1     16megs -- more than enough for several kernel images
+    /dev/hdc2     most of the disk
+    /dev/hdc3     some more swap space, if needed. otherwise add to hdc2
+</PRE>
+<P>Change the partition types for /dev/hdc1 and /dev/hdc2 to &quot;fd&quot; for
+raid-autostart.
+<P>Using the <B>failed-disk</B> parameter, create a raidtab for
+the desired RAID1 configuration. The failed disk must be the last
+entry in the table.
+<P>
+<PRE>
+# example raidtab
+# md0 is the root array
+raiddev                 /dev/md0
+raid-level              1
+nr-raid-disks           2
+chunk-size              32
+# Spare disks for hot reconstruction
+nr-spare-disks          0
+persistent-superblock   1
+device                  /dev/hdc2
+raid-disk               0
+# this is our old disk, mark as failed for now
+device                  /dev/hda2
+failed-disk             1
+
+# md1 is the /boot array
+raiddev                 /dev/md1
+raid-level              1
+nr-raid-disks           2
+chunk-size              32
+# Spare disks for hot reconstruction
+nr-spare-disks          0
+persistent-superblock   1
+device                  /dev/hdc1
+raid-disk               0
+# boot is marked failed as well
+device                  /dev/hda1
+failed-disk               1
+</PRE>
+<P>
+<H2><A NAME="ss4.3">4.3 Create, format, and configure RAID</A>
+</H2>
+
+<P>Create the md devices with the commands:
+<PRE>
+    mkraid /dev/md0
+    mkraid /dev/md1
+</PRE>
+<P>The raid devices should be created and start. Examination of /proc/mdstat
+should show the raid personalities in the kernel and the raid devices
+running.
+<P>Format the boot and root devices with:
+<PRE>
+    mke2fs /dev/md0
+    mke2fs /dev/md1
+</PRE>
+
+Mount the new root device somewhere handy and create the /boot directory and
+mount the boot partition.
+<PRE>
+    mount /dev/md0 /mnt
+    mkdir /mnt/boot
+    mount /dev/md1 /mnt/boot
+</PRE>
+<P>
+<H2><A NAME="ss4.4">4.4 Copy the current OS to the new raid device</A>
+</H2>
+
+<P>This is pretty straightforward.
+<PRE>
+    cd /
+    # set up a batch file to do this
+    cp -a /bin /mnt
+    cp -a /dev /mnt
+    cp -a /etc /mnt
+    cp -a (all directories except /mnt, /proc, and nsf mounts) /mnt
+</PRE>
+
+This operation can be tricky if you have mounted or linked other disks to
+your root file system. The example above assumes a very simple system, you
+may have to modify the procedure somewhat.
+<P>
+<H2><A NAME="ss4.5">4.5 Test your new RAID</A>
+</H2>
+
+<P>Make a boot floppy and rdev the kernel.
+<P>
+<PRE>
+    dd if=kernal.image of=/dev/fd0 bs=2k
+    rdev /dev/fd0 /dev/md0
+    rdev -r /dev/fd0 0
+    rdev -R /dev/fd0 1
+</PRE>
+<P>Modify the fstab on the RAID device to reflect the new mount points as
+follows:
+<PRE>
+  /dev/md0        /       ext2    defaults        1 1
+  /dev/md1        /boot   ext2    defaults        1 1
+</PRE>
+<P>Dismount the raid devices and boot the new file system to see that all works
+correctly.
+<P>
+<PRE>
+    umount /mnt/boot
+    umount /mnt
+    raidstop /dev/md0
+    raidstop /dev/md1
+    shutdown -r now
+</PRE>
+<P>Your RAID system should now be up and running in degraded mode with a floppy
+boot disk. Carefully check that you transferred everything to the new raid
+system. If you mess up here without a backup, YOU ARE DEAD!
+<P>If something did not work, reboot your old system and go back and fix things
+up until you successfully complete this step.
+<P>
+<H2><A NAME="ss4.6">4.6 Integrate old disk into raid array</A>
+</H2>
+
+<P>Success in the previous step means that the raid array is now operational,
+but without redundancy. We must now re-partition the old drive(s) to fit
+into the new raid array. Remember that if the geometries are not the same,
+the the partition size on the old drive must be the same or larger than the
+raid partitions or they can not be added to the raid set.
+<P>Re-partition the old drive as required. Example:
+<PRE>
+    /dev/hda1     same or larger than /dev/hdc1
+    /dev/hda2     same or larger than /dev/hdc2
+    /dev/hda3     anything left over for swap or whatever...
+</PRE>
+<P>Change the <B>failed-disk</B> parameter in the raidtab to <B>raid-disk</B> and
+hot add the new (old) disk partitions to the raid array.
+<PRE>
+    raidhotadd /dev/md1 /dev/hda1
+    raidhotadd /dev/md0 /dev/hda2
+</PRE>
+
+Examining /proc/mdstat should show one or more of the raid devices
+reconstructing the data for the new partitions. After a minute or two... 
+or so, the raid arrays should be fully synchronized 
+(this could take a while for a large
+partition).
+<P>
+<P>Using the procedure described in the first sections of this document, set up
+bootable raid on the new raid pair. Hang on to that boot floppy while
+setting up and testing this last step.
+<P>
+<HR>
+<A HREF="Boot+Root+Raid+LILO-5.html">Next</A>
+<A HREF="Boot+Root+Raid+LILO-3.html">Previous</A>
+<A HREF="Boot+Root+Raid+LILO.html#toc4">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,438 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Accessing the Video Device</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Webcam HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Enabling Support for Your (Webcam) Hardware in Linux"
+HREF="hardware.html"><LINK
+REL="NEXT"
+TITLE="Framegrabbing Applications"
+HREF="framegrabbers.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Webcam HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="hardware.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="framegrabbers.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="DEV-INTRO"
+></A
+>3. Accessing the Video Device</H1
+><P
+> The following
+section applies to all connection types.  </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DEV-MANUAL"
+></A
+>3.1. The Video Devices Node</H2
+><P
+>The Linux kernel requires a virtual device node be created to access and control the device in question. It may have already been created for you at boot-up; <B
+CLASS="COMMAND"
+>ls -l /dev/video*</B
+> (with an asterisk) or alternatively <B
+CLASS="COMMAND"
+>find /dev -name video*</B
+> or even visual inspection of the <TT
+CLASS="FILENAME"
+>/dev</TT
+> directory with your favorite file manager can give you an idea if the video devices exist. If so you can proceed to <A
+HREF="dev-intro.html#PERMISSIONS"
+>Section 3.2</A
+>; if not you will need to create them manually.</P
+><P
+>An easy way to create them, if available with your Linux distribution, is use of the <TT
+CLASS="FILENAME"
+>MAKEDEV</TT
+> script, which may be located in <TT
+CLASS="FILENAME"
+>/dev</TT
+> or the usual places for storing executable commands (<TT
+CLASS="FILENAME"
+>/bin</TT
+>,<TT
+CLASS="FILENAME"
+>/sbin</TT
+> and so on). The manual page for <TT
+CLASS="FILENAME"
+>MAKEDEV</TT
+> (<B
+CLASS="COMMAND"
+>man MAKEDEV</B
+>) can guide you further, but be aware of the device-specific command options. If <TT
+CLASS="FILENAME"
+>MAKEDEV</TT
+> doesn't work or doesn't exist, or you just prefer doing things the hard way, move on to the next paragraph.</P
+><P
+>A device can be created as a block (such as a drive), a fifo
+(file-in-file-out or pipe, as in xconsole) or a character device, which
+represents other hardware.
+
+Each device has a major and a minor number <SPAN
+CLASS="QUOTE"
+>"coordinate"</SPAN
+>
+to tell the kernel what it is and where to access it.
+
+These numbers are not arbitrary. The major number 81 with minor number 0, 1, 2, and so on are by convention assigned to Video4linux devices, including TV tuner boards and webcams. In order to create the video device <TT
+CLASS="FILENAME"
+>/dev/video0</TT
+>, use <B
+CLASS="COMMAND"
+>mknod</B
+> at the command line:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #  mknod /dev/video0 c 81 0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>where <B
+CLASS="COMMAND"
+>c</B
+> represents a character device.</P
+><P
+>&#13;You can use the following script, which I
+have borrowed from the kernel source (located in
+<TT
+CLASS="FILENAME"
+>linux/Documentation/video4linux/bttv/MAKEDEV</TT
+> of
+the source tree):</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #!/bin/bash
+   function makedev () {
+	for dev in 0 1 2 3; do echo "/dev/$1$dev:
+	char 81 $[ $2 + $dev ]" rm -f /dev/$1$dev
+	mknod /dev/$1$dev c 81 $[ $2 + $dev ] chmod
+	666 /dev/$1$dev
+   	done
+
+   	# symlink for default device
+	rm -f /dev/$1 ln -s /dev/${1}0 /dev/$1
+   	}
+
+	# see http://roadrunner.swansea.uk.linux.org/v4lapi.shtml
+	echo "*** new device names ***" makedev video
+	0 makedev radio 64 makedev vtx 192 makedev vbi 224
+	# "*** old device names (for compatibility only) ***"
+	#makedev bttv 0 #makedev bttv-fm 64 #makedev bttv-vbi 224</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> Simply copy and paste the above into your favorite editing program,
+save it as MAKEDEV or whatever name you like, make it executable
+(i.e., <B
+CLASS="COMMAND"
+>chmod u+x MAKEDEV</B
+>), and then execute it as root: </P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #  ./MAKEDEV</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PERMISSIONS"
+></A
+>3.2. Groups and Permissions</H2
+><P
+> It is a good idea to be sure that your user account can access
+the device once all modules are loaded and device nodes created.
+
+The most security-conscious way to do that is to add access for a
+particular group.
+
+On my system, the members of the group 'video' are allowed to use the
+webcam, scanner and other photographic devices.
+
+The way to accomplish this is to first change the ownership of the
+devices in <TT
+CLASS="FILENAME"
+>/dev</TT
+> like so (as root): </P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #  chown root.video /dev/usb/video*</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> ...where <B
+CLASS="COMMAND"
+>root.video</B
+> are the owner and group
+the device will now belong to.
+
+Obviously, the specific command will vary by your system and the type
+of device.
+
+It is important that you change the ownership of the device node itself
+and not the symlink; symlinks' ownerships are affected only by changing
+the parent devices or files they point to.  </P
+><P
+> To see if your user account is a member of the group in question,
+as root issue the following command:
+
+<B
+CLASS="COMMAND"
+>grep -e video /etc/group</B
+>.
+
+You should see something like the following:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   video:x:44:</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> ...where '44' is the group number.
+
+Since no members follow the last colon in the 'video' group, we can add
+them, let's say user 'jhs' with the command</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #  adduser jhs  video</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> After this, it's simply a matter of allowing read and write access
+for the user in question of the device like so: </P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #  chmod g+rw /dev/v4l/video0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> ...where <B
+CLASS="COMMAND"
+>g+rw</B
+> means add <B
+CLASS="COMMAND"
+>r</B
+>ead
+and <B
+CLASS="COMMAND"
+>w</B
+>rite access for <B
+CLASS="COMMAND"
+>g</B
+>roup.
+
+See the documentation for chmod (<B
+CLASS="COMMAND"
+>man chmod</B
+> or
+<B
+CLASS="COMMAND"
+>info chmod</B
+>) for further info.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="hardware.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="framegrabbers.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Enabling Support for Your (Webcam) Hardware in Linux</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Framegrabbing Applications</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

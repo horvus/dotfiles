@@ -1,0 +1,656 @@
+<HTML
+><HEAD
+><TITLE
+>Using the Software</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux NETMEETING HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="NetMeeting directory kit"
+HREF="netmeetserver.html"><LINK
+REL="NEXT"
+TITLE="Debugging"
+HREF="debugging.html"></HEAD
+><BODY
+CLASS="SECTION"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux NETMEETING HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="netmeetserver.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="debugging.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECTION"
+><H1
+CLASS="SECTION"
+><A
+NAME="USING"
+>4. Using the Software</A
+></H1
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="DIRECTCONNECT"
+>4.1. Direct Connection</A
+></H2
+><P
+>        You can use OpenH323's <B
+CLASS="COMMAND"
+>ohphone</B
+>
+	program to connect directly to a
+        NetMeeting client.  Specify the <TT
+CLASS="OPTION"
+>-n</TT
+>
+	option to indicate that you're
+        not using a gatekeeper, and either the DNS name or IP address of
+	the NetMeeting client:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ <TT
+CLASS="USERINPUT"
+><B
+>ohphone -n 208.130.48.22</B
+></TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        You can also start <B
+CLASS="COMMAND"
+>ohphone</B
+> to receive incoming
+	calls from NetMeeting clients:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ <TT
+CLASS="USERINPUT"
+><B
+>ohphone -n</B
+></TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>      See the <B
+CLASS="COMMAND"
+>ohphone</B
+> documentation for more information
+      on its additional features, including video conferencing, codec
+      selection, and auto-answer.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="DIROPT"
+>4.2. Directory Operation</A
+></H2
+><P
+>        Make sure you have an LDAP server running the NetMeeting directory kit,
+        as described above.
+      </P
+><P
+>        On the NetMeeting client, select the 
+        <SPAN
+CLASS="GUIMENU"
+>            Tools
+          </SPAN
+>-&gt;<SPAN
+CLASS="GUIMENUITEM"
+>            Options
+          </SPAN
+>
+        menu item to display a configuration dialog.  Under the
+        "General" (NetMeeting 3) or "Calling" (NetMeeting 2) tab,
+	there will be a section for "Directory Settings".
+        Here you can enter the IP address or DNS name of the server.
+        The client will then attach to the server and register itself
+        either automatically, if the "Log on to directory server when
+        NetMeeting starts" checkbox is selected.
+	You can also log on to the directory server manually, by selecting
+        <SPAN
+CLASS="GUIMENU"
+>            Call
+          </SPAN
+>-&gt;<SPAN
+CLASS="GUIMENUITEM"
+>            Log on
+          </SPAN
+>
+        .
+      </P
+><P
+>        If the user selects 
+        <SPAN
+CLASS="GUIMENU"
+>            Call
+          </SPAN
+>-&gt;<SPAN
+CLASS="GUIMENUITEM"
+>            Directory
+          </SPAN
+>,
+        a directory window will be displayed showing all users
+        registered on the LDAP server.
+	Double-clicking on one of the names will initiate a connection
+	to that user.
+      </P
+><P
+>        Querying the NetMeeting LDAP server from Linux can be done, but
+	is tricky because the client's IP address is stored in decimal,
+	and I don't mean dotted decimal.  For example, the IP address
+	63.216.69.197 is stored as 3309688895.  Here's some
+	Perl code to convert back and forth from the NetMeeting
+	IP address format:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># Convert $addr (IP address or DNS name) to a NetMeeting decimal IP address
+
+use Socket;
+$bytestring = inet_aton($addr);
+if (defined $bytestring) {
+    ($sipaddress) = unpack('V', $bytestring);
+} else {
+    die "Can't resolve $addr\n";
+}
+
+# Convert $sipaddress (from a NetMeeting LDAP server) into dotted decimal form
+
+$packedipaddr = pack 'V', $sipaddress;
+$ipaddress = join '.', unpack('C4',$packedipaddr);</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>      Included with the NetMeeting directory kit is
+      <B
+CLASS="COMMAND"
+>nmdirectory</B
+>, a simple Perl/Tk script to query
+      a NetMeeting LDAP server and display the clients registered with it.
+      It's very primitive, and doesn't work well with large databases,
+      but provides a rudimentary example of how to interpret search
+      results from a NetMeeting LDAP server.
+    </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="LNKFRMWEBPAGE"
+>4.3. Linking From A Web Page</A
+></H2
+><P
+>        Microsoft Internet Explorer understands URLs with a "callto:" scheme
+        that specify NetMeeting destinations in one of two forms.  When a
+        link with a "callto:" URL is selected, Internet Explorer runs
+        NetMeeting and directs it to connect to the specified destination.
+      </P
+><P
+>        The first URL form, "callto:destination", where 'destination' is
+        either an IP address or a DNS name, causes NetMeeting to open an
+        H.323 connection to port 1720 on 'destination'.  Use this form
+        to connect directly to another NetMeeting or OpenH323 client.
+      </P
+><P
+>        The second URL form, "callto:server/alias", causes a directory lookup
+        on LDAP server 'server', searching for a CN attribute of 'alias'.
+        Assuming a match is found, a connection is made to the IP address
+        specified in the entry's sipAddress attribute.  NetMeeting clients,
+        by default, register their user's E-mail addresses in the CN
+        attribute.  Use this form to perform a directory lookup based
+        on E-mail address.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="PERMDIRENT"
+>4.4. Permanent Directory Entries</A
+></H2
+><P
+>        NetMeeting clients aren't the only source of LDAP directory entries.
+        In particular, permanent directory entries can be manually inserted
+        into the LDAP server using the OpenLDAP client tools.  Assuming the
+        attributes are specified properly, these entries will then appear in
+        NetMeeting directory listings and can be used as targets in "callto:"
+        URLs.  This is useful when working with OpenH323 clients that don't
+        register themselves by default with the LDAP server.
+      </P
+><P
+>        To simply creating directory entries, the <B
+CLASS="COMMAND"
+>nmaddentry</B
+>
+	script is included in the NetMeeting directory kit.  Run it
+	without arguments for a usage message.  For example, if you've
+	started <B
+CLASS="COMMAND"
+>ohphone</B
+> on "y2k.freesoft.org", you
+	can register it with the LDAP server on "ils.freesoft.org" using
+	alias "baccala@freesoft.org" like this:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ <TT
+CLASS="USERINPUT"
+><B
+>nmaddentry -h ils.freesoft.org baccala@freesoft.org y2k.freesoft.org</B
+></TT
+>
+Successfully added cn=baccala@freesoft.org, objectclass=rtperson
+bash$
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        This entry will now appear in NetMeeting directory listings and
+	can be addressed as "ils.freesoft.org/baccala@freesoft.org".
+	The entry will automatically timeout after 30 minutes.
+        The <TT
+CLASS="OPTION"
+>-p</TT
+> switch creates a permanent directory
+	listing that won't time out, but this only works on
+	OpenLDAP servers using the NetMeeting directory kit.
+        To remove a permanent entry,
+	use the <B
+CLASS="COMMAND"
+>ldapdelete</B
+> program
+	included with the OpenLDAP distribution, specifying the LDAP
+	Distinguished Name returned by <B
+CLASS="COMMAND"
+>nmaddentry</B
+>:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ <TT
+CLASS="USERINPUT"
+><B
+>ldapdelete -h ils.freesoft.org 'cn=baccala@freesoft.org,objectclass=rtperson'</B
+></TT
+>
+bash$
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="SERVMULTALIAS"
+>4.5. Serving Multiple Aliases</A
+></H2
+><P
+>        The attributes registered by a NetMeeting client include 'sport',
+        the TCP port number it listens on for incoming H.323 requests, but
+        since this attribute is never retrieved in search requests, it
+        isn't as useful as it first appears.  In fact, NetMeeting always
+        opens H.323 connections to the default port (1720), which raises
+        the question of how to serve multiple aliases from a single IP
+        address.
+      </P
+><P
+>        The key to doing this is the <B
+CLASS="COMMAND"
+>forwarder</B
+>
+        program, included in the OpenH323 CVS archive. 
+        <B
+CLASS="COMMAND"
+>forwarder</B
+> listens for connections
+        on port 1720, and can be configured to redirect them based on the
+        alias being called.  This allows calls for each alias to be sent to
+        a unique port number, where a program like <B
+CLASS="COMMAND"
+>ohphone</B
+>
+        or <B
+CLASS="COMMAND"
+>openam</B
+> is listening.
+      </P
+><P
+>        To use aliases, an LDAP directory is required, with an entry for each
+        alias.  Each alias entry should specify a 'cn' attribute with the
+        alias name, and a 'sipAddress' attribute with the IP address of the
+        host where <B
+CLASS="COMMAND"
+>forwarder</B
+> is listening.
+      </P
+><P
+>        I've successfully configured a single host to act as a combination
+        LDAP server (on port 389), <B
+CLASS="COMMAND"
+>forwarder</B
+>
+	(on port 1720), and
+        <B
+CLASS="COMMAND"
+>ohphone</B
+> and <B
+CLASS="COMMAND"
+>openam</B
+>
+	clients on various private port numbers and remote systems.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="ANSWERINGMACHINE"
+>4.6. Using the Answering Machine</A
+></H2
+><P
+>        The OpenH323 answering machine, <B
+CLASS="COMMAND"
+>openam</B
+>, will
+	listen for incoming H.323 connections, play a pre-recorded
+	message, and then record any audio sent to it into a file.
+	It can optionally be configured to run another program at the
+	end of the call, to email the recorded audio, perhaps.
+      </P
+><P
+>        It's usefulness is currently (December 2000)
+	limited by the lack of a gatekeeper
+	program clever enough to redirect calls to it if there's no
+	answer at the main address.  Thus, it will only act as an
+	answering machine if the <B
+CLASS="COMMAND"
+>ohphone</B
+> program
+	is running at the main address, and has been configured to
+	redirect calls to another address, using
+	the <TT
+CLASS="OPTION"
+>--forward-no-answer</TT
+>
+	and <TT
+CLASS="OPTION"
+>--forward-busy</TT
+> options.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="CONFERENCECALLS"
+>4.7. Conference Calls</A
+></H2
+><P
+>        The <B
+CLASS="COMMAND"
+>openmcu</B
+> program, in the OpenH323 CVS
+	archive, implements an H.323 Multipoint Control Unit (MCU).
+	Multiple NetMeeting or <B
+CLASS="COMMAND"
+>ohphone</B
+> clients
+	can connect to the MCU and form a conference call.  As of
+	December 2000, the quality and reliability of the connection
+	is problematic, but hopefully this will improve.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="NATROUTING"
+>4.8. Routing Calls Through NAT</A
+></H2
+><P
+>        Special support is required on a NAT (IP Masquerade)
+	router to allow H.323 traffic to pass through.
+	If the NAT router is running Linux, two masquerading modules
+	are available:
+      </P
+><P
+></P
+><UL
+><LI
+><P
+><A
+HREF="http://www.coritel.it/coritel/ip/sofia/nat/nat2/nat2.htm"
+TARGET="_top"
+>http://www.coritel.it/coritel/ip/sofia/nat/nat2/nat2.htm</A
+></P
+></LI
+><LI
+><P
+><A
+HREF="http://netmeetingmasq.sourceforge.net/"
+TARGET="_top"
+>http://netmeetingmasq.sourceforge.net/</A
+></P
+></LI
+></UL
+><DIV
+CLASS="NOTE"
+><P
+></P
+><TABLE
+CLASS="NOTE"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>          I have not tested either of these modules.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="CUSTOMCONFIGURATION"
+>4.9. Custom Configurations</A
+></H2
+><P
+>        The server capabilities can be customized by modifying the
+        'netmeeting.perl' script.  For example,
+        calls for stale entries could be redirected to an
+        "forwarder" configured to hand off to "openam" answering
+        machines.  Thus, calls to a unavailable user would be answered
+        and recorded for later playback.
+      </P
+><P
+>        As OpenH323's development continues, it's expected that
+        these techniques will become more sophisticated, for example
+        by ringing the user first and only forwarding to an answering
+        machine if there's no answer after a given time.
+	Such functionality would most likely be placed in a gatekeeper.
+      </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="netmeetserver.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="debugging.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>NetMeeting directory kit</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Debugging</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,696 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Setting Up Your New Domain Mini-HOWTO.: Securing Your Domain</TITLE>
+ <LINK HREF="Domain-9.html" REL=next>
+ <LINK HREF="Domain-7.html" REL=previous>
+ <LINK HREF="Domain.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Domain-9.html">Next</A>
+<A HREF="Domain-7.html">Previous</A>
+<A HREF="Domain.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="security"></A> <A NAME="s8">8. Securing Your Domain</A></H2>
+
+<P>This section deals with setting up security for your new domain. The
+emphasis is on user-transparent features. If your security is too
+obtrusive, and interferes strongly with the actions of the users, the
+users will develop their own workarounds which may compromise the
+entire domain. The best way to avoid this is to make the security as
+transparent as possible, and to encourage users to come to you first
+when they have difficulties which might be related to the security
+measures of the site. A certain flexibility in attitude is
+important. I know from personal experience that if the security policy
+is too rigid, the users will simply set up their own network tunnels
+through the firewall so they can log in from outside the domain. It's
+better that remote login procedures, or whatever the users are trying
+to do, be set up, inspected, and approved by you.
+<P>
+<P>This section deals with securing your network against outside attack,
+and against casual snooping from within. Securing your site against
+determined attack from validated users within the private network is a
+more difficult and involved task, and is beyond the scope of this
+document.
+<P>
+<P>One of the security considerations used in this section is protecting
+against the ``hostile router''. The router provided by your ISP may be
+a remotely configurable computer in its own right, with the
+administrative password held by your provider. There have been
+security problems in the past when the router's manufacturer override
+password (the one used when your ISP forgets the password they
+programmed in) has become known to system crackers. When possible, you
+should design your security around the assumption that the router is
+potentially hostile. That is, it could be using any IP number in your
+public <EM>or private</EM> network blocks, it could be redirecting
+traffic on outgoing packets to another site, and it could be recording
+anything which goes through.
+<P>
+<P>
+<H2><A NAME="filtering"></A> <A NAME="ss8.1">8.1 Configuring Your Firewall</A>
+</H2>
+
+<P>This section deals with configuring an <EM>ipchains</EM>-based
+masquerading, forwarding, filtering router. You should probably read
+the 
+<A HREF="ftp://metalab.unc.edu/pub/Linux/docs/HOWTO/IPCHAINS-HOWTO">IPCHAINS-HOWTO</A> document first, then look here for additional
+hints. That HOWTO describes the steps necessary to compile a kernel
+with masquerading support, and describes the use of the ipchains
+binary in detail. You should enable firewalling on all machines with
+exposed IP numbers.
+<P>
+<P>Check your startup scripts to make sure that the sequence is as
+follows on the private network gateway machine:
+<OL>
+<LI>Outside Ethernet card is initialized.</LI>
+<LI>Firewall rules are run through ipchains.</LI>
+<LI>Forwarding is turned on.</LI>
+<LI>Network service daemons are started.</LI>
+</OL>
+<P>So, as an example, on a Slackware-based system, the firewall
+configuration should come between the execution of
+<CODE>rc.inet1</CODE> and <CODE>rc.inet2</CODE>. Further,
+if any problems arise during the firewall configuration steps, a
+warning should be printed, and the external Ethernet card taken
+off line before the network service daemons are run.
+<P>
+<P>One common problem with ipchains-based firewalls is the tedium of
+making sure that your rules are correctly set for packets arriving
+from the loopback interface, or arriving from either of the internal
+or external interfaces on the firewall machine. These locally-sourced
+packets can be blocked by a firewall. All too often, this is fixed by
+a sort of shotgun debugging approach, whereby the rules for the
+firewall are tweaked until all applications seem to run properly on
+the firewall host again. Unfortunately, this can sometimes result in a
+firewall which has unintended holes. With ipchains it is possible to
+write a firewall script which is easily debugged, and which avoids
+many of the packet source problems. Here is a sample script,
+<CODE>/sbin/firewall.sh</CODE>:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#! /bin/sh
+#
+# New firewalling script using IP chains. Creates a filtering router
+# with network masquerading.
+#
+
+# define a few variables
+
+IPCHAINS=/sbin/ipchains
+
+LOCALNET="192.168.1.0/24"       # the private network
+ETHINSIDE="192.168.1.1"         # fred.example.com's private IP #
+ETHOUTSIDE="10.1.1.9"           # fred.example.com's public IP #
+LOOPBACK="127.0.0.1/8"
+ANYWHERE="0/0"
+OUTSIDEIF=eth1                  # fred.example.com's private interface
+
+FORWARD_PROCENTRY=/proc/sys/net/ipv4/ip_forward
+
+#
+# These two commands will return error codes if the rules
+# already exist (which happens if you run the firewall
+# script more than once). We put the commands before "set -e"
+# so that the script doesn't abort in that case.
+
+$IPCHAINS -N outside
+$IPCHAINS -N portmap
+
+set -e                  # Abort immediately on error setting
+                        # up the rules.
+
+
+#
+# Turn off forwarding and clear the tables
+
+echo "0" > ${FORWARD_PROCENTRY}
+
+$IPCHAINS -F forward
+$IPCHAINS -F input
+$IPCHAINS -F output
+$IPCHAINS -F outside
+$IPCHAINS -F portmap
+
+
+#
+# Masquerade packets from within our local network destined for the
+# outside world. Don't masquerade packets which are local to local
+
+$IPCHAINS -A forward -s $LOCALNET -d $LOCALNET -j ACCEPT
+$IPCHAINS -A forward -s $ETHOUTSIDE -d $ANYWHERE -j ACCEPT
+$IPCHAINS -A forward -s $LOCALNET -d $ANYWHERE -j MASQ
+
+#
+# Set the priority flags. Minimum delay connections for www, telnet,
+# ftp, and ssh (outgoing packets only).
+
+$IPCHAINS -A output -p tcp -d $ANYWHERE www -t 0x01 0x10
+$IPCHAINS -A output -p tcp -d $ANYWHERE telnet -t 0x01 0x10
+$IPCHAINS -A output -p tcp -d $ANYWHERE ftp -t 0x01 0x10
+$IPCHAINS -A output -p tcp -d $ANYWHERE ssh -t 0x01 0x10
+
+
+#
+# Anything from our local class C is to be accepted, as are
+# packets from the loopback and fred's external IP.
+
+$IPCHAINS -A input -s $LOCALNET -j ACCEPT
+$IPCHAINS -A input -s $LOOPBACK -j ACCEPT
+$IPCHAINS -A input -s $ETHOUTSIDE -j ACCEPT
+
+
+
+# We'll create a set of rules for packets coming from the big, bad
+# outside world, and then bind all external interfaces to it. This
+# rule will be called "outside"
+#
+# We also create a "portmap" chain. The sockets used by daemons
+# registered with the RPC portmapper are not fixed, and so it is
+# a bit difficult to set up filter rules for them. The portmap
+# chain is configured in a separate script.
+
+
+#
+# Send packets from any outside interface to the "outside" 
+# rules chain. This includes the $OUTSIDEIF interface and any
+# ppp interfaces we create for dialout (or dialin).
+
+$IPCHAINS -A input -i ${OUTSIDEIF} -j outside
+$IPCHAINS -A input -i ppp+ -j outside
+
+
+##################################################
+#
+#  Set up the "outside" rules chain              #
+#
+##################################################
+
+#
+# Nobody from the outside should claim to be coming from our localnet
+# or loopback
+
+$IPCHAINS -A outside -s $LOCALNET -j DENY
+$IPCHAINS -A outside -s $LOOPBACK -j DENY
+
+#
+# No packets routed to our local net should come in from outside
+# because the outside isn't supposed to know about our private
+#  IP numbers.
+
+$IPCHAINS -A outside -d $LOCALNET -j DENY
+
+#
+# Block incoming connections on the X port. Block 6000 to 6010.
+
+$IPCHAINS -l -A outside -p TCP -s $ANYWHERE -d $ANYWHERE 6000:6010 -j DENY
+
+#
+# Block NFS ports 111 and 2049
+
+$IPCHAINS -l -A outside -p TCP -s $ANYWHERE -d $ANYWHERE 111 -j DENY
+$IPCHAINS -l -A outside -p TCP -s $ANYWHERE -d $ANYWHERE 2049 -j DENY
+$IPCHAINS -l -A outside -p UDP -s $ANYWHERE -d $ANYWHERE 111 -j DENY
+$IPCHAINS -l -A outside -p UDP -s $ANYWHERE -d $ANYWHERE 2049 -j DENY
+
+#
+# Block XDM packets from outside, port 177 UDP
+
+$IPCHAINS -l -A outside -p UDP -s $ANYWHERE -d $ANYWHERE 177 -j DENY
+
+
+#
+# Block the YP/NIS port 653
+
+$IPCHAINS -l -A outside -p TCP -s $ANYWHERE -d $ANYWHERE 653 -j DENY
+
+#
+# Don't bother logging accesses on TCP port 80, the www port.
+
+$IPCHAINS -A outside -p TCP -s $ANYWHERE -d $ANYWHERE 80 -j DENY
+
+#
+# Accept FTP data and control connections.
+
+$IPCHAINS -A outside -p TCP -s $ANYWHERE 20:21 -d $ANYWHERE 1024: -j ACCEPT
+
+#
+# Accept ssh packets
+
+$IPCHAINS -A outside -p TCP -s $ANYWHERE -d $ANYWHERE ssh -j ACCEPT
+
+#
+# Accept DNS packets from outside
+
+$IPCHAINS -A outside -p TCP -s $ANYWHERE -d $ANYWHERE 53 -j ACCEPT
+$IPCHAINS -A outside -p UDP -s $ANYWHERE -d $ANYWHERE 53 -j ACCEPT
+
+#
+# Accept SMTP from the world
+
+$IPCHAINS -A outside -p TCP -s $ANYWHERE -d $ANYWHERE 25 -j ACCEPT
+
+#
+# Accept NTP packets
+
+$IPCHAINS -A outside -p UDP -s $ANYWHERE -d $ANYWHERE 123 -j ACCEPT
+
+#
+# Accept no tap ident packets, we don't use them
+
+$IPCHAINS -A outside -p TCP -s $ANYWHERE -d $ANYWHERE 113 -j DENY
+
+#
+# Turn off and log all other packets incoming, TCP or UDP, on privileged ports
+
+$IPCHAINS -l -A outside -p TCP -s $ANYWHERE -d $ANYWHERE :1023 -y -j DENY
+$IPCHAINS -l -A outside -p UDP -s $ANYWHERE -d $ANYWHERE :1023 -j DENY
+
+#
+# Check against the portmapper ruleset
+
+$IPCHAINS -A outside -j portmap
+
+
+##############################################
+#
+#    End of "outside" rules chain            #
+#
+##############################################
+
+
+#
+# Block outgoing rwho packets
+
+$IPCHAINS -A output -p UDP -i $OUTSIDEIF -s $ANYWHERE 513 -d $ANYWHERE -j DENY
+
+#
+# Prevent netbios packets from leaving
+
+$IPCHAINS -A output -p UDP -i $OUTSIDEIF -s $ANYWHERE 137 -d $ANYWHERE -j DENY
+
+#
+# Turn on forwarding
+
+echo "1" > ${FORWARD_PROCENTRY}
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+Notice that the firewall can be used not only to block incoming
+packets, but also outgoing packets which might leak information about
+your private network, such as rwho and netbios packets.
+<P>
+<P>As noted earlier, the portmapper rules are a bit different, because
+the portmap daemons register themselves with the portmapper and are
+told which ports to listen on. The ports used by a particular daemon
+may change as you change the RPC services used, or change their order
+of startup. The following script,
+<CODE>/sbin/firewall.portmap.sh</CODE> generates rule sets for the
+portmapped daemons:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#! /bin/sh
+#
+ANYWHERE=0/0
+
+IPCHAINS=/sbin/ipchains
+
+$IPCHAINS -F portmap
+
+# Rules for preventing access to portmapped services by people on the outside
+#
+/usr/bin/rpcinfo -p | tail +2 | \
+        { while read program vers proto port remainder
+          do
+                prot=`echo $proto | tr "a-z" "A-Z"`
+                $IPCHAINS -l -A portmap -p $prot -s $ANYWHERE -d $ANYWHERE $port -j DENY || exit 1
+          done
+        }
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+We didn't have to worry about whether packets coming in were
+legitimate packets from the private network, the portmap chain is only
+checked when the packets come in from the outside.
+<P>
+<P>This firewall configuration logs most suspicious packets through
+klogd with the kern.info logging priority. It will log normal
+connection attempts, as well as all known ``stealth'' probes.
+<P>
+<P>Now, we put these all together. We'd like to make sure that there
+isn't a small window of vulnerability while the system is starting up,
+so you should configure your startup sequence as follows:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#! /bin/sh
+#
+# Get the network started, securely
+#
+#
+/etc/rc.d/rc.inet1              # Configure the network interfaces
+                                # and set up routing.
+/sbin/firewall.sh || { echo "Firewall configuration failed"
+                       /sbin/ifconfig eth1 down }
+
+/sbin/ipchains -I outside 1 -j DENY     # Deny all incoming packets
+
+/etc/rc.d/rc.inet2              # Start the network daemons
+
+sleep 5                         # Let them stabilize
+
+# Secure the portmapped services
+/sbin/firewall.portmap.sh || { echo "Portmap firewall configuration failed"
+                               /sbin/ifconfig eth1 down }
+
+/sbin/ipchains -D outside 1       # Allow incoming packets
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+This assumes that eth1 is the interface on the externally visible IP
+number. If any of the ipchains rule sets fail to install, a warning is
+issued and that interface is taken off line. The ``outside'' chain is set
+to deny all packets before the network service daemons are started,
+because the firewalling rules are not yet in place for the portmapped
+services. Once the portmapped services are firewalled, the ``outside''
+chain is restored to its proper behaviour.
+<P>
+<P>
+<H2><A NAME="config-ssh"></A> <A NAME="ss8.2">8.2 Configuring OpenSSH or SSH1</A>
+</H2>
+
+<P>At the time of this writing, OpenSSH, like SSH1, now offers a
+configuration setting which allows you to insert <EM>scp</EM>,
+<EM>ssh</EM>, and <EM>slogin</EM> as binaries named <EM>rcp</EM>,
+<EM>rsh</EM>, and <EM>rlogin</EM>, with transparent fall-through in
+the ssh client programs to the original <EM>rsh</EM>, <EM>rcp</EM>, or
+<EM>rlogin</EM> when the remote site isn't running
+<EM>sshd</EM>. Making an invocation of <EM>rsh</EM> run, instead, the
+<EM>ssh</EM> client program is, in my opinion, important for keeping
+the security easy to use and out of the way of the users. Everybody's
+scripts, <EM>rdist</EM> configurations, and so on will continue to
+work without modification if the remote site is running <EM>sshd</EM>,
+but data will be sent encrypted, with strong host authentication. The
+converse will not always be true. Specifically, if the remote machine
+is not running <EM>sshd</EM>, the <EM>rsh</EM> program will echo a
+diagnostic to the screen warning that the connection is
+unencrypted. This message breaks <EM>rdist</EM>, and possibly other
+programs. The message cannot be suppressed with command line or
+compile time switches. For <EM>rdist</EM>, one solution is to invoke
+the program with <CODE>-p /usr/lib/rsh/rsh</CODE>.
+<P>
+<P>Obtain ssh1 from the 
+<A HREF="http://www.ssh.org/">ssh web site</A>, or OpenSSH from the 
+<A HREF="http://www.openssh.org/">OpenSSH web site</A>, and compile it to replace the unencrypted
+r-programs (<EM>rsh</EM>, <EM>rlogin</EM>, and <EM>rcp</EM>). First,
+copy those three files to <CODE>/usr/lib/rsh/</CODE>, then configure the
+ssh package with:
+<BLOCKQUOTE><CODE>
+<PRE>
+ ./configure --with-rsh=/usr/lib/rsh/rsh --program-transform-name='s/^s/r/' --prefix=/usr
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Install the binaries, and configure according to the directions. On
+the private network gateway machine, make sure that the sshd
+configuration has the following entries defined:
+<BLOCKQUOTE><CODE>
+<PRE>
+ListenAddress 192.168.1.1       # fred's internal IP
+IgnoreRhosts no
+X11Forwarding yes
+X11DisplayOffset 10
+RhostsAuthentication no
+RhostsRSAAuthentication yes
+RSAAuthentication yes
+PasswordAuthentication yes
+</PRE>
+</CODE></BLOCKQUOTE>
+
+You will have to do further configuration of other entries in the
+<CODE>/etc/sshd_config</CODE> file, but try not to change these
+fields. Once you have all of the entries in the file set to your
+satisfaction, copy this entire file into a new file,
+<CODE>/etc/sshd_config.ext</CODE>, for the external
+network. Change two fields in the new file: the ``ListenAddress'' should
+be changed to the private network gateway's external IP number
+(10.1.1.9 in our fred.example.com case), and ``PasswordAuthentication''
+should be set to ``no'' in <CODE>/etc/sshd_config.ext</CODE>. In
+your network services startup script, start sshd twice, once with
+<BLOCKQUOTE><CODE>
+<PRE>
+/usr/sbin/sshd
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and once with
+<BLOCKQUOTE><CODE>
+<PRE>
+/usr/sbin/sshd -f /etc/sshd_config.ext
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This will create two running sshd daemons. The one operating on the
+internal interface will allow logins with passwords, but the external
+interface will require an RSA key validation before anybody can log
+on.
+<P>
+<P>Next, turn off incoming telnet and shell services in the inetd
+configuration file (note that the firewall configuration listed in
+section 
+<A HREF="#filtering">Configuring Your Firewall</A> already
+prevents access from outside, but it's best to defend in depth, don't
+rely on everything working correctly).
+<P>
+<P>People who want to be able to log in from home, or from out of town,
+will need an RSA key. Make sure they know how to do this, so they
+don't spend their energies trying to figure out another way to do it,
+like running a telnetd on an unprivileged port on your firewall
+machine.
+<P>
+<P>An RSA key is generated by the command:
+<BLOCKQUOTE><CODE>
+<PRE>
+ssh-keygen -b 1024 -f new_rsa_key
+</PRE>
+</CODE></BLOCKQUOTE>
+
+You will be prompted for a pass phrase. This should <EM>not</EM> be
+blank. A person with access to the file
+<CODE>new_rsa_key</CODE>, and knowledge of the pass phrase, has
+everything necessary to pass an RSA authentication challenge. The
+pass phrase can be an ``unguessable'' password, or a long sentence, but
+make it something non-trivial. The file <CODE>new_rsa_key</CODE>
+can be copied to a floppy disk, or onto a laptop, and, along with the
+pass phrase, can be used to log into accounts which are set to grant
+access to that particular RSA key.
+<P>
+<P>To configure an account to allow access by a particular RSA key,
+simply create a <CODE>$HOME/.ssh/</CODE> directory for that user
+on the private network gateway machine (i.e. the machine which will be
+receiving the login attempt), and copy the file
+<CODE>new_rsa_key.pub</CODE> which was created by the
+"ssh-keygen" command into the file
+<CODE>$HOME/.ssh/authorized_keys</CODE>. See the section
+``AUTHORIZED_KEYS FILE FORMAT'' in the sshd man page for details on
+other options you can add to the key, such as requiring the login to
+come from a certain IP or host name, or authorizing the key only to
+permit the remote invocation of certain commands (for instance, an RSA
+key which commands a backup to take place, or commands a status report
+to be emailed somewhere off site).
+<P>
+<P>Only one thing remains to make the RSA key mechanism as gentle as
+possible to the users. If a user is forced to enter the pass phrase
+more than once or twice in a session, they are likely to become bored
+and take security matters into their own hands. Under Linux, arrange
+their login shell to be invoked under <EM>ssh-agent</EM>. For
+instance, if the company laptop used on business trips runs
+<EM>xdm</EM>, and drops users into an X session, go into the
+<CODE>/var/X11R6/lib/xdm/Xsession_0</CODE> file and change the lines which
+invoke the startup, which are probably of the form:
+<BLOCKQUOTE><CODE>
+<PRE>
+exec "$startup"
+</PRE>
+</CODE></BLOCKQUOTE>
+
+into lines of the form:
+<BLOCKQUOTE><CODE>
+<PRE>
+exec ssh-agent "$startup"
+</PRE>
+</CODE></BLOCKQUOTE>
+
+In my xdm setup, there are three such lines which should be altered in
+that one file. Now, when the user logs onto the laptop, he enters the
+command
+<BLOCKQUOTE><CODE>
+<PRE>
+ssh-add new_rsa_key
+</PRE>
+</CODE></BLOCKQUOTE>
+
+at any prompt, enters the pass phrase when prompted, and all windows
+will have pass phrase-free access to the account on the private network
+gateway until the user logs off his X session on the laptop.
+<P>
+<P>Run sshd on all of the machines on your private network, as well as on
+any exposed hosts. For machines other than the private network gateway
+machine, the ListenAddress entry in
+<CODE>/etc/sshd_config</CODE> can be set to ``0.0.0.0''.  You
+should set up the host keys with the command:
+<BLOCKQUOTE><CODE>
+<PRE>
+ssh-keygen -b 1024 -f /etc/ssh_host_key -N ""
+</PRE>
+</CODE></BLOCKQUOTE>
+
+then run <EM>make-ssh-known-hosts</EM> and distribute the
+<CODE>/etc/ssh_known_hosts</CODE> file among all of the machines
+on the private and public networks. 
+<P>
+<P>Disable incoming telnet and the unencrypted r-services. Don't delete
+the <EM>telnet</EM> binary, it's useful for things other than simple
+telnet sessions on port 23. You should allow password authentication
+on the private network, and disable it on the exposed machines,
+requiring an RSA key to log onto the exposed hosts.
+<P>
+<P>It is convenient for the users if the hosts on the private network are
+mentioned in each other's <CODE>/etc/hosts.equiv</CODE>
+files. The sshd daemons will respect those, and allow people to rlogin
+and rsh between machines without passwords or pass phrases. On every
+connection, the machines will be verifying each other's identities
+with host-level RSA keys.
+<P>
+<P>One difficulty arises when a user logged onto a machine on the private
+network wants to log onto a box on an exposed IP number. You can't use
+<CODE>/etc/hosts.equiv</CODE> or <CODE>$HOME/.shosts</CODE> to allow
+password-less validation, because the user is coming from a machine
+whose IP number cannot be determined - it will appear to be coming
+from the masquerading firewall machine, but the host keys won't
+match. There are two solutions to this. First, if you insist on using
+the <CODE>/etc/hosts.equiv</CODE> or <CODE>$HOME/.shosts</CODE>
+methods, the user will have to log onto the private network gateway
+machine (fred.example.com in our example here), and then log through
+to the exposed machine from there. The other technique is to use RSA
+key authentication, that always works regardless of what games are
+going on with IP numbers and host name lookups.
+<P>
+<P>
+<H2><A NAME="ss8.3">8.3 Configuring X</A>
+</H2>
+
+<P>In the user's continuing quest to prove that he values convenience
+over security, it has become common for people to put 
+<BLOCKQUOTE><CODE>
+<PRE>
+xhost +
+</PRE>
+</CODE></BLOCKQUOTE>
+
+commands right into their X initialization scripts. This grants X
+server access to everybody in the world. Now the random outsider can
+change your root window graphic to something embarrassing while your
+boss is showing his mother around your office. Alternately, this
+outsider can quietly monitor every keystroke you issue, and dump the
+contents of your screen to his desktop. Needless to say, this doesn't
+bode well for passwords used to log into other sites, or for sensitive
+documents being edited on screen. The xhost protocol itself is
+inherently limited, as it is not possible to grant permissions to use
+the screen on a user basis, only on a machine basis.
+<P>
+<P>Enter <EM>xauth</EM> authentication. If you have <EM>xdm</EM> you
+probably already are running <EM>xauth</EM> authentication, but
+<EM>xhost</EM> still works, and might still be what people are using
+to run X processes between machines. Once again, the goal is to make
+the security easy enough to use that the users aren't tempted to run
+the <EM>xhost</EM> command anymore.
+<P>
+<P>The sshd setup described in section 
+<A HREF="#config-ssh">Configuring SSH1</A>, with the ``X11Forwarding'' flag set, is
+actually simpler to use than the <EM>xhost</EM> technique. Once you
+have logged into your terminal, you can simply rlogin to a remote
+machine, and run <EM>netscape</EM>, <EM>xv</EM>, or whatever you like,
+without having to set the $DISPLAY variable name or allow
+explicit permissions. During <EM>ssh</EM> login, it configures the
+system in a way transparent to the end user, and even encrypts all of
+your X packets before they go over the network.
+<P>
+<P>If you are unable to use the sshd X11 forwarding for some reason, you
+should use <EM>xauth</EM> when you want to authorize other machines to have
+access to your X server. Document this for the users, or create
+specialized shell scripts to help them out. The relevant command to
+authorize a particular login, ``jpublic'', on machine ``barney'' to have
+access to your X server is: 
+<BLOCKQUOTE><CODE>
+<PRE>
+ 
+/usr/X11/bin/xauth extract - $DISPLAY | rsh -l jpublic barney /usr/X11/bin/xauth merge -
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This sequence is not necessary to authorize X connections from
+machines which share a common NFS-mounted home directory. The xauth
+key will be immediately available to that user on all machines which
+mount the same home directory.
+<P>
+<P>I'd be tempted to delete <EM>xhost</EM> from your machines entirely. If it
+causes problems with any programs, you will at least know that those
+programs had poorly-designed security. It's simple enough to build a
+shell script as a drop-in replacement for <EM>xhost</EM> which uses the
+<EM>xauth</EM> sequence listed above.
+<P>
+<P>Note that if <EM>rsh</EM> is not the encrypting ssh program, the xauth
+key is sent plaintext. Anybody who holds the plaintext of the key can
+access your server, so you do not gain much security if you don't use
+ssh for these transactions. Note, also, that if the users' home
+directories are exported via NFS (the Network File System), the xauth
+key is available in plaintext to anybody able to snoop those NFS
+packets, regardless of whether you're running ssh on your systems.
+<P>
+<P>
+<H2><A NAME="ss8.4">8.4 Configuring Disk Sharing</A>
+</H2>
+
+<P>With email coming to a central machine, the read/send from any host
+setup described here is very convenient, but some care has to be taken
+to protect against trivial snooping by bored local users. NFS without
+AUTH_DES implemented is inherently insecure. NFS relies on the client
+machine to authenticate access, there is no password verification on
+the server to make sure that the client should be permitted to access
+the private files of a particular user. A Windows box can be
+configured to read NFS-exported volumes as any numeric uid, completely
+bypassing UNIX file permissions.  Consequently, NFS exports should
+only be made to machines which are always Linux (or UNIX) boxes under
+your direct control, and never ones which can be dual-booted into
+Windows.  If you want to export the mail spool directory, or any other
+directory, to machines which can sometimes be used as Windows boxes,
+export them with samba, setting the authentication mode to
+``security=USER''. Connecting the machines on your network with a
+switch rather than a hub will also help, as it leaves very little of
+interest for sniffers on Windows machines. Ultimately, though, it's
+very difficult to secure any disk sharing over the network at the time
+of this writing.
+<P>
+<P>Why bother, if you can't really secure the network disks? Mostly it's
+an issue of credible defense. If you leave a sheet of paper on your
+desk with confidential information, and somebody in the office reads
+it, he can argue that he didn't realize what the paper was, his
+natural curiosity just got the better of him when he saw it sitting on
+the desk. If the sheet of paper were in a filing cabinet or desk
+drawer, it's an entirely different story. The purpose of taking some
+basic network security measures internally is to ensure that nobody
+``accidentally'' compromises security.
+<P>
+<P>
+<HR>
+<A HREF="Domain-9.html">Next</A>
+<A HREF="Domain-7.html">Previous</A>
+<A HREF="Domain.html#toc8">Contents</A>
+</BODY>
+</HTML>

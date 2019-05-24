@@ -1,0 +1,765 @@
+<HTML
+><HEAD
+><TITLE
+>Linux Installation using a Remote Insight Lights-Out</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="HOWTO Use a Compaq Remote Insight Lights Out Edition for a
+	Headless, Remote Linux Installation "
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Compaq Remote Insight Lights-Out Background"
+HREF="x51.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>HOWTO Use a Compaq Remote Insight Lights Out Edition for a
+	Headless, Remote Linux Installation</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x51.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN82">3. Linux Installation using a Remote Insight Lights-Out</H1
+><P
+>    After you have installed the card into the server system you will
+    need to set up a Linux distribution repository, build and download
+    a special boot floppy, and drive the installation through a
+    browser.
+    </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN85">3.1. Hardware Installation</H2
+><P
+>        The first step is to install the Remote Insight Lights-Out
+        Edition card in a Compaq ProLiant Server and configure it for
+        network access.  Using DHCP is the easiest way to get the
+        Remote Insight Lights-Out card on the network.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN88">3.2. Setting up a Linux Distribution Point</H2
+><P
+>        On another server, make the contents of the
+        Red Hat installation CD available via HTTP or FTP.  For this
+        example, the server is named disto.OUR-LAB.com and HTTP is
+        used.
+      </P
+><P
+>        Copy the entire CD to the local hard disk and give appropriate
+        file protections to allow the web server to read it.  For Red
+        Hat V6.2, use the following commands.
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	 # mount -t iso9660 -o ro /dev/cdrom /mnt/cdrom
+	 # mkdir /usr/src/distros/RH62
+	 # (cd /mnt/cdrom &#38;&#38; tar cf - . ) | (cd /usr/src/RHCD &#38;&#38; tar xvfp - )
+	 # umount /mnt/cdrom
+	 # chmod +x -R /usr/src/distros/RH62
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Red Hat V7.0 and later versions contain two binary
+	distribution CDs, so both need to be copied into the same
+	directory structure. This example shows the steps for Red Hat
+	7.2.  Put the first binary distribution CD into the drive and
+	as above use the following commands:
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	 # mount -t iso9660 -o ro /dev/cdrom /mnt/cdrom
+	 # mkdir /usr/src/distros/RH72
+	 # (cd /mnt/cdrom &#38;&#38; tar cf - . ) | (cd /usr/src/distros/RH72 &#38;&#38; tar xvfp - )
+	 # umount /mnt/cdrom
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Then put the second binary distribution CD into the drive and
+	issue the following commands.
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	 # mount -t iso9660 -o ro /dev/cdrom /mnt/cdrom
+	 # mkdir /usr/src/distros/RH72
+	 # (cd /mnt/cdrom &#38;&#38; tar cf - . ) | (cd /usr/src/distros/RH72 &#38;&#38; tar xvfp - )
+	 # umount /mnt/cdrom
+	 # chmod +x -R /usr/src/distros/RH72
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+
+      </P
+><P
+>        Edit httpd.conf to add the following lines near the section
+        wehre other Aliases are defined.  The location of the
+        configuration file varies.  On a default Red Hat system, it is
+        in <TT
+CLASS="FILENAME"
+>/etc/httpd/httpd.conf</TT
+>. If the Apache
+        server was installed from sources using the default location,
+        it is in
+        <TT
+CLASS="FILENAME"
+>/usr/local/apache/conf/httpd.conf</TT
+>.  You
+        can also try <B
+CLASS="COMMAND"
+>locate httpd.conf</B
+> to find it.
+        
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	&#60;Directory /usr/src/distros/&#62;
+		Options Indexes
+		AllowOverride all
+        &#60;/Directory&#62;
+
+	Alias /distros	/usr/src/distros
+       </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+       </P
+><P
+>        Restart the Apache server.  If you are still running the
+        default Apache shipped with Red Hat, do this:
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	# /etc/rc.d/init.d/httpd restart
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+      </P
+><P
+>        Other Linux distributions may put the Apache Web Server
+        startup script in a different place.
+      </P
+><P
+>         The location of of apachectl may vary; find it with
+         <B
+CLASS="COMMAND"
+>locate apachectl</B
+>. If you installed
+         the Apache server yourself, you may want to use apachectl.
+         If you used the Apache default file locations, it would be
+         the following.
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+> 	# /usr/local/apache/bin/apachectl restart
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+       </P
+><P
+>        Verify that the Red Hat content is available:
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	# lynx http://distro.OUR-LAB.com/distros
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN108">3.3. Creating a Virtual Floppy Disk</H2
+><P
+>&#13;        Create a special Red Hat boot floppy that can perform a network
+        installation.  The file from the Red Hat CD is in
+        <TT
+CLASS="FILENAME"
+>images/bootnet.img</TT
+>;in this example, 
+        <TT
+CLASS="FILENAME"
+>/usr/src/distros/RH72/images/bootnet.img</TT
+> or 
+        <TT
+CLASS="FILENAME"
+>http://distro.OUR-LAB.com/distros/RH72/images/bootnet.img</TT
+>.
+        Other distributions can also install across the network using
+        similar steps.
+
+      </P
+><P
+>        From a Linux or UNIX system follow these steps.  
+        Put a floppy in the drive.
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	# dd if=/usr/src/distros/RH72/images/bootnet.img of=/dev/fd0 bs=1440k
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+       </P
+><P
+>        Take that special boot floppy to a Microsoft Windows system
+        that has the <TT
+CLASS="FILENAME"
+>CPQIMAGE</TT
+> program to build an
+        IMG file from a floppy to be uploaded to the Compaq Remote
+        Insight Lights-Out card.  This is the only step that requires
+        the use of a Microsoft platform. The
+        <TT
+CLASS="FILENAME"
+>CPQIMAGE</TT
+> program is not available on any
+        other platform.
+      </P
+><P
+>	The <TT
+CLASS="FILENAME"
+>CPQIMAGE</TT
+> program for Microsoft
+	Windows 95/98/NT 4.0/2000 is available for download from
+	<A
+HREF="http://www.compaq.com/manage/lightsout-downloads.html"
+TARGET="_top"
+>	http://www.compaq.com/manage/lightsout-downloads.html</A
+>.
+	Choose the "Diskette Image Utility" download.
+
+      </P
+><P
+>	Build a file named <TT
+CLASS="FILENAME"
+>redhat-bootnet.img</TT
+>
+        using that Windows-based application.  Note for multi-system
+        installations, this file can be reused or simply provided to
+        the customer.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN124">3.4. Downloading a Virtual Floppy Disk to the Server</H2
+><P
+>	Now that a special version of the
+	<TT
+CLASS="FILENAME"
+>bootnet.img</TT
+> has been created, it needs to
+	be loaded into the Virtual Floppy Disk on the Remote Insight
+	Lights-Out card.
+      </P
+><P
+>	<P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>        Connect to the Remote Insight Lights-Out card of the Linux
+        system from a Java-enabled browser (Netscape, MSIE) using the
+        URL https://XX.XX.XX.XX where the X's are the IP address
+        assigned to the card.  You can use a Linux system running
+        Netscape or a Windows system running Netscape or Microsoft
+        Internet Explorer.  Just have the
+        <TT
+CLASS="FILENAME"
+>redhat-bootnet.img</TT
+> local to the system
+        running the browser.  Note that this special image file is
+        larger than a regular 1.44MB floppy. Note: You may want to use
+        FTP to move the file to the system that you will run the
+        browser on.
+	    </P
+></LI
+><LI
+><P
+>	  Log in to the Remote Insight Lights-Out card by using a web
+	  browser to connect to the IP address assigned to the card.
+            </P
+></LI
+><LI
+><P
+>        Select the "Insert Virtual Floppy" from the web interface, 
+        link (on left near the bottom) and load the
+        <TT
+CLASS="FILENAME"
+>redhat-bootnet.img</TT
+> file you just created
+        into the virtual floppy.
+
+        <DIV
+CLASS="FIGURE"
+><A
+NAME="AEN138"><P
+><B
+>Figure 1. Uploading bootnet floppy image</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><IMG
+SRC="upload-bootnet.jpg"><DIV
+CLASS="CAPTION"
+><P
+>Uploading a floppy image to the Virtual Floppy</P
+></DIV
+></P
+></DIV
+></DIV
+>
+
+      </P
+></LI
+><LI
+><P
+>        Select the "Virtual Floppy Boot Option" of 'Boot Once'
+        in the "Virtual Floppy Status" section.
+
+        <DIV
+CLASS="FIGURE"
+><A
+NAME="AEN151"><P
+><B
+>Figure 2. Virtual Floppy Boot Once Dialog</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><IMG
+SRC="virtual-floppy-bootonce-dialog.jpg"><DIV
+CLASS="CAPTION"
+><P
+>Image of Virtual Floppy Options</P
+></DIV
+></P
+></DIV
+></DIV
+>
+      </P
+></LI
+></OL
+>
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN162">3.5. Power on and Booting</H2
+><P
+>        Now the system is ready to be powered.  From the browser, click
+        on the 'Virtual Power Button' and power on the server.
+
+	<P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>        Turn on the virtual console by selecting 'Remote Console (2-cursor) under
+        the "Remote Console" section.  This starts a Java applet
+        that will show you exactly what is being displayed on the
+        console, for example, the memory self check, BIOS startup,
+        SCSI probe, etc.  If you have a Compaq SmartArray card, you
+        can click on the button to send an
+        <SPAN
+CLASS="KEYCODE"
+>F10</SPAN
+> keypress.
+        
+        <DIV
+CLASS="FIGURE"
+><A
+NAME="AEN169"><P
+><B
+>Figure 3. BIOS bootup</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><IMG
+SRC="bios-boot.jpg"><DIV
+CLASS="CAPTION"
+><P
+>Browser window showing memory check during BIOS boot</P
+></DIV
+></P
+></DIV
+></DIV
+>
+      </P
+></LI
+><LI
+><P
+>        Enter "text" for a non-GUI installation method at the boot: prompt.  
+        The graphical interface would work also, but it is
+        slower over the network.
+      </P
+></LI
+><LI
+><P
+>        Follow the Red Hat installation.  When it gets to the place
+        where it asks for where the distribution media location
+        (CDROM, HardDrive, HTTP, NFS, FTP), select 'HTTP'.
+
+        <DIV
+CLASS="FIGURE"
+><A
+NAME="AEN184"><P
+><B
+>Figure 4. Red Hat bootup</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><IMG
+SRC="redhat-boot.jpg"><DIV
+CLASS="CAPTION"
+><P
+>Red Hat text-based installation</P
+></DIV
+></P
+></DIV
+></DIV
+>
+      </P
+></LI
+><LI
+><P
+>        Put the name of the web server with the Red Hat distribution
+        for the hostname, in this example, distro.OUR-LAB.com.  The
+        directory for this example is <TT
+CLASS="FILENAME"
+>/rh</TT
+>.  If you didn't previously
+        specify a DNS server in the TCP/IP configuration step prior to
+        this, you can use the IP address of the system serving the
+        distribution.
+        
+        <DIV
+CLASS="FIGURE"
+><A
+NAME="AEN198"><P
+><B
+>Figure 5. Red Hat bootup</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><IMG
+SRC="redhat-http-setup.jpg"><DIV
+CLASS="CAPTION"
+><P
+>Selecting HTTP based installation</P
+></DIV
+></P
+></DIV
+></DIV
+>
+        
+      </P
+></LI
+><LI
+><P
+>        Proceed with a normal Red Hat installation.
+      </P
+></LI
+><LI
+><P
+>        Skip the configuration of the X server when it gets to the X11 
+        configuration step.
+      </P
+><P
+>        If you want to run a graphical interface on your server
+        system, it can be configured later using
+        <TT
+CLASS="FILENAME"
+>Xconfigurator</TT
+> or
+        <TT
+CLASS="FILENAME"
+>xf86config</TT
+>.  Compaq suggests that the
+        server resolution be set to 640x480 at 16-bit color depth
+        and mouse acceleration to be 1x.
+      </P
+></LI
+><LI
+><P
+>        Proceed with a normal Red Hat installation.  Note that there
+        is a 15 minute timeout for the Remote Console, if your Red Hat
+        installation takes longer than that you may be disconnected
+        from the Remote Console.  If this happens, simply reconnect to
+        the URL https://XX.XX.XX.XX, where the X's are the IP address
+        assigned to the card, and continue from where you left off.
+      </P
+></LI
+></OL
+>
+
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN218">3.6. Post-installation configuration</H2
+><P
+>&#13;	The default configuration for the grub bootloader that Red Hat
+	7.2 installs goes into graphics mode for the boot selection.
+	While the Remote Console will work properly, it looks nicer if
+	there is no splash image.  To do this, edit /etc/grub.conf and
+	remove or comment out the line that looks like:
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>		splashimage=(hd0,1)/grub/splash.xpm.gz
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	and add the following line:
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>		terminal --dumb --timeout=3 console
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+      </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x51.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Compaq Remote Insight Lights-Out Background</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

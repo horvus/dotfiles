@@ -1,0 +1,574 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Software-RAID HOWTO: Setup &amp; Installation Considerations</TITLE>
+ <LINK HREF="Software-RAID-0.4x-HOWTO-4.html" REL=next>
+ <LINK HREF="Software-RAID-0.4x-HOWTO-2.html" REL=previous>
+ <LINK HREF="Software-RAID-0.4x-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Software-RAID-0.4x-HOWTO-4.html">Next</A>
+<A HREF="Software-RAID-0.4x-HOWTO-2.html">Previous</A>
+<A HREF="Software-RAID-0.4x-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Setup &amp; Installation Considerations</A></H2>
+
+<P>
+<OL>
+<LI><B>Q</B>:
+What is the best way to configure Software RAID?
+<BLOCKQUOTE>
+<B>A</B>:
+I keep rediscovering that file-system planning is one 
+of the more difficult Unix configuration tasks.
+To answer your question, I can describe what we did.
+
+We planned the following setup:
+<UL>
+<LI>two EIDE disks, 2.1.gig each.
+<BLOCKQUOTE><CODE>
+<PRE>
+disk partition mount pt.  size    device
+  1      1       /        300M   /dev/hda1
+  1      2       swap      64M   /dev/hda2
+  1      3       /home    800M   /dev/hda3
+  1      4       /var     900M   /dev/hda4
+
+  2      1       /root    300M   /dev/hdc1
+  2      2       swap      64M   /dev/hdc2
+  2      3       /home    800M   /dev/hdc3
+  2      4       /var     900M   /dev/hdc4
+                    
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>Each disk is on a separate controller (&amp; ribbon cable).
+The theory is that a controller failure and/or
+ribbon failure won't disable both disks.
+Also, we might possibly get a performance boost 
+from parallel operations over two controllers/cables.
+</LI>
+<LI>Install the Linux kernel on the root (<CODE>/</CODE>)
+partition <CODE>/dev/hda1</CODE>.  Mark this partition as
+bootable.
+</LI>
+<LI><CODE>/dev/hdc1</CODE> will contain a ``cold'' copy of
+<CODE>/dev/hda1</CODE>. This is NOT a raid copy,
+just a plain old copy-copy. It's there just in 
+case the first disk fails; we can use a rescue disk,
+mark <CODE>/dev/hdc1</CODE> as bootable, and use that to 
+keep going without having to reinstall the system.
+You may even want to put <CODE>/dev/hdc1</CODE>'s copy
+of the kernel into LILO to simplify booting in case of
+failure.
+
+The theory here is that in case of severe failure,
+I can still boot the system without worrying about
+raid superblock-corruption or other raid failure modes
+&amp; gotchas that I don't understand.
+</LI>
+<LI><CODE>/dev/hda3</CODE> and <CODE>/dev/hdc3</CODE> will be mirrors
+<CODE>/dev/md0</CODE>.</LI>
+<LI><CODE>/dev/hda4</CODE> and <CODE>/dev/hdc4</CODE> will be mirrors
+<CODE>/dev/md1</CODE>.
+</LI>
+<LI>we picked <CODE>/var</CODE> and <CODE>/home</CODE> to be mirrored,
+and in separate partitions, using the following logic:
+<UL>
+<LI><CODE>/</CODE> (the root partition) will contain 
+relatively static, non-changing data:
+for all practical purposes, it will be 
+read-only without actually being marked &amp;
+mounted read-only.</LI>
+<LI><CODE>/home</CODE> will contain ''slowly'' changing 
+data.</LI>
+<LI><CODE>/var</CODE> will contain rapidly changing data,
+including mail spools, database contents and
+web server logs.</LI>
+</UL>
+
+The idea behind using multiple, distinct partitions is
+that <B>if</B>, for some bizarre reason,
+whether it is human error, power loss, or an operating
+system gone wild, corruption is limited to one partition.
+In one typical case, power is lost while the
+system is writing to disk.  This will almost certainly
+lead to a corrupted filesystem, which will be repaired
+by <CODE>fsck</CODE> during the next boot.  Although 
+<CODE>fsck</CODE> does it's best to make the repairs 
+without creating additional damage during those repairs, 
+it can be comforting to know that any such damage has been
+limited to one partition.  In another typical case,
+the sysadmin makes a mistake during rescue operations,
+leading to erased or destroyed data.  Partitions can 
+help limit the repercussions of the operator's errors.</LI>
+<LI>Other reasonable choices for partitions might be 
+<CODE>/usr</CODE> or <CODE>/opt</CODE>.  In fact, <CODE>/opt</CODE>
+and <CODE>/home</CODE> make great choices for RAID-5 
+partitions, if we had more disks.  A word of caution:
+<B>DO NOT</B> put <CODE>/usr</CODE> in a RAID-5
+partition.  If a serious fault occurs, you may find
+that you cannot mount <CODE>/usr</CODE>, and that
+you want some of the tools on it (e.g. the networking
+tools, or the compiler.)  With RAID-1, if a fault has
+occurred, and you can't get RAID to work, you can at
+least mount one of the two mirrors.  You can't do this
+with any of the other RAID levels (RAID-5, striping, or
+linear append).
+</LI>
+</UL>
+
+
+<P>So, to complete the answer to the question:
+<UL>
+<LI>install the OS on disk 1, partition 1.
+do NOT mount any of the other partitions. </LI>
+<LI>install RAID per instructions. </LI>
+<LI>configure <CODE>md0</CODE> and <CODE>md1</CODE>.</LI>
+<LI>convince yourself that you know
+what to do in case of a disk failure!
+Discover sysadmin mistakes now,
+and not during an actual crisis.
+Experiment!
+(we turned off power during disk activity &mdash;
+this proved to be ugly but informative).</LI>
+<LI>do some ugly mount/copy/unmount/rename/reboot scheme to
+move <CODE>/var</CODE> over to the <CODE>/dev/md1</CODE>.
+Done carefully, this is not dangerous.</LI>
+<LI>enjoy!</LI>
+</UL>
+</BLOCKQUOTE>
+
+    </LI>
+<LI><B>Q</B>:
+What is the difference between the <CODE>mdadd</CODE>, <CODE>mdrun</CODE>, 
+<I>etc.</I> commands, and the <CODE>raidadd</CODE>, <CODE>raidrun</CODE> 
+commands?
+<BLOCKQUOTE>
+<B>A</B>:
+The names of the tools have changed as of the 0.5 release of the
+raidtools package.  The <CODE>md</CODE> naming convention was used
+in the 0.43 and older versions, while <CODE>raid</CODE> is used in 
+0.5 and newer versions.
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+I want to run RAID-linear/RAID-0 in the stock 2.0.34 kernel.
+I don't want to apply the raid patches, since these are not 
+needed for RAID-0/linear.  Where can I get the raid-tools
+to manage this?
+<BLOCKQUOTE>
+<B>A</B>:
+This is a tough question, indeed, as the newest raid tools 
+package needs to have the RAID-1,4,5 kernel patches installed 
+in order to compile.  I am not aware of any pre-compiled, binary
+version of the raid tools that is available at this time.
+However, experiments show that the raid-tools binaries, when
+compiled against kernel 2.1.100, seem to work just fine
+in creating a RAID-0/linear partition under 2.0.34.  A brave
+soul has asked for these, and I've <B>temporarily</B>
+placed the binaries mdadd, mdcreate, etc. 
+at http://linas.org/linux/Software-RAID/
+You must get the man pages, etc. from the usual raid-tools 
+package.
+</BLOCKQUOTE>
+
+    </LI>
+<LI><B>Q</B>:
+Can I strip/mirror the root partition (<CODE>/</CODE>)?
+Why can't I boot Linux directly from the <CODE>md</CODE> disks?
+
+<BLOCKQUOTE>
+<B>A</B>:
+Both LILO and Loadlin need an non-stripped/mirrored partition
+to read the kernel image from. If you want to strip/mirror
+the root partition (<CODE>/</CODE>),
+then you'll want to create an unstriped/mirrored partition
+to hold the kernel(s).
+Typically, this partition is named <CODE>/boot</CODE>.
+Then you either use the initial ramdisk support (initrd),
+or patches from Harald Hoyer 
+&lt;
+<A HREF="mailto:HarryH@Royal.Net">HarryH@Royal.Net</A>&gt;
+that allow a stripped partition to be used as the root
+device.  (These patches are now a standard part of recent
+2.1.x kernels)
+
+<P>There are several approaches that can be used.
+One approach is documented in detail in the
+Bootable RAID mini-HOWTO:
+<A HREF="ftp://ftp.bizsystems.com/pub/raid/bootable-raid">ftp://ftp.bizsystems.com/pub/raid/bootable-raid</A>.
+<P>
+<P>Alternately, use <CODE>mkinitrd</CODE> to build the ramdisk image,
+see below.
+<P>
+<P>Edward Welbon
+&lt;
+<A HREF="mailto:welbon@bga.com">welbon@bga.com</A>&gt;
+writes:
+<UL>
+<LI>... all that is needed is a script to manage the boot setup.
+To mount an <CODE>md</CODE> filesystem as root,
+the main thing is to build an initial file system image
+that has the needed modules and md tools to start <CODE>md</CODE>.
+I have a simple script that does this.</LI>
+</UL>
+
+<UL>
+<LI>For boot media, I have a small <B>cheap</B> SCSI disk
+(170MB I got it used for $20).
+This disk runs on a AHA1452, but it could just as well be an
+inexpensive IDE disk on the native IDE.
+The disk need not be very fast since it is mainly for boot. </LI>
+</UL>
+
+<UL>
+<LI>This disk has a small file system which contains the kernel and
+the file system image for <CODE>initrd</CODE>.
+The initial file system image has just enough stuff to allow me
+to load the raid SCSI device driver module and start the
+raid partition that will become root.
+I then do an
+<BLOCKQUOTE><CODE>
+<PRE>
+echo 0x900 > /proc/sys/kernel/real-root-dev
+              
+</PRE>
+</CODE></BLOCKQUOTE>
+
+(<CODE>0x900</CODE> is for <CODE>/dev/md0</CODE>)
+and exit <CODE>linuxrc</CODE>.
+The boot proceeds normally from there. </LI>
+</UL>
+
+<UL>
+<LI>I have built most support as a module except for the AHA1452
+driver that brings in the <CODE>initrd</CODE> filesystem.
+So I have a fairly small kernel. The method is perfectly
+reliable, I have been doing this since before 2.1.26 and
+have never had a problem that I could not easily recover from.
+The file systems even survived several 2.1.4[45] hard
+crashes with no real problems.</LI>
+</UL>
+
+<UL>
+<LI>At one time I had partitioned the raid disks so that the initial
+cylinders of the first raid disk held the kernel and the initial
+cylinders of the second raid disk hold the initial file system
+image, instead I made the initial cylinders of the raid disks
+swap since they are the fastest cylinders
+(why waste them on boot?).</LI>
+</UL>
+
+<UL>
+<LI>The nice thing about having an inexpensive device dedicated to
+boot is that it is easy to boot from and can also serve as
+a rescue disk if necessary. If you are interested,
+you can take a look at the script that builds my initial
+ram disk image and then runs <CODE>LILO</CODE>.
+<BLOCKQUOTE><CODE>
+<A HREF="http://www.realtime.net/~welbon/initrd.md.tar.gz">http://www.realtime.net/~welbon/initrd.md.tar.gz</A></CODE></BLOCKQUOTE>
+
+It is current enough to show the picture.
+It isn't especially pretty and it could certainly build
+a much smaller filesystem image for the initial ram disk.
+It would be easy to a make it more efficient.
+But it uses <CODE>LILO</CODE> as is.
+If you make any improvements, please forward a copy to me. 8-) </LI>
+</UL>
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+I have heard that I can run mirroring over striping. Is this true?
+Can I run mirroring over the loopback device?
+<BLOCKQUOTE>
+<B>A</B>:
+Yes, but not the reverse.  That is, you can put a stripe over 
+several disks, and then build a mirror on top of this.  However,
+striping cannot be put on top of mirroring.  
+
+<P>A brief technical explanation is that the linear and stripe 
+personalities use the <CODE>ll_rw_blk</CODE> routine for access.
+The <CODE>ll_rw_blk</CODE> routine 
+maps disk devices and  sectors, not blocks.  Block devices can be
+layered one on top of the other; but devices that do raw, low-level
+disk accesses, such as <CODE>ll_rw_blk</CODE>, cannot.
+<P>
+<P>Currently (November 1997) RAID cannot be run over the
+loopback devices, although this should be fixed shortly.
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+I have two small disks and three larger disks.  Can I
+concatenate the two smaller disks with RAID-0, and then create 
+a RAID-5 out of that and the larger disks?
+<BLOCKQUOTE>
+<B>A</B>:
+Currently (November 1997), for a RAID-5 array, no. 
+Currently, one can do this only for a RAID-1 on top of the
+concatenated drives.  
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+What is the difference between RAID-1 and RAID-5 for a two-disk
+configuration (i.e. the difference between a RAID-1 array  built 
+out of two disks, and a RAID-5 array built out of two disks)?
+
+<BLOCKQUOTE>
+<B>A</B>:
+There is no difference in storage capacity.  Nor can disks be 
+added to either array to increase capacity (see the question below for
+details).
+        
+<P>RAID-1 offers a performance advantage for reads: the RAID-1
+driver uses distributed-read technology to simultaneously read 
+two sectors, one from each drive, thus doubling read performance.
+<P>
+<P>The RAID-5 driver, although it contains many optimizations, does not
+currently (September 1997) realize that the parity disk is actually
+a mirrored copy of the data disk.  Thus, it serializes data reads.
+</BLOCKQUOTE>
+
+
+</LI>
+<LI><B>Q</B>:
+How can I guard against a two-disk failure?
+
+<BLOCKQUOTE>
+<B>A</B>:
+Some of the RAID algorithms do guard against multiple disk
+failures, but these are not currently implemented for Linux.
+However, the Linux Software RAID can guard against multiple
+disk failures by layering an array on top of an array.  For
+example, nine disks can be used to create three raid-5 arrays.
+Then these three arrays can in turn be hooked together into
+a single RAID-5 array on top.  In fact, this kind of a
+configuration will guard against a three-disk failure.  Note that 
+a large amount of disk space is ''wasted'' on the redundancy
+information.
+
+<BLOCKQUOTE><CODE>
+<PRE>
+    For an NxN raid-5 array,
+    N=3, 5 out of 9 disks are used for parity (=55%)
+    N=4, 7 out of 16 disks
+    N=5, 9 out of 25 disks
+    ...
+    N=9, 17 out of 81 disks (=~20%)
+            
+</PRE>
+</CODE></BLOCKQUOTE>
+
+In general, an MxN array will use M+N-1 disks for parity.
+The least amount of space is "wasted" when M=N.
+      
+<P>Another alternative is to create a RAID-1 array with 
+three disks.  Note that since all three disks contain
+identical data, that 2/3's of the space is ''wasted''.
+<P>
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+I'd like to understand  how it'd be possible to have something 
+like <CODE>fsck</CODE>: if the partition hasn't been cleanly unmounted, 
+<CODE>fsck</CODE> runs and fixes the filesystem by itself more than 
+90% of the time. Since the machine is capable of fixing it 
+by itself with <CODE>ckraid --fix</CODE>, why not make it automatic?
+
+
+<BLOCKQUOTE>
+<B>A</B>:
+This can be done by adding lines like the following to 
+<CODE>/etc/rc.d/rc.sysinit</CODE>:
+<PRE>
+    mdadd /dev/md0 /dev/hda1 /dev/hdc1 || {
+        ckraid --fix /etc/raid.usr.conf
+        mdadd /dev/md0 /dev/hda1 /dev/hdc1
+    }
+            
+</PRE>
+
+or 
+<PRE>
+    mdrun -p1 /dev/md0
+    if [ $? -gt 0 ] ; then
+            ckraid --fix /etc/raid1.conf
+            mdrun -p1 /dev/md0
+    fi
+            
+</PRE>
+
+Before presenting a more complete and reliable script,
+lets review the theory of operation.
+
+Gadi Oxman writes:
+In an unclean shutdown, Linux might be in one of the following states:
+<UL>
+<LI>The in-memory disk cache was in sync with the RAID set when
+the unclean shutdown occurred; no data was lost.
+</LI>
+<LI>The in-memory disk cache was newer than the RAID set contents
+when the crash occurred; this results in a corrupted filesystem
+and potentially in data loss.
+      
+This state can be further divided to the following two states:
+      
+<UL>
+<LI>Linux was writing data when the unclean shutdown occurred.</LI>
+<LI>Linux was not writing data when the crash occurred.</LI>
+</UL>
+</LI>
+</UL>
+
+
+Suppose we were using a RAID-1 array. In (2a), it might happen that
+before the crash, a small number of data blocks were successfully 
+written only to some of the mirrors, so that on the next reboot, 
+the mirrors will no longer contain the same data.
+      
+If we were to ignore the mirror differences, the raidtools-0.36.3 
+read-balancing code
+might choose to read the above data blocks from any of the mirrors, 
+which will result in inconsistent behavior (for example, the output 
+of <CODE>e2fsck -n /dev/md0</CODE> can differ from run to run).
+      
+<P>Since RAID doesn't protect against unclean shutdowns, usually 
+there isn't any ''obviously correct'' way to fix the mirror 
+differences and the filesystem corruption.
+<P>For example, by default <CODE>ckraid --fix</CODE> will choose 
+the first operational mirror and update the other mirrors 
+with its contents.  However, depending on the exact timing 
+at the crash, the data on another mirror might be more recent, 
+and we might want to use it as the source
+mirror instead, or perhaps use another method for recovery.
+<P>The following script provides one of the more robust 
+boot-up sequences.  In particular, it guards against
+long, repeated <CODE>ckraid</CODE>'s in the presence
+of uncooperative disks, controllers, or controller device
+drivers.  Modify it to reflect your config, 
+and copy it to <CODE>rc.raid.init</CODE>.  Then invoke 
+<CODE>rc.raid.init</CODE> after the root partition has been
+fsck'ed and mounted rw, but before the remaining partitions
+are fsck'ed.  Make sure the current directory is in the search
+path.
+<PRE>
+    mdadd /dev/md0 /dev/hda1 /dev/hdc1 || {
+        rm -f /fastboot             # force an fsck to occur  
+        ckraid --fix /etc/raid.usr.conf
+        mdadd /dev/md0 /dev/hda1 /dev/hdc1
+    }
+    # if a crash occurs later in the boot process,
+    # we at least want to leave this md in a clean state.
+    /sbin/mdstop /dev/md0
+
+    mdadd /dev/md1 /dev/hda2 /dev/hdc2 || {
+        rm -f /fastboot             # force an fsck to occur  
+        ckraid --fix /etc/raid.home.conf
+        mdadd /dev/md1 /dev/hda2 /dev/hdc2
+    }
+    # if a crash occurs later in the boot process,
+    # we at least want to leave this md in a clean state.
+    /sbin/mdstop /dev/md1
+
+    mdadd /dev/md0 /dev/hda1 /dev/hdc1
+    mdrun -p1 /dev/md0
+    if [ $? -gt 0 ] ; then
+        rm -f /fastboot             # force an fsck to occur  
+        ckraid --fix /etc/raid.usr.conf
+        mdrun -p1 /dev/md0
+    fi
+    # if a crash occurs later in the boot process,
+    # we at least want to leave this md in a clean state.
+    /sbin/mdstop /dev/md0
+
+    mdadd /dev/md1 /dev/hda2 /dev/hdc2
+    mdrun -p1 /dev/md1
+    if [ $? -gt 0 ] ; then
+        rm -f /fastboot             # force an fsck to occur  
+        ckraid --fix /etc/raid.home.conf
+        mdrun -p1 /dev/md1
+    fi
+    # if a crash occurs later in the boot process,
+    # we at least want to leave this md in a clean state.
+    /sbin/mdstop /dev/md1
+
+    # OK, just blast through the md commands now.  If there were
+    # errors, the above checks should have fixed things up.
+    /sbin/mdadd /dev/md0 /dev/hda1 /dev/hdc1
+    /sbin/mdrun -p1 /dev/md0
+    
+    /sbin/mdadd /dev/md12 /dev/hda2 /dev/hdc2
+    /sbin/mdrun -p1 /dev/md1
+
+            
+</PRE>
+
+In addition to the above, you'll want to create a 
+<CODE>rc.raid.halt</CODE> which should look like the following:
+<PRE>
+    /sbin/mdstop /dev/md0
+    /sbin/mdstop /dev/md1
+            
+</PRE>
+
+Be sure to modify both <CODE>rc.sysinit</CODE> and
+<CODE>init.d/halt</CODE> to include this everywhere that
+filesystems get unmounted before a halt/reboot.  (Note
+that <CODE>rc.sysinit</CODE> unmounts and reboots if <CODE>fsck</CODE>
+returned with an error.)
+<P>
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+Can I set up one-half of a RAID-1 mirror with the one disk I have
+now, and then later get the other disk and just drop it in?
+
+<BLOCKQUOTE>
+<B>A</B>:
+With the current tools, no, not in any easy way.  In particular,
+you cannot just copy the contents of one disk onto another,
+and then pair them up.  This is because the RAID drivers
+use glob of space at the end of the partition to store the
+superblock.  This decreases the amount of space available to
+the file system slightly; if you just naively try to force
+a RAID-1 arrangement onto a partition with an existing
+filesystem, the
+raid superblock will overwrite a portion of the file system
+and mangle data.  Since the ext2fs filesystem scatters
+files randomly throughput the partition (in order to avoid
+fragmentation), there is a very good chance that some file will 
+land at the very end of a partition long before the disk is
+full.
+
+<P>If you are clever, I suppose you can calculate how much room
+the RAID superblock will need, and make your filesystem
+slightly smaller, leaving room for it when you add it later.
+But then, if you are this clever, you should also be able to
+modify the tools to do this automatically for you.
+(The tools are not terribly complex).
+<P>
+<P><B>Note:</B>A careful reader has pointed out that the 
+following trick may work; I have not tried or verified this:
+Do the <CODE>mkraid</CODE> with <CODE>/dev/null</CODE> as one of the
+devices.  Then <CODE>mdadd -r</CODE> with only the single, true
+disk (do not mdadd <CODE>/dev/null</CODE>).  The <CODE>mkraid</CODE>
+should have successfully built the raid array, while the
+mdadd step just forces the system to run in "degraded" mode, 
+as if one of the disks had failed.
+</BLOCKQUOTE>
+
+</LI>
+</OL>
+<HR>
+<A HREF="Software-RAID-0.4x-HOWTO-4.html">Next</A>
+<A HREF="Software-RAID-0.4x-HOWTO-2.html">Previous</A>
+<A HREF="Software-RAID-0.4x-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

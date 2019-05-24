@@ -1,0 +1,402 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Parallel Processing HOWTO: Introduction</TITLE>
+ <LINK HREF="Parallel-Processing-HOWTO-2.html" REL=next>
+
+ <LINK HREF="Parallel-Processing-HOWTO.html#toc1" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Parallel-Processing-HOWTO-2.html">Next</A>
+Previous
+<A HREF="Parallel-Processing-HOWTO.html#toc1">Contents</A>
+<HR>
+<H2><A NAME="s1">1. Introduction</A></H2>
+
+<P>
+<P><B>Parallel Processing</B> refers to the concept of speeding-up the
+execution of a program by dividing the program into multiple fragments
+that can execute simultaneously, each on its own processor.  A program
+being executed across <EM>n</EM> processors might execute <EM>n</EM>
+times faster than it would using a single processor.
+<P>
+<P>
+<P>Traditionally, multiple processors were provided within a specially
+designed "parallel computer"; along these lines, Linux now supports
+<B>SMP</B> systems (often sold as "servers") in which multiple
+processors share a single memory and bus interface within a single
+computer.  It is also possible for a group of computers (for example,
+a group of PCs each running Linux) to be interconnected by a network
+to form a parallel-processing <B>cluster</B>.  The third alternative
+for parallel computing using Linux is to use the <B>multimedia
+instruction extensions</B> (i.e., MMX) to operate in parallel on
+vectors of integer data.  Finally, it is also possible to use a Linux
+system as a "host" for a specialized <B>attached</B> parallel
+processing compute engine.  All these approaches are discussed in
+detail in this document.
+<P>
+<H2><A NAME="ss1.1">1.1 Is Parallel Processing What I Want?</A>
+</H2>
+
+<P>
+<P>Although use of multiple processors can speed-up many operations, most
+applications cannot yet benefit from parallel processing.  Basically,
+parallel processing is appropriate only if:
+<P>
+<UL>
+<LI>Your application has enough parallelism to make good use of
+multiple processors.  In part, this is a matter of identifying
+portions of the program that can execute independently and
+simultaneously on separate processors, but you will also find that
+some things that <EM>could</EM> execute in parallel might actually slow
+execution if executed in parallel using a particular system.  For
+example, a program that takes four seconds to execute within a single
+machine might be able to execute in only one second of processor time
+on each of four machines, but no speedup would be achieved if it took
+three seconds or more for these machines to coordinate their actions.
+</LI>
+<LI>Either the particular application program you are interested in
+already has been <B>parallelized</B> (rewritten to take advantage of
+parallel processing) or you are willing to do at least some new coding
+to take advantage of parallel processing.
+</LI>
+<LI>You are interested in researching, or at least becoming familiar
+with, issues involving parallel processing.  Parallel processing using
+Linux systems isn't necessarily difficult, but it is not familiar to
+most computer users, and there isn't any book called "Parallel
+Processing for Dummies"...  at least not yet.  This HOWTO is a good
+starting point, not all you need to know.</LI>
+</UL>
+<P>
+<P>The good news is that if all the above are true, you'll find that
+parallel processing using Linux can yield supercomputer performance
+for some programs that perform complex computations or operate on
+large data sets.  What's more, it can do that using cheap hardware...
+which you might already own.  As an added bonus, it is also easy to
+use a parallel Linux system for other things when it is not busy
+executing a parallel job.
+<P>If parallel processing is <EM>not</EM> what you want, but you would
+like to achieve at least a modest improvement in performance, there are
+still things you can do.  For example, you can improve performance of
+sequential programs by moving to a faster processor, adding memory,
+replacing an IDE disk with fast wide SCSI, etc.  If that's all you are
+interested in, jump to section 6.2; otherwise, read on.
+<P>
+<H2><A NAME="ss1.2">1.2 Terminology</A>
+</H2>
+
+<P>
+<P>Although parallel processing has been used for many years in many
+systems, it is still somewhat unfamiliar to most computer users.
+Thus, before discussing the various alternatives, it is important to
+become familiar with a few commonly used terms.
+<P>
+<DL>
+<DT><B>SIMD:</B><DD><P>SIMD (Single Instruction stream, Multiple Data stream) refers to a
+parallel execution model in which all processors execute the same
+operation at the same time, but each processor is allowed to operate
+upon its own data.  This model naturally fits the concept of
+performing the same operation on every element of an array, and is
+thus often associated with vector or array manipulation.  Because all
+operations are inherently synchronized, interactions among SIMD
+processors tend to be easily and efficiently implemented.
+<P>
+<DT><B>MIMD:</B><DD><P>MIMD (Multiple Instruction stream, Multiple Data stream) refers to a
+parallel execution model in which each processor is essentially acting
+independently.  This model most naturally fits the concept of
+decomposing a program for parallel execution on a functional basis;
+for example, one processor might update a database file while another
+processor generates a graphic display of the new entry.  This is a
+more flexible model than SIMD execution, but it is achieved at the
+risk of debugging nightmares called <B>race conditions</B>, in which
+a program may intermittently fail due to timing variations reordering
+the operations of one processor relative to those of another.
+<P>
+<DT><B>SPMD:</B><DD><P>SPMD (Single Program, Multiple Data) is a restricted version of MIMD
+in which all processors are running the same program.  Unlike SIMD,
+each processor executing SPMD code may take a different control flow
+path through the program.
+<P>
+<DT><B>Communication Bandwidth:</B><DD><P>The bandwidth of a communication system is the maximum amount of data
+that can be transmitted in a unit of time...  once data transmission
+has begun.  Bandwidth for serial connections is often measured in
+<B>baud</B> or <B>bits/second (b/s)</B>, which generally
+correspond to 1/10 to 1/8 that many <B>Bytes/second (B/s)</B>.  For
+example, a 1,200 baud modem transfers about 120 B/s, whereas a 155
+Mb/s ATM network connection is nearly 130,000 times faster,
+transferring about about 17 MB/s.  High bandwidth allows large blocks
+of data to be transferred efficiently between processors.
+<P>
+<DT><B>Communication Latency:</B><DD><P>The latency of a communication system is the minimum time taken to
+transmit one object, including any send and receive software
+overhead.  Latency is very important in parallel processing because it
+determines the minimum useful <B>grain size</B>, the minimum run
+time for a segment of code to yield speed-up through parallel
+execution.  Basically, if a segment of code runs for less time than it
+takes to transmit its result value (i.e., latency), executing that
+code segment serially on the processor that needed the result value
+would be faster than parallel execution; serial execution would avoid
+the communication overhead.
+<P>
+<DT><B>Message Passing:</B><DD><P>Message passing is a model for interactions between processors within
+a parallel system.  In general, a message is constructed by software
+on one processor and is sent through an interconnection network to
+another processor, which then must accept and act upon the message
+contents.  Although the overhead in handling each message (latency)
+may be high, there are typically few restrictions on how much
+information each message may contain.  Thus, message passing can yield
+high bandwidth making it a very effective way to transmit a large
+block of data from one processor to another.  However, to minimize the
+need for expensive message passing operations, data structures within
+a parallel program must be spread across the processors so that most
+data referenced by each processor is in its local memory...  this task
+is known as <B>data layout</B>.
+<P>
+<DT><B>Shared Memory:</B><DD><P>Shared memory is a model for interactions between processors within a
+parallel system.  Systems like the multi-processor Pentium machines
+running Linux <B>physically</B> share a single memory among
+their processors, so that a value written to shared memory by one
+processor can be directly accessed by any processor.  Alternatively,
+<B>logically</B> shared memory can be implemented for
+systems in which each processor has it own memory by converting each
+non-local memory reference into an appropriate inter-processor
+communication.  Either implementation of shared memory is generally
+considered easier to use than message passing.  Physically shared
+memory can have both high bandwidth and low latency, but only when
+multiple processors do not try to access the bus simultaneously; thus,
+data layout still can seriously impact performance, and cache effects,
+etc., can make it difficult to determine what the best layout is.
+<P>
+<DT><B>Aggregate Functions:</B><DD><P>In both the message passing and shared memory models, a communication
+is initiated by a single processor; in contrast, aggregate function
+communication is an inherently parallel communication model in which
+an entire group of processors act together.  The simplest such action
+is a <B>barrier synchronization</B>, in which each individual
+processor waits until every processor in the group has arrived at the
+barrier.  By having each processor output a datum as a side-effect of
+reaching a barrier, it is possible to have the communication hardware
+return a value to each processor which is an arbitrary function of the
+values collected from all processors.  For example, the return value
+might be the answer to the question "did any processor find a
+solution?"  or it might be the sum of one value from each processor.
+Latency can be very low, but bandwidth per processor also tends to be
+low.  Traditionally, this model is used primarily to control parallel
+execution rather than to distribute data values.
+<P>
+<DT><B>Collective Communication:</B><DD><P>This is another name for aggregate functions, most often used when
+referring to aggregate functions that are constructed using multiple
+message-passing operations.
+<P>
+<DT><B>SMP:</B><DD><P>SMP (Symmetric Multi-Processor) refers to the operating system concept
+of a group of processors working together as peers, so that any piece
+of work could be done equally well by any processor.  Typically, SMP
+implies the combination of MIMD and shared memory.  In the IA32 world,
+SMP generally means compliant with MPS (the Intel MultiProcessor
+Specification); in the future, it may mean "Slot 2"....
+<P>
+<DT><B>SWAR:</B><DD><P>SWAR (SIMD Within A Register) is a generic term for the concept of
+partitioning a register into multiple integer fields and using
+register-width operations to perform SIMD-parallel computations across
+those fields.  Given a machine with <EM>k</EM>-bit registers, data
+paths, and function units, it has long been known that ordinary
+register operations can function as SIMD parallel operations on as
+many as <EM>n</EM>, <EM>k</EM>/<EM>n</EM>-bit, field values.  Although
+this type of parallelism can be implemented using ordinary integer
+registers and instructions, many high-end microprocessors have
+recently added specialized instructions to enhance the performance of
+this technique for multimedia-oriented tasks.  In addition to the
+Intel/AMD/Cyrix <B>MMX</B> (MultiMedia eXtensions), there are:
+Digital Alpha <B>MAX</B> (MultimediA eXtensions), Hewlett-Packard
+PA-RISC <B>MAX</B> (Multimedia Acceleration eXtensions), MIPS
+<B>MDMX</B> (Digital Media eXtension, pronounced "Mad Max"), and Sun
+SPARC V9 <B>VIS</B> (Visual Instruction Set).  Aside from the three
+vendors who have agreed on MMX, all of these instruction set
+extensions are roughly comparable, but mutually incompatible.
+<P>
+<DT><B>Attached Processors:</B><DD><P>Attached processors are essentially special-purpose computers that are
+connected to a <B>host</B> system to accelerate specific types of
+computation.  For example, many video and audio cards for PCs contain
+attached processors designed, respectively, to accelerate common
+graphics operations and audio <B>DSP</B> (Digital Signal
+Processing).  There is also a wide range of attached <B>array
+processors</B>, so called because they are designed to accelerate
+arithmetic operations on arrays.  In fact, many commercial
+supercomputers are really attached processors with workstation hosts.
+<P>
+<DT><B>RAID:</B><DD><P>RAID (Redundant Array of Inexpensive Disks) is a simple technology for
+increasing both the bandwidth and reliability of disk I/O.  Although
+there are many different variations, all have two key concepts in
+common.  First, each data block is <B>striped</B> across a group of
+<EM>n+k</EM> disk drives such that each drive only has to read or
+write 1/<EM>n</EM> of the data...  yielding <EM>n</EM> times the
+bandwidth of one drive.  Second, redundant data is written so that
+data can be recovered if a disk drive fails; this is important because
+otherwise if any one of the <EM>n+k</EM> drives were to fail, the
+entire file system could be lost.  A good overview of RAID in general
+is given at 
+<A HREF="http://www.uni-mainz.de/~neuffer/scsi/what_is_raid.html">http://www.uni-mainz.de/~neuffer/scsi/what_is_raid.html</A>, and
+information about RAID options for Linux systems is at 
+<A HREF="http://linas.org/linux/raid.html">http://linas.org/linux/raid.html</A>.  Aside from specialized RAID
+hardware support, Linux also supports software RAID 0, 1, 4, and 5
+across multiple disks hosted by a single Linux system; see the
+Software RAID mini-HOWTO and the Multi-Disk System Tuning mini-HOWTO
+for details.  RAID across disk drives <EM>on multiple machines in a
+cluster</EM> is not directly supported.
+<P>
+<DT><B>IA32:</B><DD><P>IA32 (Intel Architecture, 32-bit) really has nothing to do with
+parallel processing, but rather refers to the class of processors whose
+instruction sets are generally compatible with that of the Intel 386.
+Basically, any Intel x86 processor after the 286 is compatible with
+the 32-bit flat memory model that characterizes IA32.  AMD and Cyrix
+also make a multitude of IA32-compatible processors.  Because Linux
+evolved primarily on IA32 processors and that is where the commodity
+market is centered, it is convenient to use IA32 to distinguish any of
+these processors from the PowerPC, Alpha, PA-RISC, MIPS, SPARC, etc.
+The upcoming IA64 (64-bit with EPIC, Explicitly Parallel Instruction
+Computing) will certainly complicate matters, but Merced, the first
+IA64 processor, is not scheduled for production until 1999.
+<P>
+<DT><B>COTS:</B><DD><P>Since the demise of many parallel supercomputer companies, COTS
+(Commercial Off-The-Shelf) is commonly discussed as a requirement for
+parallel computing systems.  Being fanatically pure, the only COTS
+parallel processing techniques using PCs are things like SMP Windows
+NT servers and various MMX Windows applications; it really doesn't pay
+to be that fanatical.  The underlying concept of COTS is really
+minimization of development time and cost.  Thus, a more useful, more
+common, meaning of COTS is that at least most subsystems benefit from
+commodity marketing, but other technologies are used where they are
+effective.  Most often, COTS parallel processing refers to a cluster
+in which the nodes are commodity PCs, but the network interface and
+software are somewhat customized...  typically running Linux and
+applications codes that are freely available (e.g., copyleft or public
+domain), but not literally COTS.
+</DL>
+<H2><A NAME="ss1.3">1.3 Example Algorithm</A>
+</H2>
+
+<P>
+<P>In order to better understand the use of the various parallel
+programming approaches outlined in this HOWTO, it is useful to have an
+example problem.  Although just about any simple parallel algorithm
+would do, by selecting an algorithm that has been used to demonstrate
+various other parallel programming systems, it becomes a bit easier to
+compare and contrast approaches.  M. J.  Quinn's book, <EM>Parallel
+Computing Theory And Practice</EM>, second edition, McGraw Hill, New
+York, 1994, uses a parallel algorithm that computes the value of Pi to
+demonstrate a variety of different parallel supercomputer programming
+environments (e.g., nCUBE message passing, Sequent shared memory).  In
+this HOWTO, we use the same basic algorithm.
+<P>The algorithm computes the approximate value of Pi by summing the area
+under <EM>x</EM> squared.  As a purely sequential C program, the
+algorithm looks like:
+<P>
+<HR>
+<PRE>
+#include &lt;stdlib.h>;
+#include &lt;stdio.h>;
+
+main(int argc, char **argv)
+{
+  register double width, sum;
+  register int intervals, i;
+
+  /* get the number of intervals */
+  intervals = atoi(argv[1]);
+  width = 1.0 / intervals;
+
+  /* do the computation */
+  sum = 0;
+  for (i=0; i&lt;intervals; ++i) {
+    register double x = (i + 0.5) * width;
+    sum += 4.0 / (1.0 + x * x);
+  }
+  sum *= width;
+
+  printf("Estimation of pi is %f\n", sum);
+
+  return(0);
+}
+</PRE>
+<HR>
+<P>However, this sequential algorithm easily yields an "embarrassingly
+parallel" implementation.  The area is subdivided into intervals, and
+any number of processors can each independently sum the intervals
+assigned to it, with no need for interaction between processors.  Once
+the local sums have been computed, they are added together to create a
+global sum; this step requires some level of coordination and
+communication between processors.  Finally, this global sum is printed
+by one processor as the approximate value of Pi.
+<P>In this HOWTO, the various parallel implementations of this algorithm
+appear where each of the different programming methods is discussed.
+<P>
+<H2><A NAME="ss1.4">1.4 Organization Of This Document</A>
+</H2>
+
+<P>
+<P>The remainder of this document is divided into five parts.  Sections
+2, 3, 4, and 5 correspond to the three different types of hardware
+configurations supporting parallel processing using Linux:
+<P>
+<UL>
+<LI>Section 2 discusses SMP Linux systems.  These directly support
+MIMD execution using shared memory, although message passing also is
+implemented easily.  Although Linux supports SMP configurations up to
+16 processors, most SMP PC systems have either two or four identical
+processors.
+</LI>
+<LI>Section 3 discusses clusters of networked machines, each running
+Linux.  A cluster can be used as a parallel processing system that
+directly supports MIMD execution and message passing, perhaps also
+providing logically shared memory.  Simulated SIMD execution and
+aggregate function communication also can be supported, depending on
+the networking method used.  The number of processors in a cluster can
+range from two to thousands, primarily limited by the physical wiring
+constraints of the network.  In some cases, various types of machines
+can be mixed within a cluster; for example, a network combining DEC
+Alpha and Pentium Linux systems would be a <B>heterogeneous
+cluster</B>.
+</LI>
+<LI>Section 4 discusses SWAR, SIMD Within A Register.  This is a
+very restrictive type of parallel execution model, but on the other
+hand, it is a built-in capability of ordinary processors.  Recently,
+MMX (and other) instruction set extensions to modern processors have
+made this approach even more effective.
+</LI>
+<LI>Section 5 discusses the use of Linux PCs as hosts for simple
+parallel computing systems.  Either as an add-in card or as an
+external box, attached processors can provide a Linux system with
+formidable processing power for specific types of applications.  For
+example, inexpensive ISA cards are available that provide multiple DSP
+processors offering hundreds of MFLOPS for compute-bound problems.
+However, these add-in boards are <EM>just</EM> processors; they
+generally do not run an OS, have disk or console I/O capability, etc.
+To make such systems useful, the Linux "host" must provide these
+functions.</LI>
+</UL>
+<P>
+<P>The final section of this document covers aspects that are of general
+interest for parallel processing using Linux, not specific to a
+particular one of the approaches listed above.
+<P>As you read this document, keep in mind that we haven't tested
+everything, and a lot of stuff reported here "still has a research
+character" (a nice way to say "doesn't quite work like it should" ;-).
+However, parallel processing using Linux is useful now, and an
+increasingly large group is working to make it better.
+<P>The author of this HOWTO is Hank Dietz, Ph.D., currently Professor &amp;
+James F. Hardymon Chair in Networking at the
+University of Kentucky, Electrical &amp; Computer Engineering Dept in
+Lexington, KY, 40506-0046.
+Dietz retains rights to this
+document as per the Linux Documentation Project guidelines.  Although
+an effort has been made to ensure the correctness and fairness of this
+presentation, neither Dietz nor University of Kentucky can be held
+responsible for any problems or errors, and University of Kentucky does not
+endorse any of the work/products discussed.
+<P>
+<HR>
+<A HREF="Parallel-Processing-HOWTO-2.html">Next</A>
+Previous
+<A HREF="Parallel-Processing-HOWTO.html#toc1">Contents</A>
+</BODY>
+</HTML>

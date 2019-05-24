@@ -1,0 +1,326 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Modules Spanning Multiple Files</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux Kernel Module Programming Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Hello World"
+HREF="c147.html"><LINK
+REL="PREVIOUS"
+TITLE="Passing Command Line Arguments to a Module"
+HREF="x354.html"><LINK
+REL="NEXT"
+TITLE="Preliminaries"
+HREF="c435.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux Kernel Module Programming Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x354.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Hello World</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c435.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN385"
+></A
+>2.7. Modules Spanning Multiple Files</H1
+><P
+>Sometimes it makes sense to divide a kernel module between several source files.  In this case, you need to:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>In all the source files but one, add the line <B
+CLASS="COMMAND"
+>#define __NO_VERSION__</B
+>. This is important
+			because <TT
+CLASS="FILENAME"
+>module.h</TT
+> normally includes the definition of
+			<TT
+CLASS="VARNAME"
+>kernel_version</TT
+>, a global variable with the kernel version the module is compiled for.  If you need
+			<TT
+CLASS="FILENAME"
+>version.h</TT
+>, you need to include it yourself, because <TT
+CLASS="FILENAME"
+>module.h</TT
+> won't do it for you with <TT
+CLASS="VARNAME"
+>__NO_VERSION__</TT
+>.</P
+></LI
+><LI
+><P
+>Compile all the source files as usual.</P
+></LI
+><LI
+><P
+>Combine all the object files into a single one.  Under x86, use <B
+CLASS="COMMAND"
+>ld -m elf_i386 -r -o &#60;module
+			name.o&#62; &#60;1st src file.o&#62; &#60;2nd src file.o&#62;</B
+>.</P
+></LI
+></OL
+><P
+>Here's an example of such a kernel module.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="AEN421"
+></A
+><P
+><B
+>Example 2-8. start.c</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>/*  start.c - Illustration of multi filed modules
+ *
+ *  Copyright (C) 2001 by Peter Jay Salzman
+ *
+ *  08/02/2006 - Updated by Rodrigo Rubira Branco &#60;rodrigo@kernelhacking.com&#62;
+ */
+
+/* Kernel Programming */
+#define MODULE
+#define LINUX
+#define __KERNEL__
+
+#include &#60;linux/kernel.h&#62;       /* We're doing kernel work */
+#include &#60;linux/module.h&#62;       /* Specifically, a module */
+
+int init_module(void)
+{
+  printk("Hello, world - this is the kernel speaking\n");
+  return 0;
+}
+
+MODULE_LICENSE("GPL");&#13;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The next file:</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="AEN428"
+></A
+><P
+><B
+>Example 2-9. stop.c</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>/*  stop.c - Illustration of multi filed modules
+ *
+ *  Copyright (C) 2001 by Peter Jay Salzman
+ *
+ *  08/02/2006 - Updated by Rodrigo Rubira Branco &#60;rodrigo@kernelhacking.com&#62;
+ */
+
+/* Kernel Programming */
+#define MODULE
+#define LINUX
+#define __KERNEL__
+
+#if defined(CONFIG_MODVERSIONS) &#38;&#38; ! defined(MODVERSIONS)
+   #include &#60;linux/modversions.h&#62; /* Will be explained later */
+   #define MODVERSIONS
+#endif        
+
+#include &#60;linux/kernel.h&#62;  /* We're doing kernel work */
+#include &#60;linux/module.h&#62;  /* Specifically, a module  */
+#define __NO_VERSION__     /* It's not THE file of the kernel module */
+#include &#60;linux/version.h&#62; /* Not included by module.h because of
+	                                      __NO_VERSION__ */
+	
+void cleanup_module()
+{
+   printk("&#60;1&#62;Short is the life of a kernel module\n");
+}  </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>And finally, the makefile:</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="AEN432"
+></A
+><P
+><B
+>Example 2-10. Makefile for a multi-filed module</B
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>CC=gcc
+MODCFLAGS := -O -Wall -DMODULE -D__KERNEL__
+   	
+hello.o:	hello2_start.o hello2_stop.o
+   ld -m elf_i386 -r -o hello2.o hello2_start.o hello2_stop.o
+   	
+start.o: hello2_start.c
+   ${CC} ${MODCFLAGS} -c hello2_start.c
+   	
+stop.o: hello2_stop.c
+   ${CC} ${MODCFLAGS} -c hello2_stop.c</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x354.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c435.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Passing Command Line Arguments to a Module</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c147.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Preliminaries</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

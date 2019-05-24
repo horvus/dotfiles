@@ -1,0 +1,713 @@
+<HTML
+><HEAD
+><TITLE
+>Article Batching</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="C News"
+HREF="x-087-2-cnews.html"><LINK
+REL="PREVIOUS"
+TITLE="The active File"
+HREF="x-087-2-cnews.active.html"><LINK
+REL="NEXT"
+TITLE="Expiring News"
+HREF="x-087-2-cnews.explist.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-cnews.active.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 21. C News</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-cnews.explist.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-CNEWS.BATCHER"
+>21.5. Article Batching</A
+></H1
+><P
+>&#13;
+
+
+
+News batches follow a particular format that is the same for
+B News, C News, and INN. Each article is preceded by a line like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#! rnews <TT
+CLASS="REPLACEABLE"
+><I
+>count</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+><TT
+CLASS="REPLACEABLE"
+><I
+>count</I
+></TT
+> is the number of bytes in the article. When
+you use batch compression, the resulting file is compressed as a whole and
+preceded by another line, indicated by the message to be used for unpacking.
+The standard compression tool is
+<SPAN
+CLASS="SYSTEMITEM"
+>compress</SPAN
+>, which is marked by:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#! cunbatch</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Sometimes, when the news server sends batches via mail software that
+removes the eighth bit from all data, a compressed batch may be
+protected using what is called <I
+CLASS="EMPHASIS"
+>c7-encoding</I
+>; these
+batches will be marked by <B
+CLASS="COMMAND"
+>c7unbatch</B
+>.</P
+><P
+>When a batch is fed to <B
+CLASS="COMMAND"
+>rnews</B
+> on the remote site, it
+checks for these markers and processes the batch appropriately.  Some
+sites also use other compression tools, like <B
+CLASS="COMMAND"
+>gzip</B
+>,
+and precede their gzipped files with the word
+<B
+CLASS="COMMAND"
+>zunbatch</B
+> instead. C News does not recognize
+nonstandard headers like these; you have to modify the source to
+support them.</P
+><P
+>&#13;
+In C News, article batching is performed by
+<TT
+CLASS="FILENAME"
+>/usr/lib/news/batch/sendbatches</TT
+>,
+which takes a list of articles from the <TT
+CLASS="FILENAME"
+>site/togo</TT
+> file
+and puts them into several newsbatches.  It should be executed once per hour,
+or even more frequently, depending on the volume of traffic. Its operation
+is controlled by the <TT
+CLASS="FILENAME"
+>batchparms</TT
+> file in
+<TT
+CLASS="FILENAME"
+>/var/lib/news</TT
+>. This file describes the maximum batch
+size allowed for each site, the batching and optional compression program
+to be used, and the transport for delivering it to the remote site. You
+may specify batching parameters on a per-site basis, as well as a set of
+default parameters for sites not explicitly mentioned.</P
+><P
+>When installing C News, you will most likely find a
+<TT
+CLASS="FILENAME"
+>batchparms</TT
+> file in your distribution that contains
+a reasonable default entry, so there's a good chance that you won't have
+to touch the file. Just in case, we describe its format. Each line consists
+of six fields, separated by spaces or tabs:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="REPLACEABLE"
+><I
+>site</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>size</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>max</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>batcher</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>muncher</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>transport</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>site</I
+></TT
+></DT
+><DD
+><P
+><TT
+CLASS="REPLACEABLE"
+><I
+>site</I
+></TT
+> is the name of the site to which the entry 
+applies. The <TT
+CLASS="FILENAME"
+>togo</TT
+> file for this site must reside in
+<TT
+CLASS="FILENAME"
+>out.going&#8201;/togo</TT
+> below the news spool. A site name of
+<SPAN
+CLASS="SYSTEMITEM"
+>/default/</SPAN
+> denotes the default entry and
+is to match any site not directly specified with an entry unique to it.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>size</I
+></TT
+></DT
+><DD
+><P
+><TT
+CLASS="REPLACEABLE"
+><I
+>size</I
+></TT
+> is the maximum size of article batches
+created (before compression). For single articles larger than this, C News
+makes an exception and puts each in a single batch by itself.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>max</I
+></TT
+></DT
+><DD
+><P
+><TT
+CLASS="REPLACEABLE"
+><I
+>max</I
+></TT
+> is the maximum number of batches created and
+scheduled for transfer before batching stalls for this particular site. This
+is useful in case the remote site should be down for a long time,
+because it prevents C News from cluttering your UUCP spool directories 
+with zillions of newsbatches.</P
+><P
+>C News determines the number of queued batches using the
+<B
+CLASS="COMMAND"
+>queuelen</B
+> script in <TT
+CLASS="FILENAME"
+>/usr/lib/news/</TT
+>.
+If you've installed C News in a prepackaged format, the script should not
+need any editing, but if you choose to use a different flavor of spool
+directories, for example, Taylor UUCP, you might have to write your
+own. If you don't care about the number of spool files (because you're the only
+person using your computer and you don't write articles by the megabyte),
+you may replace the script's contents by a simple <B
+CLASS="COMMAND"
+>exit 0</B
+>
+statement.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>batcher</I
+></TT
+></DT
+><DD
+><P
+>&#13;The <TT
+CLASS="REPLACEABLE"
+><I
+>batcher</I
+></TT
+> field contains the command used for
+producing a batch from the list of articles in the <TT
+CLASS="FILENAME"
+>togo</TT
+>
+file. For regular feeds, this is usually <B
+CLASS="COMMAND"
+>batcher</B
+>. For
+other purposes, alternative batchers may be provided. For instance, the
+ihave/sendme protocol requires the article list to be turned into 
+<I
+CLASS="EMPHASIS"
+>ihave</I
+> or <I
+CLASS="EMPHASIS"
+>sendme</I
+> control messages, 
+which are posted to the newsgroup
+<SPAN
+CLASS="SYSTEMITEM"
+>to.site</SPAN
+>. This is performed by
+<B
+CLASS="COMMAND"
+>batchih</B
+> and <B
+CLASS="COMMAND"
+>batchsm</B
+>.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>muncher</I
+></TT
+></DT
+><DD
+><P
+>&#13;The <TT
+CLASS="REPLACEABLE"
+><I
+>muncher</I
+></TT
+> field specifies the compression
+command. Usually, this is <SPAN
+CLASS="SYSTEMITEM"
+>compcun</SPAN
+>, a script that produces a
+compressed batch.<A
+NAME="X-087-2-FNCN06"
+HREF="#FTN.X-087-2-FNCN06"
+>[1]</A
+>
+ Alternatively, suppose you create a muncher that uses
+<B
+CLASS="COMMAND"
+>gzip</B
+>, say <TT
+CLASS="USERINPUT"
+><B
+>gzipcun</B
+></TT
+> (note that you
+have to write it yourself&#8201;).  You have to make sure that
+<B
+CLASS="COMMAND"
+>uncompress</B
+> on the remote site is patched to
+recognize files compressed with <B
+CLASS="COMMAND"
+>gzip</B
+>.</P
+><P
+>If the remote site does not have an <B
+CLASS="COMMAND"
+>uncompress</B
+> command,
+you may specify <B
+CLASS="COMMAND"
+>nocomp</B
+>, which does not do any compression.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>transport</I
+></TT
+></DT
+><DD
+><P
+>The last field, <TT
+CLASS="REPLACEABLE"
+><I
+>transport</I
+></TT
+>, describes the
+transport to be used. A number of standard commands for different
+transports are available; their names begin with
+<B
+CLASS="COMMAND"
+>via</B
+>.  <B
+CLASS="COMMAND"
+>sendbatches</B
+> passes them
+the destination sitename on the command line. If the
+<TT
+CLASS="FILENAME"
+>batchparms</TT
+> entry is not <SPAN
+CLASS="SYSTEMITEM"
+>/default/</SPAN
+>, <B
+CLASS="COMMAND"
+>sendbatches</B
+>
+derives the sitename from the <TT
+CLASS="REPLACEABLE"
+><I
+>site</I
+></TT
+> field by
+stripping it of anything after and including the first dot or
+slash. If the <SPAN
+CLASS="SYSTEMITEM"
+>batchparms</SPAN
+> entry
+is <SPAN
+CLASS="SYSTEMITEM"
+>/default/</SPAN
+>, the directory
+names in <TT
+CLASS="FILENAME"
+>out.going</TT
+> are used.</P
+></DD
+></DL
+></DIV
+><P
+>To perform batching for a specific site, use the following command:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>su news -c "/usr/lib/news/batch/sendbatches site"</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;When invoked without arguments, <B
+CLASS="COMMAND"
+>sendbatches</B
+> handles all
+batch queues. The interpretation of &#8220;all&#8221; depends on the presence
+of a default entry in <TT
+CLASS="FILENAME"
+>batchparms</TT
+>. If one is found, all
+directories in <TT
+CLASS="FILENAME"
+>/var/spool/news/out.going</TT
+> are checked;
+otherwise, <B
+CLASS="COMMAND"
+>sendbatches</B
+> cycles through all entries in
+<TT
+CLASS="FILENAME"
+>batchparms</TT
+>, processing just the sites found there.
+Note that <B
+CLASS="COMMAND"
+>sendbatches</B
+>, when scanning the
+<TT
+CLASS="FILENAME"
+>out.going</TT
+> directory, takes only those directories
+that contain no dots or at signs (<SPAN
+CLASS="SYSTEMITEM"
+>@</SPAN
+>)
+as sitenames.</P
+><P
+>&#13;
+
+There are two commands that use <B
+CLASS="COMMAND"
+>uux</B
+> to execute
+<B
+CLASS="COMMAND"
+>rnews</B
+> on the remote system:
+<B
+CLASS="COMMAND"
+>viauux</B
+> and <B
+CLASS="COMMAND"
+>viauuxz</B
+>. The latter
+sets the <TT
+CLASS="OPTION"
+>&#8211;z</TT
+> flag for <B
+CLASS="COMMAND"
+>uux</B
+> to
+keep older versions from returning success messages for each article
+delivered. Another command, <B
+CLASS="COMMAND"
+>viamail</B
+>, sends article
+batches to the user <SPAN
+CLASS="SYSTEMITEM"
+>rnews</SPAN
+> on
+the remote system via mail.  Of course, this requires that the remote
+system somehow feeds all mail for <SPAN
+CLASS="SYSTEMITEM"
+>rnews</SPAN
+> to its local news system.  For a
+complete list of these transports, refer to the
+<TT
+CLASS="FILENAME"
+>newsbatch</TT
+> manual page.</P
+><P
+>All commands from the last three fields must be located in either
+<TT
+CLASS="FILENAME"
+>out.going/site</TT
+> or
+<TT
+CLASS="FILENAME"
+>/usr/lib/news/batch</TT
+>. Most of them are scripts; you 
+can easily tailor new tools for your personal needs. They are
+invoked through pipes. The list of articles is fed to the batcher on standard
+input, which produces the batch on standard output. This is piped into the
+muncher, and so on.</P
+><P
+>Here is a sample file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># batchparms file for the brewery
+# site        | size   |max    |batcher  |muncher    |transport
+#-------------+--------+-------+---------+-----------+-----------
+/default/       100000  22      batcher   compcun     viauux
+swim             10000  10      batcher   nocomp      viauux</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNCN06"
+HREF="x-087-2-cnews.batcher.html#X-087-2-FNCN06"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> As shipped with
+C News, <SPAN
+CLASS="SYSTEMITEM"
+>compcun</SPAN
+> uses
+<SPAN
+CLASS="SYSTEMITEM"
+>compress</SPAN
+> with the 12-bit
+option, since this is the lowest common denominator for most
+sites. You may produce a copy of the script, say <SPAN
+CLASS="SYSTEMITEM"
+>compcun16</SPAN
+>, for which you use 16-bit
+compression. The improvement is not too impressive, though.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-cnews.active.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-cnews.explist.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The active File</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-cnews.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Expiring News</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

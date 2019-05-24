@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <title>Lists / Learn Vimscript the Hard Way</title>
+        <meta name="description" content="">
+        <meta name="author" content="Steve Losh">
+        <!--[if lt IE 9]>
+            <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+        <link href="../static/styles/skeleton/base.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/skeleton/skeleton.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/skeleton/layout.css" rel="stylesheet" type="text/css" />
+
+        <link href="../static/styles/tango.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/style.less" rel="stylesheet/less" type="text/css" />
+
+        <script type="text/javascript" src="../static/scripts/less.js"></script>
+    </head>
+
+    <body class="">
+        <div class="container">
+            <header class="sixteen columns">
+                <h1><a href="../index.html">Learn Vimscript the Hard Way</a></h1>
+            </header>
+
+            
+    <section class="nav three columns">
+        
+<ul>
+<li><a href="35.html#lists">Lists</a><ul>
+<li><a href="35.html#indexing">Indexing</a></li>
+<li><a href="35.html#slicing">Slicing</a></li>
+<li><a href="35.html#concatenation">Concatenation</a></li>
+<li><a href="35.html#list-functions">List Functions</a></li>
+<li><a href="35.html#exercises">Exercises</a></li>
+</ul>
+</li>
+</ul>
+
+
+        <div class="prevnext">
+            
+                <a class="prev" href="34.html">&laquo; Prev</a>
+            
+            
+                <a class="next" href="36.html">Next &raquo;</a>
+            
+        </div>
+    </section>
+
+    <section class="content twelve columns offset-by-one">
+        <div> 
+<h1 id="lists">Lists</h1>
+<p>We've worked a lot with variables so far, but we haven't talked about aggregates
+at all yet!  Vim has two main aggregate types, and we'll look at the first now:
+lists.</p>
+<p>Vimscript lists are ordered, heterogeneous collections of elements.  Run the
+following command:</p>
+<pre class="codehilite"><code class="language-vim">:echo ['foo', 3, 'bar']</code></pre>
+
+
+<p>Vim displays the list.  Lists can of course be nested.  Run the following
+command:</p>
+<pre class="codehilite"><code class="language-vim">:echo ['foo', [3, 'bar']]</code></pre>
+
+
+<p>Vim happily displays the list.</p>
+<h2 id="indexing">Indexing</h2>
+<p>Vimscript lists are zero-indexed, and you can get at the elements in the usual
+way.  Run this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo [0, [1, 2]][1]</code></pre>
+
+
+<p>Vim displays <code>[1, 2]</code>.  You can also index from the end of the list, much like
+Python.  Try this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo [0, [1, 2]][-2]</code></pre>
+
+
+<p>Vim displays <code>0</code>.  The index <code>-1</code> refers to the last element in the list, <code>-2</code>
+is the second-to-last, and so on.</p>
+<h2 id="slicing">Slicing</h2>
+<p>Vim lists can also be sliced.  This will <em>look</em> familiar to Python programmers,
+but it does <em>not</em> always act the same way!  Run this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo ['a', 'b', 'c', 'd', 'e'][0:2]</code></pre>
+
+
+<p>Vim displays <code>['a', 'b', 'c']</code> (elements 0, 1 and 2).  You can safely exceed the
+upper bound as well.  Try this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo ['a', 'b', 'c', 'd', 'e'][0:100000]</code></pre>
+
+
+<p>Vim simply displays the entire list.</p>
+<p>Slice indexes can be negative.  Try this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo ['a', 'b', 'c', 'd', 'e'][-2:-1]</code></pre>
+
+
+<p>Vim displays <code>['d', 'e']</code> (elements -2 and -1).</p>
+<p>When slicing lists you can leave off the first index to mean "the beginning"
+and/or the last index to mean "the end".  Run the following commands:</p>
+<pre class="codehilite"><code class="language-vim">:echo ['a', 'b', 'c', 'd', 'e'][:1]
+:echo ['a', 'b', 'c', 'd', 'e'][3:]</code></pre>
+
+
+<p>Vim displays <code>['a', 'b']</code> and <code>['d', 'e']</code>.</p>
+<p>Like Python, Vimscript allows you to index and slice strings too.  Run the
+following command:</p>
+<pre class="codehilite"><code class="language-vim">:echo "abcd"[0:2]</code></pre>
+
+
+<p>Vim displays <code>abc</code>. However, you can't use negative bare indices with strings.
+You <em>can</em> use negative indices when slicing strings though!  Run the following
+command:</p>
+<pre class="codehilite"><code class="language-vim">:echo "abcd"[-1] . "abcd"[-2:]</code></pre>
+
+
+<p>Vim displays <code>cd</code> (using a negative index silently resulted in an empty string).</p>
+<h2 id="concatenation">Concatenation</h2>
+<p>You can combine Vim lists with <code>+</code>.  Try this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo ['a', 'b'] + ['c']</code></pre>
+
+
+<p>Vim, unsurprisingly, displays <code>['a', 'b', 'c']</code>.  There's not much else to say
+here -- Vimscript lists are surprisingly sane compared to the rest of the
+language.</p>
+<h2 id="list-functions">List Functions</h2>
+<p>Vim has a number of built-in functions for working with lists.  Run these
+commands:</p>
+<pre class="codehilite"><code class="language-vim">:let foo = ['a']
+:call add(foo, 'b')
+:echo foo</code></pre>
+
+
+<p>Vim mutates the list <code>foo</code> in-place to append <code>'b'</code> and displays <code>['a', 'b']</code>.
+Now run this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo len(foo)</code></pre>
+
+
+<p>Vim displays <code>2</code>, the length of the list.  Try these commands:</p>
+<pre class="codehilite"><code class="language-vim">:echo get(foo, 0, 'default')
+:echo get(foo, 100, 'default')</code></pre>
+
+
+<p>Vim displays <code>a</code> and <code>default</code>.  The <code>get</code> function will get the item at the
+given index from the given list, or return the given default value if the index
+is out of range in the list.</p>
+<p>Run this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo index(foo, 'b')
+:echo index(foo, 'nope')</code></pre>
+
+
+<p>Vim displays <code>1</code> and <code>-1</code>.  The <code>index</code> function returns the first index of the
+given item in the given list, or <code>-1</code> if the item is not in the list.</p>
+<p>Now run this command:</p>
+<pre class="codehilite"><code class="language-vim">:echo join(foo)
+:echo join(foo, '---')
+:echo join([1, 2, 3], '')</code></pre>
+
+
+<p>Vim displays <code>a b</code>, <code>a---b</code>, and <code>123</code>.  <code>join</code> will join the items in the given
+list together into a string, separated by the given separator string (or a space
+if none is given), coercing each item to a string if necessary/possible.</p>
+<p>Run the following commands:</p>
+<pre class="codehilite"><code class="language-vim">:call reverse(foo)
+:echo foo
+:call reverse(foo)
+:echo foo</code></pre>
+
+
+<p>Vim displays <code>['b', 'a']</code> and then <code>['a', 'b']</code>.  <code>reverse</code> reverses the given
+list <em>in place</em>.</p>
+<h2 id="exercises">Exercises</h2>
+<p>Read <code>:help List</code>.  All of it.  Notice the capital <code>L</code>.</p>
+<p>Read <code>:help add()</code>.</p>
+<p>Read <code>:help len()</code>.</p>
+<p>Read <code>:help get()</code>.</p>
+<p>Read <code>:help index()</code>.</p>
+<p>Read <code>:help join()</code>.</p>
+<p>Read <code>:help reverse()</code>.</p>
+<p>Skim <code>:help functions</code> to find some other list-related functions I haven't
+mentioned yet.  Run <code>:match Keyword /\clist/</code> to case-insensitively highlight
+the word <code>list</code> to make it easier to find what you're looking for.</p></div>
+
+        <div class="prevnext">
+            
+                <a class="prev" href="34.html">&laquo; Previous</a>
+            
+            
+                <a class="next" href="36.html">Next &raquo;</a>
+            
+        </div>
+    </section>
+
+
+            <footer class="sixteen columns">
+                Made by <a href="http://stevelosh.com">Steve Losh</a>.
+
+                <a href="../license.html">License</a>.
+
+                Built with
+                <a href="http://bitbucket.org/sjl/bookmarkdown/">Bookmarkdown</a>.
+            </footer>
+        </div>
+
+        
+            <script type="text/javascript">
+                var _gaq = _gaq || [];
+                _gaq.push(['_setAccount', 'UA-15328874-8']);
+                _gaq.push(['_trackPageview']);
+
+                (function() {
+                 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+                 ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+                 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+                 })();
+            </script>
+        
+
+        
+            <script type="text/javascript">
+                var _gauges = _gauges || [];
+                (function() {
+                 var t   = document.createElement('script');
+                 t.type  = 'text/javascript';
+                 t.async = true;
+                 t.id    = 'gauges-tracker';
+                 t.setAttribute('data-site-id', '4e8f83b7f5a1f546e200000d');
+                 t.src = '//secure.gaug.es/track.js';
+                 var s = document.getElementsByTagName('script')[0];
+                 s.parentNode.insertBefore(t, s);
+                 })();
+             </script>
+        
+    </body>
+</html>

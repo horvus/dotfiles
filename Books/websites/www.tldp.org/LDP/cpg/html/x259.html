@@ -1,0 +1,258 @@
+<HTML
+><HEAD
+><TITLE
+>Ethernet: our first PCI device</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Custom Linux: A Porting Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Linux Still Isn't Booting"
+HREF="c233.html"><LINK
+REL="PREVIOUS"
+TITLE="Big-little endian (we should have known)"
+HREF="x247.html"><LINK
+REL="NEXT"
+TITLE="Some Miscellaneous Issues"
+HREF="x273.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Custom Linux: A Porting Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x247.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Linux Still Isn't Booting</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x273.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN259"
+></A
+>4.3. Ethernet: our first PCI device</H1
+><P
+>Our board uses an Intel ethernet chip, called i82559er, which has a module called <EM
+>eepro100</EM
+>. After compiling the module and booting, we discovered that the module isn't working, although an ethernet device was found. We guessed that it was an irq problem, and that the devices don't get the IRQs they need.  We modified a function called <TT
+CLASS="function"
+>pmppc_map_irq()</TT
+> to map our ethernet devices:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;XXXX_map_irq(struct pci_dev *dev, unsigned char idsel, unsigned char pin) {
+	static char pci_irq_table[][4] =
+	/*
+	 *      PCI IDSEL/INTPIN-&#62;INTLINE
+	 *      A       B       C       D
+	 */
+	{
+		{22,    0,      0,      0},/* IDSEL 3 - Ethernet */
+		{0,     0,      0,      0},/* IDSEL 4 - unused   */
+		{0,     0,      0,      0},/* IDSEL 5 - unused   */
+		{0,     0,      0,      0},/* IDSEL 6 - ????     */
+		{0,     0,      0,      0},/* IDSEL 7 - unused   */
+		{0,     0,      0,      0},/* IDSEL 8 - unused   */
+		{0,     0,      0,      0},/* IDSEL 9 - unused   */
+	};
+
+	const long min_idsel = 3, max_idsel = 9, irqs_per_slot = 4;
+	return PCI_IRQ_TABLE_LOOKUP;
+}
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+The function maps IRQs according to IDselects, which means in the order on the PCI bus by which the devices are set. This structure is a bit tricky: <EM
+>min_idsel</EM
+> denotes the topleft corner of the array, and <EM
+>max_idsel</EM
+> is the bottomleft corner. <EM
+>irqs_per_slot</EM
+> is the number of IRQs per line. The structure is as follows:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;each cell contains (IDSEL, SLOT#, IRQ)
+		+----------------------------------------+
+		| (3,0,22) | (3,1,0) | (3,2,0) | (3,3,0) |
+		+----------------------------------------+
+		| (4,0,0)  | (4,1,0) | (4,2,0) | (4,3,0) |
+		+----------------------------------------+
+							..........
+							..........
+		+----------------------------------------+
+		| (9,0,0)  | (9,1,0) | (9,2,0) | (9,3,0) |
+		+----------------------------------------+
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+As you can see, our i8559er needs IRQ 22, and is seated in IDselect 3. Of course, we didn't know that at the start, so we wrote a small piece of code that read all the vendor IDs in all the IDselects.  Once done we compiled, but the ethernet device still didn't work.</P
+><P
+>The next problem was that the module couldn't decide on a MAC address for the device. The MAC address should be written on an EEPROM chip (connected to the device), but we discovered that the hardware guys decided that i82559 doesn't need the EEPROM, so they removed it.  After hardcoding a MAC address inside <TT
+CLASS="filename"
+>eepro100.c</TT
+>, the ethernet device finally worked.  The final solution was to make the module read the MAC address from NVRAM memory, and if no other choice was available, to fall back to a default MAC address.
+
+<DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The next step was to mount a NFS root filesystem. For details see the documentation in Documentation/nfsroot.txt</P
+></TD
+></TR
+></TABLE
+></DIV
+>
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x247.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x273.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Big-little endian (we should have known)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c233.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Some Miscellaneous Issues</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

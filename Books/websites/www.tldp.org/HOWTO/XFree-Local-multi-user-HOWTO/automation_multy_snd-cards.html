@@ -1,0 +1,350 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Using independent sound cards </TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="XFree Local Multi-User HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Tweaking it"
+HREF="automation.html"><LINK
+REL="PREVIOUS"
+TITLE="Tweaking it"
+HREF="automation.html"><LINK
+REL="NEXT"
+TITLE="Customising the login screen"
+HREF="automation_login_screen.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>XFree Local Multi-User HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="automation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. Tweaking it</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="automation_login_screen.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="automation_multy_snd-cards"
+></A
+>7.1. Using independent sound cards</H1
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>In case you do not use devfs, you may need to create additional device files. Take a look at <A
+HREF="http://www.tldp.org/HOWTO/Sound-HOWTO/index.html"
+TARGET="_top"
+>The Linux Sound HOWTO</A
+>, for information on how to setup additional sound cards.</P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1190"
+></A
+>7.1.1. Using aRts daemon</H2
+><P
+>We have to specify different sound devices for the different Xsessions/Displays.  This is done by using the following options of  aRts daemon (<A
+HREF="http://www.arts-project.org/"
+TARGET="_top"
+>http://www.arts-project.org/</A
+>):</P
+><P
+></P
+><UL
+><LI
+><P
+>By OSS-free sound driver:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>-D /dev/dsp[n]</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>where n is the number of the sound card.</P
+></LI
+><LI
+><P
+>By Alsa sound driver:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>-a alsa -D hw:[n],0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>where n is sound card id.</P
+></LI
+></UL
+><P
+></P
+><P
+>Add these lines to your Window Manager start-up script (of course, with the proper arguments for your setup):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;real_display=`echo $DISPLAY | sed "s/://" | sed "s/\..*//"`
+case "$real_display" in
+        0)
+        artsd -F 10 -S 4096 -D /dev/dsp -s 5 -m artsmessage -l 3 -f &#38;
+        ;;
+        1)
+        artsd -F 10 -S 4096 -D /dev/dsp1 -s 5 -m artsmessage -l 3 -f &#38;
+        ;;
+        2)
+        artsd -F 10 -S 4096 -a alsa -D hw:4,0 -s 5 -m artsmessage -l 3 -f &#38;
+        ;;
+esac
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>And at the end of the file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>artsshell -q terminate</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Here is an example for <TT
+CLASS="filename"
+>/usr/X11R6/bin/startenlightenment</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;#!/bin/sh
+#   License: GPL
+
+real_display=`echo $DISPLAY | sed "s/://" | sed "s/\..*//"`
+case "$real_display" in
+        0)
+        artsd -F 10 -S 4096 -D /dev/dsp -s 5 -m artsmessage -l 3 -f &#38;
+        ;;
+        1)
+        artsd -F 10 -S 4096 -D /dev/dsp1 -s 5 -m artsmessage -l 3 -f &#38;
+        ;;
+        2)
+        artsd -F 10 -S 4096 -a alsa -D hw:2,0 -s 5 -m artsmessage -l 3 -f &#38;
+        ;;
+esac
+
+/usr/X11R6/bin/enlightenment
+artsshell -q terminate
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This will start 3 aRts daemons for 3 X servers.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Daemon will use the first OSS sound device for the 1st X server.</P
+></LI
+><LI
+><P
+>Daemon will use the second OSS sound device for the 2nd X server.</P
+></LI
+><LI
+><P
+>Daemon will use the Alsa sound device for the 3rd X server (requires feedback).</P
+></LI
+></OL
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="automation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="automation_login_screen.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Tweaking it</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="automation.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Customising the login screen</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,278 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Number X servers started by Display managers</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="XFree Local Multi-User HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Tweaking it"
+HREF="automation.html"><LINK
+REL="PREVIOUS"
+TITLE="1st X server configuration file"
+HREF="first_x_server.html"><LINK
+REL="NEXT"
+TITLE="Dynamically switching the number of X servers"
+HREF="dyn_switch_num_x_serv.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>XFree Local Multi-User HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="first_x_server.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. Tweaking it</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="dyn_switch_num_x_serv.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="auto_dm_confs"
+></A
+>7.4. Number X servers started by Display managers</H1
+><P
+>Here is a modified version of the previous approach. Add this to your init scripts (I bet it's missing!):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;---------------------------------------------------------------------------------------
+#
+#the same like XF86Config but for gdm.conf &#38; Xservers
+#
+for i in xdm/Xservers gdm/gdm.conf; do
+    if [ -L "/etc/X11/$i" ]; then
+        DumbCon=`sed -n 's/.*dumbcon=\([0-9]*\).*/\1/p' /proc/cmdline`
+        [ -n "$DumbCon" ] || DumbCon=0
+        [ -r "/etc/X11/$i.$DumbCon" ] &#38;&#38; ln -sf "/etc/X11/$i.$DumbCon" "/etc/X11/$i"
+    fi
+done
+echo "Setting up display managers for `expr $DumbCon + 1` Xservers"
+---------------------------------------------------------------------------------------
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This will adjust the proper <TT
+CLASS="filename"
+>/etc/X11/xdm/Xservers</TT
+> and <TT
+CLASS="filename"
+>/etc/X11/gdm/gdm.config</TT
+> according to the boot line argument dumbcon=n (remember n+1= number of X users/sessions).</P
+><P
+>You have to create the configuration files following these assumptions:</P
+><P
+><SPAN
+CLASS="QUOTE"
+>"i"</SPAN
+> only stands for <TT
+CLASS="filename"
+>/etc/X11/xdm/Xserver</TT
+> and <TT
+CLASS="filename"
+>/etc/X11/gdm/gdm.conf</TT
+>.</P
+><P
+></P
+><UL
+><LI
+><P
+><SPAN
+CLASS="QUOTE"
+>"i.0"</SPAN
+> is used for a single X server, when dumbcon=n is not specified, or dumbcon=0.</P
+></LI
+><LI
+><P
+><SPAN
+CLASS="QUOTE"
+>"i.1"</SPAN
+> is used by the display manager when dumbcon=1 is specified.</P
+></LI
+><LI
+><P
+><SPAN
+CLASS="QUOTE"
+>"i.2"</SPAN
+> is used by the display manager when dumbcon=2 is specified.</P
+></LI
+><LI
+><P
+><SPAN
+CLASS="QUOTE"
+>"i.3"</SPAN
+> is used by the display manager when dumbcon=3 is specified.</P
+></LI
+></UL
+><P
+>...and so on.</P
+><P
+>Therefore:</P
+><P
+></P
+><UL
+><LI
+><P
+><SPAN
+CLASS="QUOTE"
+>"i.0"</SPAN
+> should contain the definition only of your original standard X server.</P
+></LI
+><LI
+><P
+><SPAN
+CLASS="QUOTE"
+>"i.1"</SPAN
+> should contain the definitions for 2 X servers.</P
+></LI
+><LI
+><P
+><SPAN
+CLASS="QUOTE"
+>"i.2"</SPAN
+> should contain the definitions for 3 X servers.</P
+></LI
+><LI
+><P
+>...and so on.</P
+></LI
+></UL
+><P
+>If you boot without dumbcon=n or with dumbcon=0 (for example a standard kernel),
+your display manager will start a single X server with the corresponding XF86Config file.</P
+><P
+>If you start with dumbcon=1 the display manager will automatically start 2 X servers.</P
+><P
+>If you start with dumbcon=2, when booting is finished you'll get 3 login prompts on your
+3 displays.</P
+><P
+>Keep in mind that each X server should have it's own configuration file, and it should be specified in the display manager configuration file properly.  Take a look at the configuration files before restarting with an activated display manager and this addition to your init scripts.</P
+><P
+>This can also be used if you have a single XFree configuration file (see <A
+HREF="no_dri.html"
+>Section 4.6</A
+>, <SPAN
+CLASS="QUOTE"
+>"For graphic cards without DRI"</SPAN
+>). In this case you will have to specify the correct layout instead of the correct XFree configuration file.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="first_x_server.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="dyn_switch_num_x_serv.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>1st X server configuration file</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="automation.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Dynamically switching the number of X servers</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

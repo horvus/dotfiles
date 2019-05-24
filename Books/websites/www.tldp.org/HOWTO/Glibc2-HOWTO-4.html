@@ -1,0 +1,287 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Glibc 2 HOWTO: Installing as a test library.</TITLE>
+ <LINK HREF="Glibc2-HOWTO-5.html" REL=next>
+ <LINK HREF="Glibc2-HOWTO-3.html" REL=previous>
+ <LINK HREF="Glibc2-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Glibc2-HOWTO-5.html">Next</A>
+<A HREF="Glibc2-HOWTO-3.html">Previous</A>
+<A HREF="Glibc2-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="test-install"></A> <A NAME="s4">4. Installing as a test library.</A></H2>
+
+<P>
+<!--
+glibc!testing
+-->
+<P>This section covers installing glibc 2 as a test library.  Anything you
+compile will be linked to your existing libraries unless you give some
+extra parameters to link to the new libraries.  It appears that the
+paths are compiled into quite a few files, so you probably have to
+install the library from source.
+<P>
+<H2><A NAME="ss4.1">4.1 Compiling and installing.</A>
+</H2>
+
+<P>
+<P>
+<H3>Prerequisites.</H3>
+
+<P>
+<!--
+glibc!testing!prerequisites
+-->
+<P>
+<UL>
+<LI>About 150 MB free disk space</LI>
+<LI>GNU make 3.75</LI>
+<LI>gcc &gt;= 2.7.2 (better 2.7.2.1)</LI>
+<LI>binutils 2.8.1 (for alpha you need a snapshot)</LI>
+<LI>bash 2.0</LI>
+<LI>autoconf 2.12 (if you change configure.in)</LI>
+<LI>texinfo 3.11</LI>
+</UL>
+<P>On an i586@133 with 64 MB of RAM, it takes about 3 hours to compile with full
+libraries with add-ons.  On a loaded i686@200, it takes about half
+an hour.
+<P>
+<H3>Extracting the source.</H3>
+
+<P>
+<!--
+glibc!testing!sources, extracting
+-->
+<P>You need to extract the source from the archives so you can compile it.
+The best way to do this is:
+<BLOCKQUOTE><CODE>
+<PRE>
+ tar xzf glibc-2.0.6.tar.gz
+ cd glibc-2.0.6
+ tar xzf ../glibc-linuxthreads-2.0.6.tar.gz
+ tar xzf ../glibc-crypt-2.0.6.tar.gz
+ tar xzf ../glibc-localedata-2.0.6.tar.gz
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This will put linuxthreads, crypt, and localedata directories in the
+glibc-2.0.6 directory where configure can find these add-ons.
+<P>
+<H3>Configuring.</H3>
+
+<P>
+<!--
+glibc!testing!configuring
+-->
+<P>In the glibc-2.0.6 directory, create a directory named compile, and
+cd into it.  All work will be done in this directory, which will simplify
+cleaning up.  (The developers have not been very concerned with getting 'make clean' perfect yet.)
+<BLOCKQUOTE><CODE>
+<PRE>
+ mkdir compile
+ cd compile
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Run <CODE>../configure</CODE>.  To use the add-on packages, you need to specify
+them with --enable-add-ons, such as --enable-add-ons=linuxthreads,crypt,localedata.
+You also need to choose a destination directory to install to.
+/usr/i486-linuxglibc2 is a good choice.  The configure line for this would be:
+<BLOCKQUOTE><CODE>
+<PRE>
+ ../configure --enable-add-ons=linuxthreads,crypt,localedata --prefix=/usr/i486-linuxglibc2
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>Compiling and installing.</H3>
+
+<P>
+<!--
+glibc!testing!compiling
+-->
+
+<!--
+glibc!testing!installing
+-->
+<P>To compile and verify, run:
+<BLOCKQUOTE><CODE>
+<PRE>
+ make
+ make check
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+If the 'make check' succeeds, install the library as root (while still in the
+<CODE>compile/</CODE> directory):
+<BLOCKQUOTE><CODE>
+<PRE>
+ make install
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss4.2">4.2 Updating the dynamic loader.</A>
+</H2>
+
+<P>
+<!--
+glibc!testing!dynamic loader, updating
+-->
+
+<!--
+glibc!testing!ld.so.conf, updating
+-->
+<P>
+<OL>
+<LI>Create a link from the new <CODE>ld.so</CODE> to <CODE>/lib/ld-linux.so.2</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+ ln -s /usr/i486-linuxglibc2/lib/ld-linux.so.2 /lib/ld-linux.so.2
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This is the only library where the location is fixed once a program
+is linked, and using a link in <CODE>/lib</CODE> will ease upgrading to glibc as
+your primary C library when the stable version is released.</LI>
+<LI>Edit <CODE>/etc/ld.so.conf</CODE>.  You need to add path to the lib
+directory the new libraries reside in at the end of the file, which will
+be <CODE>&lt;prefix&gt;/lib</CODE>, such as <CODE>/usr/i486-linuxglibc2/lib</CODE>
+for the choice above.  After you have modified <CODE>/etc/ld.so.conf</CODE>, run
+<BLOCKQUOTE><CODE>
+<PRE>
+ ldconfig -v
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+<P>
+<H2><A NAME="ss4.3">4.3 Configuring for gcc.</A>
+</H2>
+
+<P>
+<!--
+glibc!testing!gcc configuration
+-->
+
+The last step of installation is updating <CODE>/usr/lib/gcc-lib</CODE> so gcc
+knows how to use the new libraries.  First you need to duplicate the existing
+configuration.  To find out which configuration is current, use the -v
+option of gcc:
+<BLOCKQUOTE><CODE>
+<PRE>
+ % gcc -v
+ Reading specs from /usr/lib/gcc-lib/i486-unknown-linux/2.7.2.2/specs
+ gcc version 2.7.2.2
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+In this case, i486-unknown-linux is the system, and 2.7.2.2 is the
+version.  You need to copy the <CODE>/usr/lib/gcc-lib/&lt;system&gt;</CODE> to
+the new test system directory:
+<BLOCKQUOTE><CODE>
+<PRE>
+ cd /usr/lib/gcc-lib/
+ cp -r i486-unknown-linux i486-linuxglibc2
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Change into your new test system directory and version directory
+<BLOCKQUOTE><CODE>
+<PRE>
+ cd /usr/lib/gcc-lib/i486-linuxglibc2/2.7.2.2
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and edit the file <CODE>specs</CODE> found in this directory.  In this file,
+change <CODE>/lib/ld-linux.so.1</CODE> to <CODE>/lib/ld-linux.so.2</CODE>.  You also
+need to remove all expressions <CODE>%{...:-lgmon}</CODE> in the file, since
+glibc does not use the gmon library for profiling.  A sample specs file can
+be found in the 
+<A HREF="Glibc2-HOWTO-10.html#specs">Sample specs file</A> section.
+<P>
+<H2><A NAME="ss4.4">4.4 Updating header file links.</A>
+</H2>
+
+<P>
+<!--
+glibc!testing!header files, updating
+-->
+<P>You need create links in your new include directory to other include
+directories:
+<BLOCKQUOTE><CODE>
+<PRE>
+ cd /usr/i486-linuxglibc2/include
+ ln -s /usr/src/linux/include/linux
+ ln -s /usr/src/linux/include/asm
+ ln -s /usr/X11R6/include/X11
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+You might also have other libraries such as ncurses which need their
+header files put in this directory.  You should copy or link the files
+from <CODE>/usr/include</CODE>.  (Some libraries may need to be recompiled
+with glibc2 in order to work with it.  In these cases, just compile and
+install the package to <CODE>/usr/i486-linuxglibc2</CODE>.)
+<P>
+<H2><A NAME="ss4.5">4.5 Testing your installation.</A>
+</H2>
+
+<P>
+<!--
+glibc!testing
+-->
+<P>To test the installation, create the following program in a file glibc.c:
+<BLOCKQUOTE><CODE>
+<PRE>
+ #include &lt;stdio.h&gt;
+
+ main()
+ {
+     printf("hello world!\n");
+ }
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and compile with the options of &quot;-b &lt;base install directory&gt; -nostdinc -I&lt;install directory&gt;/include -I/usr/lib/gcc-lib/&lt;new system dir&gt;/&lt;gcc version&gt;/include&quot;:
+<BLOCKQUOTE><CODE>
+<PRE>
+ % gcc -b i486-linuxglibc2 -nostdinc -I/usr/i486-linuxglibc2/include -I/usr/lib/gcc-lib/i486-linuxglibc2/2.7.2.2/include glibc.c -o glibc
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Use ldd to verify the program was linked with glibc2, and not your old libc:
+<BLOCKQUOTE><CODE>
+<PRE>
+ % ldd glibc
+ libc.so.6 => /usr/i486-linuxglibc2/lib/libc-2.0.6.so (0x4000d000)
+ /lib/ld-linux.so.2 => /lib/ld-linux.so.2 (0x40000000)
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+If it compiles, the links check out, and it generates
+&quot;hello world!&quot; when run, the installation succeeded.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Glibc2-HOWTO-5.html">Next</A>
+<A HREF="Glibc2-HOWTO-3.html">Previous</A>
+<A HREF="Glibc2-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

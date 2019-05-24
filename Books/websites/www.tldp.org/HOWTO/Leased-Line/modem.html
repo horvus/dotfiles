@@ -1,0 +1,543 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Modem</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Leased line Mini HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="intro.html"><LINK
+REL="NEXT"
+TITLE="PPPD"
+HREF="pppd.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Leased line Mini HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="pppd.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="modem"
+></A
+>2. Modem</H1
+><P
+>&#13;A leased line is not connected to a telephone exchange and does not provide
+DC power, dial tone, busy tone or ring signal. This means that your modems
+are on their own and have to be able to deal with this situation.
+</P
+><P
+>&#13;You should have 2 identical (including firmware version) <EM
+>external</EM
+>
+modems supporting both leased line and dumb mode. Make sure your modems can
+actually do this! Also make sure your modem is properly documented.
+You also need:
+
+<P
+></P
+><UL
+><LI
+><P
+>&#13;2 fully wired shielded RS232 cables. The shield should be connected to
+the connector shell (not pin 1) at both ends (not at one end).
+</P
+></LI
+><LI
+><P
+>&#13;A RS232 test plug may be handy for test purposes.
+</P
+></LI
+><LI
+><P
+>&#13;2 RJ11 cords, one for each end of the leased line.
+</P
+></LI
+><LI
+><P
+>&#13;A basic understanding of `AT' commands.
+</P
+></LI
+></UL
+>
+
+</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="modem-conf"
+></A
+>2.1. Modem Configuration</H2
+><P
+>&#13;A note on modem configuration and init strings in general:
+Configure your modem software such as minicom or (m)getty to use the
+highest possible speed; 57600 bps for 14k4 and 115200 bps for 28k8 or
+faster modems.
+Lots of people use very long and complicated init strings, often starting
+with AT&#38;F and containing lots of modem brand and -type specific
+commands. This however is needlessly complicated.
+Most programs feel happy with the same modem settings, so why not write
+these settings in the non volatile memory of all your modems, and only use
+`ATZ' as an init string in all your programs. This way you can swap or
+upgrade your modems without ever having to reconfigure any of your
+software.
+</P
+><P
+>&#13;Most programs require you to use the following settings;
+
+<P
+></P
+><UL
+><LI
+><P
+>&#13;Fixed baud rate (no auto baud)
+</P
+></LI
+><LI
+><P
+>&#13;Hardware bidirectional RTS-CTS flow control (no x-on/x-off)
+</P
+></LI
+><LI
+><P
+>&#13;8 Bits, no parity, 1 stopbit
+</P
+></LI
+><LI
+><P
+>&#13;The modem should produce the <EM
+>TRUE</EM
+> DCD status (&#38;C1)
+</P
+></LI
+><LI
+><P
+>&#13;The modem should <EM
+>NOT</EM
+> ignore the DTR status (&#38;D2 or &#38;D3)
+</P
+></LI
+></UL
+>
+
+Check this with AT&#38;V or AT&#38;Ix (consult your modem documentation)
+</P
+><P
+>&#13;These settings are not necessarily the same as the default factory profile
+(&#38;F), so starting an init string with AT&#38;F is probably not a good
+idea in the first place. The smart thing to do is probably to use AT&#38;F
+only when you have reason to believe that the modem setup stored in the non
+volatile memory is really screwed up.
+If you think you have found the right setup for your modems, write it to
+non volatile memory with AT&#38;W and test it thoroughly with Z-modem file
+transfers of both ASCII text and binary files.
+Only if all of this works perfectly should you configure your modems for
+leased line.
+</P
+><P
+>&#13;Find out how to put your modem into dumb mode and, more importantly, how to
+get it out of dumb mode; The modem can only be reconfigured when it is not
+in dumb mode.
+Make sure you actually configure your modems at the highest possible speed.
+Once in dumb mode it will ignore all `AT' commands and consequently will
+not adjust its speed to that of the COM port, but will use the speed at
+which it was configured instead (this speed is stored in a S-register by
+the AT&#38;W command).
+</P
+><P
+>&#13;Now configure your modem as follows;
+
+<P
+></P
+><UL
+><LI
+><P
+>&#13;Reset on DTR toggle (&#38;D3, this is sometimes a S register). This
+setting is required by some ISP's!
+</P
+></LI
+><LI
+><P
+>&#13;Leased line mode (&#38;L1 or &#38;L2, consult your modem documentation)
+</P
+></LI
+><LI
+><P
+>&#13;The remote modem auto answer (S0=1), the local originate (S0=0)
+</P
+></LI
+><LI
+><P
+>&#13;Disable result codes (Q1, sometimes the dumb mode does this for you)
+</P
+></LI
+><LI
+><P
+>&#13;Dumb mode (\D1 or %D1, this is sometimes a jumper)
+In dumb mode the modem will ignore all AT commands (sometimes you need
+to disable the ESC char as well).
+</P
+></LI
+></UL
+>
+
+
+Write the configuration to non-volatile memory (&#38;W).
+
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="modem-test"
+></A
+>2.2. Test</H2
+><P
+>&#13;Now connect the modems to 2 computers using the RS232 cables and connect
+the modems to each other using a RJ11 lead. Use a modem program such as
+Minicom (Linux), procom or telix (DOS) on both computers to test the
+modems.
+You should be able to type text from one computer to the other and vice
+versa. If the screen produces garbage check your COM port speed and other
+settings.
+Now disconnect and reconnect the RJ11 cord. Wait for the connection to
+reestablish itself. Disconnect and reconnect the RS232 cables, switch the
+modems on and off, stop and restart Minicom.
+The modems should always reconnect at the highest possible speed (some
+modems have speed indicator leds).
+Check whether the modems actually ignores the ESC (+++) character. If
+necessary disable the ESC character.
+</P
+><P
+>&#13;
+If all of this works you may want to reconfigure your modems;
+Switch off the sound at the remote modem (M0) and put the local modem at
+low volume (L1).
+
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="examples"
+></A
+>2.3. Examples</H2
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="hi-tech"
+></A
+>2.3.1. Hi-Tech</H3
+><P
+>&#13;This is a rather vague `no name clone modem'. Its config string is however
+typical and should work on most modems.
+
+<P
+></P
+><DIV
+CLASS="variablelist"
+><DL
+><DT
+>Originate (local):</DT
+><DD
+><P
+>&#13;ATL1&#38;C1&#38;D3&#38;L2%D1&#38;W&#38;W1
+</P
+></DD
+><DT
+>Answer (remote):</DT
+><DD
+><P
+>&#13;ATM0L1&#38;C1&#38;D3&#38;L2%D1S0=1&#38;W&#38;W1
+</P
+></DD
+></DL
+></DIV
+>
+
+</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="tornado"
+></A
+>2.3.2. Tornado FM 228 E</H3
+><P
+>&#13;This is what should work;
+
+<P
+></P
+><DIV
+CLASS="variablelist"
+><DL
+><DT
+>Originate (local):</DT
+><DD
+><P
+>&#13;ATB15L1Q1&#38;C1&#38;D3&#38;L2&#38;W&#38;W1
+</P
+></DD
+><DT
+>Answer (remote):</DT
+><DD
+><P
+>&#13;ATM0B15M0Q1&#38;C1&#38;D3&#38;L2S0=1&#38;W&#38;W1
+</P
+></DD
+></DL
+></DIV
+>
+
+Move the dumb jumper from position 2-3 to 1-2.
+</P
+><P
+>&#13;
+Due to a firmware bug, the modems will only connect after being hard reset
+(power off and on) while DTR is high. I designed a
+<A
+HREF="http://www.sput.nl/hardware/modem-reset.html#l2h"
+TARGET="_top"
+>circuit</A
+>
+which hard resets the modem on the low to high transition of DTR.
+The FreeBSD pppd however, isn't very happy about this. By combining the
+setting &#38;D0 with a
+<A
+HREF="http://www.sput.nl/hardware/modem-reset.html#h2l"
+TARGET="_top"
+>circuit</A
+>
+which resets on the high to low transition instead, this problem can be
+avoided. 
+</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="tron"
+></A
+>2.3.3. Tron DF</H3
+><P
+>&#13;The ESC char should be disabled by setting S2 &#62; 127;
+
+<P
+></P
+><DIV
+CLASS="variablelist"
+><DL
+><DT
+>Originate:</DT
+><DD
+><P
+>&#13;ATL1&#38;L1Q1&#38;C1&#38;D3S2=171\D1&#38;W
+</P
+></DD
+><DT
+>Answer:</DT
+><DD
+><P
+>&#13;ATM0&#38;L2Q1&#38;C1&#38;D3S0=1S2=171\D1&#38;W
+</P
+></DD
+></DL
+></DIV
+>
+
+</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="courier"
+></A
+>2.3.4. US Robotics Courier V-Everything</H3
+><P
+>&#13;The USR Sportster and USR Courier-I do not support leased line. You need
+the Courier V-everything version for this job.
+There is a webpage on the USR site `explaining' how to set-up your Courier
+for leased line. However, if you follow these instructions you will end up
+with a completely brain dead modem, which can not be controlled or
+monitored by your pppd.
+</P
+><P
+>&#13;The USR Courier can be configured with dip switches, however you need to
+feed it the config string first.
+First make sure it uses the right factory profile. Unlike most other modems
+it has three; &#38;F0, &#38;F1 and &#38;F2. The default, which is also the
+one you should use, is &#38;F1. If you send it an AT&#38;F, however it will
+load the factory profile &#38;F0!
+For the reset on DTR toggle you set bit 0 of S register 13. This means you
+have to set S13 to 1. Furthermore you need set it to leased line mode with
+&#38;L1;
+ATS13=1&#38;L1&#38;W
+The dip switches are all default except for the following:
+
+<P
+></P
+><DIV
+CLASS="variablelist"
+><DL
+><DT
+>3</DT
+><DD
+><P
+>&#13;OFF Disable result codes
+</P
+></DD
+><DT
+>4</DT
+><DD
+><P
+>&#13;ON  Disable offline commands
+</P
+></DD
+><DT
+>5</DT
+><DD
+><P
+>&#13;ON  For originate, OFF For answer
+</P
+></DD
+><DT
+>8</DT
+><DD
+><P
+>&#13;OFF Dumb mode
+</P
+></DD
+></DL
+></DIV
+>
+
+</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="pppd.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>PPPD</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

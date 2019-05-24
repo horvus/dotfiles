@@ -1,0 +1,546 @@
+<HTML
+><HEAD
+><TITLE
+>   On the server side
+  </TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="   Serial Laplink HOWTO
+  "
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="   Introduction
+  "
+HREF="x16.html"><LINK
+REL="NEXT"
+TITLE="   On the client side
+  "
+HREF="x116.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Serial Laplink HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x16.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x116.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN24"
+>2. On the server side</A
+></H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN26"
+>2.1. Configure pppd</A
+></H2
+><P
+>    The communication will be through a serial port. On the server we will connect through the <SPAN
+CLASS="QUOTE"
+>"/dev/ttyS1"</SPAN
+> (COM2 in DOS/Windows) device. On your computer this may be different and you should modify the examples below accordingly. I force authentication because I use the configuration to provide a way to access files on a file server for a group of people. After logon they can use the Samba file shares to copy files to and from a laptop. If you are not concerned with security you can comment out the relevant options.
+   </P
+><P
+>    PPP (Point-to-Point Protocol) communication provides TCP/IP across a serial link. In other words: when you want to do internet-based browsing through a modem, you are likely to be using it. In Linux PPP is implemented by the PPP daemon <SPAN
+CLASS="QUOTE"
+>"pppd"</SPAN
+>. Its configuration is done through files in the <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/"</SPAN
+> directory. We will be using the following files:
+   </P
+><P
+>    /etc/ppp/options contains all general options for PPP connections
+   </P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>/etc/ppp/options.ttyS1</DT
+><DD
+><P
+>contains PPP options specific to connections through <SPAN
+CLASS="QUOTE"
+>"/dev/ttyS1"</SPAN
+>
+    </P
+></DD
+><DT
+>/etc/ppp/pap-secrets</DT
+><DD
+><P
+>contains authentication information
+    </P
+></DD
+><DT
+>/etc/inittab</DT
+><DD
+><P
+>starts initial system services
+    </P
+></DD
+></DL
+></DIV
+><P
+>    The <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/options"</SPAN
+> file should look more or less like this:
+
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#/etc/ppp/options
+lock
+#auth forces authorization from peer
+#login makes authentication use the system password file
+#NOTE: my pap-secrets allows anyone access, so if this is not specified
+#      anyone could connect! If this is a machine on which you dial out
+#      as well, then comment auth and login out and move them to
+#      /etc/options.ttySn
+auth
+login
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    The lines starting with a <SPAN
+CLASS="QUOTE"
+>"#"</SPAN
+> are comments. The <SPAN
+CLASS="QUOTE"
+>"lock"</SPAN
+> parameter indicates that a lock file will be created to ensure exclusive access to the serial device, the <SPAN
+CLASS="QUOTE"
+>"auth"</SPAN
+> parameter indicates that the client will need to authenticate itself, and <SPAN
+CLASS="QUOTE"
+>"login"</SPAN
+> tells pppd to use the system user names and passwords for authentication.
+   </P
+><P
+>    Note that pppd will still check the <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/pap-secrets"</SPAN
+> file for user name and password information. A special, single line entry makes that pppd will only use the system's user information. The <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/pap-secrets"</SPAN
+> file looks as follows:
+
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#/etc/ppp/pap-secrets
+# Secrets for authentication using PAP
+# client                 server                  secret         IP addresses
+*                        *                       ""             ppp_laplink_client
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    This allows any machine with the IP address <SPAN
+CLASS="QUOTE"
+>"ppp_laplink_client"</SPAN
+> to connect to the server, without using a password (you can see why it is handy to have the ppp_laplink entries in your /etc/hosts file). The <SPAN
+CLASS="QUOTE"
+>"login"</SPAN
+> parameter in the <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/options"</SPAN
+> file, however, makes that the user name and password supplied by the client for authorization have to match the <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/pap-secrets"</SPAN
+> file <EM
+>as well as</EM
+> the system user name and password, so the connection will only succeed after a valid user name and password are provided.
+   </P
+><P
+>    Options specific to the serial line you are connecting with are placed in <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/options.ttySn"</SPAN
+>, where n is the number of the serial device. My server uses <SPAN
+CLASS="QUOTE"
+>"/dev/ttyS1"</SPAN
+>, so the options go into... <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/options.ttyS1"</SPAN
+>.
+
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#/etc/ppp/options.ttyS1
+asyncmap 0
+crtscts
+#local indicates that modem lines are not used
+local
+#silent causes pppd to wait until a connection is made from the other side
+silent
+#these are entries that exist in the /etc/hosts file
+#the link does not work if this is at the end of this file - order matters!
+ppp_laplink_server:ppp_laplink_client
+#auth forces authorization from peer
+#login makes authentication use the system password file
+#NOTE: my pap-secrets allows anyone access, so if this is not specified
+#         anyone could connect! If this is a server that will never use ppp
+#         for dialing out, you should move auth and login to /etc/ppp/options
+#auth
+#login
+#use PAP, not CHAP for authentication
+require-pap
+115200
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    All these options are well described in the pppd man page; a few of the key ones are explained with comments in the file. The <SPAN
+CLASS="QUOTE"
+>"crtscts"</SPAN
+> parameter tells pppd to use hardware flow control. This is recommended because it is the fastest. Alternatively you could specify <SPAN
+CLASS="QUOTE"
+>"xonxoff"</SPAN
+> to use software-based flow control - you would specify this if your null modem cable doesn't connect the RTS/CTS lines (unlikely if you bought your cable in the store). <SPAN
+CLASS="QUOTE"
+>"115200"</SPAN
+> specifies the data transmission rate - if you have trouble connecting you might want to try with a lower speed. You can find valid speed settings in the termios manual page, although your hardware will limit the baud rate. Choosing an invalid speed setting will elicit an error message from the pppd daemon and apparently it then reverts to some default value.
+   </P
+><P
+>    Note that <SPAN
+CLASS="QUOTE"
+>"auth"</SPAN
+> and <SPAN
+CLASS="QUOTE"
+>"login"</SPAN
+> options are commented out here, because they were specified in the general options file. If you also use your computer to dial into an ISP, you will want to specify them here rather than in <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/options"</SPAN
+>, or you will be asking your ISP to authorize itself when you dial in and that probably won't succeed. The reason why they are not specified in this file by default is because if you have other incoming PPP connections now or in the future, you want to make sure they are always authenticated. Remember that the <SPAN
+CLASS="QUOTE"
+>"pap-secrets"</SPAN
+> as presented here gives zero protection.
+   </P
+><P
+>    Finally, the <SPAN
+CLASS="QUOTE"
+>"ppp_laplink_server:ppp_laplink_client"</SPAN
+> entry specifies the local and remote IP address after the link is up. You can use actual IP numbers here (e.g. 192.168.0.1:192.168.1.1), or entries from the <SPAN
+CLASS="QUOTE"
+>"/etc/hosts"</SPAN
+> file, like I have done. The nice thing of doing the latter is that you can use the names to refer to these links later. I also recommend you use IP numbers like the ones I used (192.168.0.1:192.168.1.1). These addresses are set aside for local networks and don't exist on the internet, so you are avoiding possible conflicts. After the link is up, the client can refer to the server with the IP address of ppp_laplink_server (192.168.0.1) and the server refers to the client with ppp_laplink_client (192.168.1.1).
+   </P
+><P
+>    You could use different entries in <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/pap-secrets"</SPAN
+> to only allow select users access. I am using the PAP protocol for authentication; you could use CHAP if you'd like - the setup is much the same, using the <SPAN
+CLASS="QUOTE"
+>"chap-secrets"</SPAN
+> file. For these and other options you can consult the man pages and the documentation mentioned at the bottom.
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN86"
+>2.2. A getty-like installation of pppd</A
+></H2
+><P
+>    You can have the PPP daemon (pppd) start when you boot the system and have it monitor the serial line of your choice. An elegant way of achieving this is to edit the <SPAN
+CLASS="QUOTE"
+>"/etc/inittab"</SPAN
+> file. This file contains information for initializing the system. Add the following to this file:
+
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+># Start pppd for the serial laplink.
+pd:2345:respawn:/usr/sbin/pppd /dev/ttyS1 nodetach
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    This reads as follows: for runlevels 2, 3, 4 and 5 start <SPAN
+CLASS="QUOTE"
+>"/usr/sbin/pppd /dev/ttyS1 nodetach"</SPAN
+> and if it dies (at the end of a connection) respawn (start a new one). The <SPAN
+CLASS="QUOTE"
+>"nodetach"</SPAN
+> option makes that pppd stays connected to the terminal that started it, rather than forking and exiting. This option is necessary because the <SPAN
+CLASS="QUOTE"
+>"init"</SPAN
+> process would respawn a new one immediately otherwise. Other entries in the inittab file specify getty processes to run on serial terminals (tty's); their initialization looks a lot like this one.
+   </P
+><P
+>    To activate this new configuration type:
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>[root@griis /root]# /sbin/init q
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN97"
+>2.3. Start the server when needed</A
+></H2
+><P
+>    If it is only occasionally that you want to connect to your server, you might prefer to start the connection manually. All the settings remain the same; you can start the server by simply typing:
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>/usr/sbin/pppd /dev/ttyS1 nodetach
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    at the command line. The <SPAN
+CLASS="QUOTE"
+>"nodetach"</SPAN
+> option is not really necessary, but it makes it easy to kill the connection by pressing <SPAN
+CLASS="QUOTE"
+>"ctrl-c"</SPAN
+>.
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN104"
+>2.4. Serving MS Windows clients</A
+></H2
+><P
+>    Unfortunately the MS Windows implementation is not quite standard. Before initiating the PPP connection it requires the exchange of the text strings <SPAN
+CLASS="QUOTE"
+>"CLIENT"</SPAN
+> (from the client) and <SPAN
+CLASS="QUOTE"
+>"CLIENTSERVER"</SPAN
+> (from the server). To accommodate a Windows client the following line has to be added to the <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/options.ttyS1"</SPAN
+> file:
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>connect 'chat -v -f /etc/ppp/scripts/winclient.chat'
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    Then create the scripts directory and the chat file <SPAN
+CLASS="QUOTE"
+>"/etc/ppp/scripts/winclient.chat"</SPAN
+>:
+
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>TIMEOUT 3600
+CLIENT CLIENTSERVER\c
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    The connect option allows you to specify a program to deal with the string exchange before the connection. Usually the <SPAN
+CLASS="QUOTE"
+>"chat"</SPAN
+> program is used for this; check the manual for more details. The given script deals with the Windows connection issue. You don't need it when connecting a Linux box.
+   </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x16.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x116.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>On the client side</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

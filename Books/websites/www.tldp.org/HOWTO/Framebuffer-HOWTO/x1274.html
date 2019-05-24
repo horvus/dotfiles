@@ -1,0 +1,334 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>How do I convert XFree86 mode-lines into framebuffer device timings?</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Framebuffer HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Setting up the X11 FBdev driver"
+HREF="x1232.html"><LINK
+REL="NEXT"
+TITLE="Changing the Linux Logo"
+HREF="x1368.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Framebuffer HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1232.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1368.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="AEN1274"
+></A
+>15. How do I convert XFree86 mode-lines into framebuffer device timings?</H1
+><P
+>If you have XFree86 (X11) installed on your machine, and
+			you can use it successfully, it is a simple matter to
+			convert the mode-lines in your XF86Config file to the
+			required timings needed by the framebuffer
+			devices.</P
+><P
+>The framebuffer device requires the following
+			fields:</P
+><P
+></P
+><UL
+><LI
+><P
+>pixclock - pixel clock in
+					pico seconds</P
+></LI
+><LI
+><P
+>left_margin - time between
+					sync to display</P
+></LI
+><LI
+><P
+>right_margin - time
+					between display to
+					sync</P
+></LI
+><LI
+><P
+>upper_margin - time
+					between sync to
+					display</P
+></LI
+><LI
+><P
+>lower_margin - time
+					between display to
+					sync</P
+></LI
+><LI
+><P
+>hsync_len - horizontal
+					sync length </P
+></LI
+><LI
+><P
+>vsync_len - vertical sync
+					length</P
+></LI
+></UL
+><P
+>An XFree86 mode line has the following fields:</P
+><P
+></P
+><UL
+><LI
+><P
+>Modeline "1280x1024" DCF HR SH1
+						SH2 HFL VR SV1 SV2
+						VFL</P
+></LI
+></UL
+><P
+>It is necessary to do some simple calculations to
+			translate the XF86 mode-lines into a set of framebuffer
+			device timings. As an example, we shall examine how to
+			convert a mode-line taken from my XF86Config file:</P
+><P
+></P
+><UL
+><LI
+><P
+>Modeline "1280x1024" 110.0 1280
+						1328 1512 1712 1024 1025 1028
+						1054</P
+></LI
+></UL
+><P
+>First, calculate the required pixclock rate. XFree86 uses
+			megahertz whilst framebuffer devices uses picoseconds
+			(Why, I don't know). Divide one million by DCF.  For
+			example: 1,000,000 / 110.0 =
+				9090.9091</P
+><P
+>Now we need to calculate the horizontal timings:</P
+><P
+></P
+><UL
+><LI
+><P
+>left_margin = HFL -
+						SH2</P
+></LI
+><LI
+><P
+>right_margin = SH1 -
+						HR</P
+></LI
+><LI
+><P
+>hsync_len = SH2 -
+						SH1</P
+></LI
+></UL
+><P
+>In our example, this would be:</P
+><P
+></P
+><UL
+><LI
+><P
+>left_margin = 1712 - 1512 =
+						200</P
+></LI
+><LI
+><P
+>right_margin = 1328 - 1280 =
+						48</P
+></LI
+><LI
+><P
+>hsync_len = 1512 - 1328 =
+						184</P
+></LI
+></UL
+><P
+>And now we need to calculate the vertical timings.</P
+><P
+></P
+><UL
+><LI
+><P
+>upper_margin = VFL -
+						SV2</P
+></LI
+><LI
+><P
+>lower_margin = SV1 -
+						VR</P
+></LI
+><LI
+><P
+>vsync_len = SV2 -
+						SV1</P
+></LI
+></UL
+><P
+>For our example, this would be:</P
+><P
+></P
+><UL
+><LI
+><P
+>upper_margin = 1054 - 1028 =
+						26</P
+></LI
+><LI
+><P
+>lower_margin = 1025 - 1024 =
+						1</P
+></LI
+><LI
+><P
+>vsync_len = 1028 - 1025 =
+						3</P
+></LI
+></UL
+><P
+>Now we can use this information to set up the framebuffer
+			for the desired mode. For example, for the matroxfb
+			framebuffer driver, it requires the following:</P
+><P
+></P
+><UL
+><LI
+><P
+>video=matrox:xres:&#60;&#62;,yres:&#60;&#62;,depth:&#60;&#62;,left:&#60;&#62;,right:&#60;&#62;,hslen:&#60;&#62;,upper:&#60;&#62;,lower:&#60;&#62;,vslen:&#60;&#62;</P
+></LI
+></UL
+><P
+>I put into my /etc/lilo.conf the following line:</P
+><P
+></P
+><UL
+><LI
+><P
+>append =
+						"video=matroxfb:xres:1280,yres:1024,depth:32,left:200,right:48,hslen:184,upper:26,lower:0,vslen:3"</P
+></LI
+></UL
+><P
+>Note that in this case the pixel clock isn't used. It's
+			only necessary if you don't like the default pixel
+			clock rates.  You can supply this as a parameter as
+			well. Setting the pixclock is documented in other parts
+			of this HOWTO.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1232.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1368.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Setting up the X11 FBdev driver</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Changing the Linux Logo</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

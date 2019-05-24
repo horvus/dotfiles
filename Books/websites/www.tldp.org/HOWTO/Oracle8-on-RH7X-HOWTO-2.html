@@ -1,0 +1,155 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Oracle 8i on Linux RH7.X Installation HOWTO: Starting off</TITLE>
+ <LINK HREF="Oracle8-on-RH7X-HOWTO-3.html" REL=next>
+ <LINK HREF="Oracle8-on-RH7X-HOWTO-1.html" REL=previous>
+ <LINK HREF="Oracle8-on-RH7X-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Oracle8-on-RH7X-HOWTO-3.html">Next</A>
+<A HREF="Oracle8-on-RH7X-HOWTO-1.html">Previous</A>
+<A HREF="Oracle8-on-RH7X-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. Starting off</A></H2>
+
+<H2><A NAME="ss2.1">2.1 Prerequisites</A>
+</H2>
+
+<P>At least 800M free on your hard disk. Type:
+<P>
+<PRE>
+bash$ df -h
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/hda2             5.3G  3.6G  1.4G  72% /
+</PRE>
+<P>and read the field Avail.
+<P>
+<H3>Hardware</H3>
+
+<P>The steps we are going to describe allow to have Oracle 8i, version 8.1.7
+running on:
+<UL>
+<LI>a laptop Toshiba Satellite 2800-100 with 128Mb RAM and a 600 Mhz Intel Celeron;</LI>
+<LI>others ....</LI>
+</UL>
+<P>In any case, never underestimate Oracle's system prerequisites.
+<P>
+<H2><A NAME="ss2.2">2.2 Linux setup</A>
+</H2>
+
+<H3>Distribution</H3>
+
+<P>We focus on a Linux RedHat 7.2 distribution, since we had problems 
+with it and we wanted to use it. The steps we are going to describe should work
+on any Red Hat 7.2 based Linux distribution.
+<P>
+<H3>Distribution Setup</H3>
+
+<P>We assume you have your Linux RedHat 7.2 box installed and working in a
+reasonable way for you. In any case, 'base' packages, X Windows (the
+installation routine is a Java GUI) and the development tools
+regardless of whether you intend doing any coding or not is what you need.
+<P>
+<H3>Setting users and groups</H3>
+
+<P>Login as root:
+<P><CODE>$ su - root</CODE>
+<P>and type whatever password you decided root must have.
+<P>Create groups:
+<P>
+<PRE>
+bash# groupadd oinstall
+bash# groupadd dba
+bash# groupadd oper
+</PRE>
+<P>Create oracle user and set its password:
+<P>
+<PRE>
+bash# useradd oracle -g oinstall -G dba,oper
+bash# passwd oracle (to change password)
+</PRE>
+<P>
+<H3>Installing the right Java Virtual Machine</H3>
+
+<P>The only Java Virtual Machine compatible with Oracle 8i, version 8.1.7, is:
+<A HREF="ftp://sunsite.dk/mirrors/java-linux/JDK-1.1.8/i386/v3/jdk118_v3-glibc-2.1.3.tar.bz2">ftp://sunsite.dk/mirrors/java-linux/JDK-1.1.8/i386/v3/jdk118_v3-glibc-2.1.3.tar.bz2</A>. <BR>
+Do not think: "newer versions will be less 
+buggy", as the installer probably won't work. And don't think.
+<P>Once downloaded it, move it:
+<P><CODE>bash# mv jdk118_v3-glibc-2.1.3.tar.bz2 /usr/local</CODE>
+<P>untar it:
+<P><CODE>bash# tar xvIf jdk118_v3-glibc-2.1.3.tar.bz2</CODE>
+<P>and create a symbolic link to the folder the command here above has just
+created:
+<P><CODE>bash# ln -s /usr/local/jdk118_v3 /usr/local/java </CODE>
+<P>
+<H3>Kernel parameters</H3>
+
+<P>Oracle documentation suggests that you make changes to the Linux kernel
+so you can get more shared memory. 
+If you decide to follow that way, keep the instructions in the Oracle 
+documentation  and the 
+<A HREF="http://www.linuxdoc.org/HOWTO/Kernel-HOWTO.html">Linux Kernel HOWTO</A> at hand to build your
+new kernel.
+<P>
+<P>In fact, the required changes can be made by setting some parameter in a
+suitable initialization file. Just follow some steps:
+<UL>
+<LI>
+<PRE>
+bash# cd /etc
+</PRE>
+
+and create a new file <CODE>rc.config</CODE>, if it does not exists.
+Inside <CODE>rc.config</CODE> copy the following four lines:
+<PRE>
+cd /proc/sys/kernel
+echo 250 32000 100 128 > sem
+echo 4294967295 > shmmax
+echo 4096 > shmmni
+</PRE>
+
+</LI>
+<LI>Edit the file <CODE>/etc/rc</CODE> and add the line:
+<PRE>
+/etc/rc.config
+</PRE>
+</LI>
+</UL>
+<P>
+<P>In any case, if you want just to start playing with Oracle 8i, version 8.1.7, 
+Linux RedHat 7.2 default settings can work fine, and you do not need to set
+any kernel parameter, as just described.
+<P>
+<H3>Setting up some libraries</H3>
+
+<P>There may be some compatibility problems between Oracle 8i and gcc versions >=
+2.1. If you experience them, download these rpms:
+<P>
+<A HREF="http://www.pawprint.net/linux/compat-egcs-6.2-1.1.2.14.i386.rpm">compat-egcs-6.2-1.1.2.14.i386.rpm</A><BR>
+<A HREF="http://www.pawprint.net/linux/compat-glibc-6.2-2.1.3.2.i386.rpm">compat-glibc-6.2-2.1.3.2.i386.rpm</A><BR>
+<A HREF="http://www.pawprint.net/linux/compat-libs-6.2-3.i386.rpm">compat-libs-6.2-3.i386.rpm</A><BR>
+<P>install them, as usual, by:
+<PRE>
+$ rpm -Uvh compat-egcs-6.2-1.1.2.14.i386.rpm compat-glibc-6.2-2.1.3.2.i386.rpm compat-libs-6.2-3.i386.rpm
+</PRE>
+
+and, finally set a symbolic link because there is a small installation bug in
+one of the packages just installed:
+<PRE>
+bash# ln -s /bin/id /usr/bin/id
+</PRE>
+<P>
+<H3>Final step</H3>
+
+<P>Reboot your machine and keep reading...
+<P>
+<P>
+<HR>
+<A HREF="Oracle8-on-RH7X-HOWTO-3.html">Next</A>
+<A HREF="Oracle8-on-RH7X-HOWTO-1.html">Previous</A>
+<A HREF="Oracle8-on-RH7X-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

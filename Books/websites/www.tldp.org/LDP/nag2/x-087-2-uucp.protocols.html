@@ -1,0 +1,496 @@
+<HTML
+><HEAD
+><TITLE
+>UUCP Low-Level Protocols</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="ManagingTaylor UUCP"
+HREF="x-087-2-uucp.html"><LINK
+REL="PREVIOUS"
+TITLE="Setting Up Your System for Dialing In"
+HREF="x-087-2-uucp.dialin.html"><LINK
+REL="NEXT"
+TITLE="Troubleshooting"
+HREF="x-087-2-uucp.misc.faq.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-uucp.dialin.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 16. ManagingTaylor UUCP</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-uucp.misc.faq.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-UUCP.PROTOCOLS"
+>16.5. UUCP Low-Level Protocols</A
+></H1
+><P
+>&#13;To negotiate session control and file transfers with the remote end,
+<B
+CLASS="COMMAND"
+>uucico</B
+> uses a set of standardized messages. This is often
+referred to as the <B
+CLASS="COMMAND"
+>high-level protocol</B
+>. During the 
+initialization phase and the hangup phase these are simply sent across as 
+strings. However, during the real transfer phase, an additional low-level 
+protocol that is mostly transparent to the higher levels is employed. This 
+protocol offers some added benefits, such as allowing error checks on data 
+sent over unreliable links.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN13653"
+>16.5.1. Protocol Overview</A
+></H2
+><P
+>&#13;UUCP is used over different types of connections, such as serial lines, TCP, 
+or sometimes even X.25; it is advantageous to transport UUCP within
+protocols designed specifically for the underlying network protocol. In
+addition, several implementations of UUCP have introduced different
+protocols that do roughly the same thing.</P
+><P
+>Protocols can be divided into two categories: <B
+CLASS="COMMAND"
+>streaming</B
+> 
+and <B
+CLASS="COMMAND"
+>packet</B
+> protocols. Protocols of the streaming variety 
+transfer a file as a whole, possibly computing a checksum over it. This is 
+nearly free of overhead, but requires a reliable connection because any 
+error will cause the whole file to be retransmitted. These protocols are 
+commonly used over TCP connections but are not suitable for use over 
+telephone lines. Although modern modems do quite a good job at error 
+correction, they are not perfect, nor is there any error detection between 
+your computer and the modem.</P
+><P
+>On the other hand, packet-oriented protocols split up the file into
+several chunks of equal size. Each packet is sent and received
+separately, a checksum is computed, and an acknowledgment is returned
+to the sender. To make this more efficient, sliding-window protocols
+have been invented, which allow for a limited number (a window) of
+outstanding acknowledgments at any time. This greatly reduces the
+amount of time <B
+CLASS="COMMAND"
+>uucico</B
+> has to wait during a
+transmission. Still, the relatively large overhead compared to a
+streaming protocol makes packet protocols inefficient for TCP use, but
+ideal for telephone lines.</P
+><P
+>The width of the data path also makes a difference. Sometimes sending 8-bit
+characters over a serial connection is impossible; for instance, the
+connection could go through a stupid terminal server that strips off the eighth
+bit. When you transmit 8-bit characters over a 7-bit connection, they have to
+be quoted on transmission. In the worst-case scenerio, quoting doubles the 
+amount of data to be transmitted, although compression done by the hardware may
+compensate. Lines that can transmit arbitrary 8-bit characters
+are usually called <I
+CLASS="EMPHASIS"
+>8-bit clean</I
+>. This is the case for all
+TCP connections, as well as for most modem connections.</P
+><P
+>Taylor UUCP 1.06 supports a wide variety of UUCP protocols. The most common
+of these are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><I
+CLASS="EMPHASIS"
+>g</I
+></DT
+><DD
+><P
+>This is the most common protocol and should be understood by virtually all
+<B
+CLASS="COMMAND"
+>uucico</B
+>s. It does thorough error checking and is therefore
+well suited for noisy telephone links. <I
+CLASS="EMPHASIS"
+>g</I
+> requires an
+8-bit clean connection. It is a packet-oriented protocol that uses a
+sliding-window technique.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>i</I
+></DT
+><DD
+><P
+>This is a bidirectional packet protocol, which can send and receive files at
+the same time. It requires a full-duplex connection and an 8-bit clean data
+path. It is currently understood by Taylor UUCP only.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>t</I
+></DT
+><DD
+><P
+>This protocol is intended for use over a TCP connection or other truly
+error-free networks.  It uses packets of 1,024 bytes and requires an 8-bit
+clean connection.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>e</I
+></DT
+><DD
+><P
+>This should basically do the same as <I
+CLASS="EMPHASIS"
+>t</I
+>. The main
+difference is that <I
+CLASS="EMPHASIS"
+>e</I
+> is a streaming protocol and is
+thus suited only to reliable network connections.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>f</I
+></DT
+><DD
+><P
+>This is intended for use with reliable X.25 connections. It is a streaming
+protocol and expects a 7-bit data path. 8-bit characters are quoted, which
+can make it very inefficient.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>G</I
+></DT
+><DD
+><P
+>This is the System V Release 4 version of the <I
+CLASS="EMPHASIS"
+>g</I
+> protocol.
+It is also understood by some other versions of UUCP.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>a</I
+></DT
+><DD
+><P
+>This protocol is similiar to ZMODEM. It requires an 8-bit connection, but
+quotes certain control characters like XON and XOFF.</P
+></DD
+></DL
+></DIV
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN13708"
+>16.5.2. Tuning the Transmission Protocol</A
+></H2
+><P
+>&#13;All protocols allow for some variation in packet sizes, timeouts, etc. 
+Usually, the defaults work well under standard circumstances, but may
+not be optimal for your situation.  The <I
+CLASS="EMPHASIS"
+>g</I
+> protocol, for
+instance, uses window sizes from 1 to 7, and packet sizes in powers of 2
+ranging from 64 through 4096. If your telephone line is usually so noisy that
+it drops more than 5 percent of all packets, you should probably lower the
+packet size and shrink the window. On the other hand, on very good telephone
+lines the protocol overhead of sending acknowledgments for every 128 bytes may
+prove wasteful, so you might increase the packet size to 512 or even 1,024.
+Most binaries included in Linux distributions default to a window size of 7
+and 128-byte packets.</P
+><P
+>Taylor UUCP lets you tune parameters with the 
+<B
+CLASS="COMMAND"
+>protocol-parameter</B
+> command in the
+<TT
+CLASS="FILENAME"
+>sys</TT
+> file.  For instance, to set the
+<I
+CLASS="EMPHASIS"
+>g</I
+> protocol's packet size to 512 when talking to
+<SPAN
+CLASS="SYSTEMITEM"
+>pablo</SPAN
+>, you have to add:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>system          pablo
+...
+protocol-parameter g  packet-size  512</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The tunable parameters and their names vary from protocol to protocol. For a
+complete list of them, refer to the documentation enclosed in the Taylor UUCP
+source.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN13723"
+>16.5.3. Selecting Specific Protocols</A
+></H2
+><P
+>&#13;Not every implementation of <B
+CLASS="COMMAND"
+>uucico</B
+> speaks and understands
+each protocol, so during the initial handshake phase, both processes have to
+agree on a common one.  The master <B
+CLASS="COMMAND"
+>uucico</B
+> offers the
+slave a list of supported protocols by sending
+<TT
+CLASS="LITERAL"
+>P</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>protlist</I
+></TT
+>, from which the slave
+may pick one.</P
+><P
+>Based on the type of port used (modem, TCP, or direct),
+<B
+CLASS="COMMAND"
+>uucico</B
+> will compose a default list of
+protocols. For modem and direct connections, this list usually
+comprises <I
+CLASS="EMPHASIS"
+>i</I
+>, <I
+CLASS="EMPHASIS"
+>a</I
+>,
+<I
+CLASS="EMPHASIS"
+>g</I
+>, <I
+CLASS="EMPHASIS"
+>G</I
+>, and
+<I
+CLASS="EMPHASIS"
+>j</I
+>.  For TCP connections, the list is
+<I
+CLASS="EMPHASIS"
+>t</I
+>, <I
+CLASS="EMPHASIS"
+>e</I
+>,
+<I
+CLASS="EMPHASIS"
+>i</I
+>, <I
+CLASS="EMPHASIS"
+>a</I
+>,
+<I
+CLASS="EMPHASIS"
+>g</I
+>, <I
+CLASS="EMPHASIS"
+>G</I
+>,
+<I
+CLASS="EMPHASIS"
+>j</I
+>, and <I
+CLASS="EMPHASIS"
+>f</I
+>. You can override
+this default list with the <B
+CLASS="COMMAND"
+>protocols</B
+> command, which may be specified
+in a system entry as well as a port entry. For instance, you might
+edit the <TT
+CLASS="FILENAME"
+>port</TT
+> file entry for your modem port like
+this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>port            serial1
+...
+protocols       igG</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This will require any incoming or outgoing connection through this port to use
+<I
+CLASS="EMPHASIS"
+>i</I
+>, <I
+CLASS="EMPHASIS"
+>g</I
+>, or <I
+CLASS="EMPHASIS"
+>G</I
+>. If
+the remote system does not support any of these, the conversation will fail.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.dialin.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.misc.faq.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Setting Up Your System for Dialing In</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Troubleshooting</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

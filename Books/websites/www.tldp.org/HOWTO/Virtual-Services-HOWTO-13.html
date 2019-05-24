@@ -1,0 +1,314 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Virtual Services Howto: FAQ</TITLE>
+ <LINK HREF="Virtual-Services-HOWTO-12.html" REL=previous>
+ <LINK HREF="Virtual-Services-HOWTO.html#toc13" REL=contents>
+</HEAD>
+<BODY>
+Next
+<A HREF="Virtual-Services-HOWTO-12.html">Previous</A>
+<A HREF="Virtual-Services-HOWTO.html#toc13">Contents</A>
+<HR>
+<H2><A NAME="s13">13. FAQ</A></H2>
+
+<P><B>Q1</B>. I created sendmail.init and syslogd.init.  I put them in /usr/local/bin and tried to 
+run them but I got errors.
+<P>
+<P><B>A1</B>. These files are called init scripts.  They are run by the program init when
+your computer boots.  They do not go with the /usr/local binaries.  Consult the
+Linux System Administrators Guide or the Linux Getting Started Guide for information
+on how to use the init scripts system.
+<P>
+<P><B>Q2</B>. I put these lines into /etc/sendmail.cf
+<P>
+<PRE>
+divert(0)
+VERSIONID(`tcpproto.mc')                        
+OSTYPE(linux)
+FEATURE(redirect)
+FEATURE(always_add_domain)
+FEATURE(use_cw_file)
+FEATURE(local_procmail)
+MAILER(local)
+MAILER(smtp)
+</PRE>
+<P>And I got really stange output.  Why?
+<P>
+<P><B>A2</B>. You do not put these lines directly in /etc/sendmail.cf.  The sendmail.cf
+file was written to be easy for sendmail to understand and hard for humans to read. 
+Therefore, to make it easy to configure we use a program called m4 and its macro 
+capabilities to create the sendmail.cf file.  The FEATURE lines are actually macros 
+that expand to sendmail configuration statements.   See the sendmail docs on how to 
+configure sendmail through this method.  Also note that you create a main 
+/etc/sendmail.cf file and the virtfs script then copies this to 
+/virtual/domain1.com/etc/sendmail.cf.  Then you edit that sendmail.cf file to
+respond as your domain.  
+<P>
+<P><B>Q3</B>. Where do I get virtuald, what is it, and how do I use it?
+<P>
+<P><B>A3</B>. Virtuald is C source that I wrote to run a virtual service.  
+It is included with this HOWTO.  You compile it like a normal C program 
+<CODE> make virtuald </CODE>.  The resulting binary is placed into
+/usr/local/bin.  Add lines to /etc/inetd.conf that use virtuald as a wrapper to a normal
+network server program.
+<P>
+<P><B>Q4</B>. I do not have dialog installed on my system?
+<P>
+<P><B>A4</B>. Dialog is a program that allows you to put dialog pop up windows
+into your shell scripts.  It is required for my virtual shell script
+examples to work.  You can get a copy of dialog at
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/utils/shell/cdialog-0.9a.tar.gz">sunsite</A>.  
+It compiles very easily and should be no problem to install.
+<P>
+<P><B>Q5</B>. How can I know if virtual syslogd is working?
+<P>
+<P><B>A5</B>. When virtuald runs it should output the following messages to
+syslogd (/var/log/messages):
+<P>
+<PRE>
+Nov 19 17:21:07 virtual virtuald[10223]: Virtuald Starting: $Revision: 1.49 $
+Nov 19 17:21:07 virtual virtuald[10223]: Incoming ip: 204.249.11.136
+Nov 19 17:21:07 virtual virtuald[10223]: Chroot dir: /virtual/domain1.com
+</PRE>
+<P>The <CODE> Chroot </CODE> dir message is sent by virtuald after the <CODE> chroot </CODE> system 
+call is performed.  If this message appears virtual syslogd is working.   If the
+service you are virtualizing logs messages to syslogd and you see them that
+is also a sign that virtual syslogd is correctly setup.
+<P>
+<P>Note that if you have not turned on the compile time option VERBOSELOG, 
+virtuald will not log at all.  The only way to tell if virtual syslogd is
+working at that point is if the daemon you are virtualizing independently
+logs something to syslogd.
+<P>
+<P><B>Q6</B>.  How can I setup quotas across virtual filesystems?
+<P>
+<P><B>A6</B>.  You setup quotas like you would normally.  See the 
+<A HREF="http://sunsite.unc.edu/LDP/HOWTO/mini/Quota.html">Quota mini-HOWTO</A>.  
+However, you have to make sure there are no uid conflicts across domains.  If there are
+conflicts you will have users sharing a quota.  Set aside a range of uid's that you know will
+have quota's enabled and tell your domains that they cannot have any users in that range except the
+ones registered to have a quota.  
+<P>
+<P><B>Q7</B>.  What is this \ notation in all the inetd.conf entries?
+<P>
+<P><B>A7</B>.  That is just a method of breaking up config files across two lines.
+I did that so the line would word wrap in a nice place.  You can just ignore the \
+and join the two lines back together.
+<P>
+<P><B>Q8</B>.  When I run passwd or other login programs I get <CODE> permission denied </CODE>.  
+When I run FTP or su I get <CODE> no modules loaded for service XXX </CODE>.  Why?
+<P>
+<P><B>A8</B>.  Those are PAM error messages.  I wrote these scripts before PAM was out.  
+My virtfs script does not copy /etc/pam.d, /usr/lib/cracklib_dict.*, /lib/security or any of the
+other files PAM requires.  PAM needs these to function.  If you edit my virtfs 
+script to copy these files the problem will go away.
+<P>
+<P><B>Q9</B>.  Can virtuald work with tcpd hosts.allow and hosts.deny files?
+<P>
+<P><B>A9</B>.  Yes it can with some modifications.  
+<P>
+<P>First the source has to be changed in two places.  
+<P>
+<P>This has to be inserted where the arguments are checked.
+<P>
+<PRE>
+        if (!argv[3])
+        {
+                syslog(LOG_ERR,"invalid arguments: no program to run");
+                exit(0);
+        }
+</PRE>
+<P>The exec line has to be changed from:
+<P>
+<PRE>
+        if (execvp(argv[2],argv+2)&lt;0)
+</PRE>
+<P>to:
+<P>
+<PRE>
+        if (execvp(argv[2],argv+3)&lt;0)
+</PRE>
+<P>Second the inetd.conf lines have to be changed from:
+<P>
+<PRE>
+ftp stream tcp nowait root /usr/local/bin/virtuald \
+        virtuald /virtual/conf.ftp wu.ftpd -l -a
+</PRE>
+<P>to:
+<P>
+<PRE>
+ftp stream tcp nowait root /usr/local/bin/virtuald \
+        virtuald /virtual/conf.ftp tcpd wu.ftpd -l -a
+</PRE>
+<P>Third edit the /virtual/domain1.com/etc/hosts.allow and
+/virtual/domain1.com/etc/hosts.deny files accordingly.
+<P>
+<P><B>Q10</B>.  Can my virtual hosts run CGI's?
+<P>
+<P><B>A10</B>.  Yes they can but I recommend putting the /cgi-bin in a place
+outside of the <CODE> chroot </CODE> that only you have access to.  For example, 
+/var/www/cgi-bin/domain1.com.  Giving clients access to /cgi-bin is giving them
+the opportunity to run programs on your sever.  This is a big security hole.  Be
+careful.  I do not let any cgi run on my systems that I have not personally
+inspected for bugs.
+<P>
+<P><B>Q11</B>.  My configuration files are different from your examples.   What do I do?
+<P>
+<P><B>A11</B>.  There are two basic configuration styles: SystemV and BSD.  The examples provided
+in the HOWTO are based on SystemV style configuration files.  Virtual services works equally
+well on either system.  For information on BSD style configuration files consult the origin
+of your distribution or the nearest LDP site.
+<P>
+<P><B>Q12</B>.  I sent you mail and have not heard a response from you or your response
+took a long time.  Why?
+<P>
+<P><B>A12</B>.  Probably because you did not put VIRTSERVICES HOWTO in your subject header.
+Please bear in mind that I am a network administrator and that among the other things I do
+in my 20 hour days is administering my own virtual boxes and those of my clients.  Mail
+that is properly addressed is always responded to within two or three days.  Mail that is improperly
+addressed does not get filtered into my VIRTSERVICES mailbox and can lie around unnoticed for
+days or weeks.
+<P>
+<P><B>Q13</B>.  Does virtuald work under 100Mbit?
+<P>
+<P><B>A13</B>   The speed of the network card is unrelated to whether virtuald will work or
+not.  Try making sure that your server works under 10Mbit and that your 100Mbit network card 
+works normally without a virtual server.
+<P>
+<P><B>Q14</B>.  Should I use sendmail's virthost table?
+<P>
+<P><B>A14</B>.  No.  That is sendmail's feature to accept info for multiple domains.  Virtuald
+gives each sendmail its own separate <CODE> chroot </CODE> environment.  Install virtuald and then configure
+sendmail like you would normally for each domain.
+<P>
+<P><B>Q15</B>.  Can I setup virtual telnet on my machine?  What about creating
+a virtual root account so clients can administer their own domains?
+<P>
+<P><B>A15</B>.  These questions come to me quite often and to be honest, I am getting
+a bit tired of them.  The answer, as stated numerous times in the documentation, is
+that any service run through inetd can be virtualized using virtuald so there is
+nothing to stop you from doing either of the above.  Nothing except common sense.
+Whatever benefits you might derive from allowing telnet are heavily outweighed
+by the cost to the virtual box (and thus the sites you are supposed to be 
+hosting in a responsible manner) in terms of security.  Here are just a few
+issues involved:
+<P>
+<UL>
+<LI> In order to completely fool an incoming telnet session you have to hack the kernel
+to get multiple procs working, reset your source IP address for outgoing connections,
+fool gethostname so it uses the virtual hostname and not the system hostname, etc.
+If you are an advanced user then by all means hack the kernel.  For the newbie I do not
+recommend it.</LI>
+<LI> By allowing users to come into your box via telnet you allow them to run arbitrary
+programs.  Through known hacks you can get root and cause damage to the system.</LI>
+<LI> Giving a root telnet account on a virtual box is very bad.  A root virtual user
+can still read raw device files which nullifies the <CODE> chroot </CODE>, shutdown the system, and
+can kill other processes on the system.</LI>
+<LI> The programs that these telnet sessions are running take up valuable CPU time
+that the network services could be using.</LI>
+<LI> Telnet is an insecure network service.  Plain text passwords are sent out over
+the net.  If a malicious user gets this password he/she can use the above mentioned
+attacks to harm your system.</LI>
+<LI> Your virtual environments will have to be bigger.  You will need more shared 
+libraries, more configuration files, and more binaries.  A six gigabyte disk can
+run out of space really fast.</LI>
+</UL>
+<P>
+<P>The bottom line is that allowing login's on a virtual box is a really bad idea.  If
+permitted, every site hosted on that machine is at risk.  If you want to allow a site
+holder to administer users then you are advised to write (not script) the code
+necessary to run the virtual processes that allow them to add, delete or modify users
+upon login through ssh.  This should be completely menu driven, should never allow a console
+and should not run as root.  In order to accomplish this you will have to change
+ownership of the pertinent files from root to some other user.  If done in this manner
+it is marginally safe to incorporate into a virtual machine.  There is never an
+acceptable time to allow root login's either through telnet or ssh.  Doing so is
+simply an invitation to disaster.  If there is an overwhelming reason to run telnet
+then the site should be hosted on a dedicated machine where the only risk is to the
+individual site.  No responsible administrator would ever do otherwise and so I will
+waste no more time on this issue.
+<P>
+<P><B>Q16</B>.  Is there an rpm, tar, web site, mailing list, etc. associated with
+virtuald and the Virtual-Services HOWTO?
+<P>
+<P><B>A16</B>.  Currently there is nothing like that available.  This HOWTO is the
+only source of information to everything I do concerning this project.  I find
+the HOWTO to be fairly self contained making the need for other pieces of information
+superfluous.
+<P>
+<P><B>Q17</B>.  When I try to run virtexec as a regular user I get <CODE> chroot: operation not permitted </CODE>.  Why?
+<P>
+<P><B>A17</B>.  <CODE> Chroot </CODE> is a root restricted system call.  Only the superuser can execute
+it.  The virtexec script runs the <CODE> chroot </CODE> program which is why you need to be root
+in order to run it.
+<P>
+<P><B>Q18</B>.  I setup pop and sendmail but popping mail does not seem to
+work.  How come? 
+<P>
+<P><B>A18</B>.  Some pop programs come with /usr/spool/mail as their place for mail
+files.  I know that qpop has to be manually editted to fix this.  Either recompile
+the source to your program or symlink /virtual/domain1.com/usr/spool to 
+/virtual/domain1.com/var/spool.
+<P>
+<P><B>Q19</B>.  I did not use the program mentioned in your HOWTO, I used program
+XXX.  It does not work.  Why?
+<P>
+<P><B>A19</B>.  I tried to make sure to use the most generic of each server in
+my examples.  However, I know that everyone has their favorite version of each
+server.   Send me as much information as possible and I will try to figure out
+how to solve your problem and document it in the FAQ.  The most important
+piece of information to send me is where to get the version of the software
+you are running (in the form ftp://ftp.domain1.com/subdir/subdir/file.tgz).
+<P>
+<P><B>Q20</B>.  When I run virtexec is says <CODE> symlink not a virt function </CODE>.
+What does this mean and how do I fix it?
+<P>
+<P><B>A20</B>.  Virtexec is a program that will take its zero argument, strip 
+off the first four characters, and run the remaining name in the virtual
+environment.  For example, virtpasswd runs passwd.  If the first four characters
+that it strips off are not <CODE> virt </CODE> it complains and outputs that
+error message.  Virtexec is written in shell script and should be fairly simple
+to follow.  Refer to the manual pages on bash or whatever shell you run for 
+questions about shell script programming.
+<P>
+<P><B>Q21</B>.  I have a question about Qmail, SAMBA, Apache, etc. that is unrelated
+to the virtuald setup or how the package interfaces to virtuald.
+<P>
+<P><B>A21</B>.  All the packages described here are fully documented.  Some even
+have full web sites like www.packagename.org dedicated to them.  Please
+consult them about questions dealing with the package that are unrelated to their
+virtual hosting functionality.
+<P>
+<P><B>Q22</B>.  I have several domain aliases to domain1.com but mail keeps bouncing
+from the aliases.   How come?
+<P>
+<P><B>A22</B>.  Virtmaildelivery relies on the environment variables passed to it to
+determine which /virtual/domain1.com directory to deliver to.  It does
+not perform any DNS lookups to determine the address of the mail.  However,
+if the address is submail.mail.domain1.com, virtmaildelivery will
+first try that address and then mail.domain1.com and then domain1.com and
+then com in that order until either a match happens or there is no domain name 
+left.  
+<P>
+<P>However, if you have domain aliases that are not subdomains of one
+another you have to create symlinks like so:
+<P>
+<PRE>
+cd /virtual
+ln -s domain1.com domain1alias.com
+</PRE>
+<P>That way virtmaildelivery will be fooled into thinking that both directories
+exist even though one is a symlink and mail will be able to be delivered to 
+user@domain1.com or user@domain1alias.com.  Note that virtexec will list both of
+the domains in the dialog box when your run it.  You can choose either one
+since they will be the same virtual filesystem.
+<P>
+<P>
+<HR>
+Next
+<A HREF="Virtual-Services-HOWTO-12.html">Previous</A>
+<A HREF="Virtual-Services-HOWTO.html#toc13">Contents</A>
+</BODY>
+</HTML>

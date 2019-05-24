@@ -1,0 +1,596 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux IPCHAINS-HOWTO: A Serious Example.</TITLE>
+ <LINK HREF="IPCHAINS-HOWTO-8.html" REL=next>
+ <LINK HREF="IPCHAINS-HOWTO-6.html" REL=previous>
+ <LINK HREF="IPCHAINS-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="IPCHAINS-HOWTO-8.html">Next</A>
+<A HREF="IPCHAINS-HOWTO-6.html">Previous</A>
+<A HREF="IPCHAINS-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. A Serious Example.</A></H2>
+
+<P>This example was extracted from Michael Neuling and my March 1999
+LinuxWorld Tutorial; this is not the only way to solve the given
+problem, but it is probably the simplest.  I hope you will find it
+informative.
+<P>
+<P>
+<H2><A NAME="ss7.1">7.1 The Arrangement</A>
+</H2>
+
+<P>
+<UL>
+<LI> Masqueraded internal network (various operating systems), which
+we call "GOOD".
+</LI>
+<LI> Exposed servers in a separate network (called "DMZ" for
+Demilitarized Zone).
+</LI>
+<LI> PPP Connection to the Internet (called "BAD").</LI>
+</UL>
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+   External Network (BAD)
+           |
+           |
+       ppp0|
+    ---------------
+    | 192.84.219.1|             Server Network (DMZ)
+    |             |eth0
+    |             |----------------------------------------------
+    |             |192.84.219.250 |             |              |
+    |             |               |             |              |
+    |192.168.1.250|               |             |              |
+    ---------------          --------       -------        -------
+           | eth1            | SMTP |       | DNS |        | WWW |
+           |                 --------       -------        -------
+           |              192.84.219.128  192.84.219.129  192.84.218.130
+           |
+   Internal Network (GOOD)
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss7.2">7.2 Goals</A>
+</H2>
+
+<P>
+<P>Packet Filter box:
+<DL>
+<DT><B> PING any network</B><DD><P>This is really useful to tell if a machine is down.
+<P>
+<DT><B> TRACEROUTE any network </B><DD><P>Once again, useful for diagnosis.
+<P>
+<DT><B> Access DNS </B><DD><P>To make ping and DNS more useful.
+<P>
+</DL>
+<P>
+<P>Within the DMZ: 
+<P>
+<P>Mail server
+<UL>
+<LI> SMTP to external</LI>
+<LI> Accept SMTP from internal and external</LI>
+<LI> Accept POP-3 from internal</LI>
+</UL>
+<P>Name Server 
+<UL>
+<LI> Send DNS to external</LI>
+<LI> Accept DNS from internal, external and packet filter box</LI>
+</UL>
+<P>
+<P>Web server 
+<UL>
+<LI> Accept HTTP from internal and external</LI>
+<LI> Rsync access from internal</LI>
+</UL>
+<P>
+<P> Internal:
+<DL>
+<DT><B>Allow WWW, ftp, traceroute, ssh to external</B><DD><P>These are fairly standard things to allow: some places start by
+allowing the internal machines to do just about everything, but here
+we're being restrictive.
+<P>
+<DT><B> Allow SMTP to Mail server </B><DD><P>Obviously, we want them to be able to send mail out. 
+<P>
+<DT><B> Allow POP-3 to Mail server </B><DD><P>This is how they read their mail.
+<P>
+<DT><B> Allow DNS to Name server </B><DD><P>They need to be able to look up external names for WWW, ftp,
+traceroute and ssh.
+<P>
+<DT><B> Allow rsync to Web server </B><DD><P>This is how they synchronize the external web server with the
+internal one.
+<P>
+<DT><B> Allow WWW to Web server </B><DD><P>Obviously, they should be able to connect to our external web server.
+<P>
+<DT><B> Allow ping to packet filter box </B><DD><P>This is a courteous thing to allow: it means that they can test if
+the firewall box is down (so we don't get blamed if an external site
+is broken).
+<P>
+</DL>
+<P>
+<H2><A NAME="ss7.3">7.3 Before Packet Filtering</A>
+</H2>
+
+<P>
+<UL>
+<LI> Anti-spoofing
+
+<P>Since we don't have any asymmetric routing, we can simply turn on
+anti-spoofing for all interfaces.
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# for f in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 1 > $f; done
+# 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+</LI>
+<LI> Set filtering rules to DENY all:
+
+<P>We still allow local loopback traffic, but deny anything else.
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ipchains -A input -i ! lo -j DENY
+# ipchains -A output -i ! lo -j DENY
+# ipchains -A forward -j DENY
+# 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+</LI>
+<LI> Set Up Interfaces
+
+<P>This is usually done in the boot scripts.  Make sure the above steps
+are done before the interfaces are configured, to prevent packet
+leakage before the rules are set up.
+<P>
+</LI>
+<LI> Insert per-protocol masquerading modules.
+<P>We need to insert the masquerading module for FTP, so that active and
+passive FTP `just work' from the internal network.
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# insmod ip_masq_ftp
+# 
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H2><A NAME="ss7.4">7.4 Packet Filtering for Through Packets</A>
+</H2>
+
+<P>With masquerading, it's best to filter in the forward chain.
+<P>
+<P>Split forward chain into various user chains depending on source/dest
+interfaces; this breaks the problem down into managable chunks.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -N good-dmz
+ipchains -N bad-dmz
+ipchains -N good-bad
+ipchains -N dmz-good
+ipchains -N dmz-bad
+ipchains -N bad-good
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>ACCEPTing standard error ICMPs is a common thing to do, so we create a
+chain for it.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -N icmp-acc
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>Set Up Jumps From forward Chain</H3>
+
+<P>Unfortunately, we only know (in the forward chain) the outgoing
+interface.  Thus, to figure out what interface the packet came in on,
+we use the source address (the anti-spoofing prevents address faking).
+<P>
+<P>Note that we log anything which doesn't match any of these (obviously,
+this should never happen).
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A forward -s 192.168.1.0/24 -i eth0 -j good-dmz
+ipchains -A forward -s 192.168.1.0/24 -i ppp0 -j good-bad
+ipchains -A forward -s 192.84.219.0/24 -i ppp0 -j dmz-bad
+ipchains -A forward -s 192.84.219.0/24 -i eth1 -j dmz-good
+ipchains -A forward -i eth0 -j bad-dmz
+ipchains -A forward -i eth1 -j bad-good
+ipchains -A forward -j DENY -l
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>Define the icmp-acc Chain</H3>
+
+<P>Packets which are one of the error ICMPs get ACCEPTed, otherwise,
+control will pass back to the calling chain.
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A icmp-acc -p icmp --icmp-type destination-unreachable -j ACCEPT
+ipchains -A icmp-acc -p icmp --icmp-type source-quench -j ACCEPT
+ipchains -A icmp-acc -p icmp --icmp-type time-exceeded -j ACCEPT
+ipchains -A icmp-acc -p icmp --icmp-type parameter-problem -j ACCEPT
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>Good (Internal) to DMZ (Servers)</H3>
+
+<P>Internal restrictions:
+<UL>
+<LI> Allow WWW, ftp, traceroute, ssh to external</LI>
+<LI> <B>Allow SMTP to Mail server</B></LI>
+<LI> <B>Allow POP-3 to Mail server</B></LI>
+<LI> <B>Allow DNS to Name server</B></LI>
+<LI> <B>Allow rsync to Web server</B></LI>
+<LI> <B>Allow WWW to Web server</B></LI>
+<LI> Allow ping to packet filter box</LI>
+</UL>
+<P>Could do masquerading from internal network into DMZ, but here we
+don't.  Since noone in the internal network should be trying to do
+evil things, we log any packets that get denied.
+<P>
+<P>Note that old versions of Debian called `pop3' `pop-3' in
+/etc/services, which disagrees with RFC1700.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A good-dmz -p tcp -d 192.84.219.128 smtp -j ACCEPT
+ipchains -A good-dmz -p tcp -d 192.84.219.128 pop3 -j ACCEPT
+ipchains -A good-dmz -p udp -d 192.84.219.129 domain -j ACCEPT
+ipchains -A good-dmz -p tcp -d 192.84.219.129 domain -j ACCEPT
+ipchains -A good-dmz -p tcp -d 192.84.218.130 www -j ACCEPT
+ipchains -A good-dmz -p tcp -d 192.84.218.130 rsync -j ACCEPT
+ipchains -A good-dmz -p icmp -j icmp-acc
+ipchains -A good-dmz -j DENY -l
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H3>Bad (external) to DMZ (servers).</H3>
+
+<P>
+<P>
+<UL>
+<LI> DMZ restrictions: 
+<UL>
+<LI> Mail server
+<UL>
+<LI> <B>SMTP to external</B></LI>
+<LI> <B>Accept SMTP from</B> internal and <B>external</B></LI>
+<LI> Accept POP-3 from internal</LI>
+</UL>
+
+</LI>
+<LI> Name server 
+<UL>
+<LI> <B>Send DNS to external</B></LI>
+<LI> <B>Accept DNS from</B> internal, <B>external</B> and packet filter box</LI>
+</UL>
+
+</LI>
+<LI> Web server 
+<UL>
+<LI> <B>Accept HTTP from</B> internal and <B>external</B></LI>
+<LI> Rsync access from internal</LI>
+</UL>
+</LI>
+</UL>
+
+</LI>
+<LI> Things we allow from external network to DMZ.
+<UL>
+<LI> Don't log violations, as they may happen.</LI>
+</UL>
+
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A bad-dmz -p tcp -d 192.84.219.128 smtp -j ACCEPT
+ipchains -A bad-dmz -p udp -d 192.84.219.129 domain -j ACCEPT
+ipchains -A bad-dmz -p tcp -d 192.84.219.129 domain -j ACCEPT
+ipchains -A bad-dmz -p tcp -d 192.84.218.130 www -j ACCEPT
+ipchains -A bad-dmz -p icmp -j icmp-acc
+ipchains -A bad-dmz -j DENY
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H3>Good (internal) to Bad (external).</H3>
+
+<P>
+<UL>
+<LI> Internal restrictions:
+<UL>
+<LI> <B>Allow WWW, ftp, traceroute, ssh to external</B></LI>
+<LI> Allow SMTP to Mail server</LI>
+<LI> Allow POP-3 to Mail server</LI>
+<LI> Allow DNS to Name server</LI>
+<LI> Allow rsync to Web server</LI>
+<LI> Allow WWW to Web server</LI>
+<LI> Allow ping to packet filter box</LI>
+</UL>
+</LI>
+<LI> Many people allow everything from the internal to external networks,
+then add restrictions.  We're being fascist.
+<UL>
+<LI> Log violations.</LI>
+<LI> Passive FTP handled by masq. module.</LI>
+<LI> UDP destination ports 33434 and up are used by traceroute.</LI>
+</UL>
+
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A good-bad -p tcp --dport www -j MASQ
+ipchains -A good-bad -p tcp --dport ssh -j MASQ
+ipchains -A good-bad -p udp --dport 33434:33500 -j MASQ
+ipchains -A good-bad -p tcp --dport ftp -j MASQ
+ipchains -A good-bad -p icmp --icmp-type ping -j MASQ
+ipchains -A good-bad -j REJECT -l
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H3>DMZ to Good (internal).</H3>
+
+<P>
+<P>
+<UL>
+<LI> Internal restrictions:
+<UL>
+<LI> Allow WWW, ftp, traceroute, ssh to external</LI>
+<LI> <B>Allow SMTP to Mail server</B></LI>
+<LI> <B>Allow POP-3 to Mail server</B></LI>
+<LI> <B>Allow DNS to Name server</B></LI>
+<LI> <B>Allow rsync to Web server</B></LI>
+<LI> <B>Allow WWW to Web server</B></LI>
+<LI> Allow ping to packet filter box</LI>
+</UL>
+
+</LI>
+<LI> If we were masquerading from the internal network to the DMZ, simply
+refuse any packets coming the other way. As it is, only allow packets
+which might be part of an established connection.
+
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A dmz-good -p tcp ! -y -s 192.84.219.128 smtp -j ACCEPT
+ipchains -A dmz-good -p udp -s 192.84.219.129 domain -j ACCEPT
+ipchains -A dmz-good -p tcp ! -y -s 192.84.219.129 domain -j ACCEPT
+ipchains -A dmz-good -p tcp ! -y -s 192.84.218.130 www -j ACCEPT
+ipchains -A dmz-good -p tcp ! -y -s 192.84.218.130 rsync -j ACCEPT
+ipchains -A dmz-good -p icmp -j icmp-acc
+ipchains -A dmz-good -j DENY -l
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H3>DMZ to bad (external).</H3>
+
+<P>
+<P>
+<UL>
+<LI> DMZ restrictions:
+<UL>
+<LI> Mail server
+<UL>
+<LI> <B>SMTP to external</B></LI>
+<LI> <B>Accept SMTP from</B> internal and <B>external</B></LI>
+<LI> Accept POP-3 from internal</LI>
+</UL>
+
+</LI>
+<LI> Name server 
+<UL>
+<LI> <B>Send DNS to external</B></LI>
+<LI> <B>Accept DNS from</B> internal, <B>external</B> and packet filter box</LI>
+</UL>
+
+</LI>
+<LI> Web server 
+<UL>
+<LI> <B>Accept HTTP from</B> internal and <B>external</B></LI>
+<LI> Rsync access from internal</LI>
+</UL>
+</LI>
+</UL>
+
+</LI>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A dmz-bad -p tcp -s 192.84.219.128 smtp -j ACCEPT
+ipchains -A dmz-bad -p udp -s 192.84.219.129 domain -j ACCEPT
+ipchains -A dmz-bad -p tcp -s 192.84.219.129 domain -j ACCEPT
+ipchains -A dmz-bad -p tcp ! -y -s 192.84.218.130 www -j ACCEPT
+ipchains -A dmz-bad -p icmp -j icmp-acc
+ipchains -A dmz-bad -j DENY -l
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H3>Bad (external) to Good (internal).</H3>
+
+<P>
+<P>
+<UL>
+<LI> We don't allow anything (non-masqueraded) from the external network
+to the internal network
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A bad-good -j REJECT
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H3>Packet Filtering for the Linux Box Itself</H3>
+
+<P>
+<P>
+<UL>
+<LI> If we want to use packet filtering on packets coming into the box
+itself, we need to do filtering in the input chain. We create one
+chain for each destination interface:
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -N bad-if
+ipchains -N dmz-if
+ipchains -N good-if
+</PRE>
+</CODE></BLOCKQUOTE>
+
+</LI>
+<LI> Create jumps to them:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A input -d 192.84.219.1 -j bad-if
+ipchains -A input -d 192.84.219.250 -j dmz-if
+ipchains -A input -d 192.168.1.250 -j good-if
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H3>Bad (external) interface.</H3>
+
+<P>
+<P>
+<UL>
+<LI> Packet Filter box:
+<UL>
+<LI> <B>PING any network</B></LI>
+<LI> <B>TRACEROUTE any network</B></LI>
+<LI> Access DNS</LI>
+</UL>
+
+</LI>
+<LI> External interface also receives replies to masqueraded packets
+(masquerading uses source ports 61000 to 65095) and ICMP errors for
+them and PING replies.
+
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A bad-if -i ! ppp0 -j DENY -l
+ipchains -A bad-if -p TCP --dport 61000:65095 -j ACCEPT
+ipchains -A bad-if -p UDP --dport 61000:65095 -j ACCEPT
+ipchains -A bad-if -p ICMP --icmp-type pong -j ACCEPT
+ipchains -A bad-if -j icmp-acc
+ipchains -A bad-if -j DENY
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H3>DMZ interface.</H3>
+
+<P>
+<P>
+<UL>
+<LI> Packet Filter box restrictions:
+<UL>
+<LI> <B>PING any network</B></LI>
+<LI> <B>TRACEROUTE any network</B></LI>
+<LI> <B>Access DNS</B></LI>
+</UL>
+
+</LI>
+<LI> DMZ interface receives DNS replies, ping replies and ICMP errors.
+
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A dmz-if -i ! eth0 -j DENY
+ipchains -A dmz-if -p TCP ! -y -s 192.84.219.129 53 -j ACCEPT
+ipchains -A dmz-if -p UDP -s 192.84.219.129 53 -j ACCEPT
+ipchains -A dmz-if -p ICMP --icmp-type pong -j ACCEPT
+ipchains -A dmz-if -j icmp-acc
+ipchains -A dmz-if -j DENY -l
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H3>Good (internal) interface.</H3>
+
+<P>
+<P>
+<UL>
+<LI> Packet Filter box restrictions:
+<UL>
+<LI> <B>PING any network</B></LI>
+<LI> <B>TRACEROUTE any network</B></LI>
+<LI> <B>Access DNS</B></LI>
+</UL>
+
+</LI>
+<LI> Internal restrictions:
+<UL>
+<LI> Allow WWW, ftp, traceroute, ssh to external</LI>
+<LI> Allow SMTP to Mail server</LI>
+<LI> Allow POP-3 to Mail server</LI>
+<LI> Allow DNS to Name server</LI>
+<LI> Allow rsync to Web server</LI>
+<LI> Allow WWW to Web server</LI>
+<LI> <B>Allow ping to packet filter box</B></LI>
+</UL>
+
+</LI>
+<LI> Internal interface receives pings, ping replies and ICMP errors.
+
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -A good-if -i ! eth1 -j DENY
+ipchains -A good-if -p ICMP --icmp-type ping -j ACCEPT
+ipchains -A good-if -p ICMP --icmp-type pong -j ACCEPT
+ipchains -A good-if -j icmp-acc
+ipchains -A good-if -j DENY -l
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H2><A NAME="ss7.5">7.5 Finally</A>
+</H2>
+
+<P>
+<UL>
+<LI> Delete blocking rules:
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -D input 1
+ipchains -D forward 1
+ipchains -D output 1
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<HR>
+<A HREF="IPCHAINS-HOWTO-8.html">Next</A>
+<A HREF="IPCHAINS-HOWTO-6.html">Previous</A>
+<A HREF="IPCHAINS-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

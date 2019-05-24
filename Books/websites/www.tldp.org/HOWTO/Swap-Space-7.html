@@ -1,0 +1,292 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Swap Space Mini-HOWTO: A couple of notes </TITLE>
+ <LINK HREF="Swap-Space-8.html" REL=next>
+ <LINK HREF="Swap-Space-6.html" REL=previous>
+ <LINK HREF="Swap-Space.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Swap-Space-8.html">Next</A>
+<A HREF="Swap-Space-6.html">Previous</A>
+<A HREF="Swap-Space.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. A couple of notes </A></H2>
+
+<P> 
+<UL>
+<LI><P>There is no need to add /dev/winswap to your /etc/fstab file.  In fact, it is 
+probably wise not to do so (except possibly as a comment). 
+<P>
+<P>
+<P>
+</LI>
+<LI><P> 
+If your Linux session crashes or otherwise exits without running 
+/etc/rc.d/init.d/halt, you will need to reboot and exit Linux before swapping 
+in Windows will work.  It is also possible to FORMAT X: and re-create the 
+Windows swap file.  The only way around this would be to put the equivalent of 
+the /.../halt commands in the DOS AUTOEXEC.BAT file. I have tried to write 
+some programs to do this, but that turned out to be a hell lot of trouble !
+First and foremost, simply restoring the total special sectors doesn't
+please DOS. Along with that, it seems you need to modify some internal data
+structures so that DOS starts recognizing your drive, otherwise DOS comes
+out with the error message:
+<BLOCKQUOTE><CODE>
+<PRE>
+Invalid media type reading drive X:
+Abort, Retry or Fail ?
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Since I am not aware of many details of DOS's or Windows's handling of
+disk drives, I think at this point, you may consult some DOS expert.
+Of course, if you are not concerned about the booting time, then you can
+simply add the command to perform an unconditional FORMAT of X: and then
+restore the TSS's. May be there are some other solutions. If you are aware
+of one, please e-mail me today !
+<P>
+<P>
+</LI>
+<LI><P> 
+One way to restore your Windows swap partition is to start Linux, disable 
+swapping as described above, and then use the following command : 
+<BLOCKQUOTE><CODE>
+<PRE>
+ 
+# swapoff -a 
+# zcat /etc/winswap.gz > /dev/winswap 
+# reboot 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+</LI>
+<LI><P><B>Why to delete the RECYCLED folder ?</B>
+According to the procedure mentioned above, you must delete the <CODE>RECYCLED</CODE>
+folder. This is necessary because we will be saving and restoring only the
+sectors unto the root directory, but no further sectors. Also, we want the
+drive X: to be restored to a "clean" state with no errors. If we don't
+delete the <CODE>RECYCLED</CODE> folder, then the root directory entry is
+restored, but the "." and ".." entries for this folder are not restored
+and ScanDisk finds errors on the disk. To prevent this from happening, we
+will delete the <CODE>RECYCLED</CODE> folder and hence only the entry for win386.swp file will be restored.
+<P>
+<P>
+<P>
+</LI>
+<LI> 
+<P> 
+If DOS' FDISK reports the partition as a "logical DOS drive", it has a number 
+of 5 (as in /dev/hda5) or higher.  It is *NOT* the partition labelled 
+"extended" which has a number of 4 or less!!  If your Linux fdisk does not 
+display logical partitions, you have a broken Linux fdisk (Slackware 2.2 
+included a broken fdisk, for example.)  You can try "cfdisk" if your 
+distribution has it, or you will have to get a working fdisk. 
+<P>
+<P>
+</LI>
+<LI>
+<A NAME="swapfile"></A> 
+<P>When you turn off swapping, Linux has to manage everything in the main
+memory itself. If your system memory is low, say something like 16MB, then
+some large applications that run during initialization may not be able to
+run properly. As an example, you may get the following message during
+initialization:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Finding module dependencies Out of memory
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>I don't think this will cause any problems later until you reenable
+swapping. But it's always better to take some precautions. As you will be
+seeing in the next section, Linux can also be configured to use a swap
+file instead of a swap partition. So if you feel that Linux will not run
+properly with your normal system memory, create a swap file that Linux
+will use temporarily until swapping is restored. This swap file should
+preferably in the root directory. Figure out the minimum size of swap space
+required. It will probably equal to your system memory. Create a swap file 
+of that size by giving the following commands (assuming 16MB swap space):
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# dd if=/dev/zero of=/swap bs=1024 count=16384
+# mkswap /swap 16384
+# sync
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Now place the command <CODE>swapon /swap</CODE> just after the original 
+<CODE>swapon -a</CODE> command in the rc.sysinit file. Thus, now your system
+has been configured to use swap file and hopefully there will be no Out
+of memory errors. After having a workable swap partition (i.e after
+following through this HOWTO completely), you can remove the <CODE>swapon /swap</CODE> line that you added to your rc.sysinit file.
+<P>
+<P>
+<P>
+</LI>
+<LI><P> 
+Please do not mail me unless you have checked and re-checked that you copied 
+your scripts correctly.  More than half of the problems reported with this 
+Mini-HOWTO have been due to typos when copying the scripts.  (Use cut-and-
+paste if you can!). Even a spacing error can cause an error. For example, if 
+at the startup you get the messages 
+<BLOCKQUOTE><CODE>
+<PRE>
+ 
+Verifying swap space...Linux signature found 
+swapon: /dev/winswap invalid argument 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Then, surely there has been a typing mistake in your scripts. Please check 
+your scripts. 
+<P>
+<P>
+<P>
+</LI>
+<LI><P> 
+Sometimes, the swap partition is detected to have neither Linux nor Windows 
+info and the "No signature found" error appears. I exactly don't know why this
+happens, but for that case, I have written the code in swap????.sh files to 
+try six times before reporting an error. Normally, the DOS signature should be 
+found on the first try, but many a times on my system it is found on iteration 
+2, 5 or not at all after 12 iterations. You may consider increasing the number 
+of tries to some value like 12 or 24, there is no harm in doing so. Once on my 
+system, the script could not detect the signatures even after 50 iterations ! 
+If such a situation arises, you may consider making a symbolic link to the 
+swapinit.sh file in your root home directory, and execute it at startup. 
+<BLOCKQUOTE><CODE>
+<PRE>
+       
+# ln -s /etc/rc.d/init.d/swapinit.sh swapinit.sh 
+# ./swapinit.sh  
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>However, what I have observed is that once the setup runs on your system for
+some time, the appropriate signatures are always found on the first iteration.
+<P>
+</LI>
+<LI><P><B>For added reliability</B>
+<P>Your Linux Box runs something very important, or your system memory is less
+so that without swapping, your applications just start collapsing ? You have
+set up the swap partition to be shared by Windows. But many a times, your
+system is unable to detect the proper signatures after exhaustive probing
+and so disables any swapping partitions. <B>At your own risk</B>, you may 
+consider removing the signature checking logic, but here is a more
+approachable solution. 
+<P>First refer to the 
+<A HREF="#swapfile">previous point</A> and create
+a swap file in the Linux root directory, with the name /swap. Keep it's size 
+according to your requirement. Now open the swapinit.sh file and modify the 
+last <CODE>if</CODE> statement as follows:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+if [ $activated -ne 1 ] ; then 
+  echo "Swap signature not found after $loopcount tries" 
+  echo "Activating swap file"
+  swapon /swap
+  exit 1 
+fi 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Thus if we find that swap partition lacks appropriate swap signatures, then
+we enable the swap file. Since the swap file is on the root partition and
+the Linux Kernel refuses to proceed until it mounts the root file system,
+you are safely assured that the swap file will always be successfully
+activated. Instead of creating and keeping the swap file and wasting disk
+space, you may also modify the code to create the swap file <EM>on the 
+fly</EM>.
+<P>
+<P>
+</LI>
+<LI><P><B>Saving more disk space</B>
+As we saw, Linux and Windows can share their swap spaces. But Window doesn't
+really require as large a swap file as your Linux swap partition ? Then you
+can have some free space on the swap partition (keep the Windows swap file
+size smaller than the swap partition size). Swapping for Windows based
+applications is managed by Windows itself. But many DOS programs like
+Turbo C++ Compiler, Norton DOS etc. also manage their own swap files. In 
+that case it is possible to configure these programs so that they create
+their swap files in the swap partition instead of their default location.
+This will increase your usable disk space. Also, most of these program
+forget to delete the swap files they created, leading to a large used disk
+space. But with this setup, every time you shut down Linux, you get a clean
+swap partition, saving your time in finding and deleting these swap files.
+For example, you can tell Turbo C++ to swap on drive say E: by invoking it
+as
+<BLOCKQUOTE><CODE>
+<PRE>
+C:\CLAN>TC /RE
+</PRE>
+</CODE></BLOCKQUOTE>
+
+For Norton DOS, set the variable in the NDOS.INI file as,
+<BLOCKQUOTE><CODE>
+<PRE>
+Swapping = E:\
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Many other programs may rely on the <CODE>TEMP</CODE> or <CODE>TMP</CODE>
+environment variables to decide where they will swap. In that case you may
+set these variables appropriately in your AUTOEXEC.BAT file.
+<P>
+<P>
+</LI>
+<LI><P><B> What if the swap partition is a FAT32 ? </B>
+No, you can't have a swap partition with a FAT32 file system. First of all, 
+Linux can use a maximum of 128MB of swap space on a single swap partition. 
+Thus, if your swap partition is larger than 128MB, you are wasting your disk 
+space. And Windows will refuse to convert a partition of 128MB into a FAT32 
+file system. 
+<P>
+<P>
+<P>
+</LI>
+<LI><P><B>The new style swap space </B>
+Linux knows about two styles of swap areas, the old style and the new style. 
+By default, you will be using the old style swap space with a signature 
+"SWAP-SPACE". If you want to use the new style swap space, then first of all 
+change "SWAP-SPACE" in all the above scripts to "SWAPSPACE2". Also add an 
+option -v1 in the mkswap command in the swapinit.sh script, as follows 
+<BLOCKQUOTE><CODE>
+<PRE>
+ 
+/sbin/mkswap -v1 /dev/winswap YYYYY 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Also, run the following commands from the shell prompt : 
+<BLOCKQUOTE><CODE>
+<PRE>
+   
+# swapoff /dev/winswap 
+# mkswap -v1 /dev/winswap YYYYY 
+# swapon /dev/winswap 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>It seems that under new style swap space, your usable swap partition can be as
+large as 2GB on i386 platforms. This means that you can now have a swap 
+partition larger than 512MB which Windows can format as a FAT32 partition . 
+Someone help on how do we save the "Total Special Sectors" under a FAT32 
+partition. 
+<P>
+</LI>
+<LI><P><B>For users of WINE</B>
+<A HREF="http://www.winehq.com">WINE</A> is a program which allows
+running Microsoft Windows programs on Linux. If you are using WINE on a system 
+that has been set up to share swap partition, then when running a Windows program
+a <CODE>win386.swp</CODE> file of about 8kb is created in your Windows folder. This is
+because the swap file on X: is not available at that time. You can safely delete
+this file once you finish running your Windows programs.
+<P>
+</LI>
+</UL>
+ 
+<HR>
+<A HREF="Swap-Space-8.html">Next</A>
+<A HREF="Swap-Space-6.html">Previous</A>
+<A HREF="Swap-Space.html#toc7">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rev="made" href="mailto:esr@snark.thyrsus.com" />
+<link rel="stylesheet" href="../sitestyle.css" type="text/css" media='all'/>
+<link rel="stylesheet" href="http://www.catb.org/~esr/sitestyle-print.css" type="text/css" media='print'/>
+<meta name="description" content="" />
+<meta name="keywords" content="" />
+<meta name="MSSmartTagsPreventParsing" content="TRUE" />
+<a href='http://www.anti-leech.com/spam/spambot_stopper.php'></a>
+<title>Hacking and Refactoring</title>
+</head>
+<body>
+
+<div id="Header">
+<table width="100%" cellpadding="0" summary="Canned page header">
+<tr>
+<td>Hacking and Refactoring</td>
+<td align="right">
+<script language="JavaScript" src="../datestamp.js" type='text/javascript'></script>
+</td>
+</tr>
+</table>
+</div>
+
+<div id="Menu">
+	<hr/>
+	<a href="http://www.catb.org/~esr" title="My home page">Home Page</a><br />
+	<a href="../whatsnew.html" title="What's new on this site">What's New</a><br />
+	<a href="../sitemap.html" title="Map of the site">Site Map</a><br />
+	<a href="../software.html" title="Software I maintain">Software</a><br />
+	<a href="../projects.html" title="My projects">Projects</a><br />
+	<a href="../faqs/index.html" title="My FAQ documents">HOWTOs</a><br />
+	<a href="index.html" title="Essays and ruminations">Essays</a><br />
+	<a href="../personal.html" title="Portrait of the author">Personal</a><br />
+	<a href="http://www.ibiblio.org/esrblog/">Weblog</a><br/>	
+	<a href="../netfreedom/index.html">Freedom!</a><br />
+	<a href="../guns/index.html">Firearms!</a><br />
+	<hr/>
+</div>
+
+<div id="Content">
+
+<h1 class="c1"></h1>
+
+<p class='notebox'>Originally posted on 14 Jun 2003 at <a
+href='http://www.artima.com/forums/flat.jsp?forum=106&thread=5342'>artima.com</a>;
+since lightly revised.  Thanks to Martin Fowler and Kent Beck for
+insightful comments.</p>
+
+<p>In 2001, there was a history-making conference of software-engineering
+thinkers in Snowbird, Utah.  The product of that meeting was a remarkable
+document called the <a href="http://agilemanifesto.org/">Agile Manifesto</a>,
+a call to overturn many of the assumptions of traditional software development.
+I, in my capacity as one of the principal theoreticians of open-source
+development, was invited to be at Snowbird, but couldn't make it.</p>
+
+<p>Ever since, though, I've been sensing a growing convergence between
+agile programming and the open-source movement.  I've seen agile
+concepts and terminology being adopted rapidly and enthusiastically by
+my colleagues in open-source-land &mdash; especially ideas like
+refactoring, unit testing, and design from stories and personas.  From
+the other side, key agile-movement figures like Kent Beck and Martin
+Fowler have expressed strong interest in open source both in published
+works and to me personally.  Fowler has gone so far as to <a
+href="http://www.martinfowler.com/articles/newMethodology.html#N400254">include</a>
+open source on his list of agile-movement schools.</p>
+
+<p>I agree that we belong on that list.  But I also agree with
+Fowler's description of of open source as a style, rather than a
+process.  I think his reservations as to whether open source can be
+described as just another agile school are well-founded.  There is
+something more complicated and interesting going on here. and I
+realized when I read Fowler's description of open source that at some
+point I was going to have to do some hard thinking and writing in an
+effort to sort it all out.</p>
+
+<p>While doing research for my book <a
+href="http://www.catb.org/esr/writings/taoup/">The Art of Unix
+Programming</a>, I read one particular passage in Fowler's
+<cite>Refactoring</cite> that finally brought it all home. He
+writes:</p>
+
+<blockquote>
+<p>One argument is that refactoring can be an alternative to up-front
+design.  In this scenario, you don't do any design at all.  You just
+code the first approach that comes into your head, get it working, and
+then refactor it into shape.  Actually, this approach can work.  I've
+seen people do this and come out with a very well-defined piece of
+software.  Those who support Extreme Programming often are portrayed
+as advocating this approach.</p>
+</blockquote>
+
+<p>I read this, and had one of those moments where everything comes
+together in your head with a great ringing crash and the world assumes
+a new shape &mdash; a moment not unlike the one I had in late 1996
+when I got the central insight that turned into <cite>The Cathedral
+and the Bazaar</cite>.  In the remainder of this essay I'm going to 
+try to articulate what I now think I understand about open source,
+agile programming, how they are related, and why the connection should
+be interesting even to programmers with no stake in either movement.</p>
+
+<p>Now I need to set a little background here, because I'm going
+to need to have to talk about several different categories which are
+contingently but not necessarily related.</p>
+
+<p>First, there is <em>Unix programmer</em>.  Unix is the operating
+system with the longest living tradition of programming and design.
+It has an unusually strong and mature technical culture around it, a
+culture which originated or popularized many of the core ideas and
+tools of modern software design. <cite>The Art of Unix
+Programming</cite> is a concerted attempt to capture the craft wisdom
+of this culture, one to which I have successfully enlisted quite a few
+of its founding elders.</p>
+
+<p>Second, there is <em>hacker</em>.  This is a very complex term, but
+more than anything else, it describes an attitude &mdash; an
+intentional stance that relates hackers to programming and other
+disciplines in a particular way.  I have described the hacker stance
+and its cultural correlates in detail in <a
+href="../../esr/faqs/hacker-howto.html">How To Become A
+Hacker</a>, a document which is widely considered authoritative
+within that culture.</p>
+
+<p>Third, there is <em>open-source programmer</em>.  Open source is a
+programming style with strong roots in the Unix tradition and the
+hacker culture.  I wrote the modern manifesto for it in 1997, <a
+href="cathedral-bazaar/index.html">The
+Cathedral and the Bazaar</a>, building on earlier thinking by
+Richard Stallman and others.</p>
+
+<p>These three categories are historically closely related. It is
+significant that a single person (which is accidentally me) wrote
+touchstone documents for the second and third and is attempting a
+<em>summum bonum</em> of the first.  That personal coincidence
+reflects a larger social reality that in 2003 these categories are
+becoming increasingly merged. But the relationship is not logically
+entailed; we can imagine a hacker culture speaking a common tongue
+other than Unix and C (in the far past its common tongue was Lisp),
+and we can imagine an explicit ideology of open source developing
+within a cultural and technical context other than Unix (as indeed
+nearly happened several different times).</p>
+
+<p>With this scene-setting done, I can explain that my first take on
+Fowler's statement was to think "Dude, you've just described
+<em>hacking</em>!"</p>
+
+<p>I mean something specific and powerful by this.  Throwing together
+a prototype and refactoring it into shape is a rather precise
+description of the normal working practice of hackers since that
+culture began to self-define in the 1960s.  Not a complete one, but it
+captures the most salient feature of how hackers relate to code.  The
+open-source community has inherited and elaborated this practice, 
+building on similar tendencies within the Unix tradition.</p>
+
+<p>The way Fowler writes about design-by-refactoring has two huge
+implications for the relationship between open source and agile
+programming:</p>
+
+<p>First, Fowler <em>didn't know he was describing hacking</em>.  In
+the passage, he is clearly unaware that design by repeated refactoring
+is not just a recent practice semi-accidentally stumbled on by a
+handful of agile programmers, but one which hundreds of thousands of
+hackers have accumulated experience with over three decades and have
+in their bones. There is a substantial folklore, an entire craft
+practice, around this!</em>
+
+<p>Second, in that passage Fowler described the practice of hacking
+<em>better than hackers themselves have done</em>.  Now, admittedly,
+the hacker culture has simply not had that many theoreticians, and if
+you list the ones that were strongly focused on development
+methodology you lose Richard Stallman and are left with, basically,
+myself and maybe Larry Wall (author of Perl and occasional funny and
+illuminating ruminations on hacking).  But the fact that we don't have
+a lot of theoreticians is itself an important datum; we have always
+tended to develop our most important wisdoms as <em>unconscious and
+unarticulated</em> craft practice.</p>
+
+<p>These two observations imply an enormous mutual potential, a gap 
+across which an arc of enlightenment may be beginning to blaze.  It
+implies two things:</p>
+
+<p>First, <em>people who are excited by agile-programming ideas can
+look to open source and the Unix tradition and the hackers for the
+lessons of experience</em>.  We've been doing a lot of the stuff you
+agile guys are talking about for a <em>long</em> time.  Doing it in a
+clumsy, unconscious, learned-by-osmosis way, but doing it
+nevertheless.  I believe that we have learned things that you agile
+guys need to know to give your methodologies groundedness.  Things
+like (as Fowler himself observes) how to manage communication and
+hierarchy issues in distributed teams.</p>
+
+<p>Second, <em>open-source hackers can learn from agile programmers
+how to wake up</em>.  The terminology of agile programming sharpens
+and articulates our instincts.  Learning to speak the language of open
+source, peer review, many eyeballs, and rapid iterations gave us a
+tremendous unifying boost in the late 1990s; I think becoming
+similarly conscious about agile-movement ideas like refactoring, unit
+testing, and story-centered design could be just as important for us
+in the new century.  Not by changing what we are, but by enabling us 
+to talk about it and explain it, both to others and to ourselves.</p>
+
+<p>I've already given an example of what the agile movement has to
+teach the hackers, in pointing out that repeated redesign by
+refactoring is a precise description of hacking.  Another thing we
+hackers can stand to learn from agile-movement folks is how to behave
+so that we can actually develop requirements and deliver on them when
+the customer isn't, ultimately, ourselves.</p>
+
+<p>For the flip side, consider Fowler's anecdote on page 68-69, which
+ends "Even if you know exactly what is going on in your system,
+measure performance, don't speculate.  You'll learn something, and
+nine times out of ten it won't be that you were right."  The Unix guy
+in me wants to respond "Well, <em>duh!</em>".  In my tribe, profiling
+<em>before</em> you speculate is DNA; we have a strong tradition of
+this that goes back to the 1970s. From the point of view of any old
+Unix hand, the fact that Fowler thought he had to write this down is a
+sign of severe naivete in either Fowler or his readership or both.</p>
+
+<p>In reading <cite>Refactoring</cite>, I several times had the 
+experience of thinking "What!?!  That's obvious!" closely followed
+by "But Fowler explains it better than Unix traditions do!" This may
+be because he relies less on the very rich shared explanatory context 
+that Unix provides.</p>
+
+<p>How deep do the similarities run? Let's take a look at what the
+Agile Manifesto says:</p>
+
+<p><em>Individuals and interactions over processes and tools.</em>  Yeah,
+that sounds like us, all right.  Open-source developers will toss out
+a process that isn't working in a nanosecond, and frequently do, and take
+gleeful delight in doing so.  In fact, the reaction against heavyweight
+process has a key part of our self-identification as hackers for 
+at least the last quarter century, if not longer.</p>
+
+<p><em>Working software over comprehensive documentation.</em> That's
+us, too.  In fact, the radical hacker position is that source code of
+a working system <em>is</em> its documentation.  We, more than any
+other culture of software engineering, emphasize program source code as
+human-to-human communication that is expected to bind together
+communities of cooperation and understanding distributed through time
+and space.  In this, too, we build on and amplify Unix tradition.</p>
+
+<p><em>Customer collaboration over contract negotiation.</em> In the
+open-source world, the line between "developer" and "customer" blurs
+and often disappears.  Non-technical end users are represented by
+developers who are proxies for their interests &mdash; as when, for
+example, companies that run large websites second developers to
+work on Apache Software Foundation projects.</p>
+
+<p><em>Responding to change over following a plan.</em> Absolutely.
+Our whole development style encourages this.  It's fairly unusual for
+any of our projects to <em>have</em> any plan more elaborate than "fix
+the current bugs and chase the next shiny thing we see".</p>
+
+<p>With these as main points, it's hardly surprising that so many of
+the <a href="http://agilemanifesto.org/principles.html">Principles
+behind the Agile Manifesto</a> read like Unix-tradition and hacker
+gospel.  "Deliver working software frequently, from a couple of weeks
+to a couple of months, with a preference to the shorter timescale."
+Well, <em>yeah!</em>.  Or "Simplicity--the art of maximizing the
+amount of work not done--is essential."  That's Unix-tradition holy
+writ, there.  Or "The best architectures, requirements, and designs
+emerge from self-organizing teams."</p>
+
+<p>This is stone-obvious stuff to any hacker, and exactly the sort of
+subversive thinking that most panics managers attached to big plans,
+big budgets, big up-front design, and big rigid command-and-control
+structures.  Which may, in fact, be a key part of its appeal to
+hackers and agile developers of other kinds -- because at least one
+thing that binds agile-movement and open-source people together is
+a drive to take control of our art back from the suits and get out
+from under big dumb management.</p>
+
+<p>The most important difference I see between the hackers and the
+agile-movement crowd is this: the hackers are the people who never
+surrendered to big dumb management -- they either bailed out of the
+system or forted up in academia or R&amp;D or technical-specialty areas
+where pointy-haired bosses weren't permitted to do as much damage.  The
+agile crowd, on the other hand, seems to be composed largely of people
+who were swallowed into the belly of the beast (waterfall-model
+projects, Windows, the entire conventional corporate-development
+hell) and have been smart enough not just to claw their way out but
+to formulate an ideology to justify not getting sucked back in.</p>
+
+<p>Both groups are in revolt against the same set of organizational
+assumptions.  And both are winning because those assumptions are
+obsolete, yesterday's adaptations to a world of expensive machines and
+expensive communications.  But software development doesn't need big
+concentrations of capital and resources anymore, and doesn't need the
+control structures and hierarchies and secrecy and elaborate rituals
+that go with managing big capital concentrations either.  In fact, in
+a world of rapid change, these things are nothing but a drag.  Thus
+agile techniques.  Thus, open source.  Converging paths to the same
+destination, which is not just software that doesn't suck but a
+software-development <em>process</em> that doesn't suck.</p>
+
+<p>When I think about how the tribal wisdom of the hackers and the
+sharp cut-the-bullshit insights of the agile movement seem to be
+coming together, my mind keeps circling back to Phil Greenspun's brief
+but trenchant essay <a
+href="http://tinyplanet.ca/projects/professionalism.html">Redefining
+Professionalism for Software Engineers</a>.  Greenspun proposes,
+provocatively but I think correctly, that the shift towards
+open-source development is a key part of the transformation of
+software engineering into a mature profession, with the dedication to
+excellence and ethos of service that accompanies professionalism.  I
+have elsewhere suggested that we are seeing a close historical analog
+of the transition from alchemy to chemistry.</p>
+
+<p>I'm beginning to think that from the wreckage of the industry big
+dumb management made, I can see the outline of a mature, <em>humane</em>
+discipline of software engineering emerging -- and that it will be in
+large part a fusion of the responsiveness and customer focus of the agile
+movement with the wisdom and groundedness of the Unix tradition,
+expressed in open source.</p>
+
+<br />
+
+(Some discussion of how the agile/open-source nexus looks from the
+other side is at <a
+href='http://c2.com/cgi/wiki?OpenSourceAsAgileProcess'>
+Open Source As Agile Process</a>.)
+
+</div>
+<hr />
+</body>
+</html>
+
+
+<!--
+Local Variables:
+compile-command: "(cd ~/WWW; upload writings/hacking-and-refactoring.html)"
+End:
+-->
+

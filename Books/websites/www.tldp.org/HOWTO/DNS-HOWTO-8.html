@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>DNS HOWTO : Maintenance</TITLE>
+ <LINK HREF="DNS-HOWTO-9.html" REL=next>
+ <LINK HREF="DNS-HOWTO-7.html" REL=previous>
+ <LINK HREF="DNS-HOWTO.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="DNS-HOWTO-9.html">Next</A>
+<A HREF="DNS-HOWTO-7.html">Previous</A>
+<A HREF="DNS-HOWTO.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="maint"></A> <A NAME="s8">8. Maintenance</A></H2>
+
+<P><B>Keeping it working.</B>
+<P>
+<P>There is one maintenance task you have to do on nameds, other than
+keeping them running.  That's keeping the <CODE>root.hints</CODE> file
+updated.  The easiest way is using <CODE>dig</CODE>. First run <CODE>dig</CODE> with
+no arguments you will get the <CODE>root.hints</CODE> according to your own
+server.  Then ask one of the listed root servers with <CODE>dig
+@rootserver</CODE>.  You will note that the output looks terribly like a
+<CODE>root.hints</CODE> file.  Save it to a file (<CODE>dig @e.root-servers.net
+. ns &gt;root.hints.new</CODE>) and replace the old <CODE>root.hints</CODE> with it.
+<P>
+<P>Remember to reload named after replacing the cache file.
+<P>
+<P>Al Longyear sent me this script that can be run automatically to
+update <CODE>root.hints</CODE>.  Install a crontab entry to run it once a
+month and forget it.  The script assumes you have mail working and
+that the mail-alias `hostmaster' is defined.  You must hack it to suit
+your setup.
+<P>
+<HR>
+<PRE>
+#!/bin/sh
+#
+# Update the nameserver cache information file once per month.
+# This is run automatically by a cron entry.
+#
+# Original by Al Longyear
+# Updated for BIND 8 by Nicolai Langfeldt
+# Miscelanious error-conditions reported by David A. Ranch
+# Ping test suggested by Martin Foster
+# named up-test suggested by Erik Bryer.
+#
+(
+ echo "To: hostmaster &lt;hostmaster>"
+ echo "From: system &lt;root>"
+
+ # Is named up? Check the status of named.
+ case `rndc status 2>&amp;1` in
+    *refused*)
+        echo "named is DOWN. root.hints was NOT updated"
+        echo
+        exit 0
+        ;;
+ esac
+
+ PATH=/sbin:/usr/sbin:/bin:/usr/bin:
+ export PATH
+ # NOTE: /var/named must be writable only by trusted users or this script 
+ # will cause root compromise/denial of service opportunities.
+ cd /var/named 2>/dev/null || {
+    echo "Subject: Cannot cd to /var/named, error $?"
+    echo
+    echo "The subject says it all"
+    exit 1
+ }
+
+ # Are we online?  Ping a server at your ISP
+ case `ping -qnc 1 some.machine.net 2>&amp;1` in
+   *'100% packet loss'*)
+        echo "Subject: root.hints NOT updated.  The network is DOWN."
+        echo
+        echo "The subject says it all"
+        exit 1
+        ;;
+ esac
+
+ dig @e.root-servers.net . ns >root.hints.new 2> errors
+
+ case `cat root.hints.new` in
+   *NOERROR*)
+        # It worked
+        :;;
+   *)
+        echo "Subject: The root.hints file update has FAILED."
+        echo
+        echo "The root.hints update has failed"
+        echo "This is the dig output reported:"
+        echo
+        cat root.hints.new errors
+        exit 1
+        ;;
+ esac
+
+ echo "Subject: The root.hints file has been updated"
+ echo
+ echo "The root.hints file has been updated to contain the following   
+information:"
+ echo
+ cat root.hints.new
+
+ chown root.root root.hints.new
+ chmod 444 root.hints.new
+ rm -f root.hints.old errors
+ mv root.hints root.hints.old
+ mv root.hints.new root.hints
+ rndc restart
+ echo
+ echo "The nameserver has been restarted to ensure that the update is complete."
+ echo "The previous root.hints file is now called   
+/var/named/root.hints.old."
+) 2>&amp;1 | /usr/lib/sendmail -t
+exit 0
+</PRE>
+<HR>
+<P>
+<P>Some of you might have picked up that the <CODE>root.hints</CODE> file is
+also available by ftp from Internic.  Please don't use ftp to update
+<CODE>root.hints</CODE>, the above method is much more friendly to the net,
+and Internic.
+<P>
+<HR>
+<A HREF="DNS-HOWTO-9.html">Next</A>
+<A HREF="DNS-HOWTO-7.html">Previous</A>
+<A HREF="DNS-HOWTO.html#toc8">Contents</A>
+</BODY>
+</HTML>

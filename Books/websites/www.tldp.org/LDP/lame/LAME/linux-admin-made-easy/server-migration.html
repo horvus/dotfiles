@@ -1,0 +1,519 @@
+<HTML
+><HEAD
+><TITLE
+>Server Migration and Scalability Issues</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Administration Made Easy"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Enterprise Computing with Linux"
+HREF="enterprise-computing.html"><LINK
+REL="PREVIOUS"
+TITLE="High Availability with RAID"
+HREF="hardware-raid.html"><LINK
+REL="NEXT"
+TITLE="Strategies for Keeping a Secure Server"
+HREF="security.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Administration Made Easy</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="hardware-raid.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. Enterprise Computing with Linux</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="security.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SERVER-MIGRATION"
+>11.3. Server Migration and Scalability Issues</A
+></H1
+><P
+>With support for a diverse selection of hardware, as well as proven
+speed and reliability, Linux is up to the challenge of scaling up to meet
+resource demands as they increase.  This can include moving to an SMP
+(<EM
+>Symmetric Multi Processing</EM
+>) configuration for
+greater processing needs, RAID levels 0 through 5 (either in software or
+hardware driven modes), etc.</P
+><P
+>On occasion, you may feel that your Linux server has outgrown the
+hardware it is running on, perform a major Linux version upgrade, or
+perhaps move to a different distribution of Linux.  There are, of course,
+two ways of doing this.  Either you will be leaving your server on
+existing or upgraded hardware (in which case you need simply shut down
+services, back up your data, perform the required modifications, and then
+restore data if needed), or in the more radical case, migrate your server
+to new hardware.</P
+><P
+>This section will concentrate more on the latter situation, where
+you will be actually migrating your various services from the old server
+to a new one.  There are, of course, several migration strategies, however
+this section will attempt to provide some rough guidelines which you can
+follow in order to ensure your migration effort succeeds with minimal
+disruption to your users.</P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Prepare your
+new server as necessary; install and configure Linux so that your new
+hardware devices are supported, and any required daemons and kernel-based
+features (such as firewalling) are enabled.  See <A
+HREF="install-config.html"
+>Chapter 4</A
+>, as well as <A
+HREF="kernel-custom.html"
+>Section 10.6</A
+> for
+details.</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Set up your existing services (such as the Apache web
+server, Samba or Netatalk file &#38; print services, etc.) and make use
+of them with test data for at least several days to ensure everything is
+working as desired.  See <A
+HREF="samba-file-and-print.html"
+>Section 7.4</A
+>, as well
+as <A
+HREF="netatalk-file-and-print.html"
+>Section 7.5</A
+> for details.  Don't forget to
+ensure that any changes or custom scripts you have made in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/</TT
+></TT
+>'' directory, including
+anything in ``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/rc.d/</TT
+></TT
+>'' have
+also been done on the new server as required.  It is especially important
+that you remember to move over your user account information in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+></TT
+>'',
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/group</TT
+></TT
+>'', and, if you are
+using shadow passwords,
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/shadow</TT
+></TT
+>''!</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Shut down services on your old server, so that your file
+systems will see a minimal amount of file update activity.  Obviously you
+don't want users uploading web pages and receiving e-mail on the old
+server, while you are restoring the data onto the new one!  As root, you
+can shut down most services with the following command:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>killall httpd atalkd smbd nmbd squid sendmail ftpd</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>The above command will shut down the web server, file &#38; print
+services, e-mail server, and FTP service.  (You may be running less or
+more services than the ones I have listed above.  Check your process list
+and terminate any other service you feel appropriate; see <A
+HREF="managing-processes.html"
+>Section 9.2</A
+> for details.)</P
+><P
+>You might also want to edit the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/inetd.conf</TT
+></TT
+>'' file on your
+old server, and with the ``<TT
+CLASS="LITERAL"
+>#</TT
+>'' character, comment out
+any services (such as FTP, IMAP, and POP3 services) which might result in
+file system updates.  Then, again as root, type:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>killall -HUP inetd</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>The above command will reload the TCP wrappers (security wrappers
+to Internet services) so that future connections to any services you have
+disabled in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/inet.conf</TT
+></TT
+>'' file will not
+be loaded).</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Now you should be able to move over the data from one
+system to another.  Likely, you will have prepared your new server to
+have everything it needs to function, including any additional software
+that you wish to install that did not come with your Red Hat
+distribution.  Therefore, you will likely need to backup any data stored
+in ``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/home</TT
+></TT
+>'',
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/var/spool</TT
+></TT
+>'', as well as
+optional file systems, such as
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/archive</TT
+></TT
+>'', if applicable.  
+Here is an example command that uses the ``<TT
+CLASS="LITERAL"
+>tar</TT
+>''
+utility to make a compressed backup file of data:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>cd /</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>tar zcvpf /tmp/backup_data.tar.gz --exclude=var/spool/squid \
+          home archive var/spool</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>The above command will write a backup of your
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/archive</TT
+></TT
+>'',
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/home</TT
+></TT
+>'', and
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/var/spool</TT
+></TT
+>'' file systems (or
+subdirectories, depending on how you have set up your system), to a file
+called
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/tmp/backup_data.tar.gz</TT
+></TT
+>'' in
+compressed tar format.  Make sure you have enough space to create the
+backup, or write it elsewhere!</P
+><DIV
+CLASS="TIP"
+><BLOCKQUOTE
+CLASS="TIP"
+><P
+><B
+>Tip: </B
+>Tip: You can use the ``<TT
+CLASS="LITERAL"
+>du</TT
+>'' utility to help
+determine required space.  For example, to determine the requirements of
+the ``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/archive/</TT
+></TT
+>'' and
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/home/</TT
+></TT
+>'' directory trees,
+type:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>du -h -s /archive /home</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>Bear in mind that the above command will report the actual size of
+your data, but if you are using tar's ``<TT
+CLASS="LITERAL"
+>z</TT
+>'' option (as
+above) to compress the image file, your usage requirements will likely be
+significantly less. Consider the output from the ``<TT
+CLASS="LITERAL"
+>du</TT
+>''
+command a worst-case estimate of the space required.</P
+></BLOCKQUOTE
+></DIV
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Now, you can restore the backup data from the tar file
+onto the new server.  You can restore it directly over NFS (see <A
+HREF="nfs-services.html"
+>Section 7.6</A
+> for details on how to configure NFS), or simply
+use FTP to transfer it over and untar it locally.  Here is an example that
+will restore the files that were backed up as above:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>cd /</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>tar zxvpf /tmp/backup_data.tar.gz</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Next, if necessary, swap your IP addresses so that your
+new server is seen on the old address.</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Finally, you may wish to shutdown and restart your server
+to ensure there are no unexpected error messages that appear.  See <A
+HREF="system-shutdown-and-restart.html"
+>Section 6.7</A
+> for details.</P
+></LI
+></UL
+><P
+>Once you are done, make sure everything is working as expected!
+If not, you can always re-enable any services you disabled on the old
+server and restart them so that users can continue using it until you
+resolve the problems on the new one (bear in mind, however, that you'll
+need to repeat the above steps again if you choose to do that).</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="hardware-raid.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="security.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>High Availability with RAID</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="enterprise-computing.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Strategies for Keeping a Secure Server</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

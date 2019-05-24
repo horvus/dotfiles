@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Kernel 2.4 Internals: Linux Page Cache</TITLE>
+ <LINK HREF="lki-5.html" REL=next>
+ <LINK HREF="lki-3.html" REL=previous>
+ <LINK HREF="lki.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="lki-5.html">Next</A>
+<A HREF="lki-3.html">Previous</A>
+<A HREF="lki.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Linux Page Cache</A></H2>
+
+<P>
+<P>In this chapter we describe the Linux 2.4 pagecache.  The pagecache
+is - as the name suggests - a cache of physical pages. In the UNIX world the
+concept of a pagecache became popular with the introduction of SVR4 UNIX,
+where it replaced the buffercache for data IO operations.
+<P>While the SVR4 pagecache is only used for filesystem data cache and thus uses
+the struct vnode and an offset into the file as hash parameters, the Linux page
+cache is designed to be more generic, and therefore uses a struct address_space
+(explained below) as first parameter.  Because the Linux pagecache is tightly
+coupled to the notation of address spaces, you will need at least a basic
+understanding of adress_spaces to understand the way the pagecache works.
+An address_space is some kind of software MMU that maps all pages of one object
+(e.g. inode) to an other concurrency (typically physical disk blocks).
+The struct address_space is defined in <CODE>include/linux/fs.h</CODE> as:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+        struct address_space {
+                struct list_head        clean_pages;
+                struct list_head        dirty_pages;
+                struct list_head        locked_pages;
+                unsigned long           nrpages;
+                struct address_space_operations *a_ops;
+                struct inode            *host;
+                struct vm_area_struct   *i_mmap;
+                struct vm_area_struct   *i_mmap_shared;
+                spinlock_t              i_shared_lock;
+ 
+        };
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>To understand the way address_spaces works, we only need to look at a few of this fields:
+<CODE>clean_pages</CODE>, <CODE>dirty_pages</CODE> and <CODE>locked_pages</CODE> are double linked lists
+of all clean, dirty and locked pages that belong to this address_space, <CODE>nrpages</CODE>
+is the total number of pages in this address_space.  <CODE>a_ops</CODE> defines the methods of
+this object and <CODE>host</CODE> is an pointer to the inode this address_space belongs to -
+it may also be NULL, e.g. in the case of the swapper address_space
+(<CODE>mm/swap_state.c,</CODE>).
+<P>The usage of <CODE>clean_pages</CODE>, <CODE>dirty_pages</CODE>, <CODE>locked_pages</CODE> and
+<CODE>nrpages</CODE> is obvious, so we will take a tighter look at the
+<CODE>address_space_operations</CODE> structure, defined in the same header:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+        struct address_space_operations {
+                int (*writepage)(struct page *);
+                int (*readpage)(struct file *, struct page *);
+                int (*sync_page)(struct page *);
+                int (*prepare_write)(struct file *, struct page *, unsigned, unsigned);
+                int (*commit_write)(struct file *, struct page *, unsigned, unsigned);
+                int (*bmap)(struct address_space *, long);
+        };
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>For a basic view at the principle of address_spaces (and the pagecache) we need
+to take a look at -><CODE>writepage</CODE> and -><CODE>readpage</CODE>, but in practice we need
+to take a look at -><CODE>prepare_write</CODE> and -><CODE>commit_write</CODE>, too.
+<P>You can probably guess what the address_space_operations methods do
+by virtue of their names alone; nevertheless, they do require some
+explanation.  Their use in the course of filesystem data I/O, by
+far the most common path through the pagecache, provides a good
+way of understanding them.
+Unlike most other UNIX-like operating systems, Linux has generic file
+operations (a subset of the SYSVish vnode operations) for data IO through the
+pagecache.  This means that the data will not directly interact with the file-
+system on read/write/mmap, but will be read/written from/to the pagecache
+whenever possible.  The pagecache has to get data from the actual low-level
+filesystem in case the user wants to read from a page not yet in memory,
+or write data to disk in case memory gets low.
+<P>In the read path the generic methods will first try to find a page that
+matches the wanted inode/index tuple.
+<P>
+<BLOCKQUOTE><CODE>
+hash = page_hash(inode->i_mapping, index);
+</CODE></BLOCKQUOTE>
+<P>Then we test whether the page actually exists.
+<P>
+<BLOCKQUOTE><CODE>
+hash = page_hash(inode->i_mapping, index);
+page = __find_page_nolock(inode->i_mapping, index, *hash);
+</CODE></BLOCKQUOTE>
+<P>When it does not exist, we allocate a new free page, and add it to the page-
+cache hash.
+<P>
+<BLOCKQUOTE><CODE>
+page = page_cache_alloc();
+__add_to_page_cache(page, mapping, index, hash);
+</CODE></BLOCKQUOTE>
+<P>After the page is hashed we use the -><CODE>readpage</CODE> address_space operation to
+actually fill the page with data. (file is an open instance of inode).
+<P>
+<BLOCKQUOTE><CODE>
+error = mapping->a_ops->readpage(file, page);
+</CODE></BLOCKQUOTE>
+<P>Finally we can copy the data to userspace.
+<P>For writing to the filesystem two pathes exist: one for writable mappings
+(mmap) and one for the write(2) family of syscalls. The mmap case is very
+simple, so it will be discussed first.
+When a user modifies mappings, the VM subsystem marks the page dirty.
+<P>
+<BLOCKQUOTE><CODE>
+SetPageDirty(page);
+</CODE></BLOCKQUOTE>
+<P>The bdflush kernel thread that is trying to free pages, either as background
+activity or because memory gets low will try to call -><CODE>writepage</CODE> on the pages
+that are explicitly marked dirty.  The -><CODE>writepage</CODE> method does now have to
+write the pages content back to disk and free the page.
+<P>The second write path is _much_ more complicated.  For each page the user
+writes to, we are basically doing the following:
+(for the full code see <CODE>mm/filemap.c:generic_file_write()</CODE>).
+<P>
+<BLOCKQUOTE><CODE>
+page = __grab_cache_page(mapping, index, &amp;cached_page);
+mapping->a_ops->prepare_write(file, page, offset, offset+bytes);
+copy_from_user(kaddr+offset, buf, bytes);
+mapping->a_ops->commit_write(file, page, offset, offset+bytes);
+</CODE></BLOCKQUOTE>
+<P>So first we try to find the hashed page or allocate a new one, then we call the
+-><CODE>prepare_write</CODE> address_space method, copy the user buffer to kernel memory and
+finally call the -><CODE>commit_write</CODE> method.  As you probably have seen
+->prepare_write and -><CODE>commit_write</CODE> are fundamentally different from -><CODE>readpage</CODE>
+and -><CODE>writepage</CODE>, because they are not only called when physical IO is actually
+wanted but everytime the user modifies the file.
+There are two (or more?) ways to handle this, the first one uses the Linux
+buffercache to delay the physical IO, by filling a <CODE>page->buffers</CODE> pointer with
+buffer_heads, that will be used in try_to_free_buffers (<CODE>fs/buffers.c</CODE>) to
+request IO once memory gets low, and is used very widespread in the current
+kernel.  The other way just sets the page dirty and relies on -><CODE>writepage</CODE> to do
+all the work.  Due to the lack of a validitity bitmap in struct page this does
+not work with filesystem that have a smaller granuality then <CODE>PAGE_SIZE</CODE>.
+<P>
+<HR>
+<A HREF="lki-5.html">Next</A>
+<A HREF="lki-3.html">Previous</A>
+<A HREF="lki.html#toc4">Contents</A>
+</BODY>
+</HTML>

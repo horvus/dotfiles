@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Lex and YACC primer/HOWTO: Debugging</TITLE>
+ <LINK HREF="Lex-YACC-HOWTO-8.html" REL=next>
+ <LINK HREF="Lex-YACC-HOWTO-6.html" REL=previous>
+ <LINK HREF="Lex-YACC-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Lex-YACC-HOWTO-8.html">Next</A>
+<A HREF="Lex-YACC-HOWTO-6.html">Previous</A>
+<A HREF="Lex-YACC-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Debugging</A></H2>
+
+<P>Especially when learning, it is important to have debugging facilities.
+Luckily, YACC can give a lot of feedback. This feedback comes at the cost of
+some overhead, so you need to supply some switches to enable it.
+<P>When compiling your grammar, add --debug and --verbose to the YACC
+commandline. In your grammar C heading, add the following:
+<P>int yydebug=1;
+<P>This will generate the file 'y.output' which explains the state machine that
+was created.
+<P>When you now run the generated binary, it will output a *lot* of what is
+happening. This includes what state the state machine currently has, and
+what tokens are being read.
+<P>Peter Jinks wrote a page on 
+<A HREF="http://www.cs.man.ac.uk/~pjj/cs2121/debug.html">debugging</A> which
+contains some common errors and how to solve them.
+<P>
+<H2><A NAME="ss7.1">7.1 The state machine</A>
+</H2>
+
+<P>Internally, your YACC parser runs a so called 'state machine'. As the name
+implies, this is a machine that can be in several states. Then there are
+rules which govern transitions from one state to another. Everything starts
+with the so called 'root' rule I mentioned earlier.
+<P>To quote from the output from the Example 7 y.output:
+<BLOCKQUOTE><CODE>
+<PRE>
+state 0
+
+    ZONETOK     , and go to state 1
+
+    $default    reduce using rule 1 (commands)
+
+    commands    go to state 29
+    command     go to state 2
+    zone_set    go to state 3
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>By default, this state reduces using the 'commands' rule. This is the
+aforementioned recursive rule that defines 'commands' to be built up from
+individual command statements, followed by a semicolon, followed by possibly
+more commands.
+<P>This state reduces until it hits something it understands, in this case, a
+ZONETOK, ie, the word 'zone'. It then goes to state 1, which deals further
+with a zone command:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+state 1
+
+    zone_set  ->  ZONETOK . quotedname zonecontent   (rule 4)
+
+    QUOTE       , and go to state 4
+
+    quotedname  go to state 5
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The first line has a '.' in it to indicate where we are: we've just seen a
+ZONETOK and are now looking for a 'quotedname'. Apparently, a quotedname
+starts with a QUOTE, which sends us to state 4.
+<P>To follow this further, compile Example 7 with the flags mentioned in the
+Debugging section.
+<P>
+<H2><A NAME="ss7.2">7.2 Conflicts: 'shift/reduce', 'reduce/reduce' </A>
+</H2>
+
+<P>Whenever YACC warns you about conflicts, you may be in for trouble. Solving
+these conflicts appears to be somewhat of an art form that may teach you a
+lot about your language. More than you possibly would have wanted to know.
+<P>The problems revolve around how to interpret a sequence of tokens. Let's
+suppose we define a language that needs to accept both these commands:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        delete heater all
+        delete heater number1
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>To do this, we define this grammar:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        delete_heaters:
+                TOKDELETE TOKHEATER mode
+                {
+                        deleteheaters($3);
+                }
+        
+        mode:   WORD
+
+        delete_a_heater:
+                TOKDELETE TOKHEATER WORD
+                {
+                        delete($3);
+                }
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You may already be smelling trouble. The state machine starts by reading the
+word 'delete', and then needs to decide where to go based on the next token.
+This next token can either be a mode, specifying how to delete the heaters,
+or the name of a heater to delete.
+<P>The problem however is that for both commands, the next token is going to be
+a WORD. YACC has therefore no idea what to do. This leads to 
+a 'reduce/reduce' warning, and a further warning that the 'delete_a_heater'
+node is never going to be reached.
+<P>In this case the conflict is resolved easily (ie, by renaming the first
+command to 'delete heaters all', or by making 'all' a separate token), but
+sometimes it is harder. The y.output file generated when you pass yacc the
+--verbose flag can be of tremendous help.
+<P>
+<HR>
+<A HREF="Lex-YACC-HOWTO-8.html">Next</A>
+<A HREF="Lex-YACC-HOWTO-6.html">Previous</A>
+<A HREF="Lex-YACC-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

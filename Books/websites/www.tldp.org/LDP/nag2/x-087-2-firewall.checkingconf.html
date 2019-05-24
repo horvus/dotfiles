@@ -1,0 +1,392 @@
+<HTML
+><HEAD
+><TITLE
+>Testing a
+Firewall Configuration</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="TCP/IP Firewall"
+HREF="x-087-2-firewall.html"><LINK
+REL="PREVIOUS"
+TITLE="TOS Bit Manipulation"
+HREF="x-087-2-firewall.tos.manipulation.html"><LINK
+REL="NEXT"
+TITLE="A Sample Firewall Configuration"
+HREF="x-087-2-firewall.example.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.tos.manipulation.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. TCP/IP Firewall</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.example.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-FIREWALL.CHECKINGCONF"
+>9.10. Testing a
+Firewall Configuration</A
+></H1
+><P
+>&#13;After you've designed an appropriate firewall configuration, it's
+important to validate that it does in fact do what you want it to
+do. One way to do this is to use a test host outside your network to
+attempt to pierce your firewall: this can be quite clumsy and
+slow, though, and is limited to testing only those addresses that you can
+actually use.</P
+><P
+>A faster and easier method is available with the Linux firewall
+implementation.  It allows you to manually generate tests and run them 
+through the firewall configuration just as if you were testing with
+actual datagrams. All varieties of the Linux kernel firewall software,
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+>, <B
+CLASS="COMMAND"
+>ipchains</B
+>, and
+<B
+CLASS="COMMAND"
+>iptables</B
+>, provide support for this style of
+testing. The implementation involves use of the relevant
+<I
+CLASS="EMPHASIS"
+>check</I
+> command.</P
+><P
+>The general test procedure is as follows:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Design and configure your firewall using <B
+CLASS="COMMAND"
+>ipfwadm</B
+>,
+<B
+CLASS="COMMAND"
+>ipchains</B
+>, or <B
+CLASS="COMMAND"
+>iptables</B
+>.</P
+></LI
+><LI
+><P
+>Design a series of tests that will determine whether your firewall is
+actually working as you intend. For these tests you may use any source
+or destination address, so choose some address combinations that
+should be accepted and some others that should be dropped. If you're
+allowing or disallowing only certain ranges of addresses, it is a good
+idea to test addresses on either side of the boundary of the
+range&#8212;one address just inside the boundary and one address just
+outside the boundary. This will help ensure that you have the correct
+boundaries configured, because it is sometimes easy to specify
+netmasks incorrectly in your configuration.  If you're filtering by
+protocol and port number, your tests should also check all important
+combinations of these parameters. For example, if you intend to accept
+only TCP under certain circumstances, check that UDP datagrams are
+dropped.</P
+></LI
+><LI
+><P
+>Develop <B
+CLASS="COMMAND"
+>ipfwadm</B
+>, <B
+CLASS="COMMAND"
+>ipchains</B
+>, or
+<B
+CLASS="COMMAND"
+>iptables</B
+> rules to implement each test. It is
+probably worthwhile to write all the rules into a script so you can
+test and re-test easily as you correct mistakes or change your
+design. Tests use almost the same syntax as rule specifications, but
+the arguments take on slightly differing meanings. For example, the
+source address argument in a rule specification specifies the source
+address that datagrams matching this rule should have. The source
+address argument in test syntax, in contrast, specifies the source
+address of the test datagram that will be generated. For 
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+>, you must use the <TT
+CLASS="OPTION"
+>&#8211;c</TT
+>
+option to specify that this command is a test, while for
+<B
+CLASS="COMMAND"
+>ipchains</B
+> and <B
+CLASS="COMMAND"
+>iptables</B
+>, you must
+use the <TT
+CLASS="OPTION"
+>&#8211;C</TT
+> option. In all cases you must
+<I
+CLASS="EMPHASIS"
+>always</I
+> specify the source address, destination
+address, protocol, and interface to be used for the test. Other
+arguments, such as port numbers or TOS bit settings, are optional.</P
+></LI
+><LI
+><P
+>Execute each test command and note the output. The output of each test
+will be a single word indicating the final target of the datagram
+after running it through the firewall configuration&#8212;that is,
+where the processing ended. For <B
+CLASS="COMMAND"
+>ipchains</B
+> and
+<B
+CLASS="COMMAND"
+>iptables</B
+>, user-specified chains will be tested
+in addition to the built-in ones.</P
+></LI
+><LI
+><P
+>Compare the output of each test against the desired result. If there
+are any discrepancies, you will need to analyse your ruleset to
+determine where you've made the error. If you've written your test
+commands into a script file, you can easily rerun the test after
+correcting any errors in your firewall configuration. It's a good
+practice to flush your rulesets completely and rebuild them from
+scratch, rather than to make changes dynamically. This helps ensure
+that the active configuration you are testing actually reflects the
+set of commands in your configuration script.</P
+></LI
+></OL
+><P
+>Let's take a quick look at what a manual test transcript would look
+like for our naïve example with <B
+CLASS="COMMAND"
+>ipchains</B
+>. You will remember that our
+local network in the example was 172.16.1.0 with a netmask of
+255.255.255.0, and we were to allow TCP connections out to web servers
+on the net. Nothing else was to pass our forward chain.  Start with a
+transmission that we know should work, a connection from a local host
+to a web server outside:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -C forward -p tcp -s 172.16.1.0 1025 -d 44.136.8.2 80 -i eth0</B
+></TT
+>
+accepted</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Note the arguments had to be supplied and the way they've been used to
+describe a datagram. The output of the command indicates that that the
+datagram was accepted for forwarding, which is what we hoped for.</P
+><P
+>Now try another test, this time with a source address that doesn't
+belong to our network. This one should be denied:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -C forward -p tcp -s 172.16.2.0 1025 -d 44.136.8.2 80 -i eth0</B
+></TT
+>
+denied</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Try some more tests, this time with the same details as the first test,
+but with different protocols. These should be denied, too:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -C forward -p udp -s 172.16.1.0 1025 -d 44.136.8.2 80 -i eth0</B
+></TT
+>
+denied
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -C forward -p icmp -s 172.16.1.0 1025 -d 44.136.8.2 80 -i eth0</B
+></TT
+>
+denied</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Try another destination port, again expecting it to be denied:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -C forward -p tcp -s 172.16.1.0 1025 -d 44.136.8.2 23 -i eth0</B
+></TT
+>
+denied</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>You'll go a long way toward achieving peace of mind if you design a series
+of exhaustive tests. While this can sometimes be as difficult as designing
+the firewall configuration, it's also the best way of knowing
+that your design
+is providing the security you expect of it.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.tos.manipulation.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.example.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>TOS Bit Manipulation</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>A Sample Firewall Configuration</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

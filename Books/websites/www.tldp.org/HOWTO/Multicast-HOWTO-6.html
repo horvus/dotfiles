@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Multicast over TCP/IP HOWTO: Multicast programming.</TITLE>
+ <LINK HREF="Multicast-HOWTO-7.html" REL=next>
+ <LINK HREF="Multicast-HOWTO-5.html" REL=previous>
+ <LINK HREF="Multicast-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Multicast-HOWTO-7.html">Next</A>
+<A HREF="Multicast-HOWTO-5.html">Previous</A>
+<A HREF="Multicast-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Multicast programming.</A></H2>
+
+<P>Multicast programming... or writing your own multicast applications.
+<P>Several extensions to the programming API are needed in order to support
+multicast. All of them are handled via two system calls: <CODE>setsockopt()</CODE>
+(used to pass information to the kernel) and <CODE>getsockopt()</CODE> (to retrieve 
+information regarded multicast behavior). This does <EM>not</EM> mean that
+2 new system calls were added to support multicast. The pair 
+<CODE>setsockopt()</CODE>/<CODE>getsockopt()</CODE> has been there for years. Since 4.2 BSD 
+at least. The addition consists on a new set of options (multicast options)
+that are passed to these system calls, that the kernel must understand.
+<P>The following are the <CODE>setsockopt()</CODE>/<CODE>getsockopt()</CODE> function prototypes:
+<BLOCKQUOTE><CODE>
+<PRE>
+int getsockopt(int s, int level, int optname, void* optval, int* optlen);
+
+int setsockopt(int s, int level, int optname, const void* optval, int optlen);
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The first parameter, <CODE>s</CODE>, is the socket the system call applies to.
+For multicasting, it must be a socket of the family <CODE>AF_INET</CODE> and its 
+type may be either <CODE>SOCK_DGRAM</CODE> or <CODE>SOCK_RAW</CODE>. The most common use 
+is with <CODE>SOCK_DGRAM</CODE> sockets, but if you plan to write a routing daemon or 
+modify some existing one, you will probably need to use <CODE>SOCK_RAW</CODE> ones.
+<P>The second one, <CODE>level</CODE>, identifies the layer that is to handle the
+option, message or query, whatever you want to call it. So, <CODE>SOL_SOCKET</CODE>
+is for the socket layer, <CODE>IPPROTO_IP</CODE> for the IP layer, etc...
+For multicast programming, <CODE>level</CODE> will always be <CODE>IPPROTO_IP</CODE>.
+<P><CODE>optname</CODE> identifies the option we are setting/getting. Its value
+(either supplied by the program or returned by the kernel) is
+<CODE>optval</CODE>. The optnames involved in multicast programming are the
+following:
+<P>
+<HR>
+<PRE>
+                        setsockopt()            getsockopt()
+IP_MULTICAST_LOOP           yes                     yes
+IP_MULTICAST_TTL            yes                     yes
+IP_MULTICAST_IF             yes                     yes
+IP_ADD_MEMBERSHIP           yes                      no
+IP_DROP_MEMBERSHIP          yes                      no
+</PRE>
+<HR>
+<P><CODE>optlen</CODE> carries the size of the data structure <CODE>optval</CODE> points to.
+Note that in <CODE>getsockopt()</CODE> it is a value-result rather than a value:
+the kernel writes the value of <CODE>optname</CODE> in the buffer pointed by
+<CODE>optval</CODE> and informs us of that value's size via <CODE>optlen</CODE>.
+<P>Both <CODE>setsockopt()</CODE> and <CODE>getsockopt()</CODE> return 0 on success and -1 on
+error.
+<P>
+<P>
+<H2><A NAME="ss6.1">6.1 IP_MULTICAST_LOOP.</A>
+</H2>
+
+<P>You have to decide, as the application writer, whether you want the
+data you send to be looped back to your host or not. If you plan to
+have more than one process or user "listening", loopback must be
+enabled. On the other hand, if you are sending the images your video
+camera is producing, you probably don't want loopback, even if you
+want to see yourself on the screen. In that latter case, your application
+will probably receive the images from a device attached to the computer
+and send them to the socket. As the application already "has" that data,
+it is improbable it wants to receive it again on the socket.  Loopback 
+is by default enabled.
+<P>Regard that <CODE>optval</CODE> is a pointer. You can't write: 
+<BLOCKQUOTE><CODE>
+<PRE>
+setsockopt(socket, IPPROTO_IP, IP_MULTICAST_LOOP, 0, 1);
+</PRE>
+</CODE></BLOCKQUOTE>
+
+to disable loopback. Instead write:
+<BLOCKQUOTE><CODE>
+<PRE>
+u_char loop;
+setsockopt(socket, IPPROTO_IP, IP_MULTICAST_LOOP, &amp;loop, sizeof(loop));
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and set <CODE>loop</CODE> to 1 to enable loopback or 0 to disable it.
+<P>To know whether a socket is currently looping-back or not use something like:
+<BLOCKQUOTE><CODE>
+<PRE>
+u_char loop;
+int size;
+
+getsockopt(socket, IPPROTO_IP, IP_MULTICAST_LOOP, &amp;loop, &amp;size)
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss6.2">6.2 IP_MULTICAST_TTL.</A>
+</H2>
+
+<P>If not otherwise specified, multicast datagrams are sent with a default 
+value of 1, to prevent them to be forwarded beyond the local network.
+To change the TTL to the value you desire (from 0 to 255), put that value
+into a variable (here I name it "ttl") and write somewhere in your program:
+<BLOCKQUOTE><CODE>
+<PRE>
+u_char ttl;
+setsockopt(socket, IPPROTO_IP, IP_MULTICAST_TTL, &amp;ttl, sizeof(ttl));
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The behavior with <CODE>getsockopt()</CODE> is similar to the one seen on IP_MULTICAST_LOOP.
+<P>
+<P>
+<H2><A NAME="ss6.3">6.3 IP_MULTICAST_IF.</A>
+</H2>
+
+<P>Usually, the system administrator specifies the default interface multicast
+datagrams should be sent from. The programmer can override this and choose
+a concrete outgoing interface for a given socket with this option.
+<BLOCKQUOTE><CODE>
+<PRE>
+struct in_addr interface_addr;
+setsockopt (socket, IPPROTO_IP, IP_MULTICAST_IF, &amp;interface_addr, sizeof(interface_addr));
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>>From now on, all multicast traffic generated in this socket will be output
+from the interface chosen. To revert to the original behavior and let the
+kernel choose the outgoing interface based on the system administrator's
+configuration, it is enough to call <CODE>setsockopt()</CODE> with this same option
+and <CODE>INADDR_ANY</CODE> in the interface field.
+<P>In determining or selecting outgoing interfaces, the following <CODE>ioctl</CODE>s 
+might be useful: <CODE>SIOCGIFADDR</CODE> (to get an interface's address), 
+<CODE>SIOCGIFCONF</CODE> (to get the list of all the interfaces) and  <CODE>SIOCGIFFLAGS</CODE>
+(to get an interface's flags and, thus, determine whether the interface is 
+multicast capable or not -the <CODE>IFF_MULTICAST</CODE> flag-).
+<P>If the host has more than one interface and the IP_MULTICAST_IF option is
+not set, multicast transmissions are sent from the default interface, 
+although the remainding interfaces might be used
+for multicast <EM>forwarding</EM> if the host is acting as a multicast router.
+<P>
+<P>
+<H2><A NAME="sect-ADD-MEMBERSHIP"></A> <A NAME="ss6.4">6.4 IP_ADD_MEMBERSHIP.</A>
+</H2>
+
+<P>Recall that you need to tell the kernel which multicast groups you are interested
+in. If no process is interested in a group, packets destined to it that arrive
+to the host are discarded. In order to inform the kernel of your interests and,
+thus, become a member of that group, you should first fill a <CODE>ip_mreq</CODE> 
+structure which is passed later to the kernel in the <CODE>optval</CODE> field of the 
+<CODE>setsockopt()</CODE> system call.
+<P>The ip_mreq structure (taken from <CODE>/usr/include/linux/in.h</CODE>) has the 
+following members:
+<BLOCKQUOTE><CODE>
+<PRE>
+struct ip_mreq
+{
+        struct in_addr imr_multiaddr;   /* IP multicast address of group */
+        struct in_addr imr_interface;   /* local IP address of interface */
+};
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>(Note: the "physical" definition of the structure is in the file above 
+specified.  Nonetheless, you should not include <CODE>&lt;linux/in.h></CODE> if 
+you want your code to be portable. Instead, include <CODE>&lt;netinet/in.h></CODE> 
+which, in turn, includes <CODE>&lt;linux/in.h></CODE> itself).
+<P>The first member, <CODE>imr_multiaddr</CODE>, holds the group address you want to join.
+Remember that memberships are also associated with interfaces, not
+just groups. This is the reason you have to provide a value for the second
+member: <CODE>imr_interface</CODE>. This way, if you are in a multihomed host, you can 
+join the same group in several interfaces. You can always fill this last
+member with the wildcard address (<CODE>INADDR_ANY</CODE>) and then the kernel will deal
+with the task of choosing the interface.
+<P>With this structure filled (say you defined it as: <CODE>struct ip_mreq mreq;</CODE>)
+you just have to call <CODE>setsockopt()</CODE> this way:
+<BLOCKQUOTE><CODE>
+<PRE>
+setsockopt (socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &amp;mreq, sizeof(mreq));
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Notice that you can join several groups to the same socket, not just one. The 
+limit to this is <CODE>IP_MAX_MEMBERSHIPS</CODE> and, as of version 2.0.33, it has the value 
+of 20.
+<P>
+<P>
+<H2><A NAME="ss6.5">6.5 IP_DROP_MEMBERSHIP.</A>
+</H2>
+
+<P>The process is quite similar to joining a group:
+<BLOCKQUOTE><CODE>
+<PRE>
+struct ip_mreq mreq;
+setsockopt (socket, IPPROTO_IP, IP_DROP_MEMBERSHIP, &amp;mreq, sizeof(mreq));
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>where <CODE>mreq</CODE> is the same structure with the same data used when joining the
+group. If the <CODE>imr_interface</CODE> member is filled with <CODE>INADDR_ANY</CODE>, the 
+first matching group is dropped.
+<P>If you have joined a lot of groups to the same socket, you don't need to
+drop memberships in all of them in order to terminate. When you close a
+socket, all memberships associated with it are dropped by the kernel. The
+same occurs if the process that opened the socket is killed.
+<P>Finally, keep in mind that a process dropping membership for a group does
+not imply that the host will stop receiving datagrams for that group. If
+another socket joined that group in that same interface previously to this
+<CODE>IP_DROP_MEMBERSHIP</CODE>, <EM>the host</EM> will keep being a member of that group. 
+<P>Both ADD_MEMBERSHIP and DROP_MEMBERSHIP are nonblocking operations. They
+should return immediately indicating either success or failure.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Multicast-HOWTO-7.html">Next</A>
+<A HREF="Multicast-HOWTO-5.html">Previous</A>
+<A HREF="Multicast-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

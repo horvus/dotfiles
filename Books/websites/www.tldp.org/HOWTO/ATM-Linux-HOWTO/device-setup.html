@@ -1,0 +1,727 @@
+<HTML
+><HEAD
+><TITLE
+>Device Setup</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="ATM on Linux HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Installation"
+HREF="installation.html"><LINK
+REL="NEXT"
+TITLE="Native ATM PVCs"
+HREF="native-atm-pvcs.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>ATM on Linux HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="installation.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="native-atm-pvcs.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="DEVICE-SETUP"
+>3. Device Setup</A
+></H1
+><P
+>This section describes device-specific configuration operations, and general
+diagnostic procedures at the ATM or SONET level. Please see the adapter
+documentation for details on hardware installation and diagnosis.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DEVICE-SETUP.ATM-OVER-TCP-SETUP"
+>3.1. ATM Over TCP Setup</A
+></H2
+><P
+>If you have no real ATM hardware, you can still exercise the API by using
+the ATM over TCP ``driver''. It emulates ATM devices which are directly
+wired to remote devices (i.e. there is no VPI/VCI swapping).</P
+><P
+>To establish one (bidirectional) ``wire'', become root on both systems
+(or run both sides on the same system to create two connected ``interfaces'')
+and run the following command on one of them (let's call it ``a''):
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN337"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># atmtcp virtual listen</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+
+Then, on the other system (``b''), run
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN339"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># atmtcp virtual connect <TT
+CLASS="REPLACEABLE"
+><I
+>address_of_a</I
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>Both <B
+CLASS="COMMAND"
+>atmtcp</B
+>s will report on their progress and the kernel
+should display messages like:
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN344"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>Link 0: virtual interface 2
+Link 1: incoming ATMTCP connection from 127.0.0.1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+
+and
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN346"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>Link 0: virtual interface 3
+Link 1: ATMTCP connection to localhost</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+
+on the two systems. Note that <B
+CLASS="COMMAND"
+>atmtcp</B
+> keeps running and that interrupting
+it breaks the virtual wire.</P
+><P
+>Multiple ``wires'' can be attached to the same machine by specifying a
+port number (default is 2812). Note that no AAL processing is performed.
+It is therefore not possible to receive data using a different AAL (e.g.
+AAL0) than the one with which the data was sent.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DEVICE-SETUP.ZN1221-ZN1225-TUNING"
+>3.2. ZN1221/ZN1225 Tuning</A
+></H2
+><P
+>The ZeitNet ZN1221 and ZN1225 adapters use pre-allocated pools of free
+memory buffers
+for receiving. Whenever a VC with a certain maximum SDU size is opened for
+receiving, the corresponding pool is filled with free buffers by the device
+driver. The adapter removes buffers while it receives data. When the number
+of remaining buffers falls below a certain threshold, the device driver
+replenishes the pool again.</P
+><P
+>The lower and the upper limits for the number of free buffers, and the
+threshold for adapting to a new data offset (see below for details), can
+be set using the <SPAN
+CLASS="APPLICATION"
+>zntune</SPAN
+> program. Usage:
+
+<P
+><B
+CLASS="COMMAND"
+>zntune</B
+>  [-l <TT
+CLASS="REPLACEABLE"
+><I
+>low_water</I
+></TT
+>] [-h <TT
+CLASS="REPLACEABLE"
+><I
+>high_water</I
+></TT
+>] [-t <TT
+CLASS="REPLACEABLE"
+><I
+>threshold</I
+></TT
+>]  <TT
+CLASS="REPLACEABLE"
+><I
+>itf</I
+></TT
+>  [<TT
+CLASS="REPLACEABLE"
+><I
+>pool</I
+></TT
+>]</P
+>
+
+The changes are applied to all pools if no pool number is specified.
+Pool 2 stores 64 bytes packets, pool 3 stores 128 bytes packets, etc.
+Pools 0 and 1 are currently unused.</P
+><P
+>The current settings and some usage statistics can be obtained by invoking
+<B
+CLASS="COMMAND"
+>zntune</B
+> without specifying new parameters:
+
+<P
+><B
+CLASS="COMMAND"
+>zntune</B
+>  [-z]  <TT
+CLASS="REPLACEABLE"
+><I
+>itf</I
+></TT
+>  [<TT
+CLASS="REPLACEABLE"
+><I
+>pool</I
+></TT
+>]</P
+></P
+><P
+>The ``Size'' column shows the buffer size in Bytes.
+The ``Ref'' column shows the number of open VCs using that pool. The ``Alarm''
+column shows how many times the number of free buffers has fallen below the
+low-water mark since the counters were reset. Similarly, the ``Under'' column
+shows how many times an incoming PDU had to be discarded because the
+corresponding pool was empty.</P
+><P
+>The columns ``Offs'', ``NxOf'', ``Count'' and ``Thres'' show the alignment
+adaption status. ``Offs'' is the offset of user data the driver currently
+expects in incoming PDUs. For single-copy, receive buffers are aligned
+accordingly so that data is received at page boundaries. ``NxOf'' is the
+user data offset of the most recently received PDU, where the offset differs
+from the currently assumed offset. ``Count'' is the number of PDUs that have
+been received in sequence with an offset of ``NxOf''. Finally, ``Thres'' is
+the threshold value ``Count'' has to reach for ``NxOf'' to become the new
+current offset.</P
+><P
+>Use the <TT
+CLASS="PARAMETER"
+><I
+>-z</I
+></TT
+> option to reset the ``Alarm''
+and ``Under'' counters.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DEVICE-SETUP.FILES-IN-PROC-NET-ATM"
+>3.3. Files in <TT
+CLASS="FILENAME"
+>/proc/net/atm/</TT
+></A
+></H2
+><P
+>Some status information about the ATM subsystem can be obtained through files
+in <TT
+CLASS="FILENAME"
+>/proc/net/atm/</TT
+>. 
+The file <TT
+CLASS="FILENAME"
+>/proc/net/atm/arp</TT
+> contains information
+specific to Classical IP over ATM, see section
+<A
+HREF="ip-over-atm.html#IP-OVER-ATM.CLIP"
+><I
+>CLIP</I
+></A
+>.</P
+><P
+>All active ATM devices are listed in <TT
+CLASS="FILENAME"
+>/proc/net/atm/devices</TT
+>.
+For each device,
+the interface number, the type label, the end system identifier (ESI), and
+statistics are shown. The statistics correspond to the ones available via
+<SPAN
+CLASS="APPLICATION"
+>atmdiag</SPAN
+>.</P
+><P
+>Individual ATM devices may register entries of the form
+<TT
+CLASS="LITERAL"
+><TT
+CLASS="REPLACEABLE"
+><I
+>type:number</I
+></TT
+></TT
+>
+(e.g. <TT
+CLASS="LITERAL"
+>eni:0</TT
+>) which contain
+device-specific information.</P
+><P
+>The files <TT
+CLASS="FILENAME"
+>/proc/net/atm/pvc</TT
+> and 
+<TT
+CLASS="FILENAME"
+>/proc/net/atm/svc</TT
+> list all PVC and SVC
+sockets.
+For both types of sockets, the interface, VPI and VCI numbers are shown. For
+PVCs, this is followed by the AAL and the traffic class and the selected
+PCR for the receive and the transmit direction. For SVCs, the SVC state
+and the address of the remote party are shown. SVCs with the interface
+number 999 are used for special control purposes as indicated in the ``State''
+column.</P
+><P
+>Furthermore, <TT
+CLASS="FILENAME"
+>/proc/net/atm/vc</TT
+> shows buffer sizes and
+additional internal information for all ATM sockets.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DEVICE-SETUP.ATM-DIAGNOSTICS"
+>3.4. ATM Diagnostics</A
+></H2
+><P
+>Various counters of the ATM device drivers can be queried with the
+<SPAN
+CLASS="APPLICATION"
+>atmdiag</SPAN
+>  program. See the corresponding man page
+for details.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DEVICE-SETUP.SONET-DIAGNOSTICS"
+>3.5. SONET Diagnostics</A
+></H2
+><P
+>The SONET diagnostics tool can be used to monitor link performance
+and to simulate errors.  In order to get current SONET statistics,
+run it with the ATM interface number as the argument, e.g.
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN406"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>% sonetdiag 0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>The counters can be reset with the <TT
+CLASS="PARAMETER"
+><I
+>-z</I
+></TT
+>
+option:
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN410"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># sonetdiag -z 0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>The following network failures can be simulated:<A
+NAME="AEN413"
+HREF="#FTN.AEN413"
+>[1]</A
+>
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><SPAN
+CLASS="ERRORCODE"
+>sbip</SPAN
+></DT
+><DD
+><P
+>insert section errors (B1)</P
+></DD
+><DT
+><SPAN
+CLASS="ERRORCODE"
+>lbip</SPAN
+></DT
+><DD
+><P
+>insert line errors (B2)</P
+></DD
+><DT
+><SPAN
+CLASS="ERRORCODE"
+>pbip</SPAN
+></DT
+><DD
+><P
+>insert path errors (B3)</P
+></DD
+><DT
+><SPAN
+CLASS="ERRORCODE"
+>frame</SPAN
+></DT
+><DD
+><P
+>force (RX) frame loss</P
+></DD
+><DT
+><SPAN
+CLASS="ERRORCODE"
+>los</SPAN
+></DT
+><DD
+><P
+>insert loss of signal</P
+></DD
+><DT
+><SPAN
+CLASS="ERRORCODE"
+>lais</SPAN
+></DT
+><DD
+><P
+>insert line alarm indication signal</P
+></DD
+><DT
+><SPAN
+CLASS="ERRORCODE"
+>pais</SPAN
+></DT
+><DD
+><P
+>insert path alarm indication signal</P
+></DD
+><DT
+><SPAN
+CLASS="ERRORCODE"
+>hcs</SPAN
+></DT
+><DD
+><P
+>insert header checksum errors</P
+></DD
+></DL
+></DIV
+></P
+><P
+>A failure is enabled by adding the corresponding keyword on the
+command line. The failure is cleared by prefixing the keyword with
+a minus sign, e.g.
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN457"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>a# sonetdiag -z 0 &#62;/dev/null
+b# sonetdiag -z 0 &#62;/dev/null
+a# sonetdiag 0 los
+a# sonetdiag 0 -los
+b# sonetdiag 0 | grep BIP
+Section BIP errors:      56200
+Line BIP errors:           342
+Path BIP errors:           152
+a# sonetdiag 0 | grep FEBE
+Line FEBE:                 342
+Path FEBE:                 152</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>If any diagnostic error insertions are active, their keywords are
+shown when <SPAN
+CLASS="APPLICATION"
+>sonetdiag</SPAN
+> is used to obtain statistics.
+Note that some error insertions may be automatically switched off by the
+hardware.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN413"
+HREF="device-setup.html#AEN413"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Some adapters may only support a subset of this.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="installation.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="native-atm-pvcs.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Installation</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Native ATM PVCs</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

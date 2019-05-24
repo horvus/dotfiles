@@ -1,0 +1,708 @@
+<HTML
+><HEAD
+><TITLE
+>Installing and Configuring Necessary Software</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Bandwidth Limiting HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Before We Start"
+HREF="prep.html"><LINK
+REL="NEXT"
+TITLE="Dealing with Other Bandwidth-consuming Protocols Using CBQ"
+HREF="cbq.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Bandwidth Limiting HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="prep.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="cbq.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INSTALL"
+>3. Installing and Configuring Necessary Software</A
+></H1
+><P
+>Here, I will explain how to install the necessary software
+so that we can limit and test the bandwidth usage.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN78"
+>3.1. Installing Squid with the delay pools feature</A
+></H2
+><P
+>As I mentioned before, Squid has a feature called delay pools, which
+allows us to control download bandwidth. Unfortunately, in most distributions,
+Squid is shipped without that feature.</P
+><P
+>So if you have Squid already installed, I must disappoint you -- you
+need to uninstall it and do it once again with delay pools enabled in the
+way I explain below. </P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>To get maximum performance from our Squid proxy, it's best
+to create a separate partition for its cache, called /cache/. Its size should
+be about 300 megabytes, depending on our needs.</P
+><P
+>If you don't know how to make a separate partition, you can create the 
+/cache/ directory on
+a main partition, but Squid performance can suffer a bit.</P
+></LI
+><LI
+><P
+>We add a safe 'squid' user:</P
+><P
+><TT
+CLASS="LITERAL"
+># useradd -d /cache/ -r -s /dev/null squid &#62;/dev/null 2&#62;&#38;1</TT
+></P
+><P
+>No one can log in as squid, including root.</P
+></LI
+><LI
+><P
+>We download Squid sources from http://www.squid-cache.org</P
+><P
+>When I was writing this HOWTO, the latest version was Squid 2.4 stable
+1:</P
+><P
+><A
+HREF="http://www.squid-cache.org/Versions/v2/2.4/squid-2.4.STABLE1-src.tar.gz"
+TARGET="_top"
+>http://www.squid-cache.org/Versions/v2/2.4/squid-2.4.STABLE1-src.tar.gz</A
+></P
+></LI
+><LI
+><P
+>We unpack everything to <TT
+CLASS="LITERAL"
+>/var/tmp</TT
+>:</P
+></LI
+><LI
+><P
+><TT
+CLASS="LITERAL"
+># tar xzpf squid-2.4.STABLE1-src.tar.gz</TT
+></P
+></LI
+><LI
+><P
+>We compile and install Squid (everthing is in one line):</P
+><P
+><TT
+CLASS="LITERAL"
+># ./configure --prefix=/opt/squid --exec-prefix=/opt/squid
+--enable-delay-pools --enable-cache-digests --enable-poll --disable-ident-lookups
+--enable-truncate --enable-removal-policies</TT
+></P
+><P
+><TT
+CLASS="LITERAL"
+># make all</TT
+></P
+><P
+><TT
+CLASS="LITERAL"
+># make install</TT
+></P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN110"
+>3.2. Configuring Squid to use the delay pools feature</A
+></H2
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Configure our squid.conf file (located under /opt/squid/etc/squid.conf):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#squid.conf
+#Every option in this file is very well documented in the original squid.conf file
+#and on http://www.visolve.com/squidman/Configuration%20Guide.html
+
+#
+#The ports our Squid will listen on.
+http_port 8080
+icp_port 3130
+#cgi-bins will not be cached.
+acl QUERY urlpath_regex cgi-bin \?
+no_cache deny QUERY
+#Memory the Squid will use. Well, Squid will use far more than that.
+cache_mem 16 MB
+#250 means that Squid will use 250 megabytes of disk space.
+cache_dir ufs /cache 250 16 256
+
+#Places where Squid's logs will go to.
+cache_log /var/log/squid/cache.log
+cache_access_log /var/log/squid/access.log
+cache_store_log /var/log/squid/store.log
+cache_swap_log /var/log/squid/swap.log
+#How many times to rotate the logs before deleting them.
+#See the FAQ for more info.
+logfile_rotate 10
+
+redirect_rewrites_host_header off
+cache_replacement_policy GDSF
+acl localnet src 192.168.1.0/255.255.255.0
+acl localhost src 127.0.0.1/255.255.255.255
+acl Safe_ports port 80 443 210 119 70 20 21 1025-65535
+acl CONNECT method CONNECT
+acl all src 0.0.0.0/0.0.0.0
+http_access allow localnet
+http_access allow localhost
+http_access deny !Safe_ports
+http_access deny CONNECT
+http_access deny all
+maximum_object_size 3000 KB
+store_avg_object_size 50 KB
+
+#Set these if you want your proxy to work in a transparent way.
+#Transparent proxy means you generally don't have to configure all
+#your client's browsers, but hase some drawbacks too.
+#Leaving these uncommented won't do any harm.
+httpd_accel_host virtual
+httpd_accel_port 80
+httpd_accel_with_proxy on
+httpd_accel_uses_host_header on
+ 
+#all our LAN users will be seen by external web servers
+#as if they all used Mozilla on Linux. :)
+anonymize_headers deny User-Agent
+fake_user_agent Mozilla/5.0 (X11; U; Linux i686; en-US; rv:0.9.6+) Gecko/20011122
+ 
+#To make our connection even faster, we put two lines similar
+#to the ones below. They will point a parent proxy server our own Squid
+#will use. Don't forget to change the server to the one that will
+#be fastest for you!
+#Measure pings, traceroutes and so on.
+#Make sure that http and icp ports are correct.
+
+#Uncomment lines beginning with "cache_peer" if necessary.
+#This is the proxy you are going to use for all connections...
+#cache_peer w3cache.icm.edu.pl parent 8080 3130 no-digest default
+
+#...except for the connections to addresses and IPs beginning with "!".
+#It's a good idea not to use a higher 
+#cache_peer_domain w3cache.icm.edu.pl !.pl !7thguard.net !192.168.1.1
+
+#This is useful when we want to use the Cache Manager.
+#Copy cachemgr.cgi to cgi-bin of your www server.
+#You can reach it then via a web browser typing
+#the address http://your-web-server/cgi-bin/cachemgr.cgi
+cache_mgr your@email
+cachemgr_passwd secret_password all
+ 
+#This is a name of a user our Squid will work as.
+cache_effective_user squid
+cache_effective_group squid
+ 
+log_icp_queries off
+buffered_logs on
+ 
+ 
+#####DELAY POOLS
+#This is the most important part for shaping incoming traffic with Squid
+#For detailed description see squid.conf file or docs at http://www.squid-cache.org
+ 
+#We don't want to limit downloads on our local network.
+acl magic_words1 url_regex -i 192.168
+ 
+#We want to limit downloads of these type of files
+#Put this all in one line
+acl magic_words2 url_regex -i ftp .exe .mp3 .vqf .tar.gz .gz .rpm .zip .rar .avi .mpeg .mpe .mpg .qt
+.ram .rm .iso .raw .wav .mov
+#We don't block .html, .gif, .jpg and similar files, because they
+#generally don't consume much bandwidth
+
+#We want to limit bandwidth during the day, and allow
+#full bandwidth during the night
+#Caution! with the acl below your downloads are likely to break
+#at 23:59. Read the FAQ in this bandwidth if you want to avoid it.
+acl day time 09:00-23:59
+ 
+#We have two different delay_pools
+#View Squid documentation to get familiar
+#with delay_pools and delay_class.
+delay_pools 2
+ 
+#First delay pool
+#We don't want to delay our local traffic.
+#There are three pool classes; here we will deal only with the second.
+#First delay class (1) of second type (2).
+delay_class 1 2
+ 
+#-1/-1 mean that there are no limits.
+delay_parameters 1 -1/-1 -1/-1
+ 
+#magic_words1: 192.168 we have set before
+delay_access 1 allow magic_words1
+ 
+
+#Second delay pool.
+#we want to delay downloading files mentioned in magic_words2.
+#Second delay class (2) of second type (2).
+delay_class 2 2
+ 
+#The numbers here are values in bytes;
+#we must remember that Squid doesn't consider start/stop bits
+#5000/150000 are values for the whole network
+#5000/120000 are values for the single IP
+#after downloaded files exceed about 150000 bytes,
+#(or even twice or three times as much)
+#they will continue to download at about 5000 bytes/s
+ 
+delay_parameters 2 5000/150000 5000/120000
+#We have set day to 09:00-23:59 before.
+delay_access 2 allow day
+delay_access 2 deny !day
+delay_access 2 allow magic_words2
+
+
+#EOF</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>OK, when we have configured everything, we must make sure everything under <TT
+CLASS="FILENAME"
+>/opt/squid</TT
+> and <TT
+CLASS="FILENAME"
+>/cache</TT
+> directories belongs
+to user 'squid'. </P
+><P
+><B
+CLASS="COMMAND"
+># mkdir /var/log/squid/</B
+></P
+><P
+><B
+CLASS="COMMAND"
+># chown squid:squid /var/log/squid/</B
+></P
+><P
+><B
+CLASS="COMMAND"
+># chmod 770 /var/log/squid/</B
+></P
+><P
+><B
+CLASS="COMMAND"
+># chown -R squid:squid /opt/squid/</B
+></P
+><P
+><B
+CLASS="COMMAND"
+># chown -R squid:squid /cache/</B
+></P
+><P
+>Now everything is ready to run Squid. When we do it for the first time,
+we have to create its cache directories: </P
+><P
+><B
+CLASS="COMMAND"
+># /opt/squid/bin/squid -z</B
+></P
+><P
+>We run Squid and check if everything is working. A good tool to do that
+is IPTraf; you can find it on <A
+HREF="http://freshmeat.net"
+TARGET="_top"
+>http://freshmeat.net</A
+>. Make sure you have set the appropriate proxy in your web browsers (192.168.1.1,
+port 8080 in our example): </P
+><P
+><B
+CLASS="COMMAND"
+># /opt/squid/bin/squid</B
+></P
+><P
+>If everything is working, we add <TT
+CLASS="FILENAME"
+>/opt/squid/bin/squid</TT
+> line to the end of our initializing scripts. Usually, it can
+be <TT
+CLASS="FILENAME"
+>/etc/rc.d/rc.local</TT
+>. </P
+><P
+>Other helpful options in Squid may be:</P
+><P
+><B
+CLASS="COMMAND"
+># /opt/squid/bin/squid -k reconfigure</B
+> (it reconfigures
+Squid if we made any changes in its squid.conf file)</P
+><P
+><B
+CLASS="COMMAND"
+># /opt/squid/bin/squid -help</B
+> :) self-explanatory</P
+><P
+>You can also copy <TT
+CLASS="FILENAME"
+>cachemgr.cgi</TT
+> to the cgi-bin directory
+of your WWW server, to make use of a useful Cache Manager.</P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN146"
+>3.3. Solving remaining problems</A
+></H2
+><P
+>OK, we have installed Squid and configured it to use delay pools. I
+bet nobody wants to be restricted, especially our clever LAN users. They will
+likely try to avoid our limitations, just to download their favourite mp3s
+a little faster (and thus causing your headache).</P
+><P
+>I assume that you use IP-masquerade on your LAN so that your users
+could use IRC, ICQ, e-mail, etc. That's OK, but we must make
+sure that our LAN users will use our delay pooled Squid to access web pages
+and use <TT
+CLASS="FILENAME"
+>ftp</TT
+>.</P
+><P
+>We can solve most of these problems by using <TT
+CLASS="FILENAME"
+>ipchains</TT
+> (Linux
+2.2.x kernels) or <TT
+CLASS="FILENAME"
+>iptables</TT
+> (Linux 2.4.x kernels).</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN154"
+>3.3.1. Linux 2.2.x kernels (ipchains)</A
+></H3
+><P
+>We must make sure that nobody will try to cheat and use a proxy
+server other than ours. Public proxies usually run on 3128 and 8080 ports:</P
+><P
+><B
+CLASS="COMMAND"
+>/sbin/ipchains -A input -s 192.168.1.1/24 -d ! 192.168.1.1 3128
+-p TCP -j REJECT</B
+></P
+><P
+><B
+CLASS="COMMAND"
+>/sbin/ipchains -A input -s 192.168.1.1/24 -d ! 192.168.1.1 8080
+-p TCP -j REJECT</B
+></P
+><P
+>We must also make sure that nobody will try to cheat and connect to the
+internet directly (IP-masquerade) to download web pages:</P
+><P
+><B
+CLASS="COMMAND"
+>/sbin/ipchains -A input -s 192.168.1.1/24 -d ! 192.168.1.1 80
+-p TCP -j REDIRECT 8080</B
+></P
+><P
+>If everything is working, we add these lines to the end of our initializing
+scripts. Usually, it can be <TT
+CLASS="LITERAL"
+>/etc/rc.d/rc.local</TT
+>.</P
+><P
+>We might think to block <TT
+CLASS="FILENAME"
+>ftp</TT
+> traffic (ports
+20 and 21) to force our LAN users to use Squid, but it's not a good idea
+for at least two reasons:</P
+><P
+></P
+><UL
+><LI
+><P
+>Squid is a http proxy with <TT
+CLASS="FILENAME"
+>ftp</TT
+> support,
+not a real <TT
+CLASS="FILENAME"
+>ftp</TT
+> proxy. It can download from <TT
+CLASS="FILENAME"
+>ftp</TT
+>, it can also upload to some <TT
+CLASS="FILENAME"
+>ftp</TT
+>, but it
+can't delete/change name of files on remote <TT
+CLASS="FILENAME"
+>ftp</TT
+> servers.</P
+><P
+>When we block ports 20 and 21, we won't be able to delete/change name
+of files on remote <TT
+CLASS="FILENAME"
+>ftp</TT
+> servers.</P
+></LI
+><LI
+><P
+>IE5.5 has a bug -- it doesn't use a proxy
+to retrieve the <TT
+CLASS="FILENAME"
+>ftp</TT
+> directory. Instead it connects directly
+via IP-masquerade.</P
+><P
+>When we block ports 20 and 21, we won't be able to browse through <TT
+CLASS="FILENAME"
+>ftp</TT
+> directories, using IE5.5.</P
+></LI
+></UL
+><P
+>So, we will block excessive <TT
+CLASS="FILENAME"
+>ftp</TT
+>
+downloads using other methods. We will deal with it in chapter 4.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN185"
+>3.3.2. Linux 2.4.x kernels (iptables)</A
+></H3
+><P
+>We must make sure that nobody will try to cheat and use a proxy
+server other than ours. Public proxies usually run on 3128 and 8080 ports:</P
+><P
+><B
+CLASS="COMMAND"
+>/sbin/iptables -A FORWARD -s 192.168.1.1/24 -d ! 192.168.1.1 --dport 3128
+-p TCP -j DROP</B
+></P
+><P
+><B
+CLASS="COMMAND"
+>/sbin/iptables -A FORWARD -s 192.168.1.1/24 -d ! 192.168.1.1 --dport 8080
+-p TCP -j DROP</B
+></P
+><P
+>We must also make sure that nobody will try to cheat and connect to the
+internet directly (IP-masquerade) to download web pages:</P
+><P
+><B
+CLASS="COMMAND"
+>/sbin/iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 
+-j REDIRECT --to-port 8080</B
+></P
+><P
+>If everything is working, we add these lines to the end of our initializing
+scripts. Usually, it can be <TT
+CLASS="LITERAL"
+>/etc/rc.d/rc.local</TT
+>.</P
+><P
+>We might think to block <TT
+CLASS="FILENAME"
+>ftp</TT
+> traffic (ports
+20 and 21) to force our LAN users to use Squid, but it's not a good idea
+for at least two reasons:</P
+><P
+></P
+><UL
+><LI
+><P
+>Squid is a http proxy with <TT
+CLASS="FILENAME"
+>ftp</TT
+> support,
+not a real <TT
+CLASS="FILENAME"
+>ftp</TT
+> proxy. It can download from <TT
+CLASS="FILENAME"
+>ftp</TT
+>, it can also upload to some <TT
+CLASS="FILENAME"
+>ftp</TT
+>, but it
+can't delete/change name of files on remote <TT
+CLASS="FILENAME"
+>ftp</TT
+> servers.</P
+><P
+>When we block ports 20 and 21, we won't be able to delete/change name
+of files on remote <TT
+CLASS="FILENAME"
+>ftp</TT
+> servers.</P
+></LI
+><LI
+><P
+>IE5.5 has a bug -- it doesn't use a proxy
+to retrieve the <TT
+CLASS="FILENAME"
+>ftp</TT
+> directory. Instead it connects directly
+via IP-masquerade.</P
+><P
+>When we block ports 20 and 21, our LAN users won't be able to browse
+through <TT
+CLASS="FILENAME"
+>ftp</TT
+> directories, using IE5.5.</P
+></LI
+></UL
+><P
+>So, we will block excessive <TT
+CLASS="FILENAME"
+>ftp</TT
+>
+downloads using other methods. We will deal with it in chapter 4.</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="prep.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="cbq.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Before We Start</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Dealing with Other Bandwidth-consuming Protocols Using CBQ</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,601 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Simple backups</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Backups"
+HREF="backups-intro.html"><LINK
+REL="PREVIOUS"
+TITLE="Selecting the backup tool"
+HREF="backup-tools.html"><LINK
+REL="NEXT"
+TITLE="Multilevel backups"
+HREF="multi-level-backups.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="backup-tools.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 12. Backups</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="multi-level-backups.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SIMPLE-BACKUPS"
+></A
+>12.4. Simple backups</H1
+><P
+> A simple backup scheme is to back up everything once,
+	then back up everything that has been modified since the
+	previous backup.  The first backup is called a <I
+CLASS="GLOSSTERM"
+>full
+	backup</I
+>, the subsequent ones are <I
+CLASS="GLOSSTERM"
+>incremental
+	backups</I
+>.  A full backup is often more laborious
+	than incremental ones, since there is more data to write to the
+	tape and a full backup might not fit onto one tape (or floppy).
+	Restoring from incremental backups can be many times more work
+	than from a full one.  Restoration can be optimized so that
+	you always back up everything since the previous full backup;
+	this way, backups are a bit more work, but there should never
+	be a need to restore more than a full backup and an incremental
+	backup.  </P
+><P
+> If you want to make backups every day and have six
+	tapes, you could use tape 1 for the first full backup (say, on
+	a Friday), and tapes 2 to 5 for the incremental backups (Monday
+	through Thursday).  Then you make a new full backup on tape 6
+	(second Friday), and start doing incremental ones with tapes 2
+	to 5 again.  You don't want to overwrite tape 1 until you've got
+	a new full backup, lest something happens while you're making
+	the full backup.  After you've made a full backup to tape 6,
+	you want to keep tape 1 somewhere else, so that when your other
+	backup tapes are destroyed in the fire, you still have at least
+	something left.  When you need to make the next full backup,
+	you fetch tape 1 and leave tape 6 in its place.  </P
+><P
+> If you have more than six tapes, you can use the extra
+	ones for full backups.	Each time you make a full backup, you
+	use the oldest tape.  This way you can have full backups from
+	several previous weeks, which is good if you want to find an old,
+	now deleted file, or an old version of a file.	</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TAR-BACKUPS"
+></A
+>12.4.1. Making backups with <B
+CLASS="COMMAND"
+>tar</B
+></H2
+><P
+>	A full backup can easily be made with <B
+CLASS="COMMAND"
+>tar</B
+>:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tar --create --file /dev/ftape 
+/usr/src</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>tar: Removing leading / from absolute path names in 
+the archive</TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	The example above uses the GNU version of <B
+CLASS="COMMAND"
+>tar</B
+>
+	and its long option names.  The traditional version of
+	<B
+CLASS="COMMAND"
+>tar</B
+> only understands single character
+	options.  The GNU version can also handle backups that don't
+	fit on one tape or floppy, and also very long paths; not all
+	traditional versions can do these things.  (Linux only uses
+	GNU <B
+CLASS="COMMAND"
+>tar</B
+>.)  </P
+><P
+> If your backup doesn't fit on one tape, you need to use
+	the <TT
+CLASS="OPTION"
+>--multi-volume</TT
+> (<TT
+CLASS="OPTION"
+>-M</TT
+>) option:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tar -cMf /dev/fd0H1440 
+/usr/src</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>tar: Removing leading / from absolute path names in 
+the archive
+Prepare volume #2 for /dev/fd0H1440 and hit return:</TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Note that you should format the floppies before you begin the
+	backup, or else use another window or virtual terminal and do
+	it when <B
+CLASS="COMMAND"
+>tar</B
+> asks for a new floppy.  </P
+><P
+> After you've made a backup, you should check that it is OK,
+	using the <TT
+CLASS="OPTION"
+>--compare</TT
+> (<TT
+CLASS="OPTION"
+>-d</TT
+>) option:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tar --compare --verbose -f 
+/dev/ftape</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>usr/src/
+usr/src/linux
+usr/src/linux-1.2.10-includes/
+....</TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Failing to check a backup means that you will not notice that your
+	backups aren't working until after you've lost the original data.
+	</P
+><P
+> An incremental backup can be done with
+	<B
+CLASS="COMMAND"
+>tar</B
+> using the <TT
+CLASS="OPTION"
+>--newer</TT
+>
+	(<TT
+CLASS="OPTION"
+>-N</TT
+>) option:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tar --create --newer '8 Sep 1995' 
+--file /dev/ftape /usr/src 
+--verbose</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>tar: Removing leading / from absolute path names in 
+the archive
+usr/src/
+usr/src/linux-1.2.10-includes/
+usr/src/linux-1.2.10-includes/include/
+usr/src/linux-1.2.10-includes/include/linux/
+usr/src/linux-1.2.10-includes/include/linux/modules/
+usr/src/linux-1.2.10-includes/include/asm-generic/
+usr/src/linux-1.2.10-includes/include/asm-i386/
+usr/src/linux-1.2.10-includes/include/asm-mips/
+usr/src/linux-1.2.10-includes/include/asm-alpha/
+usr/src/linux-1.2.10-includes/include/asm-m68k/
+usr/src/linux-1.2.10-includes/include/asm-sparc/
+usr/src/patch-1.2.11.gz</TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Unfortunately, <B
+CLASS="COMMAND"
+>tar</B
+> can't notice when a file's
+	inode information has changed, for example, that its permission
+	bits have been changed, or when its name has been changed.
+	This can be worked around using <B
+CLASS="COMMAND"
+>find</B
+> and
+	comparing current filesystem state with lists of files that have
+	been previously backed up.  Scripts and programs for doing this
+	can be found on Linux ftp sites.  </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TAR-RESTORE"
+></A
+>12.4.2. Restoring files with <B
+CLASS="COMMAND"
+>tar</B
+></H2
+><P
+> The <TT
+CLASS="OPTION"
+>--extract</TT
+> (<TT
+CLASS="OPTION"
+>-x</TT
+>)
+	option for <B
+CLASS="COMMAND"
+>tar</B
+> extracts files:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tar --extract --same-permissions 
+--verbose --file 
+/dev/fd0H1440</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>usr/src/
+usr/src/linux
+usr/src/linux-1.2.10-includes/
+usr/src/linux-1.2.10-includes/include/
+usr/src/linux-1.2.10-includes/include/linux/
+usr/src/linux-1.2.10-includes/include/linux/hdreg.h
+usr/src/linux-1.2.10-includes/include/linux/kernel.h
+...</TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	You also extract only specific files or directories (which
+	includes all their files and subdirectories) by naming on the
+	command line:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tar xpvf /dev/fd0H1440 
+usr/src/linux-1.2.10-includes/include/linux/hdreg.h</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>usr/src/linux-1.2.10-includes/include/linux/hdreg.h</TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Use the <TT
+CLASS="OPTION"
+>--list</TT
+> (<TT
+CLASS="OPTION"
+>-t</TT
+>) option,
+	if you just want to see what files are on a backup volume:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tar --list --file 
+/dev/fd0H1440</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>usr/src/
+usr/src/linux
+usr/src/linux-1.2.10-includes/
+usr/src/linux-1.2.10-includes/include/
+usr/src/linux-1.2.10-includes/include/linux/
+usr/src/linux-1.2.10-includes/include/linux/hdreg.h
+usr/src/linux-1.2.10-includes/include/linux/kernel.h
+...</TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Note that <B
+CLASS="COMMAND"
+>tar</B
+> always reads the backup volume
+	sequentially, so for large volumes it is rather slow.  It is not
+	possible, however, to use random access database techniques when
+	using a tape drive or some other sequential medium.  </P
+><P
+> <B
+CLASS="COMMAND"
+>tar</B
+> doesn't handle deleted files
+	properly. If you need to restore a filesystem from a full and
+	an incremental backup, and you have deleted a file between
+	the two backups, it will exist again after you have done the
+	restore. This can be a big problem, if the file has sensitive
+	data that should no longer be available.  </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="backup-tools.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="multi-level-backups.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Selecting the backup tool</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="backups-intro.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Multilevel backups</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

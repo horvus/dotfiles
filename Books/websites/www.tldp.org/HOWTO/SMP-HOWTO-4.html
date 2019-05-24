@@ -1,0 +1,419 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux SMP HOWTO: x86 architecture specific questions</TITLE>
+ <LINK HREF="SMP-HOWTO-5.html" REL=next>
+ <LINK HREF="SMP-HOWTO-3.html" REL=previous>
+ <LINK HREF="SMP-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="SMP-HOWTO-5.html">Next</A>
+<A HREF="SMP-HOWTO-3.html">Previous</A>
+<A HREF="SMP-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. x86 architecture specific questions</A></H2>
+
+<P>
+<H2><A NAME="ss4.1">4.1 Why it doesn't work on my machine?</A>
+</H2>
+
+<P>
+<OL>
+<LI> <B>Can I use my Cyrix/AMD/non-Intel CPU in SMP?</B>
+<P>Yes. Current AMD Athlon MP processors support SMP with the AMD 760MP chipset. There are several boards available featuring this chipset, e.g. from Tyan, ASUS, etc. Athlon/SMP is supported by recent 2.4.x kernels and also by the latest 2.2.x kernels. (<B>David Haring</B>)
+<P>
+</LI>
+<LI> <B>Why doesn't my old Compaq work?</B>
+<P>Put it into MP1.1/1.4 compliant mode.
+<P>check "Configure Hardware" -> "View / Edit details" -> "Advanced mode"
+(F7 I think) for a configuration option "APIC mode" and set this to
+"full Table mode". This is an official Compaq
+recommandation. (<B>Daniel Roesen</B>)
+<P>(<B>Adrian Portelli</B>)To do this:
+<OL>
+<LI> Press F10 when the server boots to enter the System Configuration Utility</LI>
+<LI> Press Enter to dismiss the splash screen</LI>
+<LI> Immediately press CTRL+A</LI>
+<LI> A message will appear informing you that you are now in "Advanced Mode"</LI>
+<LI> Then select "Configure Hardware" -> "View / Edit details"</LI>
+<LI> You will then see the advanced settings (intermixed with the ordinary ones)</LI>
+<LI> Stroll down to "APIC Mode" and then select "Fully Mapped"</LI>
+<LI> Save changes and reboot</LI>
+</OL>
+<P>
+</LI>
+<LI> <B>I can't get my Compaq SystemPro work in SMP mode.</B>
+<P>(<B>Maciej W. Rozycki</B>) Chances are that your Compaq do not make use of 82489DX APICs as they were introduced quite late -- in late 1992 or early 1993. There used to be i486 machines that implemented the APIC architecture. 82489DX is the chip that was used for them and it contained a local APIC unit and an I/O APIC unit.
+<P>
+</LI>
+<LI> <B>Why doesnt my ALR work?</B>
+<P>From <B>Robert Hyatt</B> : ALR Revolution quad-6 seems quite safe,
+while some older revolution quad machines without P6 processors seem
+"iffy"...
+<P>
+</LI>
+<LI> <B>Why does SMP go so slowly?</B> or <B>Why does one CPU show
+a very low bogomips value while the first one is normal?</B>
+<P>From <B>Alan Cox</B>: If one of your CPU's is reporting a very low
+bogomips value the cache is not enabled on it. Your vendor probably
+provides a buggy BIOS. Get the patch to work around this or better yet
+send it back and buy a board from a competent supplier.
+<P>A 2.0 kernel (> 2.0.36) contains the MTRR patch which should solve this
+problem (select option "Handle buggy SMP BIOSes with bad MTRR setup" in
+the "General setup" menu).
+<P>I think buggy SMP BIOS handling is automatic in latest 2.2 kernels.
+<P>
+</LI>
+<LI> <B>I've heard IBM machines have problems</B>
+
+<P>Some IBM machines have the MP1.4 bios block in the EBDA, allowed but not
+supported below 2.2 kernels.
+<P>There is an old 486SLC based IBM SMP box. Linux/SMP requires hardware
+FPU support.
+<P>
+</LI>
+<LI> <B>Is there any advantage of Intel MP 1.4 over 1.1 specification?</B>
+<P>Nope (according to Alan <CODE>:)</CODE> ), 1.4 is just a stricker specs of 1.1.
+<P>Please see the 
+<A HREF="SMP-HOWTO-8.html">Useful Pointers</A> for comparison between MP 1.4 and 1.1.
+<P>
+</LI>
+<LI> <B>Why does the clock drift so rapidly when I run linux SMP?</B>
+<P> 
+This is known problem with IRQ handling and long kernel locks in
+the 2.0 series kernels.  Consider upgrading to a later 2.2 kernel.
+<P>From <B>Jakob Oestergaard</B>: Or, consider running xntpd. That should
+keep your clock right on time.  (I think that I've heard that enabling
+RTC in the kernel also fixes the clock drift. It works for me! but I'm
+not sure whether that's general or I'm just being lucky)
+<P>
+<P>There are some kernel fixes in the later 2.2.x series that may 
+fix this.
+<P>
+<P>
+</LI>
+<LI> <B>Why are my CPU's numbered 0 and 2 instead of 0 and 1 (or some other odd
+numbering)?</B>
+<P>The CPU number is assigned by the MB manufacturer and doesn't mean
+anything.  Ignore it.
+<P>
+<P>
+</LI>
+<LI> <B>My quad-Xeon system hangs as soon as it has decompressed the
+kernel</B>
+<P>(<B>Doug Ledford</B>) Try recompiling LILO with LARGE_EBDA support
+and then making sure to always use make bzImage when compiling the
+kernel.  That appears to have fixed the SMP boot hangs here on Intel
+multi-Xeon boards.  However, please note that this also appears to break
+LILO in that the root= option no longer works, so make sure you rdev
+your kernel image at the same time you run lilo to make sure that the
+kernel loads the correct root filesystem at boot.
+<P>(<B>Robert M. Hyatt</B>) With 3 cpus, do you have a terminator in the
+4th slot?
+<P>
+</LI>
+<LI> <B>During boot machine hang signaling an "unexpected IO-APIC" warning</B>
+<P>
+<P><B>Short Answer:</B>  Change your MP setting from 1.4 to 1.1 (BIOS option), and boot with "noapic" option at boot prompt.
+<P><B>Long Answer:</B> This message has nothing to do with your performance problems or why all interrupts go to one CPU. This message is for the ACPI(IO-APIC) maintainers to keep an eye on when there is new hardware. (<B>Earle Nietzel</B>)
+<P>To summarize the article found in official kernel documentation:
+<OL>
+<LI> The "unexpected IO-APIC" is just an indicator that your motherboard is not on the whitelist.</LI>
+<LI> Cat your /proc/interrupts and if you see any line with IO-APIC then everything is fine because IO-APIC IRQ's are enabled.</LI>
+</OL>
+<P>
+</LI>
+<LI><B>Do I need to do change MP from 1.4 to 1.1 and boot with (<B>noapic</B>) at the same time?</B>
+<P>It depends.
+<P>I found that I do not need to turn off IO-APIC if I backed down from MP 1.4 and 1.1. Apparently some Xeon-based boards need to do both, but ASUS CUV4X boards do not. Turning off IO-APIC support needlessly imposes a probably small performance penalty on ASUS owners. (<B>Vladimir G. Ivanovic</B>)
+<P>Some IBM Netfinity machines will have problems initializing the onboard SCSI controller if MPS 1.1 is selected. Each possible LUB of each possible device on each possible bus will be queried with a timeout. Booting takes a uselessly long time. (<B>E. Robert Bogusta</B>)
+<P>There are reports that system with ASUS4X-DLS motherboard ran fine with IO-APIC enabled with MP 1.4.
+<P>For CUV4X-D motherboard, disabling the IDE controllers you probably can boot with MP 1.4 and APIC enabled.
+<P>
+</LI>
+<LI><B>Is there performance loss by running "noapic"?</B>
+<P>(<B>David Mentre</B>) It has minor impact, except if you have high interrupt load (i.e., nearly nobody).
+<P>
+</LI>
+<LI> <B>My motherboard is an ASUS-CUV4X-DLS with the VIA 694XDP chipset. If I boot with the noapic flag, the machine boots fine and /proc/cpuinfo show sboth processors. However, /proc interrupts does not show any sharing of the interrupts.</B>
+<P>Probably you need to upgrade your BIOS version to 1010.
+<P>
+</LI>
+<LI> <B>What are pros and cons of Xeons vs. Athlons?</B>
+<P>Xeon's chipset (440GX) and accompanying motherboard (supermicro S2DGE) I'd be using is probably (much?) more reliable and well-supported under Linux SMP than Athlons' (AMD 760/760MP) simply because they've been around longer and through many more iterations.
+<P>Xeon's larger cache (1mb on the dual 400's I'm considering) might give performance enhancement (and given that I don't have only a single scientific code I'm planning to run on this, it's probably not helpful to test benchmark specifically for my code).
+<P>Athlon's significiantly has faster clock rate (along with full-speed L2 cache in Thunderbirds, although at only 384kb) and much higher memory bandwidth with PC2100 DDR memory could help a lot.
+<P>Cost is unclear until 760MP boards and PC2100 memory are released, but it will probably be &nbsp;$950 to get two 1GHz 385km L2 Thunderbirds, dual motherboard and 512mb of ECC PC2100 vs &nbsp;$750 to get two 400MHz 1mb L2 Xeons, dual motherboard and 512mb of ECC PC100. (<B>Daniel Freedman</B>)
+<P>
+</LI>
+<LI><B>My system locks up during heavy NFS traffic</B>
+<P>Try the later 2.2.x kernels and the knfsd patches.  This is 
+currently under investigation. (<B>Wade Hampton</B>)
+<P>
+</LI>
+<LI> <B>My system locks up with no oops messages</B>
+<P>If you are using kernels 2.2.11 or 2.2.12, get the latest kernel. For
+example 2.2.13 has a number of SMP fixes.  Several people have reported
+these kernels to be unstable for SMP.  These same kernels may have NFS
+problems that can cause lockups.  Also, use a serial console to capture
+your oops messages. (<B>Wade Hampton</B>)
+<P>If the problem remains (and the other suggestions on this list didn't
+help either), then you could try the latest 2.3 kernels. They have more
+verbose (and more robust) SMP/APIC code, and automatic
+hard-lockup-prevention code which will produce meaningful oopses instead
+of a silent hang. (<B>Ingo Molnar</B>)
+<P>(<B>Osamu Aoki</B>) You MUST also <EM>disable</EM> all BIOS related
+power save features.  Example of good configuration (Dual Celeron 466
+Abit BP6):
+<HR>
+<PRE>
+ POWER MANAGEMENT SETUP.
+   ACPI:              Disabled
+   POWER MANAGEMENT:  Disabled
+   PM CONTROL by APM: No
+</PRE>
+<HR>
+
+If power management features are activated, some random freeze can occur.
+<P>
+</LI>
+<LI> <B>Debugging lockups</B>
+<P>(item by <B>Wade Hampton</B>)
+<P>A good means of debugging lockups is to get the ikd patch from
+Andrea Arcangeli: 
+<A HREF="ftp://ftp.suse.com/pub/people/andrea/kernel-patches/">ftp://ftp.suse.com/pub/people/andrea/kernel-patches</A><P>There are several of debug options, but do NOT use the 
+soft lockup option!  For newer SMP boxes,
+turn kernel debugging then turn on the NMI oopser.  
+To verify that the NMI oopser is working, after booting the 
+new kernel, 
+<CODE>/cat /proc/interrupts</CODE> and verify that you are getting
+NMIs.  When the box locks up, you should get an OOPS.
+<P>You may also try the %eip option.  This allows the kernel
+to print on the console the %eip address every time a kernel function
+is called.  When the box locks up, write down the first column 
+ordered by the second column then lookup the addresses in the 
+System.map file.  This works only in console mode.
+<P>Also note that the use of a serial console can greatly facilitate
+debugging kernel lockups, not just SMP kernel lockups!
+<P>
+</LI>
+<LI> <B>"APIC error interrupt on CPU#n, should never happen" messages
+in logs</B>
+<P>A message like:
+<HR>
+<PRE>
+APIC error interrupt on CPU#0, should never happen.
+... APIC ESR0: 00000002
+... APIC ESR1: 00000000
+</PRE>
+<HR>
+
+indicates a 'receive checksum error'. This cannot be caused by Linux as
+the APIC message checksumming part is completely in hardware. It might
+be marginal hardware. As long as you dont see any instability, they are
+not a problem - APIC messages are retried until delivered. (<B>Ingo
+Molnar</B>)
+<P>
+</LI>
+</OL>
+<P>
+<P>
+<H2><A NAME="ss4.2">4.2 Possible causes of crash</A>
+</H2>
+
+<P>In this section you'll find some <B>possible</B> reasons for a crash
+of an SMP machine (credits are due to <B>Jakob Østergaard</B> for
+this part). As far as I (David) know, theses problems are Intel
+specific.
+<P>
+<P>
+<UL>
+<LI> <B>Cooling problems</B>
+<P>>From <B>Ralf Bächle</B>: [Related to case size and fans]
+It's important that the air is flowing.  It of course can't where cables
+etc. are preventing this like in too small cases.  On the other side
+I've seen oversized cases causing big problems.  There are some tower
+cases on the market that actually are worse for cooling than desktops.
+In short, the right thing is thinking about aerodynamics in the case.
+Extra cases for hot peripherals are usefull as well.  
+<P>Of course you can always go to Radio Shack (or similar) and get another fan.
+You can use the lm_sensors to monitor the CPU temperature of newer PII
+and PIII processors.  This might help you to determine if heat is 
+a problem. (<B>Wade Hampton</B>)
+<P>
+<P>
+</LI>
+<LI> <B>Bad memory</B>
+<P>Don't buy cheap RAM and don't use mixed RAM modules on a motherboard
+that is picky about it.
+<P>Especially Tyan motherboards are known to be picky about RAM speed.
+<P>
+<P>There have been some report of 10ns PC100 RAM being sold with 
+motherboards where the CPU really needs 8ns RAM. (<B>Wade Hampton</B>)
+<P>
+<P>
+</LI>
+<LI> <B>Bad combination of different stepping CPUs</B>
+<P>Check <CODE>/proc/cpuinfo</CODE> to see that your CPUs are same stepping.
+<P>
+</LI>
+<LI> <B>If your system is unstable, then DON'T overclock it!</B>
+<P>...and even if it is stable, DON'T overclock.
+<P>>From <B>Ralf Bächle</B>: Overclocking causes very subtle
+problems.  I have a nice example, one of my overclocked old machines
+misscomputes a couple of pixels of a 640 x 400 fractal.  The problem is
+only visible when comparing them using tools. So better say <EM>never,
+nuncas, jamais, niemals</EM> overclock.
+<P>
+<P>
+</LI>
+<LI> <B>2.0.x kernel and fast ethernet</B> (from <B>Robert G. Brown</B>)
+<P>2.0.x kernels on high performance fast ethernet systems have significant
+(and known) problems with a race/deadlock condition in the networking
+interrupt handler.
+<P>The solution is to get the latest 100BT development drivers from 
+<A HREF="http://cesdis.gsfc.nasa.gov/linux/drivers/">CESDIS Linux Ethernet device drivers site</A> (ones that define
+SMPCHECK).
+<P>
+</LI>
+<LI> <B>A bug in the 440FX chipset</B> (from <B>Emil Briggs</B>) 
+<P>If you had a system using the 440FX chipset then your problem with the
+lockups was possibly due to a documented errata in the chipset.  Here is
+a reference
+<P>References: 
+Intel 440FX PCIset 82441FX (PMC) and 82442FX (DBX) Specification Update.  
+pg. 13 
+<P>
+<A HREF="http://www.intel.com/design/pcisets/specupdt/297654.htm">http://www.intel.com/design/pcisets/specupdt/297654.htm</A><P>The problem can be fixed with a BIOS workaround (Or a kernel patch) and
+in fact David Wragg wrote a patch that's included with Richard Gooch's
+MTTR patch. For more information and a fix look here:
+<P>
+<A HREF="http://nemo.physics.ncsu.edu/~briggs/vfix.html">http://nemo.physics.ncsu.edu/~briggs/vfix.html</A><P>
+</LI>
+<LI> <B>DONT run emm386.exe before booting linux SMP</B>
+<P>>From <B>Mark Duguid</B>, dumb rule #1 with W6LI
+motherboards. <CODE>;)</CODE>
+<P>
+</LI>
+<LI> <B>If the machine reboots/freezes after a while, there can be two good
+BIOS + memory related reasons</B> (from <B>Jakob Østergaard</B>)
+<UL>
+<LI> If the BIOS has settings like "memory hole at 16M" and/or
+"OS/2 memory > 64MB", try disabling them both. Linux does
+not always react well with theese options.</LI>
+<LI> If you have more than 64 MB of memory in the machine, and you
+specified the exact number manually in the LILO configuration, 
+you should specify one MB less than you actually have in the
+machine.  If you have 128 MB, you lilo.conf line looks like:
+append="mem=127M"</LI>
+</UL>
+
+
+</LI>
+<LI> <B>Be aware of IRQ related problems</B>
+<P>Sometime, some cards are not recognized or can trigger IRQ
+conflicts. Try shuffling cards on slots in different ways and 
+possibly moving them to different IRQs.
+<P>Contributed by <B>hASCII</B> : removing an " append="hisax=9,2,3""
+line in lilo.conf allowed using a kernel from the 2.1.xx series with
+activated ISDN + Hisax support. Kernels from the 2.0.xx series doesn't
+make problems like this.
+<P>Try also to set BIOS setup option like "MP 1.4 mode" or "route PCI
+interrupts through IOAPIC", or "OS Type" not set to DOS neither
+Novell (<B>Ingo Molnar</B>).
+<P>
+<P>
+</LI>
+<LI> <B>Floppy access while sound is active</B>
+<P>If you lockup when trying to access the floppy (for example
+while sound is playing) you may have to edit drivers/pci/quirks.c 
+and set <CODE>/int isa_dma_bridge_buggy = 1;</CODE>
+This is a problem with my Dell WS400 dual PII/300, 2.2.x, SMP
+(<B>Wade Hampton</B>).
+<P>
+</LI>
+</UL>
+<P>
+<P>
+<H2><A NAME="ss4.3">4.3 Motherboard specific information</A>
+</H2>
+
+<P><EM>Please note</EM>: Some more specific information can be found with
+the list of 
+<A HREF="http://www.nlug.org/smp/">Motherboards rumored to run Linux SMP</A><P>
+<H3>Motherboards with known problems</H3>
+
+<P>
+<UL>
+<LI> none right now</LI>
+</UL>
+<P>
+<P>
+<H2><A NAME="ss4.4">4.4 Low cost SMP Linux box (dual Celeron box)</A>
+</H2>
+
+<P>(<B>Stéphane Écolivet</B>)
+<P>
+<P>The lowest cost SMP Linux boxes with nowadays buyable processors are
+dual Celeron systems. Such a system is not officially possible 
+according to Intel.  Better think about the second generation of 
+Celeron, those with 128 Kb L2 cache.
+<P>
+<H3>Is it possible to run a dual Intel Celeron box ?</H3>
+
+<P><B>Official answer from Intel:</B> no, Celeron cannot work in SMP mode.
+<P><B>Practical answer:</B> it is possible, but requires hardware
+alteration for Slot 1 processors.  Alteration is described by Tomohiro
+Kawada on his 
+<A HREF="http://kikumaru.w-w.ne.jp/pc/celeron/index_e.html">Dual Celeron System</A> page.  Of
+course, this kind of modification removes warranties...  Some versions
+of Celeron processor are also available in Socket 370 format.  In that
+case, alteration may just be done on the Socket 370 to Slot 1 adapter or
+may even be sold pre-wired for SMP use. (<B>Andy Poling</B>, <B>Hans
+- Erik Skyttberg</B>, <B>James Beard</B>)
+<P>There is also a motherboard (ABIT BP6) allowing two Celerons in Socket
+370 format to be inserted (<B>Martijn Kruithof</B>, <B>Ryan
+McCue</B>). ABIT Computer BP6 verified tested and native to linux with
+dual ppga socket 370 (<B>Andre Hedrick</B>).
+<P>
+<H3>How does Linux behave on a dual Celeron system ?</H3>
+
+<P>Fine, thank you.
+<P>
+<H3>Celeron processors are known to be easily overclockable. And dualCeleron system ?</H3>
+
+<P>It <B>may</B> work. However, overclocking this kind of system is not
+as easy as overclocking a mono-processor one. It is definitly not a good
+idea for a production system. For personal use, dual Celeron 300A
+systems running rock-solid at 450 MHz have been reported. (<B>numerous
+people</B>)
+<P>
+<H3>And making a quad Celeron system ?</H3>
+
+<P>It is impossible. Celeron processors have nearly the same features as
+basic Pentium II chips.  If you want more than 2 processors in your
+system, you'll have to look at Pentium Pro, Pentium II Xeon or Pentium
+III (?) boxes.
+<P>
+<P>
+<H3>What about mixing Celeron and Pentium II processor ?</H3>
+
+<P>A system using a "re-enable" Celeron processor and a Pentium II
+processor with the same steppings <B>may theorically</B> work.
+<P><B>Alexandre Charbey</B> as made such a system:
+<UL>
+<LI> Asus P2B-D motherboard, proc 1: Celeron 366, proc 2: Pentium II
+400@266</LI>
+<LI> 66Mhz and 75Mhz bus frenquencies where functionnal</LI>
+<LI> the fastest processor (in this case the Celeron) should be put on
+the second slot. Swapping processors (fatest first) leads to quick
+failure. </LI>
+</UL>
+<P>
+<HR>
+<A HREF="SMP-HOWTO-5.html">Next</A>
+<A HREF="SMP-HOWTO-3.html">Previous</A>
+<A HREF="SMP-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

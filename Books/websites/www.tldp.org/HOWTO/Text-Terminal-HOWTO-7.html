@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Text-Terminal-HOWTO: Terminal Special Files such as /dev/tty </TITLE>
+ <LINK HREF="Text-Terminal-HOWTO-8.html" REL=next>
+ <LINK HREF="Text-Terminal-HOWTO-6.html" REL=previous>
+ <LINK HREF="Text-Terminal-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Text-Terminal-HOWTO-8.html">Next</A>
+<A HREF="Text-Terminal-HOWTO-6.html">Previous</A>
+<A HREF="Text-Terminal-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="devices_"></A> <A NAME="s7">7.</A> <A HREF="Text-Terminal-HOWTO.html#toc7">Terminal Special Files such as /dev/tty </A></H2>
+
+<P> "tty" is an abbreviation for "Teletype".  The first terminals were
+Teletypes (like remotely controlled typewriters).  See subsection 
+<A HREF="Text-Terminal-HOWTO-24.html#teletype">Teletypes</A>.  A list of Linux devices (the stuff
+in the /dev directory) may be found in "Linux Allocated Devices" which
+should be included with kernel sources.  It "describes" what each
+device used for in only a word or two but doesn't tell you how to use
+them.</P>
+
+<H2><A NAME="ss7.1">7.1</A> <A HREF="Text-Terminal-HOWTO.html#toc7.1">Serial Port Terminals </A>
+</H2>
+
+<P> The computer considers each serial
+port to be a "device".  It's sometimes called a terminal device since
+at one time terminals were the most common use for a serial port.  For
+each such serial port there is a special file in the /dev (device)
+directory.  /dev/ttyS0) is the special file for the serial port known
+as COM1 in the DOS/Windows world. </P>
+<P>To send text to a terminal you may redirect standard output of some
+command-line command to the appropriate special file.  For example
+typing "echo test > /dev/ttyS1" at the command prompt should send the
+word "test" to the terminal on ttyS1 (COM2) provided you have write
+permission on /dev/ttyS1.  Similarly, typing "cat my_file >
+/dev/ttyS0" will send the contents of the file my_file to COM1
+(ttyS0).</P>
+
+<H2><A NAME="ss7.2">7.2</A> <A HREF="Text-Terminal-HOWTO.html#toc7.2">Pseudo Terminals</A>
+</H2>
+
+<P> Pseudo terminals are pairs of devices such as  /dev/ptyp3 and
+/dev/ttyp3.  There is no physical device directly associated with
+either of them, not even a serial port connector.   But if a program
+treats ttyp3 like it was a serial port, what is read and written to
+that port appears on the other member of the pair ptyp3 which another
+program uses to read and write to.  Thus two programs talk to each
+other via this method and one program on ttyp3 thinks it's talking to
+a serial port.  It's something like a "pipe" between these two tty's.</P>
+<P>For talking to ttyp3, any program designed to talk to a serial port
+will do.  But for the other program that talks to ptyp3, it must have
+been specially written to talk to it.  It's mainly programmers that
+must concern themselves with pseudo terminals and most users don't
+need to worry about them.</P>
+<P>Here's an example:  If someone connects via telnet to your computer
+over a network (you are a telnet server), the part of the telnet
+program handling this connection on your computer may wind up
+connected to the pseudo terminal ptyp2.  A getty program should be
+running on the corresponding ttyp2.  Getty thinks it's talking to a
+terminal.  When telnet gets a character from the remote client, it
+goes thru ptyp2 to ttyp2 to getty which then sends back "login:"
+routed via ttyp2, ptyp2, your server telnet program, and then out to
+the network back to the client.  Here the login program and the telnet
+server program talk to each other via a "pseudo terminal".  Note that
+there is no pseudo terminal used on the client computer, just telnet.
+Of course the server allocates a pseudo terminal (on the server) for
+each client.</P>
+<P>In X Window, the terminal emulator programs (such as xterm) use pseudo
+terminals.  Ham radio programs under Linux also use them.  By using
+certain application software, it is possible to have 2 or more pseudo
+terminals attached to the same physical serial port.</P>
+<P>For a pseudo terminal pair such as ptyp3 and ttyp3, the pty... is the
+master or controlling terminal and the tty...  is the slave.</P>
+<P>There are only 16 ttyp's: ttyp0-ttypf (f is a hexadecimal digit).  To
+get more pairs, more letters such as q, r, s are used instead of p.
+For example the pair ttys8, ptys8 is a pseudo terminal pair.  Later
+on, even more letters were added so as to allow even more pseudo
+terminals.  And when z was reached, they wrapped around to a.  This is
+confusing but old habits are difficult to change.  Today Linux allow
+say ttyp189 but it's not used.  The device file system, which was
+abandoned in 2004, would have used tty/s189.  Be sure not to type say
+ttys2 if you mean ttyS2 (a real serial port).</P>
+<P>The master and slave are really the same "port" but the slave is used
+by the application program and the master is used by a network program
+(or the like) which supplies (and gets) data to/from the slave port.
+The program using the slave port can run "as is" since it thinks it is
+talking to a serial port.</P>
+<P>Unix98 pseudo terminals (available on Linux) is more advanced than the
+above but the basic concepts are the same (only the device names and
+methods of creating them change).  It creates pseudo terminal devices
+on request so there is no need to check if the pseudo terminal you
+might want to use in in use.  By opening /dev/ptmx a new pseudo
+terminal pair is created.  The master doesn't show up as a device but
+is just a file descriptor number passed to the computer program that
+opened /dev/ptmx.  But the slave is put into the /dev/pts directory:
+for example" /dev/pts/3. </P>
+<P>The /dev/pts directory is considered to be a file system of type
+devpts and appears in the lists of mounted filesystems.  While the
+"file" /dev/pts/3 looks like an entry in the now obsolete device
+filesystem, /dev/pts Is really a wholly different kind of filesystem.</P>
+<P>See the Linux manual pages "pty" and "pts" (Unix 98 style) for more
+details.  For programmers there's the man-page openpty/forkpty (either
+name displays the same man-page) which assumes that you already
+understand pseudo terminals.  There is a usr/include/pty.h file for
+use by programmers.  In earlier versions of Linux there was a pty.o
+module, but it now seems that it's been built into the kernel.  Here's
+an example of some options available when you are compiling a Linux
+2.6 kernel:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ CONFIG_UNIX98_PTYS=y CONFIG_LEGACY_PTYS=y
+CONFIG_LEGACY_PTY_COUNT=256 
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H2><A NAME="ss7.3">7.3</A> <A HREF="Text-Terminal-HOWTO.html#toc7.3">The Controlling Terminal /dev/tty </A>
+</H2>
+
+<P> /dev/tty stands for the
+controlling terminal (if any) for the current process.  To find out
+which tty's are attached to which processes use the "ps -a" command at
+the shell prompt (command line).  Look at the "tty" column.  For the
+shell process you're in, /dev/tty is the terminal you are now using.
+Type "tty" at the shell prompt to see what it is (see manual pg.
+tty(1)).  /dev/tty is something like a link to the actually terminal
+device name with some additional features for C-programmers: see the
+manual page tty(4).</P>
+
+<H2><A NAME="ss7.4">7.4</A> <A HREF="Text-Terminal-HOWTO.html#toc7.4">/dev/ttyIN "Terminals" </A>
+</H2>
+
+<P> N stands for an integer.  One use
+of these in Linux is with the ISDN driver package: isdn4linux.  The
+ttyIN is something like ttySN but it emulates a modem and can be given
+modem commands.</P>
+
+<H2><A NAME="console_dev"></A> <A NAME="ss7.5">7.5</A> <A HREF="Text-Terminal-HOWTO.html#toc7.5">The Console: ttyN or vc/N</A>
+ </H2>
+
+<P> In Linux the PC monitor is usually called the console and has
+several device special files associated with it: vc/0 (tty0), vc/1
+(tty1), vc/2 (tty2), etc.  When you log in you are on vc/1.  To go to
+vc/2 (on the same screen) press down the 2 keys Alt(left)-F3.  For
+vc/3 use Left Alt-F3, etc.  These (vc/1, vc/2, vc/3, etc.) are called
+"virtual terminals".  vc/0 (tty0) is just an alias for the current
+virtual terminal and it's where messages from the system are sent.
+Thus messages from the system will be seen on the console (monitor)
+regardless of which virtual terminal it is displaying.</P>
+<P>You may log in to different virtual terminals and thus have a few
+different sessions with the computer going on at the same time.  Only
+the system or the root user may write to /dev/vc/0 to which
+/dev/console is sometimes linked.  For more info on the console see
+<A HREF="Text-Terminal-HOWTO-10.html#console_">The Linux Console</A>.</P>
+
+<H2><A NAME="ss7.6">7.6</A> <A HREF="Text-Terminal-HOWTO.html#toc7.6">Creating a Device with "mknod" </A>
+</H2>
+
+<P> The /dev directory comes
+supplied with many device special files.  If you need something that's
+not there you may try to create it with the "mknod" command.  See the
+manual page ttys(4) for how to do this for serial ports.  To use
+<CODE>mknod</CODE> you must know the major and minor device numbers.  You
+might be able to infer the numbers you need by using the "<CODE>ls -l</CODE>"
+command in the /dev directory.  It will display the major and minor
+numbers of existing special files.</P>
+
+<HR>
+<A HREF="Text-Terminal-HOWTO-8.html">Next</A>
+<A HREF="Text-Terminal-HOWTO-6.html">Previous</A>
+<A HREF="Text-Terminal-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

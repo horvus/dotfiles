@@ -1,0 +1,450 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Infrared Remote Control ./. IrDA</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux Infrared HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Infrared Remote Control"
+HREF="infrared-howto-p2-infrared-remote-control.html"><LINK
+REL="PREVIOUS"
+TITLE="tonto"
+HREF="infrared-howto-c-tonto.html"><LINK
+REL="NEXT"
+TITLE="Appendix"
+HREF="infrared-howto-p3-appendix.html"></HEAD
+><BODY
+CLASS="chapter"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Infrared HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="infrared-howto-c-tonto.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="infrared-howto-p3-appendix.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="chapter"
+><H1
+><A
+NAME="infrared-howto-c-lirc-irda"
+></A
+>Chapter 23. Infrared Remote Control ./. IrDA</H1
+><P
+>&#13;   Two of the above mentioned projects use some kind of selfmade dongle
+   for infrared remote control. There is also a description to build a
+   serial IrDA dongle by yourself in the German 
+   <A
+HREF="http://www.elektor.de"
+TARGET="_top"
+>ELEKTOR</A
+> 5/97 p. 28
+   magazine. Maybe someone can merge these two kind of dongles together.
+</P
+><P
+>&#13;   For a discussion of the relation between Infrared Remote Control and
+   IrDA I quote from the Linux/IrDA mailing list (shortend and modified
+   by WH):
+</P
+><P
+>&#13;   Ryan Shillington wrote: "ConsumerIR - CIR, Remote IR and ASK-IR are 
+   very different from IrDA (FIR, MIR, SIR).
+</P
+><P
+>&#13;   Remote IR and ASK-IR are very low speed and low frequency (but very
+   long range) uses for IR. They operate around 2400 baud.
+</P
+><P
+>&#13;   SIR operates at higher rates, and is meant for long range transmission
+   where you need more than a few characters pass through (unlike a
+   remote control).
+</P
+><P
+>&#13;   MIR is a little faster (less range), but with speeds up to 1.15 Mbps,
+   and FIR (where the devices have to be practically touching) is 4Mbps.
+   The range is inversely proportional to the speed you can send data at.
+</P
+><P
+>&#13;   I'm working on drivers for Remote-IR, but you should know that your IR
+   stuff has to support it. Look for protocols like NEC, RC-5 or RC-0
+   (those are the most common ones).
+</P
+><P
+>&#13;   You can use SIR to receive Remote Control signals. Set your baud rate
+   nice and low and data will come through. BUT, from my experience, it's
+   not the RIGHT data. It's not being analyzed in the right way, and as
+   such, you can't compute the checksums or check it with its complement.
+</P
+><P
+>&#13;   I have managed to get data in (using SIR) with remote controls. I have
+   been told that SIR will read the remote control stuff differently
+   depending on temperature (although I have never had that experience).
+   "
+</P
+><P
+>&#13;   Lichen Wang wrote in response: "The so-called
+   ASKIR in most laptops etc. is not meant for remote IR devices. ASKIR
+   is meant for Sharp Wizard and Zaurus PDAs and some of Sharp's notebook
+   PCs. Sharp stated this long before IrDA was established and is still
+   supporting it to maintain backward compatibility. Apple's Newton had
+   this capability at one time, too.
+</P
+><P
+>&#13;   Briefly, ASKIR uses 9.6 Kbps (19.2 and 38.4 Kbps are also possible)
+   asynchronous data format of 8 data bits, 1 stop bit, and odd parity.
+   The start bit as well as all 0 bit in data/parity are transmitted as
+   IR square wave at 500 KHz (DASK sub-carrier). The stop bit as well as
+   all 1 bit in data/parity are represented by the absence of any IR
+   transmission.
+</P
+><P
+>&#13;   As you can see, this is totally incompatible with existing IR remote
+   control. [..]
+</P
+><P
+>&#13;   True. Not only can you use SIR hardware to receive, you can transmit,
+   too. Of course, there are some limitations.
+</P
+><P
+>&#13;   Most IR remote controls use 38 KHz sub-carrier. 3 times 38 is 114,
+   very close to 115.2. You can set the UART to operate at 115.2 Kbps, 7
+   data bits, no parity, and 1 stop bit - a total of 9 bits. Each 3
+   cycles of the 38 KHz sub-carrier can be received or transmitted as a
+   byte of 0x5B.
+</P
+><P
+>&#13;   There are some physical limitations in addition to the fact that the
+   sub-carrier must be 38 KHz. The SIR receiver is not as sensitive to 38
+   KHz as the IR remote receiver designed for that. The SIR transmitter
+   has a much lower duty cycle and thus can not emit a strong sub-carrier
+   either.
+</P
+><P
+>&#13;   IR remote encodes the control signal by turning on and off the
+   sub-carrier at certain specific patterns. Now that you can transmit
+   and receive the sub-carrier, what remains is all in timing.
+</P
+><P
+>&#13;   For transmit, you have to know how many consecutive bytes of 0x5B to
+   send for each burst of the sub-carrier, and how long to be quiet
+   between the bursts.
+</P
+><P
+>&#13;   For receive, you have to know how many of the 0x5Bs you received are
+   consecutive, and how long the gaps were between these groups of
+   consecutive bytes. [..]
+</P
+><P
+>&#13;   My experience with the IrDA link distance of SIR, MIR and FIR is
+   somewhat different from what Ryan said. [..]
+</P
+><P
+>&#13;   SIR, MIR and FIR should all work from 0 to 100 cm but in practice:
+</P
+><P
+>&#13;   (a) Some devices may have problems at LONG distances.
+</P
+><P
+>&#13;   When possible, place the two communicating devices no more than 50 cm
+   apart. Low power devices, such as pagers, phones, etc. may have even
+   shorter ranges despite the fact that they use SIR instead of MIR or
+   FIR.
+</P
+><P
+>&#13;   (b) Some devices may have problems at SHORT distances.
+</P
+><P
+>&#13;   Place the two devices at least a few cm apart. Putting the two devices
+   too close to each other can cause troubles.
+</P
+><P
+>&#13;   It is somewhat intuitive that when the link is not reliable we put the
+   two devices closer together. But it is counterintuitive that too close
+   is not good either. The reason is that the light intensity at 1 cm is
+   10.000 times brighter than that at 100 cm. At 0.5 cm, it is 40.000
+   times, etc. The IR receiver manufacturers have difficulties to cover
+   this huge dynamic range. We all have problems reading under a 10 W
+   light bulb, but imagine how it feels under a 100.000 W light!
+</P
+><P
+>&#13;   The IrDA Physical Layer is totally incompatible with the DASK
+   modulation used in IR remote controls. Thus it is not possible to use
+   the same controller function for both FIR and remote control. However,
+   practically all FIR controller chips do include some additional
+   functions to support remote control. National, SMC, and Winbond (just
+   to name a few) all have such I/O chips.
+</P
+><P
+>&#13;   The IR transmitter for FIR and remote control are very similar. I have
+   tried a standard FIR transmitter. It can reach 10 meters for remote
+   control purpose. Thus it performs just as good as transmitters
+   designed for remote control.
+</P
+><P
+>&#13;   The IR receiver for FIR and remote control are somewhat different. A
+   FIR receiver can receive remote control signals but can reach only 1
+   meter whereas receivers designed for remote control typically can
+   reach 10 meters.
+</P
+><P
+>&#13;   I have an ISA bus adapter with a National I/O chip that supports both
+   FIR and remote control. I also have IR Dongles that include both FIR
+   and remote control receivers. (Plus a transmitter for both modes.) I
+   cannot find any software to support remote control functions. I did my
+   own experiments in DOS (I cannot run Linux yet.) Anybody interest in
+   this? "
+</P
+><P
+>&#13;   Benny Amorsen wrote: "I have a laptop that is supposed to support
+   ASKIR. The mode of the infrared port can be switched to ASKIR in the
+   BIOS. Having to reboot to switch the mode in the BIOS makes it
+   useless, though, so someone would have to find a way to switch on the
+   fly. "
+</P
+><P
+>&#13;   Dag Brattli wrote: It should be possible to use IrControl (formerly
+   IrBus) for IrDA compliant remote controls. I currently don't know
+   about any remote controls using IrControl standard, but there should
+   be some out there (anyone else who knows better?). You should go to the
+   <A
+HREF="http://www.irda.org/"
+TARGET="_top"
+>IrDA</A
+> site and get the 
+   physical layer standard (which includes IrControl I think).
+</P
+><P
+>&#13;   "Normal" IrDA (using IrLAP) is _not_ well suited for remote control
+   because of the connection oriented nature (and just supports 9600bps
+   for connectionless use). The reason for the limited range is
+   eye-safety they say (but I currently don't know why CIR works better
+   using the same power). I have however seen laptops connect at 4-5
+   meters (but I don't think that any high speed communication would be
+   possible).
+</P
+><P
+>&#13;   Most IrDA chipsets are capable of CIR operation, and it is quite easy
+   to modify the drivers so they talk CIR. Takahide Higuchi has started
+   to look at IrSockets and it would be great if we could open a "raw"
+   Ir(DA) socket which then could send and receive CIR packets. Then all
+   the CIR applications could live in userspace.
+</P
+><P
+>&#13;   I know that Corel is interested in using CIR for controlling the
+   NetWinder (and they actually have running code). Take a look at
+   <A
+HREF="http://www.slashdot.org/articles/98/12/05/0916216.shtml"
+TARGET="_top"
+>this article</A
+>
+   or
+   <A
+HREF="http://www.netwinder.org/~ryansh"
+TARGET="_top"
+>Ryans page</A
+>
+   .
+</P
+><P
+>&#13;   From the "IrDA Data Link Design Guide" p. 21 by
+   <A
+HREF="http://www.hp.com/go/ir"
+TARGET="_top"
+>Hewlett-Packard</A
+>
+   : " It is possible to transmit and receive
+   signals other than IrDA signals with Hewlett-Packard IR transceivers.
+   For implementation details, please refer to the Application Note,
+   Transceiver Performance with ASK and TV Remote Signals."
+</P
+><P
+>&#13;   From the IR-MAN page:
+   
+</P
+><P
+>&#13;   Fortunately, many IrDA devices are compatible with the 38-kbps ASK
+   modulation used in TV remotes. This means that they can work with such
+   kind of infrared type signals. ... However, it seems that there are
+   still many portable computers that can't receive TV infrared stuff.
+</P
+><P
+>&#13;   For desktop computers, there exist two options, depending on the
+   motherboard you have. Usually a Pentium MoBo has an I/O chipset ready
+   for infrared communication. There is a special connector where you can
+   connect the transducer. The other option is buying a serial type
+   transceiver that connects to the standard serial port (RS-232) of the
+   computer. ... PC Remote Control has been tested with success using
+   both type of IrDA devices:
+</P
+><P
+>&#13;   1) IRmate IR-210 Serial Port Infrared Adapter. ... The serial port
+   speed at wich the device sends recognizable data values is 2400 bps. I
+   don't know if this speed will be the same for all the adapters of this
+   type or is an unique characteristic of this model.
+</P
+><P
+>&#13;   Look at the examples of data values received to see how similar are
+   them. There are some infrared commands that change a lot every time,
+   difficulting the recognition. In such cases, a great tolerance in the
+   comparison could be used, but the risk of confusion between different
+   commands will be increased. An apropiate tolerance value for almost
+   all cases is 20.
+</P
+><P
+>&#13;   2) Actisys IR2000L connected to an Asus P2B motherboard. ... There are
+   several serial port speeds that work well, although 4800 bps seems to
+   be the best one. Other adapters of this same type work also well using
+   this speed. Take a look at the samples of data sequences received
+   using this device. Some remote buttons send exactly the same sequence
+   and it's impossible to distinguish between them at all.
+</P
+><P
+>&#13;   3) Asus IR-eye connected to the same MoBo as above. It works as well
+   as the Actisys device.
+</P
+><P
+>&#13;   TV remotes send commands only one way, in a low-speed burst for
+   distances of up to 30 feet. They use directed IR with LEDs that have a
+   moderate cone angle to improve ease-of-use characteristics. Cordless
+   connectivity via IrDA transfers files, point-to-point and
+   bidirectionally, in a high-speed burst for short distances using
+   directed IR with LEDs having a narrow cone angle. IrDA transmissions
+   require relatively careful aiming, and they're easy to block. For this
+   reason, don't expect a great distance while working with the remote
+   unit.
+</P
+><P
+>&#13;   Alessio Massaro : wrote: " IrDA doesn't talk
+   to tv-remotes, but it does have the IrCOMM layer to emulate a serial
+   i/f. My guess is that to get LIRC working with it, you should just
+   need ... to read from the IrCOMM virtual serial device (as you would
+   with a /dev/cua or whatever) and use a remote that can be seen by your
+   dongle+IrDAheader pair."
+</P
+><P
+>&#13;   Answer by Dag Brattli: "You are talking about being normal serial
+   ports, but that is something at least I have choosen IrDA not to be. I
+   have implemented all the device drivers as network device drivers, so
+   things are a bit different (more frame oriented). The device drivers
+   deliver IrDA frames and currently nothing else.
+</P
+><P
+>&#13;   But I don't think that we must have a tty interface to the IrDA device
+   drivers in order to support more RAW reads and writes. And btw. forget
+   about IrCOMM, it has nothing to do with this issue.
+</P
+><P
+>&#13;   I have actually already implemented support for raw reads and writes
+   for the device drivers, since some of the dongles require this."
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="infrared-howto-c-tonto.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="infrared-howto-p3-appendix.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>tonto</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="infrared-howto-p2-infrared-remote-control.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Appendix</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

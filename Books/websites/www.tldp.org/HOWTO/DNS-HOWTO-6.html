@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>DNS HOWTO : Basic security options.</TITLE>
+ <LINK HREF="DNS-HOWTO-7.html" REL=next>
+ <LINK HREF="DNS-HOWTO-5.html" REL=previous>
+ <LINK HREF="DNS-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="DNS-HOWTO-7.html">Next</A>
+<A HREF="DNS-HOWTO-5.html">Previous</A>
+<A HREF="DNS-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="security"></A> <A NAME="s6">6. Basic security options.</A></H2>
+
+<P><EM>By Jamie Norrish</EM>
+<P>
+<P><B>Setting configuration options to reduce the possibility of
+problems.</B>
+<P>
+<P>There are a few simple steps that you can take which will both make
+your server more secure and potentially reduce its load. The material
+presented here is nothing more than a starting point; if you are
+concerned about security (and you should be), please consult other
+resources on the net (see 
+<A HREF="DNS-HOWTO-11.html#bigger">the last chapter</A>).
+<P>
+<P>The following configuration directives occur in <CODE>named.conf</CODE>. If
+a directive occurs in the <CODE>options</CODE> section of the file, it applies
+to all zones listed in that file. If it occurs within a <CODE>zone</CODE>
+entry, it applies only to that zone. A <CODE>zone</CODE> entry overrides an
+<CODE>options</CODE> entry.
+<P>
+<H2><A NAME="ss6.1">6.1 Restricting zone transfers</A>
+</H2>
+
+<P>In order for your slave server(s) to be able to answer queries
+about your domain, they must be able to transfer the zone information
+from your primary server.  Very few others have a need to do so.
+Therefore restrict zone transfers using the <CODE>allow-transfer</CODE>
+option, assuming 192.168.1.4 is the IP address of ns.friend.bogus and
+adding yourself for debugging purposes:
+<P>
+<HR>
+<PRE>
+zone "linux.bogus" {
+      allow-transfer { 192.168.1.4; localhost; };
+};
+</PRE>
+<HR>
+<P>
+<P>By restricting zone transfers you ensure that the only information
+available to people is that which they ask for directly - no one can
+just ask for all the details about your set-up.
+<P>
+<H2><A NAME="ss6.2">6.2 Protecting against spoofing</A>
+</H2>
+
+<P>Firstly, disable any queries for domains you don't own, except
+from your internal/local machines. This not only helps prevent
+malicious use of your DNS server, but also reduces unnecessary use of
+your server.
+<P>
+<HR>
+<PRE>
+options {
+      allow-query { 192.168.196.0/24; localhost; };
+};
+
+zone "linux.bogus" {
+      allow-query { any; };
+};
+
+zone "196.168.192.in-addr.arpa" {
+      allow-query { any; };
+};
+</PRE>
+<HR>
+<P>
+<P>Further, disable recursive queries except from internal/local
+sources. This reduces the risk of cache poisoning attacks (where false
+data is fed to your server).
+<P>
+<HR>
+<PRE>
+options {
+        allow-recursion { 192.168.196.0/24; localhost; };
+};
+</PRE>
+<HR>
+<P>
+<H2><A NAME="ss6.3">6.3 Running named as non-root</A>
+</H2>
+
+<P>It is a good idea to run named as a user other than root, so that
+if it is compromised the privileges gained by the cracker are as
+limited as possible. You first have to create a user for named to run
+under, and then modify whatever init script you use that starts
+named. Pass the new user name and group to named using the -u and -g
+flags.
+<P>
+<P>For example, in Debian GNU/Linux 2.2 you might modify your
+<CODE>/etc/init.d/bind</CODE> script to have the following line (where
+user <CODE>named</CODE> have been created):
+<P>
+<HR>
+<PRE>
+start-stop-daemon --start --quiet --exec /usr/sbin/named -- -u named 
+</PRE>
+<HR>
+<P>
+<P>The same can be done with Red Hat and the other distributions.
+<P>
+<P>Dave Lugo has described a secure dual chroot setup 
+<A HREF="http://www.etherboy.com/dns/chrootdns.html">http://www.etherboy.com/dns/chrootdns.html</A> which you may find
+interesting to read, it makes the host your run your named on even
+more secure.
+<P>
+<HR>
+<A HREF="DNS-HOWTO-7.html">Next</A>
+<A HREF="DNS-HOWTO-5.html">Previous</A>
+<A HREF="DNS-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

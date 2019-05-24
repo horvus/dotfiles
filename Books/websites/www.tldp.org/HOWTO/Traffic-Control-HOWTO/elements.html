@@ -1,0 +1,417 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Traditional Elements of Traffic Control</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Traffic Control HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Overview of Concepts"
+HREF="overview.html"><LINK
+REL="NEXT"
+TITLE="Components of Linux Traffic Control"
+HREF="components.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Traffic Control HOWTO: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="overview.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="components.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="elements"
+></A
+>3. Traditional Elements of Traffic Control</H1
+><P
+>&#13;  </P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="e-shaping"
+></A
+>3.1. Shaping</H2
+><P
+>&#13;      Shapers delay packets to meet a desired rate.
+    </P
+><P
+>&#13;      Shaping is the mechanism by which packets are delayed before
+      transmission in an output queue to meet a desired output rate.  This is
+      one of the most common desires of users seeking bandwidth control
+      solutions.  The act of delaying a packet as part of a traffic control
+      solution makes every shaping mechanism into a non-work-conserving
+      mechanism, meaning roughly:  "Work is required in order to delay
+      packets."
+    </P
+><P
+>&#13;      Viewed in reverse, a non-work-conserving queuing mechanism is performing
+      a shaping function.  A work-conserving queuing mechanism (see
+      <A
+HREF="classful-qdiscs.html#qc-prio"
+>PRIO</A
+>) would not be capable of delaying a packet.
+    </P
+><P
+>&#13;      Shapers attempt to limit or ration traffic to meet but not exceed a
+      configured rate (frequently measured in packets per second or bits/bytes
+      per second).  As a side effect, shapers can smooth out bursty traffic
+      <A
+NAME="AEN271"
+HREF="#FTN.AEN271"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>.
+      One of the advantages of shaping bandwidth is the ability to control
+      latency of packets.  The underlying mechanism for shaping to a rate is
+      typically a token and bucket mechanism.  See also
+      <A
+HREF="overview.html#o-tokens"
+>Section 2.7</A
+> for further detail on tokens and buckets.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="e-scheduling"
+></A
+>3.2. Scheduling</H2
+><P
+>&#13;      Schedulers arrange and/or rearrange packets for output.
+    </P
+><P
+>&#13;      Scheduling is the mechanism by which packets are arranged (or
+      rearranged) between input and output of a particular queue.  The
+      overwhelmingly most common scheduler is the FIFO (first-in first-out)
+      scheduler.  From a larger perspective, any set of traffic control
+      mechanisms on an output queue can be regarded as a scheduler, because
+      packets are arranged for output.
+    </P
+><P
+>&#13;      Other generic scheduling mechanisms attempt to compensate for various
+      networking conditions.  A fair queuing algorithm (see <A
+HREF="classless-qdiscs.html#qs-sfq"
+>SFQ</A
+>)
+      attempts to prevent any single client or flow from dominating the
+      network usage.  A round-robin algorithm (see WRR) gives each
+      flow or client a turn to dequeue packets.  Other sophisticated
+      scheduling algorithms attempt to prevent backbone overload (see
+      <A
+HREF="classless-qdiscs.html#qs-gred"
+>GRED</A
+>) or refine other scheduling mechanisms (see
+      <A
+HREF="classless-qdiscs.html#qs-esfq"
+>ESFQ</A
+>).
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="e-classifying"
+></A
+>3.3. Classifying</H2
+><P
+>&#13;      Classifiers sort or separate traffic into queues.
+    </P
+><P
+>&#13;      Classifying is the mechanism by which packets are separated for
+      different treatment, possibly different output queues.  During the
+      process of accepting, routing and transmitting a packet, a networking
+      device can classify the packet a number of different ways.
+      Classification can include
+      <A
+HREF="elements.html#e-marking"
+>marking</A
+> the packet, which usually
+      happens on the boundary of a network under a single administrative
+      control or classification can occur on each hop individually.
+    </P
+><P
+>&#13;      The Linux model (see
+      <A
+HREF="components.html#c-filter"
+>Section 4.3</A
+>) allows for a packet to cascade across a
+      series of classifiers in a traffic control structure and to be
+      classified in conjunction with
+      <A
+HREF="elements.html#e-policing"
+>policers</A
+> (see also
+      <A
+HREF="components.html#c-police"
+>Section 4.5</A
+>).
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="e-policing"
+></A
+>3.4. Policing</H2
+><P
+>&#13;      Policers measure and limit traffic in a particular queue.
+    </P
+><P
+>&#13;      Policing, as an element of traffic control, is simply
+      a mechanism by which traffic can be limited.  Policing is most
+      frequently used on the network border to ensure that a peer is not
+      consuming more than its allocated bandwidth.  A policer will accept
+      traffic to a certain rate, and then perform an action on traffic
+      exceeding this rate.  A rather harsh solution is to
+      <A
+HREF="elements.html#e-dropping"
+>drop</A
+> the traffic, although the
+      traffic could be
+      <A
+HREF="elements.html#e-classifying"
+>reclassified</A
+> instead of being
+      dropped.
+    </P
+><P
+>&#13;      A policer is a yes/no question about the rate at which traffic is
+      entering a queue.  If the packet is about to enter a queue below a given
+      rate, take one action (allow the enqueuing).  If the packet is about to
+      enter a queue above a given rate, take another action.  Although the
+      policer uses a token bucket mechanism internally, it does not have the
+      capability to delay a packet as a <A
+HREF="elements.html#e-shaping"
+>shaping</A
+> mechanism does.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="e-dropping"
+></A
+>3.5. Dropping</H2
+><P
+>&#13;      Dropping discards an entire packet, flow or classification.
+    </P
+><P
+>&#13;      Dropping a packet is a mechanism by which a packet is discarded.
+    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="e-marking"
+></A
+>3.6. Marking</H2
+><P
+>&#13;      Marking is a mechanism by which the packet is altered.
+    </P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>This is not <TT
+CLASS="constant"
+>fwmark</TT
+>.  The <B
+CLASS="command"
+>iptables</B
+>target <TT
+CLASS="constant"
+>MARK</TT
+>and the
+      <B
+CLASS="command"
+>ipchains</B
+><TT
+CLASS="option"
+>--mark</TT
+>are used to modify packet metadata, not the packet
+      itself.
+    </TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;      Traffic control marking mechanisms install a DSCP on the packet
+      itself, which is then used and respected by other routers inside an
+      administrative domain (usually for DiffServ).
+    </P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN271"
+HREF="elements.html#AEN271"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;          This smoothing effect is not always desirable, hence the HTB
+          parameters burst and cburst.
+        </P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="overview.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="components.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Overview of Concepts</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Components of Linux Traffic Control</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

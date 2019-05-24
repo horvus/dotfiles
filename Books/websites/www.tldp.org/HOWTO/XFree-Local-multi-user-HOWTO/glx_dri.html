@@ -1,0 +1,615 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Nvidia GLX &#38; DRI</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="XFree Local Multi-User HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Setting up the X servers"
+HREF="x_servers.html"><LINK
+REL="PREVIOUS"
+TITLE="For graphic cards without DRI"
+HREF="no_dri.html"><LINK
+REL="NEXT"
+TITLE="More on configuring input devices"
+HREF="tweak_input_devs.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>XFree Local Multi-User HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="no_dri.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Setting up the X servers</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="tweak_input_devs.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="glx_dri"
+></A
+>4.7. Nvidia GLX &#38; DRI</H1
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Here you will learn how to configure your system for parallel use of Nvidia's GLX and XFree's DRI. If you do not have Nvidia cards, or you have only Nvidia cards, you do not need to read this section. In the first case you do not need the Nvidia GLX at all, and in the second, you can use the standard procedure for installing GLX.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Why Nvidia? Why closed source drivers?</P
+><P
+>A bit of a mixed up answer:</P
+><P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>With the open source driver it's almost impossible to bring up a secondary card, so we should use the closed source driver.</P
+></LI
+><LI
+><P
+>Why the Nvidia card?  Currently these are the only available, affordable PCI video cards with some acceleration.</P
+></LI
+><LI
+><P
+>&#13;I tried to use DRI on 2 parallel X servers, but it didn't work. I posted emails to XFree, DRI and lkml list, but I only got a single answer with no valuable information on my problem. I tried to run DRI on a Matrox G550 DH AGP &#38; SiS63xx PCI, but when enabled for both cards, I got AGP errors.  When enabled only for one of the cards, I got DRI up and running. Please, someone confirm or prove me wrong!
+            </P
+></LI
+></OL
+></P
+><P
+>I'll explain several ways to get configuration working for both Nvidia GLX and XFree86 DRI.  There are probably a lot of other possibilities, and maybe these are not the simplest, but they are the ones I know to work.</P
+><P
+> The reasons why this is needed: <P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Nvidia should use a different module path for xf86: the glx extension module from Nvidia is incompatible with the one from XFree86.</P
+></LI
+><LI
+><P
+>Nvidia should use a different XF86Config file: because DRI should be disabled for Nvidia and enabled for others.</P
+></LI
+></OL
+>
+      </P
+><P
+>If you find a simpler way, please email it me and I'll include it.</P
+><DIV
+CLASS="caution"
+><P
+></P
+><TABLE
+CLASS="caution"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/caution.gif"
+HSPACE="5"
+ALT="Caution"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Caution</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This can not be used as-is on SuSE Linux.  In order to make it easy for the user to switch between Mesa, XFree and Nvidia GL libraries, SuSE uses a very complicated setup for the GL libraries. To use this setup you have to switch your configuration to XFree86's GL libraries.</P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN707"
+></A
+>4.7.1. Example 1</H2
+><P
+>This is the configuration that I use on my system (ATI AIW Radeon 7500 AGP and Nvidia TNT2 M64 PCI) XFree configuration files:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Create a directory <TT
+CLASS="filename"
+>/usr/X11R6/libNV</TT
+>:</P
+><P
+><B
+CLASS="command"
+>mkdir /usr/X11R6/libNV</B
+></P
+></LI
+><LI
+><P
+>Create links to the original <TT
+CLASS="filename"
+>/usr/X11R6/lib</TT
+>:</P
+><P
+> <B
+CLASS="command"
+>cd /usr/X11R6/libNV</B
+></P
+><P
+> <B
+CLASS="command"
+>lndir -silent -ignorelinks ../lib</B
+></P
+></LI
+><LI
+><P
+>Install the Nvidia driver and libraries in <TT
+CLASS="filename"
+>/usr/X11R6/libNV</TT
+>.</P
+></LI
+><LI
+><P
+>Install Nvidia's <TT
+CLASS="filename"
+>libGLcore.so.1.0</TT
+> [driver version], or better, <TT
+CLASS="filename"
+>libGLcore.so.1</TT
+>, in <TT
+CLASS="filename"
+>/usr/lib</TT
+>. Make a symbolic link from <TT
+CLASS="filename"
+>/usr/X11R6/libNV/libGLcore.so.1</TT
+> to <TT
+CLASS="filename"
+>/usr/lib/libGLcore.so.1</TT
+> (this will allow you to easily update your Nvidia drivers):</P
+><P
+><B
+CLASS="command"
+>cd /usr/lib</B
+></P
+><P
+><B
+CLASS="command"
+>ln -s ../X11R6/libNV/libGLcore.so.1 ./</B
+></P
+><P
+>Note: the Nvidia <TT
+CLASS="filename"
+>libGL.so</TT
+> is installed <TT
+CLASS="filename"
+>/usr/X11R6/libNV</TT
+>, so it's invisible to the system unless you tell the system about the existence of <TT
+CLASS="filename"
+>/usr/X11R6/libNV</TT
+>. For this setup, you must not do this, as it will break the standard X server start-up.  But you can use the XFree GL libraries with the Nvidia graphic card and Nvidia closed source drivers, with a non-Nvidia graphic card, using XFree's DRI, which the GL library from Nvidia cannot do.</P
+></LI
+><LI
+><P
+>Add a line in the XFree configuration file for the Nvidia card to point the X server to the right location of the library and module path:
+
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;Section "Files"
+
+..........
+ModulePath  "/usr/X11R6/libNV/modules"
+..........
+
+EndSection
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            </P
+></LI
+><LI
+><P
+>Install the Nvidia kernel driver.</P
+></LI
+></OL
+><P
+>Now everything should be fine and you should be able to use DRI and Nvidia GLX at the same time. You will have a bit smaller performance in comparison to a setup which uses Nvidia's libGL &#38; libGLcore,
+but the difference is not that big on my PC.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN747"
+></A
+>4.7.2. Example 2</H2
+><P
+>This example will give you the full performance of both the Nvidia card(s), and the
+non-Nvidia card, since XFree's libGL is used for the non Nvidia card, and
+Nvidia's libGL is used for Nvidia cards.  But this will require one more X server to be precise;
+a simple wrapper to add the path to the Nvidia libraries, and symbolic links to it for
+additional Nvidia cards.</P
+><P
+>It is almost the same as the previous scenario, with the difference that the X servers
+for the Nvidia cards should start with an environment where Nvidia's libGL is known,
+while the X servers for non Nvidia cards shouldn't know anything about the
+Nvidia libGL. This requires a wrapper to be used for starting the X servers
+driving Nvidia cards.
+</P
+><P
+>Install the Nvidia libraries and kernel driver like in the previous example.
+You may skip step 4. as <TT
+CLASS="filename"
+>libGLcore.so.1</TT
+> is installed in <TT
+CLASS="filename"
+>/usr/X11R6/libNV</TT
+>, and we'll inform the X servers driving Nvidia cards about the proper path
+to the Nvidia libraries.</P
+><P
+>The missing part - the wrapper :
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;#!/bin/bash
+export LD_LIBRARY_PATH=/usr/X11R6/libNV
+exec /usr/X11R6/bin/X0 $*
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+><P
+>Copy these lines into your favourite editor and save the file as <TT
+CLASS="filename"
+>XNV</TT
+>.  Make it executable:</P
+><P
+><B
+CLASS="command"
+>chmod +x XNV </B
+></P
+><P
+>Copy the file to <TT
+CLASS="filename"
+>/usr/X11R6/bin</TT
+> and make symbolic links to it for additional Nvidia cards (for additional cards just add more links):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;cp XNV /usr/X11R6/bin
+cd /usr/X11R6/bin
+ln -s XNV Xnv0
+ln -s XNV Xnv1
+ln -s XNV Xnv2
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Remember to use <TT
+CLASS="filename"
+>/usr/X11R6/bin/Xnv0</TT
+>, <TT
+CLASS="filename"
+>/usr/X11R6/bin/Xnv1</TT
+> ..., instead of <TT
+CLASS="filename"
+>/usr/X11R6/bin/X0</TT
+>, <TT
+CLASS="filename"
+>/usr/X11R6/bin/X1</TT
+> ... for your Nvidia cards while configuring the display managers in the next chapter, or when starting X on Nvidia card(s) from console.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN768"
+></A
+>4.7.3. Installing the Nvidia libraries easily</H2
+><P
+>Using the new Nvidia installer (note, this is a work in progress, do not use if you don't understand what happens here.  To-do: write a script to perform steps 1-4. Please provide some feedback on the script in Appendix-&#62;Scripts):
+        </P
+><P
+>Manually: 
+          <P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Make a backup of your XFree GL libraries:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;cd  [XFree prefix]
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>On my Mandrake system I can use:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;cd $OPENWINHOME
+find lib -name "libGL.*" -o -name "libGLcore*" -o -name "libglx.*" | xargs tar  rpfv   libGL-backup.tar
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Then run the Nvidia installer:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;./NVIDIA-Linux-x86-1.0-4349.run --no-opengl-headers --xfree86-prefix=/usr/X11R6NV --opengl-prefix=/usr/X11R6NV
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Copy the installed files to <TT
+CLASS="filename"
+>/usr/X11R6/libNV</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;cd /usr/X11R6NV/lib &#38;&#38;  tar cv * | tar xvC /usr/X11R6/libNV/
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Restore the backed-up GL libraries:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;cd [XFree prefix]
+tar xvfp libGL-backup.tar &#38;&#38; ldconfig
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+></OL
+>
+        </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="no_dri.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="tweak_input_devs.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>For graphic cards without DRI</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x_servers.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>More on configuring input devices</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

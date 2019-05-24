@@ -1,0 +1,313 @@
+<HTML
+><HEAD
+><TITLE
+>High Availability with RAID</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Administration Made Easy"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Enterprise Computing with Linux"
+HREF="enterprise-computing.html"><LINK
+REL="PREVIOUS"
+TITLE="Performance Tuning"
+HREF="performance-tuning.html"><LINK
+REL="NEXT"
+TITLE="Server Migration and Scalability Issues"
+HREF="server-migration.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Administration Made Easy</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="performance-tuning.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. Enterprise Computing with Linux</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="server-migration.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="HARDWARE-RAID"
+>11.2. High Availability with RAID</A
+></H1
+><P
+>As storage needs increase, it sometimes becomes necessary to put
+additional drives with larger capacities online.  Yet ironically, the law
+of probability dictates that as the number of storage devices increases,
+so too does the likelihood of a device failure.  Therefore, a system with
+a single hard drive is only 25% as likely to suffer a hardware failure as
+a system with four drives.  [ Well, theoretically speaking, anyway :-) ]</P
+><P
+>Fortunately, such failures can be handled gracefully, and more
+importantly without downtime, using a technique called <SPAN
+CLASS="QUOTE"
+>"Redundant
+Array of Inexpensive Disks"</SPAN
+> (<EM
+>RAID</EM
+>) which uses
+one of several methods of distributing data over multiple disks.  This
+redundancy allows for automatic recovery of data should a device
+fail.</P
+><P
+>This section will describe the installation, configuration, and
+setup of a RAID disk array using the Mylex AcceleRAID DAC960 controller.  
+I have been very impressed with not only the performance and reliability
+of the controller itself, but also with the technical support I've gotten
+from Mylex -- they are very Linux-friendly!  (However, there are a wide
+variety of hardware RAID solutions for Linux, and RAID can be implemented
+in software by the Linux kernel itself.)  The type of RAID implementation
+that is most useful is probably RAID level 5.</P
+><P
+>The first step in getting the RAID controller usable under Linux is to
+build a custom kernel with driver support for the hardware.  The driver
+for the Mylex DAC960 can be downloaded from the Dandelion Digital Linux
+page at <A
+HREF="http://www.dandelion.com/Linux/DAC960-2.0.tar.gz"
+TARGET="_top"
+>http://www.dandelion.com/Linux/DAC960-2.0.tar.gz</A
+>.</P
+><P
+>The final step in getting your RAID array usable under Linux is to
+use the ``<TT
+CLASS="LITERAL"
+>fdisk</TT
+>'' utility to create valid partitions.  
+This is done in exactly the same manner as you would use on an IDE or
+regular SCSI drive.  See <A
+HREF="install-partitioning.html"
+>Section 4.3</A
+> for
+details on how to set up partition information.</P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>Note: The DAC960 driver supports a maximum of 7 partitions per
+logical drive.  If you need to define more, you will need to define
+multiple logical drives in the RAID configuration utility (press
+<TT
+CLASS="LITERAL"
+>&#60;<B
+CLASS="KEYCAP"
+>Alt</B
+>&#62;-&#60;<B
+CLASS="KEYCAP"
+>R</B
+>&#62;</TT
+>
+at system boot time to enter the setup utility).</P
+></BLOCKQUOTE
+></DIV
+><P
+>Once you are able to see your RAID array, you should initialize any
+swap areas and file systems you wish to define.  The following is an
+example of initializing a swap area on the third partition of the second
+drive, as well as an ext2-formatted file system on the first partition of
+the first drive:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>/sbin/mkswap -c /dev/rd/c0d1p3</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>/sbin/swapon /dev/rd/c0d1p3</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>/sbin/mkfs.ext2 -c /dev/rd/c0d0p1</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>Note: The ``<TT
+CLASS="LITERAL"
+>-c</TT
+>'' option in the above
+``<TT
+CLASS="LITERAL"
+>mkswap</TT
+>'' and ``<TT
+CLASS="LITERAL"
+>mkfs.ext2</TT
+>''
+commands enable bad-block checking as the appropriate swap/file systems
+are created.  This adds <EM
+>substantially</EM
+> to the time it
+takes to complete the process, but it is probably a very good idea to
+perform such checks.</P
+></BLOCKQUOTE
+></DIV
+><P
+>For any new swap areas you have defined, you should make an entry
+in the ``<TT
+CLASS="LITERAL"
+>/etc/fstab</TT
+>'' file to ensure the swap area is
+actually used from subsequent bootups.  As per the above example, the
+following line should be added:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>/dev/rd/c0d1p3  swap       swap  defaults   0 0</PRE
+></TD
+></TR
+></TABLE
+><P
+>Finally, once your file systems have been initialized, you can
+create mount points there and move your large file systems onto the array
+as you desire.  It is probably a good idea to test the array for a few
+days before using it in a production environment.</P
+><P
+>For further information on the Mylex AcceleRAID controller, visit
+the Mylex web site at <A
+HREF="http://www.mylex.com/"
+TARGET="_top"
+>http://www.mylex.com/</A
+> as well as the Dandelion Digital DAC960
+driver page at <A
+HREF="http://www.dandelion.com/Linux/DAC960.html"
+TARGET="_top"
+>http://www.dandelion.com/Linux/DAC960.html</A
+>.  For further
+information on RAID in general (including both software- as well as
+hardware-based solutions), see the Linux High Availability web site at
+<A
+HREF="http://linas.org/linux/raid.html"
+TARGET="_top"
+>http://linas.org/linux/raid.html</A
+>.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="performance-tuning.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="server-migration.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Performance Tuning</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="enterprise-computing.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Server Migration and Scalability Issues</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

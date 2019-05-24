@@ -1,0 +1,325 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Reading VMS tapes from Linux</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="From VMS to Linux HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Tips You Can't Do Without"
+HREF="x811.html"><LINK
+REL="NEXT"
+TITLE="The End"
+HREF="x871.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>From VMS to Linux HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x811.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x871.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN838"
+></A
+>13. Reading VMS tapes from Linux</H1
+><P
+>(This section was written by Mike Miller)</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN841"
+></A
+>13.1. Introduction</H2
+><P
+>From time to time you may want to read tapes made on a VMS machine (or tapes
+that are made to be readable by VMS and *nix systems). In general, this is
+quite easy for DECFILES11A tapes.</P
+><P
+>Although you may be reading this as part of a Linux mini-HOWTO, I believe
+that the information here is applicable to any *nix system - I've done this
+on Linux, HP, Sun and DEC *nix systems. The main platform dependences that I
+know are device names, which can differ on different systems, and the
+options to mt for specifying the device name (for example, mt -f on Linux
+and mt -t on HPUX 9).</P
+><P
+>Caveat - I've only tried this with Exabyte 8mm SCSI tape drives. If you've
+read other formats (still got those 9-tracks lying around?) let me know and
+I'll add a note here.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN846"
+></A
+>13.2. The Basics</H2
+><P
+>When reading a tape that has been made with the VMS ``copy'' command (or has
+at least been made to look like it was made with copy) all you need to know
+is there will be three files on the tape for each actual data file - a
+header, the data, and a trailer.  The header and trailer are interesting in
+that they contain info on the file as it existed under VMS.  The data is,
+well, the data.  Each of these files can be extracted from the tape with the
+dd command.  The tape can be positioned by skipping around with the mt
+command.</P
+><P
+>Example: I've got VMS tape with a series of files on it.  The first two were
+originally named ce66-2.evt and ce66-3.evt on a VMS system.  The tape label
+is c66a2.</P
+><P
+>If I execute these commands:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#62; dd if=$TAPE bs=16k of=header1
+&#62; dd if=$TAPE bs=16k of=data1
+&#62; dd if=$TAPE bs=16k of=trailer1
+&#62; dd if=$TAPE bs=16k of=header2
+&#62; dd if=$TAPE bs=16k of=data2
+&#62; dd if=$TAPE bs=16k of=trailer2</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>I'm left with six files: header1, data1, trailer1, header2, data2 and
+trailer2.  The syntax here is if="input file", bs="block size" and
+of="output file".  TAPE is expected to be a variable containing the device
+name of your tape drive - for example, /dev/nts0 if you are using the first
+SCSI tape on Linux.</P
+><P
+>If you wanted to read the second file, but not the first, you didn't care
+about the header, and you wanted to use the original file name, do this:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#62; mt -f $TAPE fsf 4
+&#62; dd if=$TAPE bs=16k of=ce66-2.evt
+&#62; mt -f $TAPE fsf 1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>Note the 4 - skip three files for the first file on the tape and one for the
+next header.  The second mt skips the second file's trailer and positions
+the tape at the beginning of the next file - the third VMS header.  You can
+also use mt to skip backwards (bsf), rewind (rewind) and rewind and unload
+the tape (offline, rewoffl).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN858"
+></A
+>13.3. Some details</H2
+><P
+>The header and trailer files contain uppercase ASCII data used by VMS to
+store file information such as block size.  They also contain the file name,
+which can be handy if you want to build scripts that automate read files or
+search for a particular file. The first header on a tape volume is slightly
+different than subsequent headers.</P
+><P
+>For a file that is the first file on the tape, as in header1 of the above
+example, the first four characters will be "VOL1" followed by the volume
+name.  In the example, header1 starts with "VOL1C66A2".  This is followed by
+a series of spaces terminated with a numeral.  After that is the string
+"HDR1" which indicates that this is a file header.  The characters
+immediately following the HDR1 string are the VMS file name.  In in the
+example, this is "HDR1CE66-2.EVT".  The next field is the volume name again.</P
+><P
+>For files that are not the first file on the tape, the initial VOL1 field is
+not present.  Other than that the header has the same structure as for the
+initial file.  Another useful field is the 7th field, which will end with
+"DECFILES11A".  This must be present on tapes that conform to the DEC
+Files11A standard.</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>       field	 initial header		subsequent headers
+       =====	 =============		==================
+         1	 VOL1 + volume name	HDR1 + file name
+         2	 3HDR1 + file name	volume name
+         3	 volume name		
+
+         6				...DECFILES11A
+	 7	...DECFILES11A</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>For full details on the header and trailer format, see the DEC FILES11A
+documentation (on the orange/grey wall - ask your local VMS folks :-).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN866"
+></A
+>13.4. Comment on Block Size</H2
+><P
+>In the example, I used a block size of 16k.  On a *nix system, there is no
+block size associated with a file on disk while, under VMS, each file has a
+specific block size.  That means that block size doesn't matter too much on
+the Linux end... unless it makes it hard to read the tape.  If you have
+difficulty figuring out the block size and reading a tape, you can try
+setting the hardware block size on your tape drive using `mt -f $TAPE setblk
+0'.  The exact form of the setblk option (and its availability) may depend
+on the version of mt, the tape drive hardware interface and on your
+particular flavor of *nix.</P
+><P
+>(Thanks to Wojtek Skulski (<A
+HREF="skulski@nsrlc6.nsrl.rochester.edu"
+TARGET="_top"
+>&#65533;</A
+>) 
+for pointing out setblk.)</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x811.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x871.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Tips You Can't Do Without</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The End</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

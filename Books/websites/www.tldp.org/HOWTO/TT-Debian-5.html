@@ -1,0 +1,188 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>TrueType Fonts in Debian mini-HOWTO: Content Generation</TITLE>
+ <LINK HREF="TT-Debian-6.html" REL=next>
+ <LINK HREF="TT-Debian-4.html" REL=previous>
+ <LINK HREF="TT-Debian.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="TT-Debian-6.html">Next</A>
+<A HREF="TT-Debian-4.html">Previous</A>
+<A HREF="TT-Debian.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="s5">5. Content Generation</A></H2>
+
+<H2><A NAME="ss5.1">5.1 Generating <CODE>AFM</CODE> font metrics</A>
+</H2>
+
+<P><CODE>AFM</CODE> font metrics files are not required for display existing
+files with TrueType fonts, but they are necessary to create new files.
+The ghostscript program <CODE>/usr/lib/ghostscript/5.50/printafm.ps</CODE>
+could be used to generate these metric files, but I have found
+the <CODE>ttf2afm</CODE> program from the <CODE>tetex-bin</CODE> package to be easier
+to use. 
+<P>The following script will generate an <CODE>afm</CODE> file for all TrueType
+fonts in a directory:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+
+set -e
+
+for i in *.TTF
+do
+    /usr/bin/ttf2afm $i > ${i%TTF}afm
+done
+
+for i in *.ttf
+do
+    /usr/bin/ttf2afm $i > ${i%ttf}afm
+done
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>One minor problem with <CODE>ttf2afm</CODE> is that some applications expect
+<CODE>afm</CODE> files to start with the <CODE>StartFontMetrics</CODE> tag, but
+files created by <CODE>ttf2afm</CODE> start with a comment.  This "problem"
+is easily fixed by hitting each file with a text editor.
+<P>
+<H2><A NAME="ss5.2">5.2 Generating <CODE>font.map</CODE> files</A>
+</H2>
+
+<P>Once we have our <CODE>afm</CODE> files, we need to tell the system how to
+find them.  This is often done via the <CODE>font.map</CODE> file.
+<P>I have been unable to find documentation on this file format, unlike
+<CODE>fonts.dir</CODE>, <CODE>fonts.scale</CODE>, and <CODE>fonts.alias</CODE>, all created by
+the <CODE>mkfontdir</CODE> program.  However the minimum format appears to
+be quite simple:
+<P>
+<UL>
+<LI>Font name, without whitespace</LI>
+<LI><CODE>AFM</CODE> filename, without extension</LI>
+</UL>
+<P>Aliases appear to be implemented via multiple entries, and the filename
+extension must be in lowercase.
+<P>
+<H2><A NAME="ss5.3">5.3 Image manipulation: <CODE>GIMP</CODE></A>
+</H2>
+
+<P><CODE>GIMP</CODE> is the Gnu image manipulation and paint program.  I did not
+have to make any additional changes to use TrueType fonts in <CODE>gimp</CODE>.
+<P>
+<H2><A NAME="ss5.4">5.4 ASCII to PostScript conversion: <CODE>enscript</CODE></A>
+</H2>
+
+<P><CODE>Enscript</CODE> is a program that converts ASCII to PostScript.  Other
+programs which serve a similiar purpose are <CODE>a2ps</CODE> and <CODE>mpage</CODE>.
+<CODE>Enscript</CODE> allows two-up rotation, watermarks, headers, and 
+keyword-based syntax coloring.  It does not reformat text and is 
+commonly used to print source listing.
+<P>To use TrueType fonts with <CODE>enscript</CODE>, you must do two things:
+<P>
+<UL>
+<LI>Add <CODE>/usr/share/fonts/truetype</CODE> to your <CODE>AFMPath</CODE>.</LI>
+<LI>Specify a TrueType font, either explicitly or by aliasing a
+default font.</LI>
+</UL>
+<P>For details, see the <CODE>enscript</CODE> documentation.
+<P>Once I had made these changes, I had no problem using TrueType
+fonts.
+<P>
+<H2><A NAME="ss5.5">5.5 Text Formatting and Typesetting: <CODE>groff</CODE></A>
+</H2>
+
+<P><CODE>Groff</CODE> is the Gnu front end of the groff/troff document
+formatting system.  The power of <CODE>Groff</CODE> is best seen with
+<CODE>man</CODE> pages.
+<P>
+<BLOCKQUOTE><CODE>
+<EM>user shell</EM>
+<HR>
+<PRE>
+$ zcat /usr/man/man1/groff.1.gz | groff -man | lpr
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>Besides man pages, an incredible amount of Unix documentation
+uses <CODE>troff</CODE> formatting with <CODE>ms</CODE> (and occasionally <CODE>me</CODE>)
+macros.  The Debian <CODE>xbooks</CODE> package, for example, has 43
+files using <CODE>troff</CODE> with <CODE>ms</CODE> macros.  With <CODE>groff</CODE>, this
+material can be attractively printed.
+<P><CODE>Groff</CODE> is a very powerful system, but it's the grandchild (or
+great-grandchild) of a program used to typeset 1960's era printing
+presses.  Font support in <CODE>groff</CODE> reflects that heritage.
+<CODE>Groff</CODE>, in contrast to its predecessors, uses PostScript as 
+the default output format so our earlier work with <CODE>ghostscript</CODE> 
+takes care of half of the problem -- <CODE>groff</CODE> does not have to
+deal with reading TrueType font files.  It does need to have
+accurate font metrics, and this section describes how to regenerate
+the necessary <CODE>groff</CODE> files:
+<P>
+<BLOCKQUOTE><CODE>
+<EM>Groff PostScript description files</EM>
+<HR>
+<PRE>
+/usr/share/groff/font/devps/DESC
+    Device description file
+/usr/share/groff/font/devps/text.enc
+    Encoding used for text fonts
+/usr/share/groff/font/devps/generate/textmap
+    Standard mapping.
+/usr/share/groff/font/devps/generate/Makefile
+    Standard makefile
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>We must edit the Makefile,
+<P>
+<BLOCKQUOTE><CODE>
+<EM>/usr/share/groff/font/devps/generate/Makefile</EM>
+<HR>
+<PRE>
+- afmdir=/usr/local/afm
++ afmdir=/usr/share/fonts/truetype
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>change the name of the fonts to their TrueType equivalent (e.g.,
+if we're using Microsoft's free TrueType fonts we would replace
+<CODE>Helvetica</CODE> with <CODE>Arial</CODE>), and change <CODE>TEXTFONTS</CODE>
+and the like to only include those fonts we are redefining.
+<P>We must also edit <CODE>/usr/share/groff/font/devps/generate/afmname</CODE>
+to use the TrueType font names and <CODE>afm</CODE> files, and to remove an
+<CODE>"-e"</CODE> flag from <CODE>awk</CODE>.
+<P>After all of this, we can rebuild the <CODE>groff</CODE> tables with
+<P>
+<BLOCKQUOTE><CODE>
+<EM>user shell</EM>
+<HR>
+<PRE>
+$ cd /usr/share/groff/font/devps
+$ make -f generate/Makefile
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>As usual, the best way to verify the changes is to use a visually
+distinctive font.  E.g., if you are using the Microsoft free TrueType
+fonts you can use <CODE>Mistral</CODE> for <CODE>TR</CODE>.
+<P>(I expect royalties from everyone who reconfigures their system to
+print manual pages in Old English fonts next April First!)
+<P>
+<H2><A NAME="ss5.6">5.6 Text Formatting and Typesetting: <CODE>TeX</CODE></A>
+</H2>
+
+<P><CODE>TeX</CODE> is the other common set of text formatting and typesetting
+programs on most GNU/Linux systems.
+<P><CODE>TeX</CODE> fonts can created with <CODE>mktexmf</CODE>, but I have little
+information on the exact process.  More details will be provided shortly.
+<P>
+<HR>
+<A HREF="TT-Debian-6.html">Next</A>
+<A HREF="TT-Debian-4.html">Previous</A>
+<A HREF="TT-Debian.html#toc5">Contents</A>
+</BODY>
+</HTML>

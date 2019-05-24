@@ -1,0 +1,296 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Creating a swap space</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Memory Management"
+HREF="memory-management.html"><LINK
+REL="PREVIOUS"
+TITLE="What is virtual memory?"
+HREF="vm-intro.html"><LINK
+REL="NEXT"
+TITLE="Using a swap space"
+HREF="using-swap.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="vm-intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Memory Management</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="using-swap.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SWAP-SPACE"
+></A
+>6.2. Creating a swap space</H1
+><P
+>A swap file is an ordinary file; it is in no way special
+	to the kernel.	The only thing that matters to the kernel is that it
+	has no holes, and that it is prepared for use with
+	<B
+CLASS="COMMAND"
+>mkswap</B
+>.  It must reside on a local disk, however;
+	it can't reside in a filesystem that has been mounted
+	over NFS due to implementation reasons.</P
+><P
+>The bit about holes is important. The swap file reserves
+	the disk space so that the kernel can quickly swap out a page
+	without having to go through all the things that are necessary
+	when allocating a disk sector to a file.  The kernel merely
+	uses any sectors that have already been allocated to the file.
+	Because a hole in a file means that there are no disk sectors
+	allocated (for that place in the file), it is not good for the
+	kernel to try to use them.</P
+><P
+>One good way to create the swap file without holes is through
+	the following command:
+
+        <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>	<TT
+CLASS="PROMPT"
+>$</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>dd if=/dev/zero of=/extra-swap bs=1024 
+	count=1024</B
+></TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>1024+0 records in
+	1024+0 records out</TT
+>
+	<TT
+CLASS="PROMPT"
+>$</TT
+>
+	</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	where <TT
+CLASS="FILENAME"
+>/extra-swap</TT
+> is the name of the swap
+	file and the size of is given after the <TT
+CLASS="LITERAL"
+>count=</TT
+>.
+	It is best for the size to be a multiple of 4, because the
+	kernel writes out <I
+CLASS="GLOSSTERM"
+>memory pages</I
+>, which
+	are 4 kilobytes in size.  If the size is not a multiple of 4,
+	the last couple of kilobytes may be unused.</P
+><P
+>A swap partition is also not special in any way.	You create
+	it just like any other partition; the only difference is that
+	it is used as a raw partition, that is, it will not contain any
+	filesystem at all.  It is a good idea to mark swap partitions
+	as type 82 (Linux swap); this will the make partition listings
+	clearer, even though it is not strictly necessary to the
+	kernel.</P
+><P
+>After you have created a swap file or a swap partition, you
+	need to write a signature to its beginning; this contains some
+	administrative information and is used by the kernel.  The
+	command to do this is <B
+CLASS="COMMAND"
+>mkswap</B
+>, used like this:
+
+        <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>	<TT
+CLASS="PROMPT"
+>$</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>mkswap /extra-swap 1024</B
+></TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>Setting up swapspace, size = 1044480 
+	bytes</TT
+>
+	<TT
+CLASS="PROMPT"
+>$</TT
+>
+	</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Note that the swap space is still not in use yet: it exists,
+	but the kernel does not use it to provide virtual memory.</P
+><P
+>You should be very careful when using
+	<B
+CLASS="COMMAND"
+>mkswap</B
+>, since it does not check that the
+	file or partition isn't used for anything else.  <EM
+>You
+	can easily overwrite important files and partitions with
+	<B
+CLASS="COMMAND"
+>mkswap</B
+>!</EM
+> Fortunately, you should
+	only need to use <B
+CLASS="COMMAND"
+>mkswap</B
+> when you install
+	your system.</P
+><P
+>The Linux memory manager limits the size of each swap space to
+	2 GB.  You can, however, use up to
+	8 swap spaces simultaneously, for a total of 16GB.
+	</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="vm-intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="using-swap.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>What is virtual memory?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="memory-management.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Using a swap space</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

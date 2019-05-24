@@ -1,0 +1,614 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Add a new disk to a multi-disk SCSI system</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Recipes"
+HREF="recipes.html"><LINK
+REL="PREVIOUS"
+TITLE="Setting up LVM on three SCSI disks with striping"
+HREF="recipethreescsistripe.html"><LINK
+REL="NEXT"
+TITLE="Taking a Backup Using Snapshots"
+HREF="snapshots_backup.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="recipethreescsistripe.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. Recipes</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="snapshots_backup.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="recipeadddisk"
+></A
+>13.3. Add a new disk to a multi-disk SCSI system</H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1155"
+></A
+>13.3.1. Current situation</H2
+><P
+>&#13;          A data centre machine has 6 disks attached as follows:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvscan</B
+>
+<TT
+CLASS="computeroutput"
+>pvscan -- ACTIVE   PV "/dev/sda"  of VG "dev"   [1.95 GB / 0 free]
+pvscan -- ACTIVE   PV "/dev/sdb"  of VG "sales" [1.95 GB / 0 free]
+pvscan -- ACTIVE   PV "/dev/sdc"  of VG "ops"   [1.95 GB / 44 MB free]
+pvscan -- ACTIVE   PV "/dev/sdd"  of VG "dev"   [1.95 GB / 0 free]
+pvscan -- ACTIVE   PV "/dev/sde1" of VG "ops"   [996 MB / 52 MB free]
+pvscan -- ACTIVE   PV "/dev/sde2" of VG "sales" [996 MB / 944 MB free]
+pvscan -- ACTIVE   PV "/dev/sdf1" of VG "ops"   [996 MB / 0 free]
+pvscan -- ACTIVE   PV "/dev/sdf2" of VG "dev"   [996 MB / 72 MB free]
+pvscan -- total: 8 [11.72 GB] / in use: 8 [11.72 GB] / in no VG: 0 [0]</TT
+>
+
+<B
+CLASS="command"
+># df</B
+>
+<TT
+CLASS="computeroutput"
+>Filesystem           1k-blocks      Used Available Use% Mounted on
+/dev/dev/cvs           1342492    516468    757828  41% /mnt/dev/cvs
+/dev/dev/users         2064208   2060036      4172 100% /mnt/dev/users
+/dev/dev/build         1548144   1023041    525103  66% /mnt/dev/build
+/dev/ops/databases     2890692   2302417    588275  79% /mnt/ops/databases
+/dev/sales/users       2064208    871214   1192994  42% /mnt/sales/users
+/dev/ops/batch         1032088    897122    134966  86% /mnt/ops/batch</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          As you can see the "dev" and "ops" groups are getting full so
+          a new disk is purchased and added to the system. It becomes
+          <TT
+CLASS="filename"
+>/dev/sdg</TT
+>.
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1164"
+></A
+>13.3.2. Prepare the disk partitions</H2
+><P
+>&#13;          The new disk is to be shared equally between ops and dev so
+          it is partitioned into two physical volumes /dev/sdg1 and
+          /dev/sdg2 :
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># fdisk /dev/sdg</B
+>
+<TT
+CLASS="computeroutput"
+>&#13;Device contains neither a valid DOS partition table, nor Sun or SGI
+disklabel Building a new DOS disklabel. Changes will remain in memory
+only, until you decide to write them. After that, of course, the
+previous content won't be recoverable.</TT
+>
+
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>n
+<TT
+CLASS="computeroutput"
+>Command action
+   e   extended
+   p   primary partition (1-4)</TT
+>
+p
+<TT
+CLASS="prompt"
+>Partition number (1-4): </TT
+>1
+<TT
+CLASS="prompt"
+>First cylinder (1-1000, default 1):</TT
+>
+<TT
+CLASS="computeroutput"
+>Using default value 1</TT
+>
+<TT
+CLASS="prompt"
+>Last cylinder or +size or +sizeM or +sizeK (1-1000, default 1000): </TT
+>500
+
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>n
+<TT
+CLASS="computeroutput"
+>Command action
+   e   extended
+   p   primary partition (1-4)</TT
+>
+p
+<TT
+CLASS="prompt"
+>Partition number (1-4): </TT
+>2
+<TT
+CLASS="prompt"
+>First cylinder (501-1000, default 501):</TT
+> 
+<TT
+CLASS="computeroutput"
+>Using default value 501</TT
+>
+<TT
+CLASS="prompt"
+>Last cylinder or +size or +sizeM or +sizeK (501-1000, default 1000):</TT
+> 
+<TT
+CLASS="computeroutput"
+>Using default value 1000</TT
+>
+
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>t
+<TT
+CLASS="prompt"
+>Partition number (1-4): </TT
+>1
+<TT
+CLASS="prompt"
+>Hex code (type L to list codes): </TT
+>8e
+<TT
+CLASS="computeroutput"
+>Changed system type of partition 1 to 8e (Unknown)</TT
+>
+
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>t
+<TT
+CLASS="prompt"
+>Partition number (1-4): </TT
+>2
+<TT
+CLASS="prompt"
+>Hex code (type L to list codes): </TT
+>8e
+<TT
+CLASS="computeroutput"
+>Changed system type of partition 2 to 8e (Unknown)</TT
+>
+
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>w
+<TT
+CLASS="computeroutput"
+>The partition table has been altered!
+
+Calling ioctl() to re-read partition table.
+
+WARNING: If you have created or modified any DOS 6.x partitions,
+please see the fdisk manual page for additional information.
+</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+><P
+>&#13;          Next physical volumes are created on this partition:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvcreate /dev/sdg1</B
+>
+<TT
+CLASS="computeroutput"
+>pvcreate -- physical volume "/dev/sdg1" successfully created</TT
+>
+
+<B
+CLASS="command"
+># pvcreate /dev/sdg2</B
+>
+<TT
+CLASS="computeroutput"
+>pvcreate -- physical volume "/dev/sdg2" successfully created</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1199"
+></A
+>13.3.3. Add the new disks to the volume groups</H2
+><P
+>&#13;          The volumes are then added to the dev and ops volume groups:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgextend ops /dev/sdg1</B
+>
+<TT
+CLASS="computeroutput"
+>vgextend -- INFO: maximum logical volume size is 255.99 Gigabyte
+vgextend -- doing automatic backup of volume group "ops"
+vgextend -- volume group "ops" successfully extended</TT
+>
+
+<B
+CLASS="command"
+># vgextend dev /dev/sdg2</B
+>
+<TT
+CLASS="computeroutput"
+>vgextend -- INFO: maximum logical volume size is 255.99 Gigabyte
+vgextend -- doing automatic backup of volume group "dev"
+vgextend -- volume group "dev" successfully extended</TT
+>
+
+<B
+CLASS="command"
+># pvscan</B
+>
+<TT
+CLASS="computeroutput"
+>pvscan -- reading all physical volumes (this may take a while...)
+pvscan -- ACTIVE   PV "/dev/sda"  of VG "dev"   [1.95 GB / 0 free]
+pvscan -- ACTIVE   PV "/dev/sdb"  of VG "sales" [1.95 GB / 0 free]
+pvscan -- ACTIVE   PV "/dev/sdc"  of VG "ops"   [1.95 GB / 44 MB free]
+pvscan -- ACTIVE   PV "/dev/sdd"  of VG "dev"   [1.95 GB / 0 free]
+pvscan -- ACTIVE   PV "/dev/sde1" of VG "ops"   [996 MB / 52 MB free]
+pvscan -- ACTIVE   PV "/dev/sde2" of VG "sales" [996 MB / 944 MB free]
+pvscan -- ACTIVE   PV "/dev/sdf1" of VG "ops"   [996 MB / 0 free]
+pvscan -- ACTIVE   PV "/dev/sdf2" of VG "dev"   [996 MB / 72 MB free]
+pvscan -- ACTIVE   PV "/dev/sdg1" of VG "ops"   [996 MB / 996 MB free]
+pvscan -- ACTIVE   PV "/dev/sdg2" of VG "dev"   [996 MB / 996 MB free]
+pvscan -- total: 10 [13.67 GB] / in use: 10 [13.67 GB] / in no VG: 0 [0]</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1209"
+></A
+>13.3.4. Extend the file systems</H2
+><P
+>&#13;          The next thing to do is to extend the file systems so that the
+          users can make use of the extra space.
+        </P
+><P
+>&#13;          There are tools to allow online-resizing of ext2 file systems
+          but here we take the safe route and unmount the two file systems
+          before resizing them:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># umount /mnt/ops/batch
+# umount /mnt/dev/users</B
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+><P
+>&#13;          We then use the e2fsadm command to resize the logical volume and
+          the ext2 file system on one operation. We are using ext2resize
+          instead of resize2fs (which is the default command for e2fsadm)
+          so we define the environment variable E2FSADM_RESIZE_CMD to tell
+          e2fsadm to use that command.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># export E2FSADM_RESIZE_CMD=ext2resize
+# e2fsadm /dev/ops/batch -L+500M</B
+>
+<TT
+CLASS="computeroutput"
+>e2fsck 1.18, 11-Nov-1999 for EXT2 FS 0.5b, 95/08/09
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+/dev/ops/batch: 11/131072 files (0.0&#60;!--  non-contiguous), 4127/262144 blocks
+lvextend -- extending logical volume "/dev/ops/batch" to 1.49 GB
+lvextend -- doing automatic backup of volume group "ops"
+lvextend -- logical volume "/dev/ops/batch" successfully extended
+
+ext2resize v1.1.15 - 2000/08/08 for EXT2FS 0.5b
+e2fsadm -- ext2fs in logical volume "/dev/ops/batch" successfully extended to 1.49 GB</TT
+>
+
+
+<B
+CLASS="command"
+># e2fsadm /dev/dev/users -L+900M</B
+>
+<TT
+CLASS="computeroutput"
+>e2fsck 1.18, 11-Nov-1999 for EXT2 FS 0.5b, 95/08/09
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+/dev/dev/users: 12/262144 files (0.0% non-contiguous), 275245/524288 blocks
+lvextend -- extending logical volume "/dev/dev/users" to 2.88 GB
+lvextend -- doing automatic backup of volume group "dev"
+lvextend -- logical volume "/dev/dev/users" successfully extended
+
+ext2resize v1.1.15 - 2000/08/08 for EXT2FS 0.5b
+e2fsadm -- ext2fs in logical volume "/dev/dev/users" successfully extended to 2.88 GB</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1221"
+></A
+>13.3.5. Remount the extended volumes</H2
+><P
+>&#13;          We can now remount the file systems and see that the is plenty
+          of space.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># mount /dev/ops/batch
+# mount /dev/dev/users
+# df</B
+>
+<TT
+CLASS="computeroutput"
+>Filesystem           1k-blocks      Used Available Use% Mounted on
+/dev/dev/cvs           1342492    516468    757828  41% /mnt/dev/cvs
+/dev/dev/users         2969360   2060036    909324  69% /mnt/dev/users
+/dev/dev/build         1548144   1023041    525103  66% /mnt/dev/build
+/dev/ops/databases     2890692   2302417    588275  79% /mnt/ops/databases
+/dev/sales/users       2064208    871214   1192994  42% /mnt/sales/users
+/dev/ops/batch         1535856    897122    638734  58% /mnt/ops/batch</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="recipethreescsistripe.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="snapshots_backup.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Setting up LVM on three SCSI disks with striping</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="recipes.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Taking a Backup Using Snapshots</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

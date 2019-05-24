@@ -1,0 +1,1112 @@
+<HTML
+><HEAD
+><TITLE
+>Cryptoloop HOWTO</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"></HEAD
+><BODY
+CLASS="article"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="ARTICLE"
+><DIV
+CLASS="TITLEPAGE"
+><H1
+CLASS="title"
+><A
+NAME="AEN2"
+></A
+>Cryptoloop HOWTO</H1
+><H3
+CLASS="author"
+><A
+NAME="AEN4"
+>Ralf Hölzer</A
+></H3
+><DIV
+CLASS="affiliation"
+><DIV
+CLASS="address"
+><P
+CLASS="address"
+><TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:cryptoloop@ralfhoelzer.com"
+>cryptoloop@ralfhoelzer.com</A
+>&#62;</TT
+></P
+></DIV
+></DIV
+><P
+CLASS="pubdate"
+>2004-01-15<BR></P
+><DIV
+CLASS="revhistory"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+COLSPAN="3"
+><B
+>Revision History</B
+></TH
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 1.2</TD
+><TD
+ALIGN="LEFT"
+>2004-03-12</TD
+><TD
+ALIGN="LEFT"
+>Revised by: rh</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>Added information on dm-crypt, updated loop-AES info, added more info on security</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 1.1</TD
+><TD
+ALIGN="LEFT"
+>2004-01-24</TD
+><TD
+ALIGN="LEFT"
+>Revised by: rh</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>Updated information on patching util-linux, Loop-AES, Best Crypt</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 1.0</TD
+><TD
+ALIGN="LEFT"
+>2004-01-17</TD
+><TD
+ALIGN="LEFT"
+>Revised by: rh</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>Initial release, reviewed by TM at LDP.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision v0.9</TD
+><TD
+ALIGN="LEFT"
+>2004-01-15</TD
+><TD
+ALIGN="LEFT"
+>Revised by: rh</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>Updated and converted to DocBook XML.</TD
+></TR
+></TABLE
+></DIV
+><DIV
+><DIV
+CLASS="abstract"
+><A
+NAME="AEN32"
+></A
+><P
+></P
+><P
+>&#13;        This document explains how to create encrypted file systems using the Cryptoloop functionality. Cryptoloop is part of the CryptoAPI in the 2.6 Linux kernel series.
+        </P
+><P
+></P
+></DIV
+></DIV
+><HR></DIV
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>1. <A
+HREF="#about"
+>About this document</A
+></DT
+><DD
+><DL
+><DT
+>1.1. <A
+HREF="#copyright"
+>Copyright and License</A
+></DT
+><DT
+>1.2. <A
+HREF="#disclaimer"
+>Disclaimer</A
+></DT
+><DT
+>1.3. <A
+HREF="#credits"
+>Credits / Contributors</A
+></DT
+><DT
+>1.4. <A
+HREF="#feedback"
+>Feedback</A
+></DT
+></DL
+></DD
+><DT
+>2. <A
+HREF="#cryptoloop-introduction"
+>Introduction</A
+></DT
+><DT
+>3. <A
+HREF="#kernel-configuration"
+>Configuring the kernel</A
+></DT
+><DT
+>4. <A
+HREF="#userspace-tools"
+>Getting the user space tools</A
+></DT
+><DT
+>5. <A
+HREF="#loopdevice-setup"
+>Setting up the loop device</A
+></DT
+><DT
+>6. <A
+HREF="#mounting-filesystem"
+>Mounting the encrypted file system</A
+></DT
+><DT
+>7. <A
+HREF="#filebased"
+>Using a file instead of a partition</A
+></DT
+></DL
+></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="about"
+></A
+>1. About this document</H1
+><P
+>&#13;  This HOWTO describes how to use the Cryptoloop loop device encryption in the 2.6 Linux kernel series. Cryptoloop
+  makes it possible to create encrypted file systems within a partition or another file in the file system. These encrypted files
+  can the be moved to a CD, DVD, USB memory stick, etc. Cryptoloop makes
+  use of the loop device. This device is a pseudo-device which serves as a <SPAN
+CLASS="QUOTE"
+>"loop"</SPAN
+> through which each call to a the file system
+  has to pass. This way, data can be processed in order to encrypt and decrypt it. Since kernel 2.6, the
+  Crypto API has been integrated into the main kernel, and setting up an encrypted file system has become much easier. No
+  additional kernel patches are required. An update of some userspace utilities is necessary. Unfortunately, the
+  use of Cryptoloop is not very well-documented so far. This HOWTO is an attempt to make it easy everyone
+  to create an encrypted file system using the standard Cryptoloop functionality.
+
+  Cryptoloop is based on the Crypto API in the 2.6 Linux kernel. It should not be confused with Loop-AES, which is a completely
+  separate project. Cryptoloop is similar to the Crypto API that was available as a separate patch for the 2.4 kernel series. The
+  new version is not compatible with the older one.
+        </P
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="copyright"
+></A
+>1.1. Copyright and License</H2
+><P
+>&#13;This document, <EM
+>Cryptoloop HOWTO</EM
+>,
+is copyrighted © 2004 by <EM
+>Ralf Hölzer</EM
+>.
+Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation
+License, Version 1.1 or any later version published
+by the Free Software Foundation; with no Invariant Sections,
+with no Front-Cover Texts, and with no Back-Cover Texts.
+A copy of the license is available at
+<A
+HREF="http://www.gnu.org/copyleft/fdl.html"
+TARGET="_top"
+>&#13;http://www.gnu.org/copyleft/fdl.html</A
+>.
+</P
+><P
+>&#13;Linux is a registered trademark of Linus Torvalds.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="disclaimer"
+></A
+>1.2. Disclaimer</H2
+><P
+>&#13;No liability for the contents of this document can be accepted.
+Use the concepts, examples and information at your own risk.
+There may be errors and inaccuracies, that could be damaging to
+your system.  Proceed with caution, and although this is highly
+unlikely, the author(s) do not take any responsibility.
+</P
+><P
+>&#13;All copyrights are held by their by their respective owners,
+unless specifically noted otherwise.  Use of a term in this
+document should not be regarded as affecting the validity of any
+trademark or service mark.  Naming of particular products or
+brands should not be seen as endorsements.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="credits"
+></A
+>1.3. Credits / Contributors</H2
+><P
+>&#13;I'd like to thank the following people who helped me improve this HOWTO: 
+</P
+><P
+></P
+><UL
+><LI
+><P
+>Dennis Kaledin</P
+></LI
+><LI
+><P
+>Binh Nguyen</P
+></LI
+><LI
+><P
+>David Lawyer</P
+></LI
+><LI
+><P
+>Tabatha Marshall</P
+></LI
+><LI
+><P
+>Kian Spongsveen</P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="feedback"
+></A
+>1.4. Feedback</H2
+><P
+>&#13;Feedback is most certainly welcome for this document. Send
+your additions, comments and criticisms to the following
+email address : <TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:cryptoloop@ralfhoelzer.com"
+>cryptoloop@ralfhoelzer.com</A
+>&#62;</TT
+>.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="cryptoloop-introduction"
+></A
+>2. Introduction</H1
+><P
+>&#13;    There are currently a few alternatives to using Cryptoloop. Loop-AES (<A
+HREF="http://loop-aes.sourceforge.net"
+TARGET="_top"
+>http://loop-aes.sourceforge.net</A
+>)
+    is probably the most well-known. It provides very similar functionality to Cryptoloop. Aes-loop
+    is currently more mature than Cryptoloop and it is also faster (about twice as fast, according to the author of loop-AES), because it uses a highly 
+    optimized assembler implementation for
+    AES. This doesn't mean that Cryptoloop is slow. I have not noticed any significant speed differences between a Cryptoloop-encrypted
+    partition and a non-encrypted partition during everyday work with normal amounts of I/O. Unless I/O performance is
+    extremely important to you, Cryptoloop should do just fine. Loop-AES offers some additional features that are not yet present in the kernel
+    implementation of Cryptoloop. Loop-AES requires modified userspace tools (mount, losetup) and these modifications are incompatible with
+    Cryptoloop. You will not be able to use Cryptoloop and Loop-AES at the same time.
+    </P
+><P
+>&#13;    In terms of security, Cryptoloop is doing ok. The key is usually generated from a password and its hash is used as the key to AES. This leads
+    to the possibility of a <A
+HREF="http://lwn.net/Articles/67216/"
+TARGET="_top"
+>known-plaintext attack</A
+>. 
+    Loop-AES is superior in this regard, because it generates a random key and encrypts this
+    key separately, making a known-plaintext attack more difficult. Loop-AES also supports a multi-key mode, where sectors are encrypted with
+    64 separate AES keys. In general, a brute-force attack on your password can be very effective, if you choose a weak password. To be on
+    the safe side, your password should be at least 20 characters long. Otherwise a brute-force attack on the password will be much easier
+    than trying to brute-force the AES encryption directly.
+    </P
+><P
+>&#13;    The Cryptoloop functionality in the standard kernel provides a stable and clean implementation without the need for extra patches. Since it
+    is still fairly new, it may not have gotten the necessary amount of review in terms of security. You have to decide for yourself what
+    is suitable for you.
+    </P
+><P
+>&#13;    IMPORTANT: Cryptoloop has been marked deprecated in the latest 2.6 kernel. This means that it will no longer be maintained actively. The
+    successor to Cryptoloop will be <A
+HREF="http://www.saout.de/misc/dm-crypt/"
+TARGET="_top"
+>dm-crypt</A
+>. Dm-crypt is available in the main kernel
+    since 2.6.4. Cryptoloop will still be available in the main kernel for a long time, but dm-crypt will be the method of choice for disk
+    encryption in the future. Dm-crypt is based on the device mapper and offers pretty much the same functionality as Cryptoloop. It is still
+    very new and there are no easy-to-use userspace tools available yet. Dm-crypt is considered to be much cleaner code than Cryptoloop, but
+    there are some important differences. For example, creating an ecrypted filesystem within a file will still require to go through a loop
+    device, but this support is still in development. 
+    </P
+><P
+>&#13;    There are other tools which allow you to create an encrypted file system. BestCrypt is a commercial product from Jetico. It allows you to
+    create encrypted containers and has a large choice of ciphers. It also offers some nifty features such as hidden containers. It is available
+    for Windows and Linux, which makes it suitable for interchanging encrypted containers between Windows and Linux. BestCrypt now compiles
+    on 2.6 kernels as well. Cryptoloop can also create containers that can be moved around, by creating the encrypted file system
+    within a file as described below. I don't know of a way to access the Cryptoloop-encrypted files from other operating systems such as Windows. In
+    this case, BestCrypt may be your only choice.
+    </P
+><P
+>&#13;    There are other commercial disk encryption tools such as PGP disk, but to my knowledge there is no Linux support for them.
+    </P
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="kernel-configuration"
+></A
+>3. Configuring the kernel</H1
+><P
+>&#13;    In order to use Cryptoloop, you need to activate a few kernel options. You have the option to either compile these
+    requirements as modules or compile them directly into the kernel. The following steps enable them as modules.
+    If you are not familiar with building a 2.6 kernel, you should refer to the <A
+HREF="http://www.linuxdocs.org/HOWTOs/Kernel-HOWTO.html"
+TARGET="_top"
+>Linux Kernel HOWTO</A
+>. The following
+    instructions just give the minimal steps.
+    </P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Go to the directory that holds your kernel source tree (usually <TT
+CLASS="filename"
+>/usr/src/linux/</TT
+>) and start the configuration:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>make menuconfig</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Enable general loop device support. Active <SPAN
+CLASS="QUOTE"
+>"Loopback device support"</SPAN
+> under:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>Device Drivers -&#62; Block Devices -&#62; Loopback device support</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Enable Cryptoloop support in the same section. The option should show up as soon as you enable general loopback support.</P
+></LI
+><LI
+><P
+>Enable the cryptographic API by going to <SPAN
+CLASS="QUOTE"
+>"Cryptographic options"</SPAN
+> from the main menu. You can safely enable most algorithms here.  I would recommend that you enable the following:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    -- Cryptographic API
+     &#60;*&#62;   HMAC support  
+     &#60; &#62;   Null algorithms
+     &#60;*&#62;   MD4 digest algorithm
+     &#60;*&#62;   MD5 digest algorithm
+     &#60;*&#62;   SHA1 digest algorithm
+     &#60;*&#62;   SHA256 digest algorithm
+     &#60;*&#62;   SHA384 and SHA512 digest algorithms
+     &#60;*&#62;   DES and Triple DES EDE cipher algorithms
+     &#60;*&#62;   Blowfish cipher algorithm
+     &#60;*&#62;   Twofish cipher algorithm
+     &#60;*&#62;   Serpent cipher algorithm 
+     &#60;*&#62;   AES cipher algorithms
+     &#60;*&#62;   CAST5 (CAST-128) cipher algorithm
+     &#60;*&#62;   CAST6 (CAST-256) cipher algorithm 
+     &#60;*&#62;   Deflate compression algorithm
+     &#60; &#62;   Testing module
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;    If you decide to make them as modules, make sure you load the appropriate modules (cryptoloop, aes, etc.) at startup before you continue.</P
+></LI
+><LI
+><P
+>Make your kernel and modules and install them. For example, if you are using lilo on a x86 machine, this can be done like this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;     make
+     make modules_install
+     cp arch/i386/boot/bzImage /boot/kernel-2.6.1
+     lilo
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Load the required modules at startup. This is handled differently on the various distributions. For example, on Gentoo these modules can be added to <TT
+CLASS="filename"
+>/etc/modules.autoload/kernel-2.6</TT
+>. If you have compiled Cryptoloop as a module, it will have to be loaded first. It will automatically load the basic loop device module as well. You can manually load the module with:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>modprobe cryptoloop</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+></OL
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="userspace-tools"
+></A
+>4. Getting the user space tools</H1
+><P
+>&#13;    The Cryptoloop driver requires updated userspace tools to actually create and mount the encrypted
+    file system. An updated util-linux package is needed and can be obtained from <A
+HREF="http://ftp.cwi.nl/aeb/util-linux/util-linux-2.12.tar.gz"
+TARGET="_top"
+>http://ftp.cwi.nl/aeb/util-linux/util-linux-2.12.tar.gz</A
+>.
+    The most current version is 2.12. There will be new versions out soon that will probably introduce major changes, so make sure you check this
+    HOWTO for updates before upgrading to a newer version.
+    Unfortunately there are many patches for util-linux out there. There are differences in the way how encrypted partitions are created
+    and mounted. In order to use util-linux 2.12 with a 2.6 kernel at least the following two patches need to be applied:
+    <P
+></P
+><OL
+TYPE="1"
+><LI
+><A
+HREF="http://www.stwing.org/~sluskyb/util-linux/losetup-combined.patch"
+TARGET="_top"
+>Combined losetup patch</A
+></LI
+><LI
+><A
+HREF="http://www.ece.cmu.edu/~rholzer/cryptoloop/util-linux-2.12-kernel-2.6.patch"
+TARGET="_top"
+>Util-linux 2.6 patch</A
+></LI
+></OL
+>
+    </P
+><P
+>&#13;    Download the util-linux package and the two patches above.
+    First extract the util-linux package and then apply the two patches:
+    </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;     tar xvfz util-linux-2.12.tar.gz
+
+     cd util-linux-2.12
+
+     patch -p1 &#60; /path_to_patchfile/losetup-combined.patch
+
+     patch -p1 &#60; /path_to_patchfile/util-linux-2.12-kernel-2.6.patch
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;    After applying the patches, compile and install util-linux according to the instructions in the INSTALL file.
+    </P
+><P
+>&#13;    I recommend to use <A
+HREF="http://gentoo.org"
+TARGET="_top"
+>Gentoo Linux</A
+>, which automatically applies these patches when emerging the util-linux patches.
+    Other distributions may have versions of util-linux available, that have these patches aleady applied as well.
+    
+    </P
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="loopdevice-setup"
+></A
+>5. Setting up the loop device</H1
+><P
+>Cryptoloop can be used either on a file or an entire file system. The following describes how to
+set it up on a particular partition. This partition can be any partition you like; the following
+example uses <TT
+CLASS="filename"
+>/dev/sda1</TT
+>. I have chosen to use AES as a cipher, but you can substitute any cipher
+you like that has been enabled in the kernel. You can get a list of the algorithms supported by
+your currently running kernel by looking into <TT
+CLASS="filename"
+>/proc/crypto</TT
+>. An excellent resource, discussing the
+different cryptographic algorithms, are Bruce Schneier's books, Applied Cryptography and Practical
+Cryptography. Both AES and Serpent are probably a reasonable choice. AES has been cryptanalyzed a lot
+and no serious weaknesses have been discovered so far. Serpent has not been analyzed as much, but is
+considered to be even a little bit stronger than AES. However, Serpent is also slower than AES.
+Stay away from DES, it is both slow and weak. Triple-DES may be an option, but AES is probably more
+secure and faster, so there is really no reason to use Triple-DES anymore.
+</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>It is recommended that you format your partition and fill it with random data before you create the encrypted file system on it. This will make it harder for an attacker to detect patterns in your encrypted partition.
+</P
+><P
+><EM
+>WARNING!</EM
+> </P
+><P
+>Be careful what you type here for your partition. If you do make a mistake, you can easily overwrite the wrong partition with random garbage! </P
+><P
+>Filling a partition with random data can be done as follows:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>dd if=/dev/urandom of=/dev/sda1 bs=1M
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You may get an error message that the device is full. You can ignore it.</P
+></LI
+><LI
+><P
+>Select a cipher and key size. A list of ciphers supported by your kernel can be obtained from <TT
+CLASS="filename"
+>/proc/crypto</TT
+>. I recommend that you use AES with a 256-bit key.</P
+></LI
+><LI
+><P
+>Set up the loop device. This is done using the <B
+CLASS="command"
+>losetup</B
+> command from the util-linux package. The following command creates an encrypted filesystem using the loop device 0 using the AES cipher with a 256-bit key on the device <TT
+CLASS="filename"
+>/dev/sda1</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>losetup -e aes-256 /dev/loop0 /dev/sda1
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>The command prompts for a password. Select a strong password and try to remember it without having to stick a Post-It note to your monitor. 
+        There is one big downside to using Cryptoloop. Since the password is hashed to create the encryption key, it is not easy to change the password later on. 
+        The most straight-forward way of changing the password is to create a new encrypted partition or file and move all data into it. For this reason, make 
+        sure you select a strong password from the start.  AES may be a strong algorithm, but if you chose a weak password, that security goes down the drain.
+        </P
+><P
+>If <B
+CLASS="command"
+>losetup</B
+> fails with an INVALID ARGUMENT error message, there is a problem with your util-linux package. 
+         Make sure you have followed the instructions above on how to install a patched version of util-linux. Older and unpatched version use a 
+         different way of passing the key size, and do not work with the 2.6 Crypto API.
+        </P
+></LI
+><LI
+><P
+>Create a file system. You can chose whatever file system you like. The following creates an ext3 file system using the loop device:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>mkfs.ext3 /dev/loop0
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Mount the encrypted file system. First you need to create a mount point, such as <TT
+CLASS="filename"
+>/mnt/crypto</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>mkdir /mnt/crypto</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Then you need to mount the file system. At this stage you need to tell mount explicitly which loop device to use:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>mount -t ext3 /dev/loop0 /mnt/crypto
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>You can now play with your encrypted file system until you are bored.</P
+></LI
+><LI
+><P
+>Unmount the file system. After you are done playing, unmount the filesystem:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>umount /mnt/crypto</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Detach the loop device. The loop device is still attached to your partition. Detach it with:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>losetup -d /dev/loop0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+></OL
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="mounting-filesystem"
+></A
+>6. Mounting the encrypted file system</H1
+><P
+>&#13;For all operations on the Cryptoloop device, it is important that the necessary modules are loaded. You
+need to load at least the Cryptoloop module and the modules for each cipher with <B
+CLASS="command"
+>modprobe</B
+>. If the features
+are compiled directly into the kernel, this is not necessary.
+</P
+><P
+>In order to mount the encrypted file system created above, you can use the standard mount command
+from util-linux:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>mount -t ext3 /dev/sda1 /mnt/crypto/ -oencryption=aes-256</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You will be prompted for the password and the file system will be mounted just as any other. Since the encryption option
+implies that this is a Cryptoloop filesystem, it will automatically pick an available loopback device.
+</P
+><P
+>When you are done, unmount it with:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>umount /mnt/crypto</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You can add the following line to <TT
+CLASS="filename"
+>/etc/fstab</TT
+>:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>/dev/sda1               /mnt/crypto     ext3            noauto,encryption=aes-256       0 0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now you can simply mount the device with:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>mount /mnt/crypto</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>That's it. Have fun.</P
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="filebased"
+></A
+>7. Using a file instead of a partition</H1
+><P
+>&#13;It is just as easy to create an encrypted file system within a file on another file system. This is especially useful
+if you want to back up this file by burning it to a DVD, etc. You can then easily move the file around to other
+machines as well.
+</P
+><P
+>To initially create a 100MB file containing random data use the following command:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>dd if=/dev/urandom of=/mystuff.aes bs=1k count=100000</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;If you want to change the size of the file, change the <TT
+CLASS="varname"
+>count</TT
+> value accordingly. The above command creates 100000 blocks
+of 1k in size, but you can change this to whatever you like. Just make sure it is not too small to hold the file system you
+chose. You can choose any file name and path you want instead of <TT
+CLASS="filename"
+>/mystuff.aes</TT
+> as long as there's enough space on the partition.
+</P
+><P
+>You can then create the encrypted file system within this file, similar to the way it is done above:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>losetup -e aes-256 /dev/loop0 /mystuff.aes</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now you can create the file system:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;mkfs.ext3 /dev/loop0
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;and mount it:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;mount -t ext3 /dev/loop0 /mnt/crypto
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;Finally, unmount and detach the loop device:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;umount /mnt/crypto
+losetup -d /dev/loop0
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;You can then mount the file system later on as follows:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>mount /mystuff.aes /mnt/crypto -oencryption=aes-256</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>If you want to move the file or burn it to a CD or DVD, make sure you <B
+CLASS="command"
+>unmount</B
+> it first.
+</P
+></DIV
+></DIV
+></BODY
+></HTML
+>

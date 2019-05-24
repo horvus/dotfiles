@@ -1,0 +1,40 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>5. Enable Privacy Extension</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="ch06.html" title="Chapter 6. Configuring IPv6 addresses"><link rel="prev" href="ch06s04.html" title="4. Automatic IPv6 Address Configuration"><link rel="next" href="ch07.html" title="Chapter 7. Configuring normal IPv6 routes"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">5. Enable Privacy Extension</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch06s04.html">Prev</a> </td><th width="60%" align="center">Chapter 6. Configuring IPv6 addresses</th><td width="20%" align="right"> <a accesskey="n" href="ch07.html">Next</a></td></tr></table><hr></div><div class="sect1"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="idp50718832"></a>5. Enable Privacy Extension</h2></div></div></div><p>Privacy Extension as described in <a class="ulink" href="http://www.faqs.org/rfcs/rfc4941.html" target="_top">RFC 4941 / Privacy Extensions for Stateless Address Autoconfiguration in IPv6</a> (obsoleted <a class="ulink" href="http://www.faqs.org/rfcs/rfc3041.html" target="_top">RFC 3041</a>) is replacing the static interface ID (mostly based on word-wide unique MAC address) used during autoconfiguration by a pseudo-random one and generating from time to time a new one deprecating the old one.</p><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp50721296"></a>5.1. Enable Privacy Extension using sysctl</h3></div></div></div><h3><a name="idp50721936"></a>Temporary activation</h3><p>Enable privacy extension for e.g. interface &#8221;eth0&#8221; and prefer the generated address:</p><pre class="screen">
+# sysctl -w net.ipv6.conf.eth0.use_tempaddr=2
+</pre><p>Afterwards, restart of the interface is necessary</p><pre class="screen">
+# ip link set dev eth0 down
+# ip link set dev eth0 up
+</pre><p>Once a router advertisement is received, the result should look like following</p><pre class="screen">
+# ip -6 addr show dev eth0
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qlen 1000
+    inet6 2001:db8:0:1:8992:3c03:d6e2:ed72/64 scope global secondary dynamic   &lt;- pseudo-random IID
+       valid_lft 604711sec preferred_lft 86311sec
+    inet6 2001:db8:0:1::224:21ff:fe01:2345/64 scope global     &lt;- IID based on MAC
+       valid_lft 604711sec preferred_lft 86311sec
+    ...
+</pre><h3><a name="idp50725344"></a>Permanent activation</h3><p>For permanent activation, either a special initscript value per interface will enable privacy or an entry in the /etc/sysctl.conf file like</p><pre class="screen">
+net.ipv6.conf.eth0.use_tempaddr=2
+</pre><p>Note: interface must already exists with proper name when sysctl.conf is applied. If this is not the case (e.g. after reboot) one has to configure privacy for all interfaces by default:</p><pre class="screen">
+net.ipv6.conf.all.use_tempaddr=2
+net.ipv6.conf.default.use_tempaddr=2
+</pre><p>Changed/added values in /etc/sysctl.conf can be activated during runtime, but at least an interface down/up or a reboot is recommended.</p><pre class="screen">
+# sysctl -p
+</pre></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp50729840"></a>5.2. Enable Privacy Extension using NetworkManager</h3></div></div></div><p>Modern (client) systems are using NetworkManager for configuring interfaces. A command line tool is built-in which can be used to change settings which are not available via GUI.</p><p>Examples based on version 0.9.9.1-5.git20140319.fc21</p><p>Check existing interfaces with:</p><pre class="screen">
+# nmcli connection 
+NAME UUID TYPE DEVICE
+ens4v1 d0fc2b2e-5fa0-4675-96b5-b723ca5c46db 802-3-ethernet ens4v1 
+</pre><p>Current amount of IPv6 privacy extension addresses can be checked with</p><pre class="screen">
+# ip -o addr show dev ens4v1 | grep temporary | wc -l
+0
+</pre><p>Current IPv6 privacy extension settings can be checked with</p><pre class="screen">
+# nmcli connection show ens4v1 |grep ip6-privacy
+ipv6.ip6-privacy: -1 (unknown)
+</pre><p>Enable IPv6 privacy extension and restart interface</p><pre class="screen">
+# nmcli connection modify ens4v1 ipv6.ip6-privacy 2
+# nmcli connection down ens4v1; nmcli connection up ens4v1
+</pre><p>New IPv6 privacy extension settings can be checked with</p><pre class="screen">
+# nmcli connection show ens4v1 |grep ip6-privacy
+ipv6.ip6-privacy: 2 (active, prefer temporary IP)
+</pre><p>Now IPv6 privacy extension addresses are configured on the interface</p><pre class="screen">
+# ip -o addr show dev ens4v1 | grep temporary | wc -l
+2
+</pre></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp50737408"></a>5.3. Test real use of Privacy Extension IPv6 Addresses</h3></div></div></div><p>Whether the IPv6 address with an Interface ID generated by Privacy Extension is really used for outgoing connections, one can browse to <a class="ulink" href="http://ip.bieringer.de/" target="_top">http://ip.bieringer.de/</a>, in case EUI64_SCOPE shows &#8221;iid-privacy&#8221;, then everything is working fine.</p></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch06s04.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ch06.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch07.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">4. Automatic IPv6 Address Configuration </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 7. Configuring normal IPv6 routes</td></tr></table></div></body></html>

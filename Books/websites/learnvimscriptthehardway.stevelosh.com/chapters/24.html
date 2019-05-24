@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <title>Function Arguments / Learn Vimscript the Hard Way</title>
+        <meta name="description" content="">
+        <meta name="author" content="Steve Losh">
+        <!--[if lt IE 9]>
+            <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+        <link href="../static/styles/skeleton/base.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/skeleton/skeleton.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/skeleton/layout.css" rel="stylesheet" type="text/css" />
+
+        <link href="../static/styles/tango.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/style.less" rel="stylesheet/less" type="text/css" />
+
+        <script type="text/javascript" src="../static/scripts/less.js"></script>
+    </head>
+
+    <body class="">
+        <div class="container">
+            <header class="sixteen columns">
+                <h1><a href="../index.html">Learn Vimscript the Hard Way</a></h1>
+            </header>
+
+            
+    <section class="nav three columns">
+        
+<ul>
+<li><a href="24.html#function-arguments">Function Arguments</a><ul>
+<li><a href="24.html#varargs">Varargs</a></li>
+<li><a href="24.html#assignment">Assignment</a></li>
+<li><a href="24.html#exercises">Exercises</a></li>
+</ul>
+</li>
+</ul>
+
+
+        <div class="prevnext">
+            
+                <a class="prev" href="23.html">&laquo; Prev</a>
+            
+            
+                <a class="next" href="25.html">Next &raquo;</a>
+            
+        </div>
+    </section>
+
+    <section class="content twelve columns offset-by-one">
+        <div> 
+<h1 id="function-arguments">Function Arguments</h1>
+<p>Vimscript functions can, of course, take arguments.  Run the following commands:</p>
+<pre class="codehilite"><code class="language-vim">:function DisplayName(name)
+:  echom "Hello!  My name is:"
+:  echom a:name
+:endfunction</code></pre>
+
+
+<p>Run the function:</p>
+<pre class="codehilite"><code class="language-vim">:call DisplayName("Your Name")</code></pre>
+
+
+<p>Vim will display two lines: <code>Hello!  My name is:</code> and <code>Your Name</code>.</p>
+<p>Notice the <code>a:</code> in the name of the variable that we passed to the <code>echom</code>
+command.  This represents a variable scope, which we talked about in an earlier
+chapter.</p>
+<p>Let's remove this scope prefix and see how Vim reacts.  Run the following
+commands:</p>
+<pre class="codehilite"><code class="language-vim">:function UnscopedDisplayName(name)
+:  echom "Hello!  My name is:"
+:  echom name
+:endfunction
+:call UnscopedDisplayName("Your Name")</code></pre>
+
+
+<p>This time Vim complains that it can't find the variable <code>name</code>.</p>
+<p>When you write a Vimscript function that takes arguments you <em>always</em> need to
+prefix those arguments with <code>a:</code> when you use them to tell Vim that they're in
+the argument scope.</p>
+<h2 id="varargs">Varargs</h2>
+<p>Vimscript functions can optionally take variable-length argument lists like
+Javascript and Python.  Run the following commands:</p>
+<pre class="codehilite"><code class="language-vim">:function Varg(...)
+:  echom a:0
+:  echom a:1
+:  echo a:000
+:endfunction
+
+:call Varg("a", "b")</code></pre>
+
+
+<p>This function shows us several things, so let's look at each one individually.</p>
+<p>The <code>...</code> in the function definition tells Vim that this function can take any
+number of arguments.  This is like a <code>*args</code> argument in a Python function.</p>
+<p>The first line of the function echoes the message <code>a:0</code> and displays <code>2</code>.  When
+you define a function that takes a variable number of arguments in Vim, <code>a:0</code>
+will be set to the number of extra arguments you were given.  In this case we
+passed two arguments to <code>Varg</code> so Vim displayed <code>2</code>.</p>
+<p>The second line echoes <code>a:1</code> which displays <code>a</code>.  You can use <code>a:1</code>, <code>a:2</code>, etc
+to refer to each extra argument your function receives.  If we had used <code>a:2</code>
+Vim would have displayed "b".</p>
+<p>The third line is a bit trickier.  When a function has varargs, <code>a:000</code> will be
+set to a list containing all the extra arguments that were passed.  We haven't
+looked at lists quite yet, so don't worry about this too much.  You can't use
+<code>echom</code> with a list, which is why we used <code>echo</code> instead for that line.</p>
+<p>You can use varargs together with regular arguments too.  Run the following
+commands:</p>
+<pre class="codehilite"><code class="language-vim">:function Varg2(foo, ...)
+:  echom a:foo
+:  echom a:0
+:  echom a:1
+:  echo a:000
+:endfunction
+
+:call Varg2("a", "b", "c")</code></pre>
+
+
+<p>We can see that Vim puts <code>"a"</code> into the named argument <code>a:foo</code>, and the rest are
+put into the list of varargs.</p>
+<h2 id="assignment">Assignment</h2>
+<p>Try running the following commands:</p>
+<pre class="codehilite"><code class="language-vim">:function Assign(foo)
+:  let a:foo = "Nope"
+:  echom a:foo
+:endfunction
+
+:call Assign("test")</code></pre>
+
+
+<p>Vim will throw an error, because you can't reassign argument variables.  Now run
+these commands:</p>
+<pre class="codehilite"><code class="language-vim">:function AssignGood(foo)
+:  let foo_tmp = a:foo
+:  let foo_tmp = "Yep"
+:  echom foo_tmp
+:endfunction
+
+:call AssignGood("test")</code></pre>
+
+
+<p>This time the function works, and Vim displays <code>Yep</code>.</p>
+<h2 id="exercises">Exercises</h2>
+<p>Read the first two paragraphs of <code>:help function-argument</code>.</p>
+<p>Read <code>:help local-variables</code>.</p></div>
+
+        <div class="prevnext">
+            
+                <a class="prev" href="23.html">&laquo; Previous</a>
+            
+            
+                <a class="next" href="25.html">Next &raquo;</a>
+            
+        </div>
+    </section>
+
+
+            <footer class="sixteen columns">
+                Made by <a href="http://stevelosh.com">Steve Losh</a>.
+
+                <a href="../license.html">License</a>.
+
+                Built with
+                <a href="http://bitbucket.org/sjl/bookmarkdown/">Bookmarkdown</a>.
+            </footer>
+        </div>
+
+        
+            <script type="text/javascript">
+                var _gaq = _gaq || [];
+                _gaq.push(['_setAccount', 'UA-15328874-8']);
+                _gaq.push(['_trackPageview']);
+
+                (function() {
+                 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+                 ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+                 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+                 })();
+            </script>
+        
+
+        
+            <script type="text/javascript">
+                var _gauges = _gauges || [];
+                (function() {
+                 var t   = document.createElement('script');
+                 t.type  = 'text/javascript';
+                 t.async = true;
+                 t.id    = 'gauges-tracker';
+                 t.setAttribute('data-site-id', '4e8f83b7f5a1f546e200000d');
+                 t.src = '//secure.gaug.es/track.js';
+                 var s = document.getElementsByTagName('script')[0];
+                 s.parentNode.insertBefore(t, s);
+                 })();
+             </script>
+        
+    </body>
+</html>

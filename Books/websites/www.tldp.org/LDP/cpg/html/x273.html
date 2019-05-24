@@ -1,0 +1,214 @@
+<HTML
+><HEAD
+><TITLE
+>Some Miscellaneous Issues</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Custom Linux: A Porting Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Linux Still Isn't Booting"
+HREF="c233.html"><LINK
+REL="PREVIOUS"
+TITLE="Ethernet: our first PCI device"
+HREF="x259.html"><LINK
+REL="NEXT"
+TITLE="Linux Is Booting ... What Now ?"
+HREF="c293.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Custom Linux: A Porting Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x259.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Linux Still Isn't Booting</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c293.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN273"
+></A
+>4.4. Some Miscellaneous Issues</H1
+><P
+>We had new problems, some would say good problems. We didn't have a bootloader yet, however we needed to pass a command line to the kernel at boot time.  We hard-coded the command line into the kernel inside the <TT
+CLASS="function"
+>parse_options()</TT
+>. After that was finished, we made <TT
+CLASS="function"
+>console_init()</TT
+> and <TT
+CLASS="function"
+>serial_console_setup()</TT
+> work the way they should.  They no longer ignored the command line, but still RTS and DTR stay low.</P
+><P
+>Another important issue was memory mapping. The file <TT
+CLASS="filename"
+>arch/ppc/mm/init.c</TT
+> contains a function called <TT
+CLASS="function"
+>MMU_init()</TT
+>. This function is actually a big <B
+CLASS="command"
+>switch</B
+> statment, divided by the machine type. Each machine maps its memory using the <TT
+CLASS="function"
+>setbat()</TT
+> and <TT
+CLASS="function"
+>ioremap()</TT
+> functions. The BAT mechanism is a way of translating virtual addresses into physical ones. Thus, <TT
+CLASS="function"
+>setbat()</TT
+> is used by specifying a virtual address, a physical address and a page size.  Not every size can be used here; you should use one of the finite set of sizes, ranging from 128KB to 256MB.  We mapped our IO memory so that virtual equalled physical.</P
+><P
+>As mentioned, there is another way of mapping memory - <TT
+CLASS="function"
+>ioremap()</TT
+>. <TT
+CLASS="function"
+>ioremap()</TT
+> is used to map physical addresses into virtual ones, making them available to the kernel. The function <EM
+>does not allocate any memory</EM
+>, simply returns a virtual address by which one can access the memory region. The following is a snippet from <TT
+CLASS="function"
+>MMU_init()</TT
+>:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;case _MACH_mymachine:
+	setbat(0, LOW_IO_VIRT_BASE, LOW_IO_PHYS_BASE, LOW_IO_SIZE, IO_PAGE);
+	ioremap(UNIVERSE_BASE,UNIVERSE_SIZE);      /* Universe VME */
+	ioremap(EEPRO100_BASE,EEPRO100_SIZE);      /* Ethernet EEPRO100 */
+	break;
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+As you can see,  we don't take the return value of <TT
+CLASS="function"
+>ioremap()</TT
+>. We don't need it,  since at this stage the kernel maps the addresses so that virtual address == physical address.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x259.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c293.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Ethernet: our first PCI device</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c233.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Linux Is Booting ... What Now ?</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

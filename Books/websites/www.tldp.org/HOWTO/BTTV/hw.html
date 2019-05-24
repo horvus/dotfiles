@@ -1,0 +1,865 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Enabling Support for Your Bt8x8 Hardware in Linux</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The BTTV HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="The BTTV Hardware"
+HREF="hardware.html"><LINK
+REL="NEXT"
+TITLE="Loading the Modules"
+HREF="modprobe.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The BTTV HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="hardware.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="modprobe.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="HW"
+></A
+>3. Enabling Support for Your Bt8x8 Hardware in Linux</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DRIVER-INTRO"
+></A
+>3.1. The Bttv Driver</H2
+><P
+>Drivers for Bt8x8-based hardware have been a part of the <A
+HREF="http://www.kernel.org/"
+TARGET="_top"
+>Linux</A
+> 
+<A
+HREF="http://en.wikipedia.org/wiki/Kernel_%28computer_science%29"
+TARGET="_top"
+>kernel</A
+> since version 2.2.0, 
+and are likely to be already enabled in your running kernel if you have not recompiled or 
+otherwise replaced your system's stock kernel with a custom version. If unavailable, Bt8x8 support can 
+be enabled two ways: </P
+><P
+><P
+></P
+><UL
+><LI
+><P
+>by recompiling your kernel using the source code using 
+ downloaded kernel-source from your distribution or fetched directly from 
+ <A
+HREF="http://www.kernel.org"
+TARGET="_top"
+>the kernel source repository</A
+></P
+></LI
+><LI
+><P
+>the Bttv driver can be fetched directly from <A
+HREF="http://bytesex.org/bttv.html"
+TARGET="_top"
+> the Bttv home page</A
+> and then patching your available kernel source, which 
+ should only be necessary if you have a kernel version prior to 2.2.0 or later than 2.0.35; 
+ earlier versions are not likely to work.</P
+></LI
+></UL
+></P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNEL-MODULES"
+></A
+>3.1.1. Module or In-Kernel?</H3
+><P
+>It is likely the stock kernel that was installed on your Linux system, if unmodified, already 
+supports Bt8x8-based hardware.  The driver will exist either as a 
+loadable module or within the already running kernel. An easy way to tell is to use the 
+<B
+CLASS="COMMAND"
+>dmesg</B
+> command piped into <B
+CLASS="COMMAND"
+>less</B
+> (for easy viewing) 
+to look for an acknowledgement that the 
+driver in question was loaded when your system started up:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $ dmesg | less</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>...which may yield something like the following, depending on your exact Bt8x8 
+chipset features and kernel version (in this case, 2.6):</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   Jan 26 19:40:04 localhost kernel: bttv: driver version 0.9.15 loaded
+   Jan 26 19:40:04 localhost kernel: bttv: using 8 buffers with 2080k 
+      (520 pages) each for capture
+   Jan 26 19:40:04 localhost kernel: bttv: Bt8xx card found (0).
+   Jan 26 19:40:04 localhost kernel: ACPI: PCI interrupt 0000:02:09.0[A] -&#62; 
+      GSI 17 (level, low) -&#62; IRQ 17
+   Jan 26 19:40:04 localhost kernel: bttv0: Bt878 (rev 2) at 0000:02:09.0, 
+      irq: 17, latency: 32, mmio: 0xe7000000
+   Jan 26 19:40:04 localhost kernel: bttv0: detected: Hauppauge WinTV 
+      [card=10], PCI subsystem ID is 0070:13eb
+   Jan 26 19:40:04 localhost kernel: bttv0: using: Hauppauge (bt878) [card=10, 
+      autodetected]
+   Jan 26 19:40:04 localhost kernel: bttv0: using tuner=2
+   Jan 26 19:40:04 localhost kernel: tuner: chip found at addr 0xc2 i2c-bus 
+      bt878 #0 [sw]
+   Jan 26 19:40:04 localhost kernel: tuner: type set to 2 (Philips NTSC 
+      (FI1236, FM1236 and compatibles)) by bt878 #0 [sw]</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>If you don't see it, the particular driver module you are interested in may 
+be available but not necessarily loaded at that time. If you know what the module is named, 
+try using <TT
+CLASS="FILENAME"
+>find</TT
+>; in this example we are looking for the 'bttv' module:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $ find /lib/modules -name bttv.o</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Note that up until the 2.4 series modules had the suffix <TT
+CLASS="FILENAME"
+>.o</TT
+>; for 2.6+ series kernels this was replaced with <TT
+CLASS="FILENAME"
+>.ko</TT
+>.</P
+><P
+>You can get a list of all modules available by typing the following at the command line:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+> 
+   $ ls -R /lib/modules/`uname -r`/kernel </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> Where <B
+CLASS="COMMAND"
+>`uname -r`</B
+>, surrounded by forward tick marks, is your kernel version number.
+
+The following output is an example of what you might find in a Bttv-ready kernel, where everything is 
+loaded as a module (edited for brevity):</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   /lib/modules/2.6.8/kernel/drivers/media/video:
+    btcx-risc.ko    ir-kbd-i2c.ko  tda9875.ko  tvaudio.ko      video-buf.ko
+    bttv.ko         msp3400.ko     tda9887.ko  v4l1-compat.ko  videodev.ko
+    ir-kbd-gpio.ko  tda7432.ko     tuner.ko    v4l2-common.ko</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Again, your output may vary by the currently running kernel capabilities.</P
+><P
+>Once you know which module your hardware needs you can find out if it is already loaded 
+by typing at the command line or in a terminal window:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # lsmod</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> As shown by the prompt above, you will need to have root privileges
+to do this.
+
+You should get output similar to, but not necessarily limited to the following:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   snd_bt87x              11400  0
+   tuner                  18832  0
+   tvaudio                20428  0
+   msp3400                22100  0
+   bttv                  145804  0
+   video_buf              17476  1 bttv
+   i2c_algo_bit            8904  1 bttv
+   v4l2_common             4928  1 bttv
+   videodev                7232  2 quickcam,bttv</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> Most stock kernels are compiled with <TT
+CLASS="FILENAME"
+>kmod</TT
+>, 
+which enables automatic loading of necessary modules when the appropriate 
+hardware is detected. It may not always do so, however, so  if you don't 
+have the particular module you're seeking loaded and
+you think the module may be available, try loading
+it manually with <B
+CLASS="COMMAND"
+>modprobe</B
+>, as in the 
+following example (using the <TT
+CLASS="FILENAME"
+>bttv</TT
+> module):</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # modprobe -v bttv</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="RECOMPILE"
+></A
+>3.2. No Bttv module or in-kernel support found?</H2
+><P
+>If your running kernel or precompiled distribution kernel inexplicably 
+doesn't have Bt8x8 support enabled or available, your can always acquire new 
+kernel source code from the Linux <A
+HREF="http://www.kernel.org"
+TARGET="_top"
+>kernel.org</A
+> source code repository. If you are unfamiliar with the 
+prerequisites and procedure of compiling your own kernel, I direct you to the <A
+HREF="http://www.tldp.org/HOWTO/Kernel-HOWTO.html"
+TARGET="_top"
+>Kernel HOWTO</A
+>
+for more information.  </P
+><P
+>If you do recompile, the Bttv driver itself will obviously need to be enabled, 
+and is found in the heading entitled "Multimedia Devices" -&#62; "Video for Linux" 
+in the 2.4 and earlier kernels in menuconfig or xconfig, or alternatively in 
+"Device Drivers" -&#62; "Multimedia Devices" -&#62; "Video for Linux" -&#62; "BT848 Video 
+For Linux" in the 2.6+ series. </P
+><DIV
+CLASS="NOTE"
+><P
+></P
+><TABLE
+CLASS="NOTE"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>You will need <TT
+CLASS="FILENAME"
+>i2c</TT
+> subsystem support 
+enabled as well as <TT
+CLASS="FILENAME"
+>i2c-algo-bit</TT
+>.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Device support (<TT
+CLASS="FILENAME"
+>i2c-dev</TT
+>) is not required for Bt8x8 
+support. Earlier than kernel version 2.3.34 i2c is not present in the kernel 
+source and a patch must be fetched and applied to your source, found at the 
+<A
+HREF="http://secure.netroedge.com/~lm78/download.html"
+TARGET="_top"
+>lm_sensors homepage</A
+>.</P
+><P
+>If you are running a 2.4 series kernel, <B
+CLASS="COMMAND"
+>btaudio</B
+> 
+in the OSS "Sound" category is optional if you want to use external speakers 
+attached to the the card's audio out jack, and either (or both) OSS or 
+ALSA sound system btaudio drivers in the 2.6+ series.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TUNING"
+></A
+>3.3. Configuration Requirements for Use of your Bttv Hardware</H2
+><P
+>Once you know your kernel is enabled you can proceed to some minor tuning that 
+may already be done for you depending on your system and distributor and 
+distribution features.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="DEV"
+></A
+>3.3.1. Device Files</H3
+><P
+>If you are using 
+<A
+HREF="http://www.atnf.csiro.au/people/rgooch/linux/docs/devfs.html"
+TARGET="_top"
+>Device Filesystem</A
+> (devfs) or 
+<A
+HREF="http://www.kernel.org/pub/linux/utils/kernel/hotplug/udev.html"
+TARGET="_top"
+>udev</A
+> your work in this respect may be done for you dynamically, but 
+at the same time the devices may not exist until they are recognized by the 
+kernel (i.e., the necessary modules loaded), so be sure you have taken care 
+of the previously outlined prerequisites first.</P
+><P
+>The Linux kernel requires a virtual device node be created to access 
+and control a particular piece of hardware. This node may have already been 
+created for you automatically; <B
+CLASS="COMMAND"
+>ls -l /dev/video*</B
+> (with an 
+asterisk) or alternatively <B
+CLASS="COMMAND"
+>find /dev -name video*</B
+> or even 
+visual inspection of the <TT
+CLASS="FILENAME"
+>/dev</TT
+> directory with your 
+favorite file manager can give you an idea if the video devices exist. If 
+so you can proceed to <A
+HREF="hw.html#PERMISSIONS"
+>Section 3.4</A
+>; if not you will need to 
+create them manually.</P
+><P
+>An easy way to create them, if available with your Linux distribution, 
+is use of the <TT
+CLASS="FILENAME"
+>MAKEDEV</TT
+> script, which may be located in 
+<TT
+CLASS="FILENAME"
+>/dev</TT
+> or the usual places for storing executable commands 
+(<TT
+CLASS="FILENAME"
+>/bin</TT
+>,<TT
+CLASS="FILENAME"
+>/sbin</TT
+> and so on). The manual 
+page for <TT
+CLASS="FILENAME"
+>MAKEDEV</TT
+> (<B
+CLASS="COMMAND"
+>man MAKEDEV</B
+>) can 
+guide you further, but be aware of the device-specific command options. If 
+<TT
+CLASS="FILENAME"
+>MAKEDEV</TT
+> doesn't work or doesn't exist, or you just prefer 
+doing things the hard way, move on to the next paragraph.</P
+><P
+>A device can be created as a block (such as a drive), a FIFO
+(file-in-file-out or pipe, as in xconsole) or a character device, which
+represents other hardware.
+
+Each device has a major and a minor number <SPAN
+CLASS="QUOTE"
+>"coordinate"</SPAN
+>
+to tell the kernel what it is and where to access it.
+
+These numbers are not arbitrary. The major number 81 with minor number 0, 1, 
+2, and so on are by convention assigned to Video4linux devices, including TV 
+tuner boards and webcams. In order to create the video device 
+<TT
+CLASS="FILENAME"
+>/dev/video0</TT
+>, use <B
+CLASS="COMMAND"
+>mknod</B
+> at the command 
+line:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # mknod /dev/video0 c 81 0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>where <B
+CLASS="COMMAND"
+>c</B
+> represents a character device.</P
+><P
+>&#13;You can use the following script, which I
+have borrowed from the kernel source (located in
+<TT
+CLASS="FILENAME"
+>linux/Documentation/video4linux/bttv/MAKEDEV</TT
+> of
+the source tree):</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #!/bin/bash
+   function makedev () {
+	for dev in 0 1 2 3; do echo "/dev/$1$dev:
+	char 81 $[ $2 + $dev ]" rm -f /dev/$1$dev
+	mknod /dev/$1$dev c 81 $[ $2 + $dev ] chmod
+	666 /dev/$1$dev
+   	done
+
+   	# symlink for default device
+	rm -f /dev/$1 ln -s /dev/${1}0 /dev/$1
+   	}
+
+	# see http://roadrunner.swansea.uk.linux.org/v4lapi.shtml
+	echo "*** new device names ***" makedev video
+	0 makedev radio 64 makedev vtx 192 makedev vbi 224
+	# "*** old device names (for compatibility only) ***"
+	#makedev bttv 0 #makedev bttv-fm 64 #makedev bttv-vbi 224</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> Simply copy and paste the above into your favorite editing program,
+save it as MAKEDEV or whatever name you like, make it executable
+(i.e., <B
+CLASS="COMMAND"
+>chmod u+x MAKEDEV</B
+>), and then execute it as root: </P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # ./MAKEDEV</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PERMISSIONS"
+></A
+>3.4. Groups and Permissions</H2
+><P
+> It is a good idea to be sure that your user account can access
+the device once all modules are loaded and device nodes created.
+
+The most security-conscious way to do that is to add access for a
+particular group.
+
+On my system, the members of the group 'video' are allowed to use the
+webcam, scanner and other photographic devices.
+
+The way to accomplish this is to first change the ownership of the
+devices in <TT
+CLASS="FILENAME"
+>/dev</TT
+> like so (as root): </P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # chown root.video /dev/usb/video*</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> ...where <B
+CLASS="COMMAND"
+>root.video</B
+> are the owner and group
+the device will now belong to.
+
+Obviously, the specific command will vary by your system and the type
+of device.
+
+It is important that you change the ownership of the device node itself
+and not the symlink; symlinks' ownerships are affected only by changing
+the parent devices or files they point to.  </P
+><P
+> To see if your user account is a member of the group in question,
+as root issue the following command:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # grep -e video /etc/group</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+You should see something like the following:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   video:x:44:</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> ...where '44' is the group number.
+
+Since no members follow the last colon in the 'video' group, we can add
+them, let's say user 'jhs' with the command</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # adduser jhs  video</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> After this, it's simply a matter of allowing read and write access
+for the user in question of the device like so: </P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # chmod g+rw /dev/v4l/video0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> ...where <B
+CLASS="COMMAND"
+>g+rw</B
+> means add <B
+CLASS="COMMAND"
+>r</B
+>ead
+and <B
+CLASS="COMMAND"
+>w</B
+>rite access for <B
+CLASS="COMMAND"
+>g</B
+>roup.
+
+See the documentation for chmod (<B
+CLASS="COMMAND"
+>man chmod</B
+> or
+<B
+CLASS="COMMAND"
+>info chmod</B
+>) for further info.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="hardware.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="modprobe.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The BTTV Hardware</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Loading the Modules</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

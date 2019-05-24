@@ -1,0 +1,419 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Backup-With-MSDOS mini-HOWTO: The technique</TITLE>
+ <LINK HREF="Backup-With-MSDOS-3.html" REL=next>
+ <LINK HREF="Backup-With-MSDOS-1.html" REL=previous>
+ <LINK HREF="Backup-With-MSDOS.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Backup-With-MSDOS-3.html">Next</A>
+<A HREF="Backup-With-MSDOS-1.html">Previous</A>
+<A HREF="Backup-With-MSDOS.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. The technique</A></H2>
+
+<P>Throughout this description I will refer to two machines as ``<CODE>msdos</CODE>''
+and ``<CODE>linux</CODE>''. ``<CODE>msdos</CODE>'' is the name of the machine
+which has the tape drive and is usually running MS-DOS.
+``<CODE>linux</CODE>'' is the Linux machine whose disk
+you are trying to back up or restore to the tape drive.
+For simplicity I will refer to the first machine as ``<CODE>msdos</CODE>''
+even when it is booted into and running Linux.
+Further, all path names in this document should be considered
+to be relative to the Linux machine with the Search-And-Rescue (SAR)
+disks mounted somewhere on the system.
+That means that the file <CODE>/etc/passwd</CODE> is the password file for
+your Linux machine's hard drive, while, for instance,
+<CODE>/tape144/etc/passwd</CODE> is the corresponding file on the floppy disk.
+<P>
+<P>I am using Karel Kubat's backup scripts, version 1.03, available at
+<BLOCKQUOTE><CODE>
+<A HREF="ftp://sunsite.enc.edu:/pub/Linux/system/Backup/backup-1.03.tar.gz">ftp://sunsite.enc.edu:/pub/Linux/system/Backup/backup-1.03.tar.gz</A></CODE></BLOCKQUOTE>
+
+Throughout this document I will refer to these simply as
+``<CODE>the backup scripts</CODE>''.
+You do not have to use these scripts for your own backups to tape.
+I like these scripts as they use afio to form
+an uncompressed archive of compressed files,
+rather than a compressed archive of uncompressed files.
+The former is much safer if there is a media read error during the restore.
+I understand that Karel is no longer supporting backup,
+and now has produced 'tob', or tape oriented backup.
+While I haven't tried the new package myself,
+it cannot make a significant difference to the procedure outlined here.
+<P>First of all, obtain the ftape module. It is a part of all modern kernels,
+but if you are using an older kernel you can find the module at:
+<BLOCKQUOTE><CODE>
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/kernel/tapes/ftape-2.05.tar.gz">ftp://sunsite.unc.edu/pub/Linux/kernel/tapes/ftape-2.05.tar.gz</A></CODE></BLOCKQUOTE>
+
+Next, get a Slackware boot disk
+(I got the net disk, but it doesn't make much difference) and
+the <CODE>tape144</CODE> root disk,
+and put the images onto 3&quot;1/2 floppies.
+<P>The <CODE>ftape</CODE> module will only work
+if it is installed in the kernel which was running when you compiled it.
+I could not get it to work with the <CODE>ftape.o</CODE> module on
+the <CODE>tape144</CODE> root disk,
+I think because that module has been stripped of symbols and won't install.
+So, you now have to make a new kernel with network and ftape support,
+and if you're running an old kernel, a new <CODE>ftape.o</CODE>.
+Read the directions which ship with the <CODE>ftape</CODE> archive for
+directions at this stage.
+Remember that the kernel you compile must support the Ethernet cards
+on both the Linux machine and the MS-DOS machine.
+<P>Copy the newly created kernel image over top of the one on the Net boot disk.
+Use <CODE>/bin/cp</CODE>, do not create a boot disk with the ``<CODE>dd</CODE>''
+command as you would to create a bootable kernel image.
+Write protect the boot disk, and label it: SAR#1.
+<P>Now, mount the <CODE>tape144</CODE> root disk.
+I'll assume that the mount point is <CODE>/tape144</CODE>,
+to avoid confusion in file names.
+We need to free some space on it, so delete the following files:
+<BLOCKQUOTE><CODE>
+<PRE>
+/tape144/bin/dialog
+/tape144/bin/elvis
+/tape144/bin/vi
+/tape144/boot/ftape.o
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Now, create a new file:
+<BLOCKQUOTE><CODE>
+<PRE>
+/tape144/etc/exports
+</PRE>
+</CODE></BLOCKQUOTE>
+
+which contains the following line:
+<BLOCKQUOTE><CODE>
+<PRE>
+/mnt    msdos(ro)
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Where ``<CODE>msdos</CODE>'' should be replaced with the name or IP#
+of the MS-DOS machine which has the tape drive installed.
+<P>Next, so that you don't have to rely on a name server,
+add lines to the file <CODE>/tape144/etc/hosts</CODE> with
+the names and IP numbers of the Linux and MS-DOS machines.
+For instance, mine contains the following two lines:
+<BLOCKQUOTE><CODE>
+<PRE>
+128.100.75.114  caliban.physics.utoronto.ca caliban caliban.physics
+128.100.75.111  ariel.physics.utoronto.ca ariel ariel.physics
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Now, there's some sort of problem with the inetd configuration.
+We have to put the full path name of the rsh daemon in it.
+Change line 19 of <CODE>/tape144/etc/inetd.conf</CODE> to read:
+<BLOCKQUOTE><CODE>
+<PRE>
+shell   stream  tcp     nowait  root    /usr/etc/tcpd   /usr/etc/in.rshd
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Add local net routing information to <CODE>/tape144/etc/rc.d/rc.inet1</CODE>
+to enable the MS-DOS machine to use the network.
+The format of this depends on your network configuration,
+you can just copy the appropriate format out of your Linux
+<CODE>/etc/rc.d/rc.inet1</CODE>.
+For my network, the lines that have to be added are:
+<BLOCKQUOTE><CODE>
+<PRE>
+/etc/ifconfig eth0 128.100.75.111 broadcast 128.100.75.0 netmask 255.255.255.0
+/etc/route add -net 128.100.75.0 netmask 255.255.255.0
+</PRE>
+</CODE></BLOCKQUOTE>
+
+The IP# in the ifconfig entry is that of the MS-DOS machine.
+<P>Now, copy this file into <CODE>/tape144/etc/rc.d/rc.inet1-l</CODE>,
+and change the IP# in the new file to reflect that of
+the Linux machine rather than the MS-DOS machine.
+<P>Next, clip out lines 3 to 11 of <CODE>/tape144/etc/rc.local</CODE>.
+That's an if statement which executes the <CODE>rc.inet*</CODE> files.
+We don't want this to happen during the bootup.
+<P>Create a new file: <CODE>/tape144/root/.rhosts</CODE> containing the line:
+<BLOCKQUOTE><CODE>
+<PRE>
+linux root
+</PRE>
+</CODE></BLOCKQUOTE>
+
+where, again, ``<CODE>linux</CODE>'' is replaced with the full machine name
+(including domain) or the IP# of the Linux machine.
+<P>Fill in the password field in <CODE>/tape144/etc/passwd</CODE>
+for the root login to keep people from logging onto the MS-DOS machine
+while you're doing the backup.
+You can do this by copying the corresponding field from your Linux machine's
+<CODE>/etc/passwd file</CODE>.
+<P>Copy /usr/bin/rsh into /tape144/usr/bin.
+<P>Copy the following files from <CODE>/usr/etc</CODE> into <CODE>/tape144/usr/etc</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+in.rshd
+rpc.mountd
+rpc.nfsd
+rpc.portmap
+services
+tcpd
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Create a new script, <CODE>/tape144/bin/tapesetup</CODE>,
+which consists of the following:
+(change ``<CODE>linux</CODE>'' to reflect your Linux machine name).
+<BLOCKQUOTE><CODE>
+<PRE>
+#! /bin/sh
+
+/bin/sh /etc/rc.d/rc.inet1
+/bin/sh /etc/rc.d/rc.inet2
+
+/bin/mount linux:/nfs /mnt
+/bin/insmod /mnt/ftape.o
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Note that newer kernels will not require the insmod line.
+<P>Next, create another new script, <CODE>/tape144/bin/msdosset</CODE>, as follows:
+(change ``<CODE>linux</CODE>'' to reflect your Linux machine name).
+<BLOCKQUOTE><CODE>
+<PRE>
+#! /bin/sh 
+
+/bin/sh /etc/rc.d/rc.inet1
+/bin/sh /etc/rc.d/rc.inet2
+
+mount linux:/mnt /mnt
+/bin/insmod /mnt/ftape.o
+</PRE>
+</CODE></BLOCKQUOTE>
+
+As above, newer kernels will not require the insmod line.
+<P>Create a readable file, <CODE>/tape144/root/notes</CODE>,
+which contains this helpful information for use in full recovery:
+<BLOCKQUOTE><CODE>
+<PRE>
+For a full recovery to a trashed hard disk,
+boot the Linux machine with the SAR disks #1 and #2
+then type the following:
+
+   /bin/sh /etc/rc.d/rc.inet1-l
+   /bin/sh /etc/rc.d/rc.inet2
+
+   /usr/etc/rpc.portmap
+   /usr/etc/rpc.mountd
+   /usr/etc/rpc.nfsd
+
+Next, insert SAR disk #3 and type:
+
+   mount /dev/fd0 /mnt
+
+Create a new mount point, with:
+
+   mkdir /mnt2
+
+and mount your Linux hard disk partition on this point.
+You may have to reformat the partition first, if so,
+follow the directions in the Linux Installation HOWTO.
+The SAR disks contain all the files necessary to do the reformat.
+
+Finally, use disks SAR#1 and SAR#2 to boot up
+the MS-DOS machine and run the /bin/msdosset script on that machine.
+It will take about a minute to run that script because it is getting
+an NSF file from a floppy drive, so be patient.
+Now, recover the tape to /mnt2 on the Linux machine.
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>If you are using the backup scripts you will need to
+copy 'afio' into the <CODE>/tape144/local/bin</CODE> subdirectory.
+It is not necessary to have the rest of the backup script files
+on the recovery disks, an archive can be recovered using only 'afio' and 'gzip'.
+<P>I was unable to use the backup scripts as they come shipped.
+The tape archive appears to build cleanly, but it is unrecoverable.
+I found that removing the block size and conversion statements fixed it.
+Here is the patch to the ``<CODE>netbackup</CODE>'' script.
+Apply this patch to the Linux machine's hard disk copy of 'netbackup'
+as well as to the copy on the SAR disks.
+<BLOCKQUOTE><CODE>
+<PRE>
+*** netbackup.orig      Mon Jan  9 17:22:32 1995
+--- netbackup   Mon Jan  9 17:23:25 1995
+***************
+*** 35,41 ****
+                  "'mknod", devname, "p'");
+      exec ("su -", USERNAME, "-c",
+                  "'rsh ", REMOTE_HOST, 
+!                       "\"dd", "of=" REMOTE_DEVICE, "obs=20k", "conv=sync\"",
+                        "&lt;", devname,
+                "'&amp;"
+         );
+--- 35,41 ----
+                  "'mknod", devname, "p'");
+      exec ("su -", USERNAME, "-c",
+                  "'rsh ", REMOTE_HOST, 
+!                       "\"dd", "of=" REMOTE_DEVICE, "\"",
+                        "&lt;", devname,
+                "'&amp;"
+         );
+***************
+*** 50,56 ****
+                  "'mknod", devname, "p'");
+      exec ("su", USERNAME, "-c", 
+                  "'rsh ", REMOTE_HOST, 
+!                       "\"dd", "if=" REMOTE_DEVICE, "ibs=20k", "conv=sync\"",
+                        ">", devname,
+                "'&amp;"
+         );
+--- 50,56 ----
+                  "'mknod", devname, "p'");
+      exec ("su", USERNAME, "-c", 
+                  "'rsh ", REMOTE_HOST, 
+!                       "\"dd", "if=" REMOTE_DEVICE, "\"",
+                        ">", devname,
+                "'&amp;"
+         );
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You have now finished your SAR disk #2.
+Write protect it.
+<P>Next, mount a clean, formatted disk
+(create it with <CODE>fdformat</CODE> and <CODE>mkfs</CODE>).
+Copy the <CODE>ftape.o</CODE> file onto it, and label it SAR#3.
+For some reason things go badly if you write protect this disk,
+so leave it write-enabled.
+<P>On the Linux machine, create a new directory for NFS file serving.
+I made a directory:
+<BLOCKQUOTE><CODE>
+<PRE>
+/nfs
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Put the <CODE>ftape.o</CODE> (unstripped, about 500+ kB) into this subdirectory.
+Create an entry in your Linux's exports file <CODE>/etc/exports</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+/nfs    msdos(ro)
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Note that all files in your NFS directory and it's subdirectories
+are not secure.
+Somebody else could boot the MS-DOS machine into Linux with
+his own boot disks and mount this directory,
+so be certain that you don't put anything sensitive in your NFS subdirectory.
+<P>Restart your NFS daemons, <CODE>rpc.mountd</CODE> and <CODE>rpc.nfsd</CODE>.
+They don't seem to take kindly to a <CODE>SIGHUP</CODE> restart,
+so kill them and reinvoke them.
+If you're not activating these daemons in your <CODE>/etc/rc.d/rc.inet2</CODE>
+you might want to do so now.
+<P>OK, now we're all set to back up and recover.
+To make a full backup from the Linux machine,
+boot the MS-DOS machine with SAR#1.
+When prompted for the second disk, load SAR#2. Log in as root,
+and execute the script: <CODE>/bin/tapesetup</CODE>.
+Log out of the MS-DOS machine.
+If you're using the backup scripts, the netbackup command will now work.
+You can also use the ``<CODE>-f msdos:/dev/ftape</CODE>'' switch on GNU
+<CODE>tar</CODE>, <CODE>cpio</CODE>, or <CODE>mt</CODE>, and make your backup this way.
+If you have a backup program,
+which is only capable of writing to a local file,
+do the following.
+Assume that the backup program is called ``<CODE>localbackup</CODE>'' and
+writes to the file represented by its command line argument:
+<BLOCKQUOTE><CODE>
+<PRE>
+mknod /tmp/tapepipe p
+rsh msdos dd of=/dev/ftape &lt; /tmp/tapepipe &amp;
+localbackup /tmp/tapepipe
+</PRE>
+</CODE></BLOCKQUOTE>
+
+when it's done, delete <CODE>/tmp/tapepipe</CODE>.
+<P>Recovering to a live Linux machine:
+the <CODE>netbackup</CODE> script, <CODE>tar</CODE>, <CODE>cpio</CODE>,
+and so on will all work without special actions on the part of the operator.
+If you have a local recovery program which recovers from a file, do this:
+<BLOCKQUOTE><CODE>
+<PRE>
+mknod /tmp/tapepipe p
+rsh -n msdos dd if=/dev/ftape >> /tmp/tapepipe &amp;
+localrecovery /tmp/tapepipe
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and delete <CODE>/tmp/tapepipe</CODE> when you're done.
+<P>Notice that I'm using '<CODE>rsh</CODE>' to the root user on the MS-DOS machine.
+This works with a correct <CODE>.rhosts</CODE> entry.
+The configuration on the '<CODE>tape144</CODE>' disk allows <CODE>rsh</CODE> to root,
+but does not allow <CODE>telnet</CODE> or <CODE>rlogin</CODE> to root,
+logins are restricted to the console.
+This is good for security.
+<P>If you are worried about a root <CODE>.rhost</CODE> file,
+you can create a new user on SAR#2, ``<CODE>tapeuser</CODE>'',
+with permissions to operate the tape drive but not the disks
+(create a new group and put tapeuser in that group,
+then <CODE>chown</CODE> and <CODE>chmod</CODE> the files <CODE>/dev/rft*</CODE> and
+<CODE>/dev/nrft*</CODE>).
+Your backup program then has to know to <CODE>rsh</CODE> to that username
+rather than to root.
+Of course, now there must be an <CODE>.rhosts</CODE> file in
+<CODE>~tapeuser</CODE> on SAR#2.
+For my own use, I have chosen this course, rather than a root <CODE>.rhosts</CODE>.
+<P>Finally, the directions for a complete recovery to a trashed hard disk.
+This assumes that the Linux partition is completely unrecoverable.
+If necessary, reformat that partition as described in the Linux
+Installation HOWTO. Boot the Linux machine from SAR disk #1.
+When prompted, insert disk #2.
+Now, follow the directions in the file <CODE>/root/notes</CODE>
+(this was <CODE>/tape144/root/notes</CODE> when it was mounted on
+your Linux machine).
+Once both machines have been booted up, run the recovery routine you need.
+If you are running the backup scripts you can do it as follows:
+<OL>
+<LI>change directory to the mount point of the hard disk partition
+which you will be recovering.</LI>
+<LI>if any mounted volumes are on the backup,
+and you want to recover them,
+create the mount points within the hard disk partition and
+mount the volumes.</LI>
+<LI>Enter the command:
+<BLOCKQUOTE><CODE>
+<PRE>
+rsh -n msdos dd if=/dev/ftape | afio -i -v -Z -c 1024 -
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+or
+<BLOCKQUOTE><CODE>
+<PRE>
+rsh -n -l tapeuser msdos dd if=/dev/ftape | afio -i -v -Z -c 1024 -
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+or
+<BLOCKQUOTE><CODE>
+<PRE>
+mknod /tmp/backpipe p
+rsh -n msdos dd if=/dev/ftape >> /tmp/backpipe &amp;
+afio -i -v -Z -c 1024 /tmp/backpipe
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+
+This reads the tape on the remote machine, writing the result to stdout,
+where <CODE>afio</CODE> picks it up.
+The '<CODE>-i</CODE>' switch tells it to recover the files relative to
+the current working directory (which is the root of the hard disk partition).  '<CODE>-v</CODE>' is verbose, listing the files as they are recovered.  '<CODE>-Z</CODE>' tells afio that this is an archive of individually compressed files.  '<CODE>-c 1024</CODE>' tells it to use a 5 MB streaming buffer
+to avoid a lot of tape rewinding.
+<HR>
+<A HREF="Backup-With-MSDOS-3.html">Next</A>
+<A HREF="Backup-With-MSDOS-1.html">Previous</A>
+<A HREF="Backup-With-MSDOS.html#toc2">Contents</A>
+</BODY>
+</HTML>

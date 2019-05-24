@@ -1,0 +1,407 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>How it works</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Autodir HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Differences between Autodir and Autofs"
+HREF="x130.html"><LINK
+REL="NEXT"
+TITLE="Some definitions"
+HREF="x235.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Autodir HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x130.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x235.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN170"
+></A
+>7. How it works</H1
+><P
+><EM
+>Autodir</EM
+> uses modules to get specific functionality. The core <EM
+>Autodir</EM
+> implements generic functionality that modules can exploit and add specific functionality to.</P
+><P
+>At any moment only one module can be added to <EM
+>Autodir</EM
+>. If there are two modules, for example <TT
+CLASS="literal"
+>autohome</TT
+> and <TT
+CLASS="literal"
+>autogroup</TT
+>, then two processes of <EM
+>Autodir</EM
+> should be created so that each process can have one of the required modules attached to it.</P
+><P
+>For further explanation I chose the <TT
+CLASS="literal"
+>autohome</TT
+> module which handles transparent home directory creation.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Assumptions</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+></P
+><UL
+><LI
+><P
+>The <TT
+CLASS="literal"
+>autohome</TT
+> module creates user home directories on demand if these do not exist already.</P
+></LI
+><LI
+><P
+>It is assumed that user accounts exists, but the accompanying home directories do not - either because these accounts were created with the <TT
+CLASS="literal"
+>-M</TT
+> option with <B
+CLASS="command"
+>useradd</B
+> or because these accounts were imported from LDAP, NIS or some other external database for which home directories are yet to be created.</P
+></LI
+><LI
+><P
+>It also assumed <EM
+>for this explanation only</EM
+> that all user home directories are expected to be in the <TT
+CLASS="filename"
+>/home</TT
+> directory.</P
+></LI
+></UL
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>KISS</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Keep it Simple: Some fine details are intentionally kept aside to make the explanation easy to understand.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>First the autofs file system is mounted on the <TT
+CLASS="filename"
+>/home</TT
+> directory by <EM
+>Autodir</EM
+>. The Linux kernel is informed that <TT
+CLASS="filename"
+>/home</TT
+> is managed by a user space application, <EM
+>Autodir</EM
+>, from now on.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Autofs?</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Do not bother too much about the autofs file system if you do not understand about it. Just think of it as a special kind of file system, similar to memory based file systems but with some additional special properties.</P
+></TD
+></TR
+></TABLE
+></DIV
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;
+                                +----------------+
+                                |  Linux Kernel  |
+                                +----------------+
+                                  /        \
+                                 /          \
+                                /            \
+                               /              \
+   +-------------+       +--------+       +------------+        +-----------------+
+   | Application |------&#62;| /home  |&#60;-----&#62;|  Autodir   |&#60;------&#62;| autohome module |
+   +-------------+       +--------+       +------------+        +-----------------+
+                              \                                          /
+                               \  +----------------+                    /
+                                +-|   /autohome    |&#60;------------------+
+                                  +----------------+
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Whenever an application or daemon needs access to a user's home directory, for example <TT
+CLASS="filename"
+>/home/userhome1</TT
+>, they directly enter into <TT
+CLASS="filename"
+>/home/userhome1</TT
+> to access it. The kernel, which notices this, informs <EM
+>Autodir</EM
+> if the <TT
+CLASS="filename"
+>userhome1</TT
+> directory does not yet exist already in <TT
+CLASS="filename"
+>/home</TT
+>.</P
+><P
+><EM
+>Autodir</EM
+>, in turn, passes this request to the <TT
+CLASS="literal"
+>autohome</TT
+> module.  The <TT
+CLASS="literal"
+>autohome</TT
+> module does not touch the <TT
+CLASS="filename"
+>/home</TT
+> directory. Instead it manages <EM
+>real home directories</EM
+> somewhere else, for example in <TT
+CLASS="filename"
+>/autohome</TT
+> as shown in the above figure.</P
+><P
+>The <TT
+CLASS="literal"
+>autohome</TT
+> module creates a real home directory if it does not exist in the <TT
+CLASS="filename"
+>/autohome</TT
+> directory. After it is successfully created or failed to be created, whatever the outcome, <TT
+CLASS="literal"
+>autohome</TT
+> reports back to <EM
+>Autodir</EM
+>.  When the directory creation task has completed successfully, the path to real home directory is provided to <EM
+>Autodir</EM
+>.</P
+><P
+>If the <TT
+CLASS="literal"
+>autohome</TT
+> module reports success, <EM
+>Autodir</EM
+> creates <TT
+CLASS="filename"
+>userhome1</TT
+> directory under <TT
+CLASS="filename"
+>/home</TT
+> and mounts the <EM
+>real home directory</EM
+> from <TT
+CLASS="filename"
+>/autohome</TT
+> on it. At the end of the process, <EM
+>Autodir</EM
+> informs the kernel whether the whole operation was successful or not. Accordingly, the kernel allows applications to enter the directory, or, in case of failure, it reports that no such directory exists.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x130.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x235.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Differences between Autodir and Autofs</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Some definitions</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

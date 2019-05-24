@@ -1,0 +1,472 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Portuguese-HOWTO: Configura&ccedil;&atilde;o do X</TITLE>
+ <LINK HREF="Portuguese-HOWTO-6.html" REL=next>
+ <LINK HREF="Portuguese-HOWTO-4.html" REL=previous>
+ <LINK HREF="Portuguese-HOWTO.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Portuguese-HOWTO-6.html">Next</A>
+<A HREF="Portuguese-HOWTO-4.html">Previous</A>
+<A HREF="Portuguese-HOWTO.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="CONF-X"></A> <A NAME="s5">5. Configura&ccedil;&atilde;o do X</A></H2>
+
+<P>Quando o servidor X est&aacute; ativo, ele coloca o teclado do computador em um modo
+de opera&ccedil;&atilde;o chamado <EM>raw</EM> (cru), em oposi&ccedil;&atilde;o ao modo normal, chamado
+<EM>cooked</EM> (isto mesmo: cozido). No modo raw o sistema operativo n&atilde;o processa
+seq&uuml;&ecirc;ncias acento-letra. O servidor X &eacute; uma daquelas raras aplica&ccedil;&otilde;es que,
+por dever de of&iacute;cio, tem que tratar o teclado ``em baixo n&iacute;vel''.
+<P>O X vem equipado com um utilit&aacute;rio destinado &agrave; configura&ccedil;&atilde;o do teclado,
+chamado <EM>xmodmap</EM>, que cumpre uma fun&ccedil;&atilde;o correspondente &agrave; do comando
+<EM>loadkeys</EM>, ou seja, l&ecirc; um arquivo de mapa de teclado do X, expecificando
+as equival&ecirc;ncias entre os <EM>keycodes</EM> e respectivos <EM>keysymbols</EM>.
+<P>Eis um excerto deste arquivo:
+<PRE>
+    keycode 47 = ccedilla Ccedilla dead_acute dead_doubleacute
+    keycode 48 = masculine ordfeminine dead_circumflex dead_caron
+    keycode 49 = backslash bar notsign
+    keycode 50 = Shift_L
+    keycode 51 = dead_tilde dead_circumflex dead_grave dead_breve
+</PRE>
+
+Observem que, ao contr&aacute;rio do loadkeys, o xmodmap n&atilde;o possui um diret&oacute;rio
+padr&atilde;o onde o arquivo &eacute; procurado. 
+<P>A configura&ccedil;&atilde;o do X n&atilde;o interfere de forma alguma com a configura&ccedil;&atilde;o do modo
+de texto.  De facto, &eacute; poss&iacute;vel ter o seu X bem configurado, e no entanto
+n&atilde;o ter realizado qualquer tipo de configura&ccedil;&atilde;o ao modo de texto, e
+vice-versa.  Outro ponto importante de se observar &eacute; que os c&oacute;digos num&eacute;ricos
+das teclas no X n&atilde;o correspondem aos do console. A tecla <B>Backspace</B>, por
+exemplo, tem o n&uacute;mero 14 no console, e 22 no X (em um computador do tipo
+IBM-PC). 
+<P>As vers&otilde;es 3.2 e posteriores do XFree86 permitam definir <EM>dead-keys</EM>, mas
+o seu tratamento &eacute; responsabilidade da aplica&ccedil;&atilde;o, conforme visto na se&ccedil;&atilde;o&nbsp;
+<A HREF="Portuguese-HOWTO-2.html#SEC:DIFXC">Modo texto versus Sistema de Janelas X</A>. H&aacute; modos de
+contornar esta limita&ccedil;&atilde;o e tornar o tratamento de <EM>dead-keys</EM> transparente
+&agrave;s aplica&ccedil;&otilde;es, conforme mostrado na se&ccedil;&atilde;o 
+<A HREF="#SEC:CONTOR-X">Contornando os limites do X</A>.
+<P>Dividimos a configura&ccedil;&atilde;o em duas partes: Uma que deve ser feita antes do
+<EM>login</EM> do usu&aacute;rio e outra depois.
+<P>
+<H2><A NAME="ss5.1">5.1 Configura&ccedil;&atilde;o do xinit</A>
+</H2>
+
+<P>Junto com este documento s&atilde;o fornecidos v&aacute;rios mapas de teclado para uso no
+X. Para automatizar o processo de configura&ccedil;&atilde;o do teclado basta copiar o
+arquivo adequado para o diret&oacute;rio <CODE>/usr/X11R6/lib/X11/xinit</CODE>, onde
+normalmente ficam os arquivos de in&iacute;cio da se&ccedil;&atilde;o de trabalho no X. Na
+distribui&ccedil;&atilde;o Slackware esse diret&oacute;rio &eacute; um link simb&oacute;lico para
+<CODE>/var/X11R6/lib/xinit</CODE> e na Debian e na Red Hat para
+<CODE>/etc/X11/xinit</CODE>. 
+<P>Nas distribui&ccedil;&otilde;es Slackware e Red Hat, verifique se no referido diret&oacute;rio
+existe um arquivo chamado <CODE>.Xmodmap</CODE>. Se existir, copie o
+<CODE>Xmodmap.</CODE>&lt;alguma-coisa&gt;  para ele, ou fa&ccedil;a um link.
+Normalmente o arquivo de configura&ccedil;&atilde;o <CODE>xinitrc</CODE> possui os comandos
+para carreg&aacute;-lo automaticamente. Veja o seguinte trecho: 
+<P>
+<PRE>
+    #!/bin/sh
+    # $XConsortium: xinitrc.cpp,v 1.4 91/08/22 11:41:34 rws Exp $
+
+    userresources=$HOME/.Xresources
+    usermodmap=$HOME/.Xmodmap
+    sysresources=/usr/X11R6/lib/X11/xinit/.Xresources
+    sysmodmap=/usr/X11R6/lib/X11/xinit/.Xmodmap
+
+    # merge in defaults and keymaps
+
+    if [ -f $sysresources ]; then
+        xrdb -merge $sysresources
+    fi
+
+    if [ -f $sysmodmap ]; then
+        xmodmap $sysmodmap
+    fi
+</PRE>
+<P>Na distribui&ccedil;&atilde;o Debian o mapa de teclado padr&atilde;o do X &eacute;
+<CODE>/etc/X11/Xmodmap</CODE>, basta copiar o mapa desejado para aquele
+arquivo.  Ele ser&aacute; carregado pelo xinitrc, que por sua vez &eacute; um link simb&oacute;lico
+para <CODE>/etc/X11/Xsession</CODE>, sempre que iniciar a se&ccedil;&atilde;o de trabalho do
+usu&aacute;rio.
+<P>
+<H2><A NAME="ss5.2">5.2 Configura&ccedil;&atilde;o do XDM</A>
+</H2>
+
+<P>Existe ainda um pequeno problema: no meu computador, por exemplo, o
+sistema carrega diretamente o X ao dar boot e o login &eacute; feito pelo X
+Display Manager (xdm). Como o xdm faz o login <B>antes</B> de iniciar a
+se&ccedil;&atilde;o de trabalho, o mapa de teclado n&atilde;o ser&aacute; carregado, o que pode criar
+problemas se o usu&aacute;rio usa caracteres como ``['' ou ``]'' em sua
+senha, pois nos teclados ABNT-2 e portugu&ecirc;s esses s&iacute;mbolos s&atilde;o gerados por
+teclas cujos c&oacute;digos num&eacute;ricos n&atilde;o s&atilde;o os mesmos do teclado americano. 
+<P>&Eacute; preciso fazer uma pequena altera&ccedil;&atilde;o no arquivo de configura&ccedil;&atilde;o Xsetup_0.
+Esse arquivo deve estar no diret&oacute;rio <CODE>/usr/X11R6/lib/X11/xdm</CODE>, que
+na Slackware &eacute; um link simb&oacute;lico para <CODE>/var/X11R6/lib/xdm</CODE> e
+<CODE>/etc/X11/xdm</CODE> na Debian e -- sujeito a confirma&ccedil;&atilde;o -- RedHat. Eis
+o conte&uacute;do completo desse arquivo: 
+<PRE>
+    #!/bin/sh
+    #
+    # /usr/X11R6/lib/X11/xdm/Xsetup_0
+    #
+
+    sysresources=/usr/X11R6/lib/X11/xinit/.Xresources
+    sysmodmap=/usr/X11R6/lib/X11/xinit/.Xmodmap
+
+    # merge in defaults and keymaps
+
+    if [ -r $sysresources ]; then
+        xrdb -merge $sysresources
+    fi
+
+    if [ -r $sysmodmap ]; then
+        xmodmap $sysmodmap
+    fi
+
+    xconsole -geometry 480x130-0-0 -daemon -notify -verbose -exitOnFail
+</PRE>
+<P>A distribui&ccedil;&atilde;o Debian tem um <CODE>Xsetup_0</CODE> um pouco diferente, em
+<CODE>/etc/X11/xdm/Xsetup_0</CODE>, mas basta acrescentar-lhe o seguinte:
+<P>
+<PRE>
+    sysmodmap=/etc/X11/Xmodmap
+    sysresources=/etc/X11/Xresources
+
+    if [ -f $sysresources ]; then
+      xrdb -merge $sysresources
+    fi
+
+    if [ -f $sysmodmap ]; then
+      xmodmap $sysmodmap
+    fi
+</PRE>
+<P>Se no seu computador o login do usu&aacute;rio tamb&eacute;m for feito sempre via xdm, n&atilde;o &eacute;
+necess&aacute;rio mexer no xinitrc, como mostrado na se&ccedil;&atilde;o anterior, j&aacute; que o mapa de
+teclado ser&aacute; carregado antes do in&iacute;cio na se&ccedil;&atilde;o do usu&aacute;rio.
+<P>
+<H2><A NAME="ss5.3">5.3 Compose</A>
+</H2>
+
+<P>Uma das coisas mais importantes a definir quando vamos utilizar acentua&ccedil;&atilde;o
+por meio de <EM>dead-keys</EM> &eacute; o conjunto de <EM>regras de composi&ccedil;&atilde;o</EM>. Essas
+regras determinam, por exemplo que a composi&ccedil;&atilde;o do caracter <B>'</B>&nbsp;com
+a letra <B>e</B> gerar&aacute; um <B>&eacute;</B>.
+<P>Ao contr&aacute;rio do console, no qual podemos definir as regras de composi&ccedil;&atilde;o no
+pr&oacute;prio mapa de teclado, no X essas regras s&atilde;o colocadas no arquivo
+<CODE>/usr/X11R6/lib/X11/locale/???/Compose</CODE>, onde ??? &eacute; a codifica&ccedil;&atilde;o
+em uso (no nosso caso, iso8859-1).
+<P>Para facilitar o uso dos mapas para teclados que n&atilde;o t&ecirc;m o c-cedilhado, como o
+US+ (veja adiante) &eacute; conveniente definirmos uma nova regra de composi&ccedil;&atilde;o,
+permitindo que o <B>&Ccedil;</B> seja gerado pela seq&uuml;&ecirc;ncia <CODE>'C</CODE>. Se n&atilde;o fizermos
+isso, seremos obrigados a digitar <CODE>&lt;dead_cedilla-C&gt;</CODE>, sedo o
+<EM>dead_cedilla</EM> produzido pela combina&ccedil;&atilde;o <CODE>AltGR-=</CODE>, o que n&atilde;o &eacute; nada
+confort&aacute;vel. Al&eacute;m disso, no teclado americano somos obrigados a usar as aspas
+duplas para gerar o trema.
+<P>O arquivo <CODE>Compose</CODE> fornecido foi feito procurando imitar ao m&aacute;ximo o
+comportamento do console e possui as seguintes facilidades para gera&ccedil;&atilde;o de
+caracteres:
+<UL>
+<LI>C-cedilha: tecla <CODE>&Ccedil;</CODE> ou seq&uuml;&ecirc;ncia
+&lt;acento-agudo&gt;-C</LI>
+<LI>Ap&oacute;strofo: tecla <CODE>'</CODE> ou seq&uuml;&ecirc;ncias
+&lt;acento-agudo&gt;-&lt;acento-agudo&gt; e
+&lt;acento-agudo&gt;-&lt;espa&ccedil;o&gt;</LI>
+<LI>Acento grave: seq&uuml;&ecirc;ncias &lt;acento-grave&gt;-&lt;acento-grave&gt; e
+&lt;acento-grave&gt;-&lt;espa&ccedil;o&gt;</LI>
+<LI>Aspas: tecla <CODE>&quot;</CODE> ou seq&uuml;&ecirc;ncia &lt;trema&gt;-&lt;trema&gt;</LI>
+<LI>Trema: seq&uuml;&ecirc;ncia &lt;trema&gt;-&lt;espa&ccedil;o&gt;</LI>
+<LI>Til: seq&uuml;&ecirc;ncias &lt;til&gt;-&lt;espa&ccedil;o&gt; e &lt;til&gt;-&lt;til&gt;</LI>
+<LI>Circumflexo: seq&uuml;&ecirc;ncias &lt;circumflexo&gt;-&lt;espa&ccedil;o&gt; e
+&lt;circumflexo&gt;-&lt;circumflexo&gt;</LI>
+</UL>
+<P>Para incluirmos as novas regras, basta aplicar uma altera&ccedil;&atilde;o &agrave; defini&ccedil;&atilde;o
+original. O arquivo <CODE>Compose.patch</CODE> pode ser obtido via WWW na p&aacute;gina do
+Portuguese HOWTO. Para aplicar a atualiza&ccedil;&atilde;o, copie-o para o diret&oacute;rio
+<CODE>/usr/X11R6/lib/X11/locale/iso8859-1/</CODE>, fa&ccedil;a uma c&oacute;pia de reserva do
+<CODE>Compose</CODE> original e invoque o utilit&aacute;rio <EM>patch</EM>:
+<PRE>
+    cp -p Compose Compose.backup
+    patch &lt; Compose.patch
+</PRE>
+<P>Caso voc&ecirc; prefira n&atilde;o aplicar o ``patch'', um arquivo <CODE>Compose</CODE> pronto
+tamb&eacute;m &eacute; fornecido. Lembre-se de fazer c&oacute;pia do original <B>antes</B> de
+substitu&iacute;-lo!
+<H2><A NAME="SEC:LOCALE"></A> <A NAME="ss5.4">5.4 Locale</A>
+</H2>
+
+<P>Para os usu&aacute;rios brasileiros, pode haver mais uma altera&ccedil;&atilde;o a fazer no X.
+Conforme vimos na se&ccedil;&atilde;o&nbsp;
+<A HREF="Portuguese-HOWTO-4.html#SEC:LIBC">Biblioteca libc</A>, uma
+vari&aacute;vel de ambiente (LANG ou LC_ALL) configura o suporte internacional
+existente na biblioteca de fun&ccedil;&otilde;es padr&atilde;o do sistema (<EM>libc</EM>). A biblioteca
+de fun&ccedil;&otilde;es do X (<EM>Xlib</EM>) usa a vari&aacute;vel LANG para identificar a l&iacute;ngua em
+uso mas at&eacute; a revis&atilde;o 6.3, na qual &eacute; baseado o XFree86, n&atilde;o era inclu&iacute;da a
+combina&ccedil;&atilde;o ``pt_BR'', correspondente a Portugu&ecirc;s/Brasil. Como resultado, cada
+vez que executarmos um aplicativo X com LC_ALL definido como ``pt_BR'' ele
+emitir&aacute; a mensagem ``Warning: locale not supported by Xlib, locale set to C''.
+<P>Para incluir o local pt_BR no X11R6.3 basta alterar tr&ecirc;s arquivos existentes
+no diret&oacute;rio <CODE>/usr/X11R6/lib/X11/locale</CODE>. Pegue o arquivo
+<CODE>Xlocale.patch</CODE> via WWW na p&aacute;gina do Portuguese HOWTO. Para aplicar a
+atualiza&ccedil;&atilde;o, copie-o para o diret&oacute;rio <CODE>/usr/X11R6/lib/X11/locale</CODE>,
+fa&ccedil;a uma c&oacute;pia de reserva dos arquivos a serem alterados e invoque o
+utilit&aacute;rio <EM>patch</EM>:
+<PRE>
+    cp -p compose.dir compose.dir.backup
+    cp -p locale.alias locale.alias.backup
+    cp -p locale.dir locale.dir.backup
+    patch &lt; Xlocale.patch
+</PRE>
+<P>Caso voc&ecirc; prefira n&atilde;o aplicar o ``patch'', arquivos prontos tamb&eacute;m s&atilde;o
+fornecidos. Lembre-se de fazer c&oacute;pias dos originais <B>antes</B> de
+substitu&iacute;-los!
+<P>Em setembro de 1998 o fix-2 da revis&atilde;o 6.4 do X Window System incluiu
+oficialmente o suporte ao local pt_BR. Infelizmente neste mesmo fix-2 foi
+introduzida uma falha em uma das fun&ccedil;&otilde;es de tratamento de <EM>input contexts</EM>
+da Xlib que provoca viola&ccedil;&otilde;es de acesso &agrave; mem&oacute;ria. Uma das aplica&ccedil;&otilde;es afetadas
+&eacute; o processador de textos LyX. Uma corre&ccedil;&atilde;o provavelmente ser&aacute; inclu&iacute;da no
+fix-4. O X11R6.4 dever&aacute; ser a base para a vers&atilde;o 4 do XFree86.
+<P>
+<H2><A NAME="ss5.5">5.5 Gera&ccedil;&atilde;o de mapas com o XKeyCaps</A>
+</H2>
+
+<P>O programa XKeyCaps, criado por 
+<A HREF="http://www.jwz.org/">Jamie Zawinski</A> &eacute; uma interface gr&aacute;fica para o <CODE>xmodmap</CODE>, que mostra na tela o
+desenho de um teclado e permite modificar interativamente os s&iacute;mbolos gerados
+por cada tecla e gerar automaticamente o arquivo <CODE>.Xmodmap</CODE> correspondente.
+<P>Ele pode ser obtido via WWW em 
+<A HREF="http://www.jwz.org/xkeycaps/">http://www.jwz.org/xkeycaps/</A> e, a
+partir da vers&atilde;o 2.43, j&aacute; incoropra tamb&eacute;m suporte para o desenho brasileiro
+(ABNT2), uma contribui&ccedil;&atilde;o de Andre Gerhard.
+<P>
+<H2><A NAME="SEC:CONTOR-X"></A> <A NAME="ss5.6">5.6 Contornando os limites do X</A>
+</H2>
+
+<P>Conforme foi explicado na se&ccedil;&atilde;o 
+<A HREF="Portuguese-HOWTO-2.html#SEC:DIFXC">Modo texto versus Sistema de Janelas X</A>, o tratamento de acentos deve ser feito pela aplica&ccedil;&atilde;o,
+mas ainda h&aacute; muitos programas que n&atilde;o levam isto em considera&ccedil;&atilde;o, tais como
+Netscape Navigator/Communicator e Nedit. Como n&atilde;o &eacute; poss&iacute;vel modificar muitos
+deles, &eacute; preciso encontrar outro tipo de solu&ccedil;&atilde;o.
+<P>
+<H3>Altera&ccedil;&atilde;o da biblioteca Xlib</H3>
+
+<P>Linux, assim como a maioria dos sistemas operacionais modernos, usa um
+sistema de v&iacute;nculo de programas a bibliotecas de fun&ccedil;&otilde;es chamado ``liga&ccedil;&atilde;o
+din&acirc;mica'' (<EM>dynamic binding</EM>). Deste modo, podemos modificar o
+comportamento de um programa alterando uma dessas bibliotecas. Maiores
+informa&ccedil;&otilde;es sobre este tema pode ser obtida nos manuais do Linux com os
+comandos
+<PRE>
+    man ld.so
+    man ldconfig
+    man ldd
+    man dlopen
+</PRE>
+
+Thomas Quinot criou uma altera&ccedil;&atilde;o para a biblioteca de fun&ccedil;&otilde;es do X
+(<EM>Xlib</EM>) introduzindo o tratamento de acentos na fun&ccedil;&atilde;o <B>XLookupString</B>,
+Tudo que se tem a fazer &eacute; substituir o arquivo contendo esta biblioteca por
+outro, que pode ser obtido via internet no endere&ccedil;o
+<P>
+<BLOCKQUOTE>
+<A HREF="http://web.fdn.fr/~tquinot/dead-keys.en.html">http://web.fdn.fr/~tquinot/dead-keys.en.html</A></BLOCKQUOTE>
+<P>Existem duas vers&otilde;es do arquivo, uma para sistemas onde as bibliotecas do X
+suportam o uso seguro de <EM>threads</EM> (Debian 2.x, Red Hat 5.x, etc.) e outra
+para os sistemas que n&atilde;o possuem tal atributo (Slackware, Caldera 1.x). Se
+voc&ecirc; n&atilde;o sabe o que s&atilde;o threads n&atilde;o se preocupe com isso, mas saiba que eles
+permitem criar um programa capaz de se dividir em sub-processos que rodam
+concorrentemente em um computador. Para analisar sua <EM>Xlib</EM> rode o seguinte
+comando:
+<P>
+<BLOCKQUOTE>
+nm --dynamic /usr/X11R6/lib/libXext.so.6|grep _Xglobal_lock
+</BLOCKQUOTE>
+<P>Se aparecer ``<CODE>U _Xglobal_lock</CODE>'' seu sistema suporta threads e o arquivo
+a obter &eacute; <CODE>libX11-XF3.3.1-TS.tar.gz</CODE>. Se n&atilde;o aparecer, seu sistema n&atilde;o
+suporta threads e o arquivo a obter &eacute; <CODE>libX11-XF3.3.1.tar.gz</CODE>. Tendo
+obtido o arquivo, copie-o para um diret&oacute;rio tempor&aacute;rio e extraia seu conte&uacute;do.
+Mova o arquivo <CODE>/usr/X11R6/libX11.so.6.1</CODE> para outro diret&oacute;rio,
+para preserv&aacute;-lo. N&atilde;o &eacute; suficiente renome&aacute;-lo! Remova-o para um diret&oacute;rio cujo
+nome <B>n&atilde;o</B> esteja contido no arquivo <CODE>/etc/ld.so.conf</CODE>. Depois,
+mova o novo arquivo para o lugar do antigo e rode o programa <EM>ldconfig</EM>
+(isto deve ser feito pelo usu&aacute;rio <B>root</B>):
+<PRE>
+    cp libX11-XF3.3.1-TS.tar.gz /tmp
+    cd /tmp
+    tar xzf libX11-XF3.3.1-TS.tar.gz
+    mkdir /usr/X11R6/oldlib
+    mv /usr/X11R6/lib/libX11.so.6.1 /usr/X11R6/oldlib
+    mv libX11.so.6.1 /usr/X11R6/lib
+    chown root:root /usr/X11R6/lib/libX11.so.6.1
+    chmod 755 /usr/X11R6/lib/libX11.so.6.1
+    /sbin/ldconfig
+</PRE>
+<P>&Eacute; aconselh&aacute;vel que a opera&ccedil;&atilde;o seja realizada quando nenhuma aplica&ccedil;&atilde;o X
+estiver rodando. A seguir, edite o arquivo de configura&ccedil;&atilde;o do servidor X,
+chamado <CODE>XF86Config</CODE>. Este arquivo fica no diret&oacute;rio <CODE>/etc</CODE>
+(Slackware) ou <CODE>/etc/X11</CODE> (Debian, Red Hat). Procure a se&ccedil;&atilde;o
+``Keyboard'' e inclua a op&ccedil;&atilde;o ``XkbDisable'', conforme mostrado a seguir:
+<PRE>
+    Section "Keyboard"
+       Protocol        "Standard"
+       XkbDisable
+    EndSection
+</PRE>
+<P>A op&ccedil;&atilde;o XkbDisable inabilita a extens&atilde;o XKEYBOARD do servidor X, o que neste
+caso serve para sinalizar &agrave; fun&ccedil;&atilde;o <B>XLookupString</B> que ela deve tratar os
+acentos. Se quisermos voltar ao comportamento normal, basta retirar a op&ccedil;&atilde;o
+do <CODE>XF86Config</CODE>.
+<P>Configure o mapa de teclado do X conforme explicado nas se&ccedil;&otilde;es anteriores
+deste documento. Para testar o resultado, rode o programa <EM>xedit</EM> e digite
+alguns caracteres acentuados.
+<P>
+<H3>Altera&ccedil;&atilde;o no kernel do Linux</H3>
+
+<P>
+<BLOCKQUOTE>
+Esta se&ccedil;&atilde;o &eacute; baseada em contribui&ccedil;&atilde;o enviada por Bruno Barberi Gnecco
+e na documenta&ccedil;&atilde;o do diacrd. Podem haver ainda alguns erros e se algu&eacute;m os
+detectar, por favor avise-me.
+</BLOCKQUOTE>
+<P>Seguindo a regra geral do mundo *nix, existe sempre mais de um modo se
+resolver o mesmo problema. Conforme vimos anteriormente, existem dois modos de
+opera&ccedil;&atilde;o do teclado, chamados <EM>raw</EM> e <EM>cooked</EM>. Estes modos de opera&ccedil;&atilde;o
+podem ser mudados com o programa <B>kbd_mode</B>, integrante do pacote kbd, o
+que n&atilde;o &eacute; recomend&aacute;vel fazer a n&atilde;o ser para restaurar o estado do console ap&oacute;s
+um desastre com o servidor X, por exemplo. No modo raw o kernel n&atilde;o processa
+os diacr&iacute;ticos (acentos).
+<P>Cedric Adjih criou uma altera&ccedil;&atilde;o para o kernel que permitia tratar os acentos
+mesmo em modo raw, inicialmente voltada para o teclado de desenho franc&ecirc;s.
+En&eacute;as Queiroz, Andr&eacute; D. Balsa e Claudemir Todo Bom fizeram melhorias e o
+adaptaram para os teclados internacional, portugu&ecirc;s e ABNT. O tratemanto de
+acentos &eacute; feito parte pelo kernel, parte por um processo que roda em
+retaguarda (<EM>daemon</EM>) chamado <B>diacrd</B>, conforme descrito a seguir:
+<UL>
+<LI>Uma modifica&ccedil;&atilde;o no kernel faz que todos os dados lidos do teclado
+sejam redirecionados para um dispositivo especial do sistema chamado
+<CODE>/dev/rawkbd</CODE> quando o teclado estiver em modo <EM>raw</EM>.</LI>
+<LI>Os dados que o kernel grava no <CODE>/dev/rawkbd</CODE> s&atilde;o lidos pelo
+programa <CODE>diacrd</CODE>, que processa as seq&uuml;&ecirc;ncias acento-letra e reescreve
+no <CODE>/dev/rawkbd</CODE> os caracteres acentuados na forma de c&oacute;digos de
+varredura (<EM>scancodes</EM>) que normalmente n&atilde;o existem no teclado.</LI>
+<LI>O kernel l&ecirc; no <CODE>/dev/rawkbd</CODE> os c&oacute;digos gravados pelo
+<CODE>diacrd</CODE> e os passa &agrave; aplica&ccedil;&atilde;o, que no caso &eacute; o servidor X.</LI>
+<LI>O servidor X mapeia os c&oacute;digos de varredura para caracteres. Um mapa de
+teclado especial permite ent&atilde;o gerar as letras acentuadas.</LI>
+</UL>
+<P>O diacrd pode ser obtido via FTP an&ocirc;nimo no endere&ccedil;o
+<BLOCKQUOTE>
+<A HREF="ftp://metalab.unc.edu/pub/Linux/system/keyboards">ftp://metalab.unc.edu/pub/Linux/system/keyboards</A></BLOCKQUOTE>
+
+H&aacute; vers&otilde;es diferentes, de acordo com o tipo de teclado e, pelo menos por
+enquanto, n&atilde;o se pode reconfigur&aacute;-lo sem recompilar. Para fazer a
+instala&ccedil;&atilde;o, de acordo com o arquivo ``README'', deve-se fazer o seguinte (pelo
+usu&aacute;rio <B>root</B>):
+<UL>
+<LI>Obtenha o arquivo -.tar.gz correspondente a seu teclado. Extraia seu
+conte&uacute;do, o que dever&aacute; criar um diret&oacute;rio chamado
+<CODE>diacrd-&lt;vers&atilde;o&gt;</CODE>.</LI>
+<LI>Edite o arquivo <CODE>diacrd.c</CODE> e remova os coment&aacute;rios desejados, de
+acordo com suas prefer&ecirc;ncias. Pode-se incluir capacidade de rodar o
+programa <B>xmodmap</B> e ejetar o CD-ROM sob controle do pressionamento de
+uma combina&ccedil;&atilde;o de teclas.</LI>
+<LI>Aplique a modifica&ccedil;&atilde;o no kernel. Para isto, execute o comando
+``make&nbsp;patch-usr-src''.</LI>
+<LI>Crie o dispositivo <CODE>/dev/rawkbd</CODE> executando o comando
+``make&nbsp;rawkbd''.</LI>
+<LI>Compile o diacrd e instale-o executando os comandos ``make'' e
+``make&nbsp;install''.</LI>
+<LI>Compile e instale o kernel, com os comandos
+<PRE>
+    cd /usr/src/linux
+    make config
+    make zlilo
+</PRE>
+
+Para maiores informa&ccedil;&otilde;es sobre compila&ccedil;&atilde;o/instala&ccedil;&atilde;o do kernel, leia o
+Kernel-HOWTO, dispon&iacute;vel via Internet nos reposit&oacute;rios do LDP mencionados
+na se&ccedil;&atilde;o 
+<A HREF="Portuguese-HOWTO-1.html#SEC:ONDE">Onde encontrar a vers&atilde;o mais atual</A>.</LI>
+<LI>D&ecirc; um ``reboot'' no computador. Verifique se o suporte ao dispositivo
+rawkbd foi instalado com sucesso com o comando
+<PRE>
+    dmesg | grep RAWKBD
+</PRE>
+
+Deve aparecer
+<PRE>
+    RAWKBD interface for diacriticals translation enabled...
+</PRE>
+
+e teste o dispositivo <CODE>/dev/rawkbd</CODE> com o comando
+<PRE>
+    printf "### TESTANDO ###" &gt;&gt; /dev/rawkbd
+</PRE>
+
+Veja na se&ccedil;&atilde;o 
+<A HREF="Portuguese-HOWTO-3.html#CONF-CONS">Configura&ccedil;&atilde;o do console</A> como
+carregar um mapa com suporte &agrave; acentua&ccedil;&atilde;o. O pacote diacrd vem com um
+arquivo chamada <CODE>usintl.map</CODE>, que corresponde ao nosso
+<CODE>us+.map</CODE>. Se seu teclado n&atilde;o for do tipo americano, use o
+<CODE>pt.map</CODE> ou <CODE>abnt-2.map</CODE>.</LI>
+<LI>Substitua o arquivo <CODE>/usr/X11R6/lib/X11/xkb/keycodes/xfree86</CODE>
+pelo arquivo fornecido junto com o diacrd.</LI>
+<LI>Se tudo correr bem, rode o programa <B>diacrd</B>. Depois ative o X e
+use o <B>xmodmap</B> para carregar o mapa <CODE>xmodmap.diacrd</CODE>.</LI>
+</UL>
+<P>Se a gera&ccedil;&atilde;o de acentos funcionar, &eacute; preciso tornar permanentes as altera&ccedil;&otilde;es
+necess&aacute;rias. Pode-se faz&ecirc;-lo incluindo a carga do diacrd no arquivo
+<CODE>/etc/rc.d/rc.local</CODE> (Slackware).
+<BLOCKQUOTE>
+Se algum dos leitores tiver criado um script de ativa&ccedil;&atilde;o do diacrd para a
+distribui&ccedil;&atilde;o Debian ou Red Hat, por favor envie-o para que seja inclu&iacute;do
+aqui.
+</BLOCKQUOTE>
+
+Mais informa&ccedil;&otilde;es sobre o diacrd podem ser encontradas no ``Dead keys
+Mini-HOWTO'' de Claudemir Todo Bom, dispon&iacute;vel em 
+<A HREF="http://linux.unicamp.br/docs/diversos/deadkeys.html">http://linux.unicamp.br/docs/diversos/deadkeys.html</A>.
+<P>
+<H3>Compara&ccedil;&atilde;o entre as duas solu&ccedil;&otilde;es</H3>
+
+<P>Em termos de resultados pr&aacute;ticos, a Xlib modificada e o diacrd s&atilde;o
+equivalentes. H&aacute; por&eacute;m algumas diferen&ccedil;as entre as duas solu&ccedil;&otilde;es que merecem
+aten&ccedil;&atilde;o.
+<P>Diacrd exige uma altera&ccedil;&atilde;o no kernel do Linux para resolver um problema que o
+kernel j&aacute; resolve, o que n&atilde;o deixa de parecer um tanto redundante. A
+depend&ecirc;ncia de um processo de usu&aacute;rio (o <EM>daemon</EM> kerneld) &eacute; uma
+desvantagem, pois se esse programa deixar de funcionar perde-se o suporte &agrave;
+acentua&ccedil;&atilde;o no X. Trata-se de uma solu&ccedil;&atilde;o ainda em desenvolvimento e, segundo o
+conte&uacute;do da documenta&ccedil;&atilde;o que o acompanha, o ideal seria que todo o tratamento
+fosse feito pelo kernel, sem depender de outro programa.
+<P>At&eacute; o momento da publica&ccedil;&atilde;o deste HOWTO, o diacrd ainda n&atilde;o era compat&iacute;vel com
+a vers&atilde;o 2.2 do kernel do Linux.
+<P>A solu&ccedil;&atilde;o via Xlib &eacute;, pelo menos em teoria, totalmente transparente &agrave;s
+aplica&ccedil;&otilde;es e permite reconfigura&ccedil;&atilde;o em tempo de execu&ccedil;&atilde;o, bastando alterar o
+mapa de teclado do X e as regras de composi&ccedil;&atilde;o. J&aacute; o diacrd precisa ser
+recompilado se quisermos trocar o tipo de teclado, mas &eacute; poss&iacute;vel que novas
+vers&otilde;es incorporem algum recurso de reconfigura&ccedil;&atilde;o.
+<P>O diacrd s&oacute; funciona no teclado do pr&oacute;prio computador. Se quisermos usar um
+<EM>display</EM> remoto, seja um terminal X, seja um outro computador, n&atilde;o teremos
+suporte &agrave; acentua&ccedil;&atilde;o. A troca da Xlib, por outro lado, enquadra-se plenamente
+na filosofia do X de que o servidor prov&ecirc; <EM>mecanismo</EM>, deixando a cargo da
+aplica&ccedil;&atilde;o a defini&ccedil;&atilde;o de <EM>pol&iacute;ticas</EM>. Exemplo da vantagem deste paradigma &eacute;
+poder usar as t&eacute;cnicas descritas na se&ccedil;&atilde;o 
+<A HREF="#CONF-X">Configura&ccedil;&atilde;o do X</A> em outros sistemas operativos e com terminais X.
+<P>A solu&ccedil;&atilde;o via Xlib parece-me mais ``limpa'' e &eacute; minha predileta, mas, como
+sempre, fica a crit&eacute;rio do usu&aacute;rio ou do administrador do sistema qual
+alternativa escolher. De qualquer modo, sempre &eacute; bom lembrar qua ambas as
+solu&ccedil;&otilde;es s&atilde;o remendos. Considerando-se a r&aacute;pida evolu&ccedil;&atilde;o que est&aacute; a ocorrer no
+campo do software livre, com o desenvolvimendo de ambientes de trabalho como
+<A HREF="http://www.kde.org/">KDE</A>, 
+<A HREF="http://www.gnome.org/">GNOME</A> e 
+<A HREF="http://www.gnustep.org/">GNUStep</A>, podemos supor que em breve
+nenhum desses remendos ser&aacute; mais necess&aacute;rio.
+<P>
+<HR>
+<A HREF="Portuguese-HOWTO-6.html">Next</A>
+<A HREF="Portuguese-HOWTO-4.html">Previous</A>
+<A HREF="Portuguese-HOWTO.html#toc5">Contents</A>
+</BODY>
+</HTML>

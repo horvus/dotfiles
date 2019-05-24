@@ -1,0 +1,576 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux PCMCIA HOWTO: Advanced topics</TITLE>
+ <LINK HREF="PCMCIA-HOWTO-6.html" REL=next>
+ <LINK HREF="PCMCIA-HOWTO-4.html" REL=previous>
+ <LINK HREF="PCMCIA-HOWTO.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="PCMCIA-HOWTO-6.html">Next</A>
+<A HREF="PCMCIA-HOWTO-4.html">Previous</A>
+<A HREF="PCMCIA-HOWTO.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="s5">5. Advanced topics</A></H2>
+
+<P>
+<P>
+<H2><A NAME="ss5.1">5.1 Resource allocation for PCMCIA devices</A>
+</H2>
+
+<P>In theory, it should not really matter which interrupt is allocated to
+which device, as long as two devices are not configured to use the
+same interrupt.  In <CODE>/etc/pcmcia/config.opts</CODE> you'll find
+a place for excluding interrupts that are used by non-PCMCIA devices.
+<P>Similarly, there is no way to directly specify the I/O addresses for a
+card to use.  The <CODE>/etc/pcmcia/config.opts</CODE> file allows
+you to specify ranges of ports available for use by any card, or to
+exclude ranges that conflict with other devices. 
+<P>After modifying <CODE>/etc/pcmcia/config.opts</CODE>, you can reinitialize
+<CODE>cardmgr</CODE> with ``<CODE>kill -HUP</CODE>''.
+<P>The interrupt used to monitor card status changes is chosen
+by the low-level socket driver module (<CODE>i82365</CODE> or <CODE>tcic</CODE>)
+before <CODE>cardmgr</CODE> parses <CODE>/etc/pcmcia/config</CODE>, so it is not
+affected by changes to this file.  To set this interrupt, use the
+<CODE>cs_irq=</CODE> option when the socket driver is loaded, by setting
+the <CODE>PCIC_OPTS</CODE> variable in <CODE>/etc/rc.d/rc.pcmcia</CODE>.
+<P>All the client card drivers have a parameter called <CODE>irq_list</CODE> for
+specifying which interrupts they may try to allocate.
+These driver options should be set in
+your <CODE>/etc/pcmcia/config</CODE> file.  For example:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+device "serial_cs"
+  module "serial_cs" opts "irq_list=8,12"
+  ...
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>would specify that the serial driver should only use irq 8 or irq 12.
+Regardless of <CODE>irq_list</CODE> settings, Card Services will never
+allocate an interrupt that is already in use by another device, or an
+interrupt that is excluded in the config file.
+<P>
+<H2><A NAME="ss5.2">5.2 PCI interrupt configuration problems and solutions</A>
+</H2>
+
+<P>
+<P>Most of the following discussion applies to 2.2 and earlier kernels.
+With 2.4 and later kernels, the PCI subsystem has more complete
+responsibility for PCI interrupt management.  The following tips may
+help diagnose a problem, though some workarounds described here may
+not be available.
+<P>
+<H3>An overview of PCI interrupt routing issues</H3>
+
+<P>Each PCI slot has four PCI interrupt pins, INTA through INTD.  Single
+function devices will only use the INTA pin; multifunction devices may
+use multiple INT pins.  On the processor side, on x86 single processor
+systems, incoming hardware interrupts are directed to interrupt
+requests (irq's) numbered 0..15.  The PCI interrupt router, usually
+part of the PCI-to-ISA host bridge, determines how incoming PCI
+interrupts are mapped to CPU irq numbers.  Most modern bridge chips
+have several PCI interrupt inputs, known as PIRQ1, PIRQ2, etc, each of
+which can be routed to any CPU irq number.  So we might have something
+like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+PCI slot 1 INTA --> router PIRQ1 --> CPU irq 9
+PCI slot 1 INTB --> router PIRQ2 --> CPU irq 10
+
+PCI slot 2 INTA --> router PIRQ2 --> CPU irq 10
+PCI slot 2 INTB --> router PIRQ1 --> CPU irq 9
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Multiple INT pins are often connected to the same PIRQ pin.  Usually,
+the connections from INT pins to PIRQ pins are arranged to spread
+installed devices out as much as possible, to give the OS the most
+flexibility for choosing how interrupts are shared.  The mapping from
+bridge PIRQ pins to CPU irq numbers can be obtained by reading
+registers in the interrupt router.  The mapping from INT pins to the
+router's PIRQ pins, however, depends on how the board designer decided
+to connect things up, and cannot be directly determined by driver
+software.
+<P>For most PCI devices, the OS does not need to understand the interrupt
+router details.  Each PCI device has a configuration register, the PCI
+Interrupt Line Register, that the BIOS initializes with the
+appropriate CPU irq number for that device.  Unfortunately, the BIOS
+generally will not configure PCI interrupts for CardBus bridge devices.
+<P>The PCI BIOS's Interrupt Routing Table is a data structure that
+contains information about the mapping from PCI INT pins to the PIRQ
+pins on the PCI interrupt router.  The routing information in the
+table is stored in a somewhat unhelpful form, however.  For each
+device's INT pins, the table specifies a ``link value''.  All
+interrupts with the same link value are wired to the same PIRQ pin;
+however, the meaning of the link values is defined by the chipset
+vendor.
+<P>Several tools are available for examining PCI interrupt routing
+information:
+<P>
+<DL>
+<P>
+<DT><B><CODE>lspci</CODE>, <CODE>/proc/pci</CODE></B><DD><P>These will show you resource information (including interrupt
+assignments, where they are known) for all your PCI devices.
+<P>
+<DT><B><CODE>dump_pirq</CODE></B><DD><P>This is in the <CODE>debug-tools</CODE> directory of the PCMCIA source
+distribution.  It dumps the contents of your PCI interrupt routing
+table, if available.  It also scans for known interrupt routers and
+dumps their current interrupt steering settings.
+<P>
+</DL>
+<P>Several PCMCIA module parameters affect PCI interrupt routing:
+<P>
+<DL>
+<P>
+<DT><B><CODE>pcmcia_core</CODE> module: <CODE>cb_pci_irq=n</CODE></B><DD><P>This option specifies one interrupt number to be used to program the
+PCI interrupt router for all CardBus sockets that do not already have
+an interrupt assignment. It only has any effect on systems that have a
+PCI irq routing table, and a known interrupt router.
+<P>
+<DT><B><CODE>i82365</CODE> module: <CODE>irq_mode=n</CODE></B><DD><P>Most CardBus bridges offer several methods for delivering interrupts
+to the host.  The i82365 module by default assumes that a bridge can
+deliver both PCI and ISA interrupts, since this is normal for laptops.
+A setting of ``<CODE>irq_mode=0</CODE>'' can be used to force a bridge to use only
+PCI interrupts.  See the man page for the <CODE>i82365</CODE> module for a
+description of what other values mean for different bridge types.
+<P>
+<DT><B><CODE>i82365</CODE> module: <CODE>irq_list=n,n,...</CODE></B><DD><P>This parameter lists which ISA interrupt(s) can be used for PCMCIA.
+If no ISA interrupts are available, specify ``<CODE>irq_list=0</CODE>''.  Note
+that ``<CODE>irq_mode=0</CODE>'' implies ``<CODE>irq_list=0</CODE>''.
+<P>
+<DT><B><CODE>i82365</CODE> module: <CODE>pci_irq_list=n,n,...</CODE></B><DD><P>This option specifies a list of PCI interrupt numbers to use for
+CardBus sockets.  It differs from <CODE>cb_pci_irq</CODE>, because it does not
+actually program the PCI interrupt router; it can be used when you
+know the PCI interrupts are already set up a certain way, even if you
+do not know how the router works.
+<P>
+</DL>
+<P>If you are having problems that you think may be related to PCI
+interrupt configuration, you should first verify that you have a
+reasonably current PCMCIA driver package.  Also carefully look at the
+startup messages when the PCMCIA kernel modules are loaded.  You
+should see something like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Linux PCMCIA Card Services 3.1.18
+  kernel build: 2.2.14-5.0 #1 Tue May 9 10:44:24 PDT 2000 
+  options:  [pci] [cardbus] [apm] [pnp]
+PCI routing table version 1.0 at 0xfdf30
+Intel PCIC probe:
+  TI 1125 rev 02 PCI-to-CardBus at slot 00:07, mem 0x20000000
+    host opts [0]: [ring] [serial pci &amp; irq] [pci irq 11] ...
+    host opts [0]: [ring] [serial pci &amp; irq] [pci irq 11] ...
+  ISA irqs (scanned) = 3,4,7 PCI status changes
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The ``<CODE>PCI routing table</CODE>'' message indicates that a valid routing
+table was found.  The ``<CODE>host opts</CODE>'' lines indicate the interrupt
+delivery mode and whether or not a PCI interrupt could be determined
+for each socket.  And the final line indicates the results of the scan
+for available interrupts.
+<P>
+<H3>CardBus bridge is not detected by the PCI BIOS</H3>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>Intel PCIC probe: not found.</LI>
+<LI>The bridge does not show up in <CODE>lspci</CODE> or in <CODE>/proc/pci</CODE>.</LI>
+</UL>
+<P>The Lucent/SCM PCI-to-CardBus adapters seem to confuse the PCI BIOS on
+some older systems.  Lucent says that this card is only supported
+on systems that have a BIOS that supports the PCI 2.2 specification,
+or are PC99 compliant.  Some older systems will not detect the Lucent
+card at all, and if the system can't detect it, the Linux drivers
+cannot use it.  The only possible resolutions are a BIOS upgrade, or
+using a different motherboard or CardBus adapter.
+<P>
+<H3><A NAME="irqmode"></A> PCI interrupt delivery problems </H3>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>Cards seem to be configured correctly, but do not work.</LI>
+<LI><CODE>/proc/interrupts</CODE> shows a count of 0 for interrupts
+assigned to PCMCIA drivers.</LI>
+</UL>
+<P>CardBus bridges usually support two types of interrupts, PCI and ISA.
+Partly for historical reasons, it has become conventional to use PCI
+interrupts for signaling card insertion and removal events, and for
+CardBus card interrupts; and ISA interrupts for 16-bit cards.  Since
+version 3.1.9, this is the scheme that the Linux PCMCIA system will
+use by default.  Most CardBus bridges support multiple methods for
+delivering interrupts to the host CPU.  Methods include ``parallel''
+interrupts, where each supported irq has a dedicated pin on the
+bridge; various serial interrupt protocols, where one or two pins are
+used to communicate with an interrupt controller; and hybrids, where
+PCI interrupts might be signalled using dedicated pins, while ISA
+interrupts are delivered via a serial controller.
+<P>In general, it is the responsibility of the BIOS to program a bridge
+for the appropriate interrupt delivery method.  However, there are
+systems that do this incorrectly, and in some cases, there is no way
+for software to safely detect the correct delivery method.  The
+<CODE>i82365</CODE> module reports the bridge mode at startup time, and has a
+parameter, <CODE>irq_mode</CODE>, that can be used to reconfigure it.  Not all
+bridges support this parameter, and the meaning of <CODE>irq_mode</CODE>
+depends on the bridge type.  See the <CODE>i82365</CODE> man page for a
+description of what values are supported by your bridge.  In some
+cases, a bridge may function correctly in more than one interrupt
+mode.
+<P>Most PCMCIA card readers that fit in a PCI bus slot only provide PCI
+interrupt routing.  The Linux drivers assume that all bridges have ISA
+interrupt capability, since that is generally correct on laptops.
+With a card reader, it will generally be necessary to use the
+<CODE>irq_mode</CODE> parameter to specify a ``PCI only'' interrupt delivery
+mode; the value of the parameter depends on the bridge type, so check
+the <CODE>i82365</CODE> man page.  A few PCI card readers require an
+<CODE>irq_mode</CODE> that permits ISA interrupts, but those interrupts are
+not actually connected; in that case, use ``<CODE>irq_list=0</CODE>''.
+<P>Check the system log and verify that the CardBus bridge has a PCI
+interrupt assignment.  If it does not, then resolve that problem
+first, then return here if the symptoms persist.  Next, experiment
+with different values for the <CODE>irq_mode</CODE> parameter.
+<P>
+<H3>No PCI interrupt assignment; valid routing table</H3>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>The Intel PCIC probe reports ``no pci irq'' for each socket.</LI>
+<LI>There is a routing table, and the router type is supported.</LI>
+</UL>
+<P>When a routing table is present, the <CODE>pcmcia_core</CODE> module will try
+to automatically configure the PCI interrupt router, but only does so
+when it has a safe and unambiguous choice for what PCI interrupt to
+use.  If there are several valid choices, then you must use the
+``<CODE>cb_pci_irq=...</CODE>'' option to specify which interrupt to assign.
+Your best bet is to pick the most lightly used interrupt that is
+already assigned to another PCI device.
+<P>Moving the card to another slot sometimes offers a quick solution.  If
+that slot shares its interrupt with an already-configured device, then
+the PCMCIA drivers will have no trouble figuring out the assignment.
+<P>
+<H3>No PCI interrupt assignment; unknown interrupt router</H3>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>The Intel PCIC probe reports ``no pci irq'' for each socket.</LI>
+<LI>There is a routing table, but the router is an unknown type.</LI>
+</UL>
+<P>Adding support for a new interrupt router is tricky but not a big
+job.  First determine, from a datasheet, how your interrupt router
+steers PCI interrupts.  Then, see if you can guess the meaning of the
+link values from the output of <CODE>dump_pirq</CODE>.  Usually this is
+reasonably obvious.  Most routers have four PIRQ pins, and the link
+values might be something like 1,2,3,4, or 0x10,0x18,0x20,0x28, or
+0x60,0x61,0x62,0x63.  The values are usually chosen so that they can
+be easily converted to the location of the appropriate interrupt
+steering register.  Finally, add small functions to
+<CODE>modules/pci_fixup.c</CODE> to get/set the interrupt steering
+information for this router, using the other routers as examples.
+<P>
+<H3>No PCI interrupt assignment; no routing table</H3>
+
+<P>
+<P>Symptoms:
+<UL>
+<LI>The Intel PCIC probe reports ``no pci irq'' for each socket.</LI>
+<LI>No interrupt routing table is found.</LI>
+</UL>
+<P>Without an interrupt routing table, we cannot tell how interrupts from
+the CardBus bridge are directed to CPU irq numbers.  All hope is not
+lost: you may be able to guess the PCI interrupt assignment and use
+the ``<CODE>pci_irq_list=...</CODE>'' option to pass this information to the
+<CODE>i82365</CODE> module.  Good guesses might include the interrupt(s)
+assigned to other PCI devices, the interrupt(s) used under Windows, or
+any other interrupts that are unaccounted for.
+<P>You may also want to experiment with putting the adapter in different
+PCI slots, for each <CODE>pci_irq_list</CODE> you try.  You are trying to find
+a slot that shares its interrupt with an already-configured device,
+and might need to try several slots to find one.
+<P>
+<H2><A NAME="ss5.3">5.3 How can I have separate device setups for home and work?</A>
+</H2>
+
+<P>This is fairly easy using ``scheme'' support.
+Use two configuration schemes, called ``home'' and ``work''.  Here is
+an example of a <CODE>network.opts</CODE> script with scheme-specific
+settings:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+case "$ADDRESS" in
+work,*,*,*)
+    # definitions for network card in work scheme
+    ...
+    ;;
+home,*,*,*|default,*,*,*)
+    # definitions for network card in home scheme
+    ...
+    ;;
+esac
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The first part of a device address is always the configuration
+scheme.  In this example, the second ``case'' clause will select for
+both the ``home'' and ``default'' schemes.  So, if the scheme is unset
+for any reason, it will default to the ``home'' setup.
+<P>Now, to select between the two sets of settings, run either:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cardctl scheme home
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>or
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cardctl scheme work
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The <CODE>cardctl</CODE> command does the equivalent of shutting down all your
+cards and restarting them.  The command can be safely executed whether
+or not the PCMCIA system is loaded, but the command may fail if you
+are using other PCMCIA devices at the time (even if their
+configurations are not explicitly dependant on the scheme setting).
+<P>To find out the current scheme setting, run:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cardctl scheme
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>By default, the scheme setting is persistent across boots.  This can
+have undesirable effects if networking is initialized for the wrong
+environment.  Optionally, you can set the initial scheme value with
+the <CODE>SCHEME</CODE> startup option (see 
+<A HREF="PCMCIA-HOWTO-2.html#startup">Startup options</A> for details).  It is also possible to set the scheme from
+the <CODE>lilo</CODE> boot prompt.  Since <CODE>lilo</CODE> passes unrecognized
+options to <CODE>init</CODE> as environment variables, a value for <CODE>SCHEME</CODE>
+(or any other PCMCIA startup option) at the boot prompt will be
+propagated into the PCMCIA startup script.
+<P>To save even more keystrokes, schemes can be specified in <CODE>lilo</CODE>'s
+configuration file.  For instance, you could have:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+root = /dev/hda1
+read-only
+image = /boot/vmlinuz
+  label  = home
+  append = "SCHEME=home"
+image = /boot/vmlinuz
+  label  = work
+  append = "SCHEME=work"
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Typing ``home'' or ``work'' at the boot prompt would then boot into
+the appropriate scheme.
+<P>
+<H2><A NAME="ss5.4">5.4 Booting from a PCMCIA device</A>
+</H2>
+
+<P>
+<P>Having the root filesystem on a PCMCIA device is tricky because the
+Linux PCMCIA system is not designed to be linked into the kernel.  Its
+core components, the loadable kernel modules and the user mode cardmgr
+daemon, depend on an already running system.  The kernel's
+``initrd'' facility works around this requirement by
+allowing Linux to boot using a temporary ram disk as a minimal root
+image, load drivers, and then re-mount a different root filesystem.
+The temporary root can configure PCMCIA devices and then re-mount a
+PCMCIA device as root.
+<P>The initrd image absolutely must reside on a bootable device: this
+generally cannot be put on a PCMCIA device.  This is a BIOS
+limitation, not a kernel limitation.  It is useful here to distinguish
+between ``boot-able'' devices (i.e., devices that can be booted), and
+``root-able'' devices (i.e., devices that can be mounted as root).
+``Boot-able'' devices are determined by the BIOS, and are generally
+limited to internal floppy and hard disk drives.  ``Root-able''
+devices are any block devices that the kernel supports once it has
+been loaded.  The initrd facility makes more devices ``root-able'',
+not ``boot-able''. 
+<P>Some Linux distributions will allow installation to a device connected
+to a PCMCIA SCSI adapter, as an unintended side-effect of their
+support for installs from PCMCIA SCSI CD-ROM devices.  However, at
+present, no Linux installation tools support configuring an
+appropriate ``initrd'' to boot Linux with a PCMCIA root filesystem.
+Setting up a system with a PCMCIA root thus requires that you use
+another Linux system to create the ``initrd'' image.  If another Linux
+system is not available, another option would be to temporarily
+install a minimal Linux setup on a non-PCMCIA drive, create an initrd
+image, and then reinstall to the PCMCIA target.
+<P>The Linux Bootdisk-HOWTO has some general information about setting up
+boot disks but nothing specific to initrd.  The main initrd document
+is included with recent kernel source code distributions, in
+<CODE>linux/Documentation/initrd.txt</CODE>.  Before beginning, you should
+read this document.  A familiarity with <CODE>lilo</CODE> is also helpful.
+Using initrd also requires that you have a kernel compiled with
+<CODE>CONFIG_BLK_DEV_RAM</CODE> and <CODE>CONFIG_BLK_DEV_INITRD</CODE> enabled.
+<P>This is an advanced configuration technique, and requires a high level
+of familiarity with Linux and the PCMCIA system.  Be sure to read all
+the relevant documentation before starting.  The following cookbook
+instructions should work, but deviations from the examples will
+quickly put you in uncharted and ``unsupported'' territory, and you
+will be on your own. 
+<P>This method absolutely requires that you use a PCMCIA driver release
+of 2.9.5 or later.  Older PCMCIA packages or individual components
+will not work in the initrd context.  Do not mix components from
+different releases.
+<P>
+<H3>The pcinitrd helper script</H3>
+
+<P>The <CODE>pcinitrd</CODE> script creates a basic initrd image for booting with
+a PCMCIA root partition.  The image includes a minimal directory
+heirarchy, a handful of device files, a few binaries, shared
+libraries, and a set of PCMCIA driver modules.  When invoking
+<CODE>pcinitrd</CODE>, you specify the driver modules that you want to be
+included in the image.  The core PCMCIA components, <CODE>pcmcia_core</CODE>
+and <CODE>ds</CODE>, are automatically included.
+<P>As an example, say that your laptop uses an i82365-compatible
+host controller, and you want to boot Linux with the root filesystem
+on a hard drive attached to an Adaptec SlimSCSI adapter.  You could
+create an appropriate initrd image with:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+pcinitrd -v initrd pcmcia/i82365.o pcmcia/aha152x_cs.o
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>To customize the initrd startup sequence, you could mount the image
+using the ``loopback'' device with a command like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+mount -o loop -t ext2 initrd /mnt
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>and then edit the <CODE>linuxrc</CODE> script.  The configuration files
+will be installed under <CODE>/etc</CODE> in the image, and can also be
+customized.  See the man page for <CODE>pcinitrd</CODE> for more information.
+<P>
+<H3>Creating an initrd boot floppy</H3>
+
+<P>
+<P>After creating an image with <CODE>pcinitrd</CODE>, you can create a boot
+floppy by copying the kernel, the compressed initrd image, and a few
+support files for <CODE>lilo</CODE> to a clean floppy.  In the following
+example, we assume that the desired PCMCIA root device is
+<CODE>/dev/sda1</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+mke2fs /dev/fd0
+mount /dev/fd0 /mnt
+mkdir /mnt/etc /mnt/boot /mnt/dev
+cp -a /dev/fd0 /dev/sda1 /mnt/dev
+cp [kernel-image] /mnt/vmlinuz
+cp /boot/boot.b /mnt/boot/boot.b
+gzip &lt; [initrd-image] > /mnt/initrd
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Create <CODE>/mnt/etc/lilo.conf</CODE> with the contents:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+boot=/dev/fd0
+compact
+image=/vmlinuz
+    label=linux
+    initrd=/initrd
+    read-only
+    root=/dev/sda1
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Finally, invoke lilo with:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+lilo -r /mnt
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>When <CODE>lilo</CODE> is invoked with <CODE>-r</CODE>, it performs all actions
+relative to the specified alternate root directory.  The reason for
+creating the device files under <CODE>/mnt/dev</CODE> was that <CODE>lilo</CODE>
+will not be able to use the files in <CODE>/dev</CODE> when it is running
+in this alternate-root mode.
+<P>
+<H3>Installing an initrd image on a non-Linux drive</H3>
+
+<P>One common use of the initrd facility would be on systems where the
+internal hard drive is dedicated to another operating system.  The
+Linux kernel and initrd image can be placed in a non-Linux partition,
+and <CODE>lilo</CODE> or <CODE>LOADLIN</CODE> can be set up to boot Linux from these
+images.
+<P>Assuming that you have a kernel has been configured for the
+appropriate root device, and an initrd image created on another
+system, the easiest way to get started is to boot Linux using
+<CODE>LOADLIN</CODE>, as:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+LOADLIN &lt;kernel> initrd=&lt;initrd-image>
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Once you can boot Linux on your target machine, you could then
+install <CODE>lilo</CODE> to allow booting Linux directly.
+For example, say that <CODE>/dev/hda1</CODE> is the non-Linux target
+partition and <CODE>/mnt</CODE> can be used as a mount point.  First,
+create a subdirectory on the target for the Linux files:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+mount /dev/hda1 /mnt
+mkdir /mnt/linux
+cp [kernel-image] /mnt/linux/vmlinuz
+cp [initrd-image] /mnt/linux/initrd
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>In this example, say that <CODE>/dev/sda1</CODE> is the desired Linux root
+partition, a SCSI hard drive mounted via a PCMCIA SCSI adapter.  To
+install <CODE>lilo</CODE>, create a <CODE>lilo.conf</CODE> file with the contents:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+boot=/dev/hda
+map=/mnt/linux/map
+compact
+image=/mnt/linux/vmlinuz
+        label=linux
+        root=/dev/sda1
+        initrd=/mnt/linux/initrd
+        read-only
+other=/dev/hda1
+        table=/dev/hda
+        label=windows
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The <CODE>boot=</CODE> line says to install the boot loader in the master boot
+record of the specified device.  The <CODE>root=</CODE> line identifies the
+desired root filesystem to be used after loading the initrd image, and
+may be unnecessary if the kernel image is already configured this way.
+The <CODE>other=</CODE> section is used to describe the other operating system
+installed on <CODE>/dev/hda1</CODE>.
+<P>To install <CODE>lilo</CODE> in this case, use:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+lilo -C lilo.conf
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Note that in this case, the <CODE>lilo.conf</CODE> file uses absolute paths
+that include <CODE>/mnt</CODE>.  I did this in the example because the target
+filesystem may not support the creation of Linux device files for the
+<CODE>boot=</CODE> and <CODE>root=</CODE> options.
+<P>
+<HR>
+<A HREF="PCMCIA-HOWTO-6.html">Next</A>
+<A HREF="PCMCIA-HOWTO-4.html">Previous</A>
+<A HREF="PCMCIA-HOWTO.html#toc5">Contents</A>
+</BODY>
+</HTML>

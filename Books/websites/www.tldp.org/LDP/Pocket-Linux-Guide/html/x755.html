@@ -1,0 +1,588 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Design</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Pocket Linux Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Checking and Mounting Disks"
+HREF="phase4.html"><LINK
+REL="PREVIOUS"
+TITLE="Analysis"
+HREF="x729.html"><LINK
+REL="NEXT"
+TITLE="Construction"
+HREF="x867.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Pocket Linux Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x729.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Checking and Mounting Disks</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x867.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN755"
+></A
+>5.2. Design</H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN757"
+></A
+>5.2.1. Determining necessary utilities.</H2
+><P
+>We can use the Filesystem Hierarchy Standard (FHS) document to
+      help find the names of utilities we need and where they reside in the
+      directory structure. The FHS <TT
+CLASS="filename"
+>/sbin</TT
+> directory lists
+      <B
+CLASS="command"
+>fsck</B
+> and something called <B
+CLASS="command"
+>fsck.*</B
+>
+      for checking filesystems. Since we are using a Second Extended (ext2)
+      filesystem the <B
+CLASS="command"
+>fsck.*</B
+> becomes
+      <B
+CLASS="command"
+>fsck.ext2</B
+> for our purposes. Mounting filesystems is
+      done using the commands <B
+CLASS="command"
+>mount</B
+> and
+      <B
+CLASS="command"
+>umount</B
+> in the <TT
+CLASS="filename"
+>/bin</TT
+> directory.
+      However, the name of a script to automatically mount local filesystems
+      cannot be found. On most systems this type of script is in the
+      <TT
+CLASS="filename"
+>/etc</TT
+> directory, but while FHS does list
+      requirements for <TT
+CLASS="filename"
+>/etc</TT
+>, it does not currently make
+      recommendations for startup scripts. Several GNU/Linux distributions use
+      <TT
+CLASS="filename"
+>/etc/init.d</TT
+> as the place to hold startup scripts so
+      we will put our filesystem mounting script there.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN771"
+></A
+>5.2.2. Finding source code</H2
+><P
+>In the previous chapter we used manpages to help us find source
+      code. In this chapter we will use a tool called the Linux Software Map
+      (LSM). LSM is a database of GNU/Linux software that tracks such things
+      as package name, author, names of binaries that make up the package and
+      download sites. Using an LSM search engine we can locate packages using
+      command names as keywords.</P
+><P
+>If we search Ibiblio's Linux Software Map (LSM) at <A
+HREF="http://www.ibiblio.org/pub/Linux/"
+TARGET="_top"
+>http://www.ibiblio.org/pub/Linux/</A
+>
+      for the keyword "fsck" we get a large number of matches. Since we are
+      using a Second Extended filesystem, called ext2 for short, we can refine
+      the search using "ext2" as a keyword. Supplying both keywords to the LSM
+      search engine comes up with a package called e2fsprogs. Looking at the
+      LSM entry for e2fsprogs we find out that this package contains the
+      utilities <B
+CLASS="command"
+>e2fsck</B
+>, <B
+CLASS="command"
+>mke2fs</B
+>,
+      <B
+CLASS="command"
+>dumpe2fs</B
+>, <B
+CLASS="command"
+>fsck</B
+> and more. We also
+      find out that the LSM entry for e2fsprogs has not been updated for a
+      while. There is almost certainly a newer version out there somewhere.
+      Another good Internet resource for source code is SourceForge at <A
+HREF="http://sourceforge.net/"
+TARGET="_top"
+>http://sourceforge.net/</A
+>. Using the
+      keyword "e2fsprogs" in the SourceForge search engine results in a much
+      newer version of e2fsprogs.</P
+><P
+>Finding <B
+CLASS="command"
+>fsck</B
+> was quite an adventure, but now we
+      can move on to finding <B
+CLASS="command"
+>mount</B
+> and
+      <B
+CLASS="command"
+>umount</B
+>. A search on LSM comes up with a number of
+      matches, but most of them point to various versions of a package called
+      util-linux. All we have to do is scroll through and pick the most recent
+      release. The LSM entry for util-linux lists a lot of utilities besides
+      just mount and umount. We should definitely scan through the list to see
+      if any of the other util-linux commands show up in the FHS requirements
+      for <TT
+CLASS="filename"
+>/bin</TT
+> and <TT
+CLASS="filename"
+>/sbin</TT
+>.</P
+><P
+>Below is a list of packages we have gathered so far and the
+      utilities that match up with FHS.</P
+><P
+></P
+><UL
+><LI
+><P
+>e2fsprogs -- <B
+CLASS="command"
+>fsck</B
+>,
+          <B
+CLASS="command"
+>fsck.ext2</B
+> (<B
+CLASS="command"
+>e2fsck</B
+>),
+          <B
+CLASS="command"
+>mkfs.ext2</B
+> (<B
+CLASS="command"
+>mke2fs</B
+>)</P
+></LI
+><LI
+><P
+>util-linux -- <B
+CLASS="command"
+>dmesg</B
+>,
+          <B
+CLASS="command"
+>getty</B
+> (<B
+CLASS="command"
+>agetty</B
+>),
+          <B
+CLASS="command"
+>kill</B
+>, <B
+CLASS="command"
+>login</B
+>,
+          <B
+CLASS="command"
+>mount</B
+>, <B
+CLASS="command"
+>swapon</B
+>,
+          <B
+CLASS="command"
+>umount</B
+></P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN806"
+></A
+>5.2.3. Automating fsck and mount</H2
+><P
+>Now that we have <B
+CLASS="command"
+>fsck</B
+> and
+      <B
+CLASS="command"
+>mount</B
+> commands we need to come up with a shell script
+      to automate checking and mounting the local filesystems. An easy way to
+      do this would be to write a short, two line script that calls
+      <B
+CLASS="command"
+>fsck</B
+> and then <B
+CLASS="command"
+>mount</B
+>. But, what if
+      the filesystems are not clean? The system should definitely not try to
+      mount a corrupted filesystem. Therefore we need to devise a way of
+      determining the status of the filesystems before mounting them. The
+      manpage for <B
+CLASS="command"
+>fsck</B
+> gives some insight into how this can
+      be accomplished using return codes. Basically, if
+      <B
+CLASS="command"
+>fsck</B
+> returns a code of zero or one it means the
+      filesystem is okay and a return code of two or greater means some kind
+      of manual intervention is needed. A simple if-then statement could
+      evaluate the <B
+CLASS="command"
+>fsck</B
+> return code to determine whether or
+      not the filesystem should be mounted. For help on writing shell scripts
+      we can turn to the BASH(1) manpage and the
+      Advanced-BASH-Scripting-Guide. Both references are freely available from
+      the Linux Documentation Project web site at <A
+HREF="http://www.tldp.org/"
+TARGET="_top"
+>http://www.tldp.org/</A
+>.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN817"
+></A
+>5.2.4. File dependencies</H2
+><P
+>The last thing to do is to figure out if any other files besides
+      the binaries are needed. We learned about using <B
+CLASS="command"
+>ldd</B
+>
+      to check for library dependencies in the last phase of the project and
+      we will use it to check the utilities in this phase too. There are also
+      some other files that <B
+CLASS="command"
+>fsck</B
+> and
+      <B
+CLASS="command"
+>mount</B
+> will need and the fsck(8) and mount(8) manpages
+      give some insight into what those files are. There is
+      <TT
+CLASS="filename"
+>/etc/fstab</TT
+> that lists devices and their mount
+      points, <TT
+CLASS="filename"
+>/etc/mtab</TT
+> that keeps track of what is
+      mounted, and a number of <TT
+CLASS="filename"
+>/dev</TT
+> files that represent
+      the various disks. We will need to include all of these to have
+      everything work right.</P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN826"
+></A
+>5.2.4.1. /etc/fstab</H3
+><P
+>The <TT
+CLASS="filename"
+>/etc/fstab</TT
+> file is just a simple text
+        file that can be created with any editor. We will need an entry for
+        the root filesystem and for the proc filesystem. Information about the
+        format of this file can be found in the fstab(5) manpage or by looking
+        at the <TT
+CLASS="filename"
+>/etc/fstab</TT
+> file on any of the popular
+        GNU/Linux distributions.</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN831"
+></A
+>5.2.4.2. /etc/mtab</H3
+><P
+>The <TT
+CLASS="filename"
+>/etc/mtab</TT
+> file presents a unique
+        challenge, because it does not contain static information like
+        <TT
+CLASS="filename"
+>fstab</TT
+>. The <TT
+CLASS="filename"
+>mtab</TT
+> file tracks
+        mounted filesystems and therefore its contents change from time to
+        time. We are particularly interested in the state of
+        <TT
+CLASS="filename"
+>mtab</TT
+> when the system first starts up, before any
+        filesystems are mounted. At this point <TT
+CLASS="filename"
+>/etc/mtab</TT
+>
+        should be empty so we will need to configure a startup script to
+        create an empty <TT
+CLASS="filename"
+>/etc/mtab</TT
+> before any filesystems
+        are mounted. But it is not possible to create any files in the
+        <TT
+CLASS="filename"
+>/etc</TT
+> directory because <TT
+CLASS="filename"
+>/</TT
+> is
+        read-only at startup. This creates a paradox. We cannot create an
+        empty <TT
+CLASS="filename"
+>mtab</TT
+>, because the <TT
+CLASS="filename"
+>/</TT
+>
+        filesystem is not mounted as writable and we should not mount any
+        filesystems until we have created an empty <TT
+CLASS="filename"
+>mtab</TT
+>.
+        In order to sidestep this problem we need to do the following:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Remount <TT
+CLASS="filename"
+>/</TT
+> as read-write, but use the
+            <TT
+CLASS="option"
+>-n</TT
+> option so that <B
+CLASS="command"
+>mount</B
+> does
+            not attempt to write an entry to <TT
+CLASS="filename"
+>/etc/mtab</TT
+>
+            which is read-only at this point.</P
+></LI
+><LI
+><P
+>Create an empty <TT
+CLASS="filename"
+>/etc/mtab</TT
+> file now that
+            the filesystem is writable.</P
+></LI
+><LI
+><P
+>Remount <TT
+CLASS="filename"
+>/</TT
+> as read-write again, this
+            time using the <TT
+CLASS="option"
+>-f</TT
+> option so that an entry is
+            written into <TT
+CLASS="filename"
+>/etc/mtab</TT
+>, but
+            <TT
+CLASS="filename"
+>/</TT
+> is not actually mounted a second
+            time.</P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN861"
+></A
+>5.2.4.3. Device files</H3
+><P
+>The only thing left to do is to create device files. We will
+        need <TT
+CLASS="filename"
+>/dev/ram0</TT
+>, because that is where the root
+        filesystem is located. We also need <TT
+CLASS="filename"
+>/dev/fd0</TT
+> to
+        mount other floppy disks and <TT
+CLASS="filename"
+>/dev/null</TT
+> for use by
+        some of the system commands.</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x729.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x867.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Analysis</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="phase4.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Construction</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

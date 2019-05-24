@@ -1,0 +1,2208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Traffic Control using tcng and HTB HOWTO</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"></HEAD
+><BODY
+CLASS="article"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="ARTICLE"
+><DIV
+CLASS="TITLEPAGE"
+><H1
+CLASS="title"
+><A
+NAME="AEN2"
+></A
+>Traffic Control using tcng and HTB HOWTO</H1
+><H2
+CLASS="subtitle"
+>Version 1.0.1</H2
+><H3
+CLASS="author"
+><A
+NAME="AEN5"
+>Martin A. Brown</A
+></H3
+><DIV
+CLASS="affiliation"
+><SPAN
+CLASS="orgname"
+>&#13;        <A
+HREF="http://linux-ip.net/"
+TARGET="_top"
+>linux-ip.net</A
+>
+        <BR></SPAN
+><SPAN
+CLASS="orgdiv"
+>Network Administration<BR></SPAN
+><DIV
+CLASS="address"
+><P
+CLASS="address"
+><TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:martin@linux-ip.net"
+>martin@linux-ip.net</A
+>&#62;</TT
+></P
+></DIV
+></DIV
+><P
+CLASS="pubdate"
+>April 2006<BR></P
+><DIV
+CLASS="revhistory"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+COLSPAN="3"
+><B
+>Revision History</B
+></TH
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 1.0.1</TD
+><TD
+ALIGN="LEFT"
+>2006-10-28</TD
+><TD
+ALIGN="LEFT"
+>Revised by: MAB</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>Updating contact information</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 1.0</TD
+><TD
+ALIGN="LEFT"
+>2003-04-16</TD
+><TD
+ALIGN="LEFT"
+>Revised by: tab</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>Initial Release, reviewed by LDP</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 0.5</TD
+><TD
+ALIGN="LEFT"
+>2002-04-01</TD
+><TD
+ALIGN="LEFT"
+>Revised by: MAB</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>submit to tldp, rename/retitle with HOWTO</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 0.4</TD
+><TD
+ALIGN="LEFT"
+>2002-03-31</TD
+><TD
+ALIGN="LEFT"
+>Revised by: MAB</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>new example, bucket crash course</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 0.3</TD
+><TD
+ALIGN="LEFT"
+>2002-03-16</TD
+><TD
+ALIGN="LEFT"
+>Revised by: MAB</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>corrections and notes from Jacob Teplitsky, raptor and Joshua
+        Heling</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 0.2</TD
+><TD
+ALIGN="LEFT"
+>2002-03-15</TD
+><TD
+ALIGN="LEFT"
+>Revised by: MAB</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>links, cleanup, publish</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 0.1</TD
+><TD
+ALIGN="LEFT"
+>2002-03-14</TD
+><TD
+ALIGN="LEFT"
+>Revised by: MAB</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>initial revision</TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="legalnotice"
+><A
+NAME="legalnotice"
+></A
+><P
+></P
+><P
+>© 2006, Martin A. Brown</P
+><A
+NAME="AEN18"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>Permission is granted to copy, distribute and/or modify this 		document under the terms of the GNU Free Documentation License, 		Version 1.1 or any later version published by the Free Software 		Foundation; with no invariant sections, with no Front-Cover Texts, 		with no Back-Cover Text.  A copy of the license is located at <A
+HREF="http://www.gnu.org/licenses/fdl.html"
+TARGET="_top"
+>www.gnu.org/copyleft/fdl.html</A
+>.</P
+></BLOCKQUOTE
+><P
+></P
+></DIV
+><HR></DIV
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>1. <A
+HREF="#intro"
+>Introduction</A
+></DT
+><DD
+><DL
+><DT
+>1.1. <A
+HREF="#intro-tc"
+>What is traffic control and how does it work?</A
+></DT
+><DT
+>1.2. <A
+HREF="#intro-htb"
+>What is htb?</A
+></DT
+><DT
+>1.3. <A
+HREF="#intro-tcng"
+>What is <B
+CLASS="command"
+>tcng</B
+>?</A
+></DT
+></DL
+></DD
+><DT
+>2. <A
+HREF="#requirements"
+>Requirements</A
+></DT
+><DD
+><DL
+><DT
+>2.1. <A
+HREF="#requirements-kernel"
+>kernel requirements</A
+></DT
+><DT
+>2.2. <A
+HREF="#requirements-tc"
+><B
+CLASS="command"
+>tc</B
+> requirements</A
+></DT
+><DT
+>2.3. <A
+HREF="#requirements-tcng"
+><B
+CLASS="command"
+>tcng</B
+> requirements</A
+></DT
+></DL
+></DD
+><DT
+>3. <A
+HREF="#examples"
+>Configuration examples</A
+></DT
+><DD
+><DL
+><DT
+>3.1. <A
+HREF="#examples-adsl"
+>Using tcng to shape download only</A
+></DT
+><DT
+>3.2. <A
+HREF="#examples-1"
+>Using a two-rate three-color meter</A
+></DT
+></DL
+></DD
+><DT
+>4. <A
+HREF="#misc"
+>Miscellaneous Notes</A
+></DT
+><DT
+>5. <A
+HREF="#further"
+>Links and Further documentation</A
+></DT
+></DL
+></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="intro"
+></A
+>1. Introduction</H1
+><P
+>&#13;    This is a brief tutorial on using <B
+CLASS="command"
+>tcng</B
+>
+    (<A
+HREF="http://tcng.sourceforge.net"
+TARGET="_top"
+>Traffic Control Next
+    Generation</A
+>) with HTB
+    (<A
+HREF="http://luxik.cdi.cz/~devik/qos/htb/"
+TARGET="_top"
+>Hierarchical Token
+    Bucket</A
+>) to perform traffic shaping on a Linux machine.
+  </P
+><P
+>&#13;    This tutorial is intended for systems administrators who have
+    <P
+></P
+><UL
+><LI
+><P
+>&#13;          AT LEAST, a basic understanding of traffic control
+        </P
+></LI
+><LI
+><P
+>&#13;          EITHER the capability to compile iproute2 and tcng from source
+        </P
+><P
+>&#13;          OR the capability of building RPMS from provided SRPMs
+        </P
+></LI
+><LI
+><P
+>&#13;          EITHER a modular kernel with support for htb and dsmark
+        </P
+><P
+>&#13;          OR capability to compile a kernel with support for htb and dsmark
+        </P
+></LI
+></UL
+>
+    <DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This article is neither comprehensive nor authoritative.  The
+      author solicits positive and negative feedback at <TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:martin@linux-ip.net"
+>martin@linux-ip.net</A
+>&#62;</TT
+>.  Corrections,
+      additions, and further examples are always welcome.</P
+></TD
+></TR
+></TABLE
+></DIV
+>
+  </P
+><DIV
+CLASS="section"
+><HR><H2
+CLASS="section"
+><A
+NAME="intro-tc"
+></A
+>1.1. What is traffic control and how does it work?</H2
+><P
+>&#13;      Traffic control is the term given to the entire packet queuing
+      subsystem in a network or network device.  Traffic control consists of
+      several distinct operations.  Classifying is a mechanism by which to
+      identify packets and place them in individual flows or classes.
+      Policing is a mechanism by which one limits the number of packets or
+      bytes in a stream matching a particular classification.  Scheduling is
+      the decision-making process by which packets are ordered and re-ordered
+      for transmission.  Shaping is the process by which packets are delayed
+      and transmitted to produce an even and predictable flow rate.
+    </P
+><P
+>&#13;      These many characteristics of a traffic control system can be combined
+      in complex ways to reserve bandwidth for a particular flow (or
+      application) or to limit the amount of bandwidth available to a
+      particular flow or application.
+    </P
+><P
+>&#13;      One of the key concepts of traffic control is the concept of tokens.
+      A policing or shaping implementation needs to calculate the number of
+      bytes or packets which have passed at what rate.  Each packet or byte
+      (depending on the implementation), corresponds to a token, and the
+      policing or shaping implementation will only transmit or pass the packet
+      if it has a token available.  A common metaphorical container in
+      which an implementation keeps its token is the bucket.  In short, a
+      bucket represents the both the number of tokens which can be used
+      instantaneously (the size of the bucket), and the rate at which the
+      tokens are replenished (how fast the bucket gets refilled).
+    </P
+><P
+>&#13;      See
+      <A
+HREF="#intro-htb"
+>Section 1.2</A
+> for an example of buckets in a linux traffic
+      control system.
+    </P
+><P
+>&#13;      Under linux, traffic control has historically been a complex
+      endeavor.  The <B
+CLASS="command"
+>tc</B
+> command line tool provides an
+      interface to the kernel structures which perform the shaping,
+      scheduling, policing and classifying.  The syntax of this command is,
+      however, arcane.  The <B
+CLASS="command"
+>tcng</B
+> project provides a much
+      friendlier interface to the human by layering a language on top of the
+      powerful <B
+CLASS="command"
+>tc</B
+> command line tool.  By writing traffic
+      control configurations in <B
+CLASS="command"
+>tcng</B
+> they become easily
+      maintainable, less arcane, and importantly also more portable.
+    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><HR><H2
+CLASS="section"
+><A
+NAME="intro-htb"
+></A
+>1.2. What is htb?</H2
+><P
+>&#13;      <A
+HREF="http://luxik.cdi.cz/~devik/qos/htb/"
+TARGET="_top"
+>Hierarchichal Token
+      Bucket</A
+> is a classful qdisc written by Martin Devera 
+      with a simpler set of
+      configuration parameters than CBQ.  There is a great deal of
+      documentation on the author's site and also on 
+      <A
+HREF="http://www.docum.org/"
+TARGET="_top"
+>Stef Coene's website</A
+> about
+      HTB and its uses.  Below is a very brief sketch of the HTB system.
+    </P
+><P
+>&#13;      Conceptually, HTB is an arbitrary number of token buckets arranged in a
+      hierarchy (yes, you probably could have figured that out without my
+      sentence).  Let's consider the simplest scenario.
+      The primary egress queuing discipline on any device is known as
+      the <TT
+CLASS="constant"
+>root</TT
+> qdisc.
+    </P
+><P
+>&#13;      The <TT
+CLASS="constant"
+>root</TT
+> qdisc will contain one class (complex
+      scenarios could have multiple classes attached to the
+      <TT
+CLASS="constant"
+>root</TT
+> qdisc).  This single HTB class will be set
+      with two parameters, a <TT
+CLASS="constant"
+>rate</TT
+> and a
+      <TT
+CLASS="constant"
+>ceil</TT
+>.  These values should be the same for the
+      top-level class, and will represent the total
+      available bandwidth on the link.
+    </P
+><P
+>&#13;      In HTB, <TT
+CLASS="constant"
+>rate</TT
+> means the guaranteed bandwidth
+      available for a given class and <TT
+CLASS="constant"
+>ceil</TT
+> is short for
+      ceiling, which indicates the maximum bandwidth that class is allowed to
+      consume.  Any bandwidth used between <TT
+CLASS="constant"
+>rate</TT
+> and
+      <TT
+CLASS="constant"
+>ceil</TT
+> is borrowed from a parent class, hence the
+      suggestion that <TT
+CLASS="constant"
+>rate</TT
+> and <TT
+CLASS="constant"
+>ceil</TT
+>
+      be the same in the top-level class.
+    </P
+><P
+>&#13;      A number of children classes can be made under this class, each of which
+      can be allocated some amount of the available bandwidth from the parent
+      class.  In these children classes, the <TT
+CLASS="constant"
+>rate</TT
+> and
+      <TT
+CLASS="constant"
+>ceil</TT
+> parameter values need not be the same as
+      suggested for the parent class.  This allows you to reserve a specified
+      amount of bandwidth to a particular class.  It also
+      allows HTB to calculate the ratio of distribution of available bandwidth
+      to the ratios of the classes themselves.  This should be more apparent
+      in the examples below.
+    </P
+><P
+>&#13;      Hierarchical Token Bucket implements a classful queuing mechanism for
+      the linux traffic control system, and provides <TT
+CLASS="constant"
+>rate</TT
+>
+      and <TT
+CLASS="constant"
+>ceil</TT
+> to allow the user to control the absolute
+      bandwidth to particular classes of traffic as well as indicate the ratio
+      of distribution of bandwidth when extra bandwidth becomes available (up
+      to <TT
+CLASS="constant"
+>ceil</TT
+>).
+    </P
+><P
+>&#13;      Keep in mind when choosing the bandwidth for your top-level class that
+      traffic shaping only helps if you are the bottleneck between your LAN
+      and the Internet.  Typically, this is the case in home and office
+      network environments, where an entire LAN is serviced by a DSL or T1
+      connection.
+    </P
+><P
+>&#13;      In practice, this means that you should probably set the bandwidth for
+      your top-level class to your available bandwidth minus a fraction of
+      that bandwidth.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><HR><H2
+CLASS="section"
+><A
+NAME="intro-tcng"
+></A
+>1.3. What is <B
+CLASS="command"
+>tcng</B
+>?</H2
+><P
+>&#13;      <A
+HREF="http://tcng.sourceforge.net/"
+TARGET="_top"
+>Traffic Control Next
+      Generation (tcng)</A
+> is a project by Werner Almesberger to provide
+      a powerful, abstract, and uniform language in which to describe traffic
+      control structures.  The <B
+CLASS="command"
+>tcc</B
+> parser in the
+      <B
+CLASS="command"
+>tcng</B
+> distribution transforms tcng the language into a
+      number of output formats.  By default, <B
+CLASS="command"
+>tcc</B
+> will read
+      a file (specified as an argument or as STDIN) and print to STDOUT the
+      series of <B
+CLASS="command"
+>tc</B
+> commands (see
+      <B
+CLASS="command"
+>iproute2</B
+> below) required to create the desired traffic
+      control structure in the kernel.
+    </P
+><P
+>&#13;      Consult the 
+      <A
+HREF="http://linux-ip.net/gl/tcng/node159.html"
+TARGET="_top"
+>parameter
+      reference for <B
+CLASS="command"
+>tcng</B
+></A
+> to see the supported
+      queuing disciplines.  Jacob Teplitsky, active on the
+      <A
+HREF="http://lartc.org/#mailinglist"
+TARGET="_top"
+>LARTC mailing list</A
+>
+      and a contributor to the tcng project,
+      wrote the htb support for <B
+CLASS="command"
+>tcng</B
+>.
+    </P
+><P
+>&#13;      The <B
+CLASS="command"
+>tcc</B
+> tool can produce a number of different types
+      of output, but this document will only consider the conventional and
+      default output.  Consult the
+      <A
+HREF="http://linux-ip.net/gl/tcng/"
+TARGET="_top"
+>TCNG manual</A
+> for
+      more detailed information about the use of <B
+CLASS="command"
+>tcng</B
+>.
+    </P
+><P
+>&#13;      The
+      <B
+CLASS="command"
+>tcsim</B
+> tool is a traffic control simulator which
+      accepts tcng configuration files and reads a control language to
+      simulate the behaviour of a kernel sending and receiving packets with
+      the specified control structures.  Although <B
+CLASS="command"
+>tcsim</B
+>
+      is a significant portion of the <B
+CLASS="command"
+>tcng</B
+> project,
+      <B
+CLASS="command"
+>tcsim</B
+> will not be covered here at all.
+    </P
+></DIV
+></DIV
+><DIV
+CLASS="section"
+><HR><H1
+CLASS="section"
+><A
+NAME="requirements"
+></A
+>2. Requirements</H1
+><P
+>&#13;    There are a few requirements in order for the
+    <A
+HREF="#requirements-kernel"
+>kernel to support HTB and
+    DSMARK</A
+>, 
+    <A
+HREF="#requirements-tc"
+>tc to support HTB and DSMARK</A
+>, and
+    <A
+HREF="#requirements-tcng"
+>tcng itself</A
+>. 
+  </P
+><P
+>&#13;    Specifically, support for HTB in the kernel and tc is absolutely required
+    in order for this tutorial to be remotely useful (refer to the title if
+    htere is any doubt in your mind).  DSMARK support is, strictly speaking,
+    optional, although some
+    <A
+HREF="#examples"
+>examples</A
+> (class selection path, in
+    particular, but maybe others) may not operate without dsmark support.
+  </P
+><DIV
+CLASS="section"
+><HR><H2
+CLASS="section"
+><A
+NAME="requirements-kernel"
+></A
+>2.1. kernel requirements</H2
+><P
+>&#13;      The kernel requirements are very easy to meet.  Kernel 2.4.20 and newer
+      include support for HTB and dsmark, so simply be certain that these
+      options are turned on in the QoS/Fair Queuing portion of your kernel
+      configuration.  For a brief summary of the options to select in kernel
+      configuration, visit
+      <A
+HREF="http://diffserv.sourceforge.net/#24"
+TARGET="_top"
+>the DiffServ project
+      kernel configuration notes</A
+>.
+    </P
+><P
+>&#13;      For kernels older than 2.4.20, the following
+      <A
+HREF="http://luxik.cdi.cz/~devik/qos/htb/v3/htb3.6-020525.tgz"
+TARGET="_top"
+>tarball
+      containing a patch</A
+> should be applied to your 2.4.17 or newer
+      kernel tree.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><HR><H2
+CLASS="section"
+><A
+NAME="requirements-tc"
+></A
+>2.2. <B
+CLASS="command"
+>tc</B
+> requirements</H2
+><P
+>&#13;      The <B
+CLASS="command"
+>tc</B
+> command is a part of the
+      <B
+CLASS="command"
+>iproute2</B
+> utility suite.  For general documentation on
+      <B
+CLASS="command"
+>iproute2</B
+>, see
+      <A
+HREF="http://linux-ip.net/"
+TARGET="_top"
+>http://linux-ip.net/</A
+> and
+      <A
+HREF="http://linux-ip.net/gl/ip-cref/"
+TARGET="_top"
+>the
+      <B
+CLASS="command"
+>iproute2</B
+> manual</A
+>.  The software itself is
+      available directly from
+      <A
+HREF="ftp://ftp.inr.ac.ru/ip-routing/"
+TARGET="_top"
+>Alexey Kuznetsov'z FTP
+      archive</A
+> but commonly also via packages supplied with your
+      linux distribution.  If your distribution can make use of RPMS, you can
+      download this
+      <A
+HREF="http://linux-ip.net/traffic-control/iproute-2.4.7-7.src.rpm"
+TARGET="_top"
+>SRPM</A
+>
+      and compile it on your own system.
+    </P
+><P
+>&#13;      If you need to compile <B
+CLASS="command"
+>iproute2</B
+> yourself, use the
+      <A
+HREF="http://luxik.cdi.cz/~devik/qos/htb/v3/htb3.6-020525.tgz"
+TARGET="_top"
+>patch
+      to <B
+CLASS="command"
+>tc</B
+> from this tarball</A
+> at
+      <A
+HREF="http://luxik.cdi.cz/~devik/qos/htb/"
+TARGET="_top"
+>Martin Devera's HTB
+      site</A
+> in order to provide support for HTB in
+      <B
+CLASS="command"
+>tc</B
+>.
+    </P
+><P
+>&#13;      Your <B
+CLASS="command"
+>tc</B
+> will also need to support dsmark, the
+      diffserv marking mechanism.  Fortunately, this is a simple change to 
+      the <TT
+CLASS="filename"
+>Config</TT
+> file from the
+      <B
+CLASS="command"
+>iproute2</B
+> source package.  Simply change
+      <TT
+CLASS="computeroutput"
+>TC_CONFIG_DIFFSERV=n</TT
+> to
+      <TT
+CLASS="computeroutput"
+>TC_CONFIG_DIFFSERV=y</TT
+> and recompile.
+    </P
+><P
+>&#13;      The
+      <A
+HREF="http://linux-ip.net/traffic-control/iproute-2.4.7-7.src.rpm"
+TARGET="_top"
+>SRPM</A
+>
+      creates a <B
+CLASS="command"
+>tc</B
+> binary with support for
+      dsmark and for HTB, both of which are required for this example.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><HR><H2
+CLASS="section"
+><A
+NAME="requirements-tcng"
+></A
+>2.3. <B
+CLASS="command"
+>tcng</B
+> requirements</H2
+><P
+>&#13;      Support for <B
+CLASS="command"
+>tcng</B
+> is the easiest part of the process.
+      Simply untar the tcng source and run <TT
+CLASS="userinput"
+><B
+>./configure
+      --no-tcsim</B
+></TT
+> before compiling.
+    </P
+><P
+>&#13;      If you are on an RPM-based system, you can use the SPEC file in
+      <TT
+CLASS="filename"
+>tcng/build/tcng.spec</TT
+> to build for your
+      distribution, or you can download and compile this
+      <A
+HREF="http://linux-ip.net/traffic-control/tcng-9d-1.src.rpm"
+TARGET="_top"
+>SRPM</A
+>.
+      The SRPM produces two packages, tcc and tcc-devel.  You need only tcc to
+      create configurations.
+    </P
+><P
+>&#13;      In order to run the <B
+CLASS="command"
+>tcc</B
+> parser, you will also need to
+      have the <B
+CLASS="command"
+>cpp</B
+> package installed.
+      <B
+CLASS="command"
+>tcc</B
+> uses cpp.
+    </P
+></DIV
+></DIV
+><DIV
+CLASS="section"
+><HR><H1
+CLASS="section"
+><A
+NAME="examples"
+></A
+>3. Configuration examples</H1
+><P
+>&#13;    Examples shown here will be modified examples of downloadable
+    configurations available in
+    <A
+HREF="http://linux-ip.net/code/tcng/"
+TARGET="_top"
+>this directory</A
+>.
+  </P
+><P
+>&#13;    These examples can be used as standalone configuration files to be fed
+    into a <B
+CLASS="command"
+>tcc</B
+> parser, or they can be used in
+    conjunction with the example
+    <A
+HREF="http://linux-ip.net/code/tcng/tcng.init"
+TARGET="_top"
+>SysV startup
+    script</A
+>.  The startup script is a modification of a
+    <A
+HREF="http://mailman.ds9a.nl/pipermail/lartc/2002q4/005411.html"
+TARGET="_top"
+>script
+    posted on the LARTC mailing list by raptor</A
+>.
+  </P
+><P
+>&#13;    If you are going to use the above startup script, take a look at
+    this example <TT
+CLASS="filename"
+>/etc/sysconfig/tcng</TT
+>:
+  </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-sysconfig-tcng"
+></A
+><P
+><B
+>Example 1. <TT
+CLASS="filename"
+>/etc/sysconfig/tcng</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;# - tcng meta-configuration file
+#   (I never meta-configuration file I didn't like)
+#
+# -- 2003-03-15 created; -MAB
+# -- 2003-03-31 modified to allow ENVAR override; -MAB
+#
+# -- this directory will hold all of the tcng configurations
+#    used on this host
+#
+TCCONFBASEDIR=${TCCONFBASEDIR:-/etc/sysconfig/tcng-configs}
+
+# -- this is the active, desired tcng configuration
+#    note, that, because tcng provides the #include construct,
+#    the modularity of configuration can be built into the
+#    configuration files in $TCCONFBASEDIR
+#
+TCCONF=${TCCONF:-$TCCONFBASEDIR/global.tcc}
+
+tcstats=${tcstats:-no}   # -- will suppress statistical output
+tcstats=${tcstats:-yes}  # -- will throw the "-s" option to tc
+
+tcdebug=${tcdebug:-0}    # -- for typical startup script usage
+tcdebug=${tcdebug:-1}    # -- for a bit of information about what's happening
+tcdebug=${tcdebug:-2}    # -- for debugging information
+#
+#
+# -- an additional measure to take, you can override the default tc and tcc
+#    command line utilities by specifying their pathnames here, for example:
+#
+#  tc=/usr/local/bin/tc
+#  tcc=/usr/local/tcng/bin/tcc
+#
+#
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="section"
+><HR><H2
+CLASS="section"
+><A
+NAME="examples-adsl"
+></A
+>3.1. Using tcng to shape download only</H2
+><P
+>&#13;      Many general concepts will be introduced with this example.  This
+      example can be compiled to its <B
+CLASS="command"
+>tc</B
+> output with the
+      command <TT
+CLASS="userinput"
+><B
+>tcc
+      <TT
+CLASS="filename"
+>class-selection-path.tcc</TT
+></B
+></TT
+>.
+    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-example-0"
+></A
+><P
+><B
+>Example 2. <TT
+CLASS="filename"
+>/etc/sysconfig/tcng/class-selection-path.tcc</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;/*
+ * Simply commented example of a tcng traffic control file.
+ *
+ *   Martin A. Brown <TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:martin@linux-ip.net"
+>martin@linux-ip.net</A
+>&#62;</TT
+>
+ *
+ * Example:  Using class selection path.
+ *
+ * (If you are reading the processed output in HTML, the callouts are
+ *  clickable links to the description text.)
+ *
+ */
+
+#include "fields.tc"     <A
+NAME="ex-0-includes"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>
+#include "ports.tc"
+
+#define INTERFACE  eth0  <A
+NAME="ex-0-defines"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+>
+
+dev INTERFACE {
+    egress { <A
+NAME="ex-0-egress"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+>
+
+        /* In class selection path, the filters come first!  DSmark */ <A
+NAME="ex-0-csp"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+>
+
+        class ( &#60;$ssh&#62; )    if tcp_sport ==  22 &#38;&#38; ip_tos_delay == 1 ;
+        class ( &#60;$audio&#62; )  if tcp_sport == 554 || tcp_dport == 7070 ;
+        class ( &#60;$bulk&#62; ) \
+            if tcp_sport == PORT_SSH || tcp_dport == PORT_HTTP ; <A
+NAME="ex-0-portusage"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+>
+        class ( &#60;$other&#62; )  if 1 ; <A
+NAME="ex-0-leftover"
+><IMG
+SRC="../images/callouts/6.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(6)"></A
+>
+
+        /* section in which we configure the qdiscs and classes */ 
+
+        htb () { <A
+NAME="ex-0-root"
+><IMG
+SRC="../images/callouts/7.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(7)"></A
+>
+            class ( rate 600kbps, ceil 600kbps ) { <A
+NAME="ex-0-topclass"
+><IMG
+SRC="../images/callouts/8.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(8)"></A
+>
+                $ssh   = class ( rate  64kbps, ceil 128kbps ) { sfq; } ; 
+              <A
+NAME="ex-0-classvariable"
+><IMG
+SRC="../images/callouts/9.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(9)"></A
+> $audio = class ( rate 128kbps, ceil 128kbps ) { sfq; } ;
+                $bulk  = class ( rate 256kbps, ceil 512kbps ) { sfq; } ;
+                $other = class ( rate 128kbps, ceil 384kbps ) { sfq; } ; <A
+NAME="ex-0-embedsfq"
+><IMG
+SRC="../images/callouts/10.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(10)"></A
+>
+            }
+        }
+    }
+}
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="calloutlist"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="#ex-0-includes"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>&#13;            The <B
+CLASS="command"
+>tcng</B
+> language provides support for C-style
+            include directives which can include any file.  Files are included
+            relative to the current directory or the <B
+CLASS="command"
+>tcng</B
+>
+            library (normally <TT
+CLASS="filename"
+>/usr/lib/tcng/include</TT
+>).
+            Strictly speaking, it is not necessary to
+            <TT
+CLASS="constant"
+>#include</TT
+> <TT
+CLASS="filename"
+>ports.tc</TT
+> and
+            <TT
+CLASS="filename"
+>fields.tc</TT
+>, because
+            <B
+CLASS="command"
+>tcc</B
+> will include these by default.
+          </DD
+><DD
+><P
+>&#13;            The use of <TT
+CLASS="constant"
+>#include</TT
+> can allow for flexible
+            definition of variables and inclusion of common traffic control
+            elements.
+          </P
+></DD
+><DD
+><P
+>&#13;            See also the tcng manual
+            <A
+HREF="http://linux-ip.net/gl/tcng/node35.html"
+TARGET="_top"
+>on
+            includes</A
+>.
+          </P
+></DD
+><DT
+><A
+HREF="#ex-0-defines"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+></DT
+><DD
+>&#13;            These are CPP directives.  The <TT
+CLASS="constant"
+>#define</TT
+>
+            can be used to create macros or constants.  For more on their use,
+            you should see the <B
+CLASS="command"
+>tcng</B
+> manual
+            <A
+HREF="http://linux-ip.net/gl/tcng/node111.html"
+TARGET="_top"
+>on
+            variables</A
+>.
+          </DD
+><DT
+><A
+HREF="#ex-0-egress"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+></DT
+><DD
+>&#13;            The <TT
+CLASS="constant"
+>egress</TT
+> keyword is synonymous with the
+            <TT
+CLASS="constant"
+>dsmark</TT
+> keyword.  The example here uses
+            <A
+HREF="http://linux-ip.net/gl/tcng/node32.html"
+TARGET="_top"
+>class
+            selection path</A
+>.  It is the use of the
+            <TT
+CLASS="constant"
+>egress</TT
+> keyword in this configuration which
+            requires dsmark support in the kernel and <B
+CLASS="command"
+>tc</B
+>.
+          </DD
+><DT
+><A
+HREF="#ex-0-csp"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+></DT
+><DD
+>&#13;            Class selection path is one approach to traffic shaping.  In class
+            selection path, the packet is marked (DiffServ mark) upon entry
+            into the router.  The router may take any number of actions or
+            apply any number of policing, scheduling or shaping actions on the
+            packet as a result of this initial classification.
+          </DD
+><DD
+><P
+>&#13;            Consult the <B
+CLASS="command"
+>tcng</B
+> manual
+            <A
+HREF="http://linux-ip.net/gl/tcng/node32.html"
+TARGET="_top"
+>on class
+            selection path</A
+> for further details.
+          </P
+></DD
+><DT
+><A
+HREF="#ex-0-portusage"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+></DT
+><DD
+>&#13;            This example shows the use of names for the ports instead of
+            numbers.  This is one of the conveniences of
+            <B
+CLASS="command"
+>tcng</B
+> afforded by the automatic inclusion of
+            <TT
+CLASS="filename"
+>ports.tc</TT
+>.  The ports are named in accordance
+            with IANA port names.  See
+            <A
+HREF="http://www.iana.org/assignments/port-numbers"
+TARGET="_top"
+>IANA's
+            registered ports</A
+> for these names or examine the file
+            <TT
+CLASS="filename"
+>ports.tc</TT
+>.
+          </DD
+><DD
+><P
+>&#13;            Names and numbers are equally acceptable and valid.
+          </P
+></DD
+><DT
+><A
+HREF="#ex-0-leftover"
+><IMG
+SRC="../images/callouts/6.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(6)"></A
+></DT
+><DD
+>&#13;            Note this peculiar construct which classifies any packet which
+            have not yet been classified.  Any packet which has not been
+            classified by the above classifiers is put into the class "$other"
+            here.  The <TT
+CLASS="constant"
+>if 1</TT
+> construct can be used to
+            classify the remainder of unclassified traffic.
+          </DD
+><DT
+><A
+HREF="#ex-0-root"
+><IMG
+SRC="../images/callouts/7.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(7)"></A
+></DT
+><DD
+>&#13;            This is the creation of the root qdisc which is attached to
+            device, <TT
+CLASS="constant"
+>eth0</TT
+> in this case.  Consult the
+            reference material in the <B
+CLASS="command"
+>tcng</B
+>
+            <A
+HREF="http://linux-ip.net/gl/tcng/node159.html"
+TARGET="_top"
+>appendix on
+            queuing discipline parameters</A
+> for valid parameters to
+            each qdisc.  Any qdisc parameters can be inserted into the
+            parentheses in the same fashion as the class parameters further
+            below in the example.  If no parameters need be specified, the
+            parentheses are optional.
+          </DD
+><DT
+><A
+HREF="#ex-0-topclass"
+><IMG
+SRC="../images/callouts/8.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(8)"></A
+></DT
+><DD
+>&#13;            The top level class in this example sets the maximum bandwidth
+            allowed through this class.  Let's assume that
+            <TT
+CLASS="constant"
+>eth0</TT
+> is the inside network interface of a
+            machine.  This limits the total bandwidth to 600 kilobits per
+            second transmitted to the internal network.
+          </DD
+><DD
+><P
+>&#13;            The parameters
+            <TT
+CLASS="constant"
+>rate</TT
+> and <TT
+CLASS="constant"
+>ceil</TT
+> should be
+            familiar to anybody who has used HTB.  These are HTB specific
+            parameters and are translated properly by the
+            <B
+CLASS="command"
+>tcc</B
+> utility.  See the table
+            <A
+HREF="#tb-misc-rates"
+>on <B
+CLASS="command"
+>tcng</B
+> rate
+            and speed specification</A
+>.
+          </P
+></DD
+><DT
+><A
+HREF="#ex-0-classvariable"
+><IMG
+SRC="../images/callouts/9.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(9)"></A
+></DT
+><DD
+>&#13;            This is the assignment of a class to a variable.  This is commonly
+            done as part of class selection path.
+          </DD
+><DT
+><A
+HREF="#ex-0-embedsfq"
+><IMG
+SRC="../images/callouts/10.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(10)"></A
+></DT
+><DD
+>&#13;            As suggested by Martin Devera on the HTB homepage, an embedded SFQ
+            gives each class a fair queuing algorithm for distribution of
+            resources to the contenders passing packets through that class.
+            Note the absence of any parameters to the embedded queuing
+            discipline.
+          </DD
+><DD
+><P
+>&#13;            If no queuing discipline is specified for leaf
+            classes, they contain the default, a pfifo_fast qdisc.  The
+            inclusion of a stochastic fair queuing qdisc in the leaf classes
+            inhibits the ability of a single connection to dominate in a given
+            class.
+          </P
+></DD
+></DL
+></DIV
+></DIV
+><P
+>&#13;    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><HR><H2
+CLASS="section"
+><A
+NAME="examples-1"
+></A
+>3.2. Using a two-rate three-color meter</H2
+><P
+>&#13;    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-example-1"
+></A
+><P
+><B
+>Example 3. <TT
+CLASS="filename"
+>/etc/sysconfig/tcng/two-rate-three-color-meter.tcc</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;/*
+ * Simply commented example of a tcng traffic control file.
+ *
+ *   Martin A. Brown <TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:martin@linux-ip.net"
+>martin@linux-ip.net</A
+>&#62;</TT
+>
+ *
+ * Example:  Using a meter.
+ *
+ * (If you are reading the processed output in HTML, the callouts are
+ *  clickable links to the description text.)
+ *
+ */
+
+#define   EXCEPTION      192.168.137.50
+#define   INTERFACE      eth0
+
+$meter = trTCM( cir 128kbps, cbs 10kB, pir 256kbps, pbs 10kB );  <A
+NAME="ex-1-mdefine"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>
+
+dev eth0 {
+    egress {
+        class ( &#60;$full&#62; )     if ip_src == EXCEPTION      ; <A
+NAME="ex-1-notmetered"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+>
+        class ( &#60;$fast&#62; )     if trTCM_green( $meter )    ; <A
+NAME="ex-1-green"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+>
+        class ( &#60;$slow&#62; )     if trTCM_yellow( $meter )   ; <A
+NAME="ex-1-yellow"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+>
+        drop                  if trTCM_red( $meter )      ; <A
+NAME="ex-1-red"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+>
+        htb {
+            class ( rate 600kbps, ceil 600kbps ) {
+                $fast = class ( rate 256kbps, ceil 256kbps ) { sfq; } ;
+                $slow = class ( rate 128kbps, ceil 128kbps ) { sfq; } ;
+                $full = class ( rate 600kbps, ceil 600kbps ) { sfq; } ;
+            }
+        }
+    }
+}
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="calloutlist"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="#ex-1-mdefine"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>&#13;            This is the declaration of the meter to be used for classifying
+            traffic.  The underlying technology used to implement this meter
+            is policing.  See the
+            <A
+HREF="http://linux-ip.net/gl/tcng/node53.html"
+TARGET="_top"
+>tcng manual
+            on meters</A
+> for the different types of meters.
+          </DD
+><DD
+><P
+>&#13;            This meter is a two-rate three-color meter, the most complex meter
+            available in the <B
+CLASS="command"
+>tcng</B
+> language.  This meter
+            returns the colors green, yellow and red, based on the rates
+            offered in the committed and peak buckets.  If the metered rate
+            exceeds the committed rate, this meter will turn yellow, and if
+            the metered rate exceeds the peak rate, this meter will turn red.
+          </P
+></DD
+><DD
+><P
+>&#13;            The variable <TT
+CLASS="varname"
+>$meter</TT
+> can be operated on by
+            functions applicable to the meter type.  In this case, there are
+            three functions available for testing <TT
+CLASS="varname"
+>$meter</TT
+>'s
+            state,
+            <TT
+CLASS="function"
+>trTCM_green</TT
+>, <TT
+CLASS="function"
+>trTCM_yellow</TT
+>,
+            and <TT
+CLASS="function"
+>trTCM_red</TT
+>.  For efficiency, consider also
+            the
+            <A
+HREF="http://linux-ip.net/gl/tcng/node58.html"
+TARGET="_top"
+>accelerated
+            counterparts</A
+>.
+          </P
+></DD
+><DT
+><A
+HREF="#ex-1-notmetered"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+></DT
+><DD
+>&#13;            In this example, the IP 192.168.137.50 is specifically excluded
+            from the policing control applied to traffic departing on eth0.
+          </DD
+><DT
+><A
+HREF="#ex-1-green"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+></DT
+><DD
+>&#13;            Up to the committed information rate (<TT
+CLASS="constant"
+>cir</TT
+>),
+            packets will pass through this class.  Tokens will be removed from
+            the <TT
+CLASS="constant"
+>cir</TT
+>/<TT
+CLASS="constant"
+>cbs</TT
+> bucket.
+          </DD
+><DD
+><P
+>&#13;            The meter is green.
+          </P
+></DD
+><DT
+><A
+HREF="#ex-1-yellow"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+></DT
+><DD
+>&#13;            Traffic flow exceeding the
+            <TT
+CLASS="constant"
+>cir</TT
+>/<TT
+CLASS="constant"
+>cbs</TT
+> bucket will be
+            classified here.  The
+            <TT
+CLASS="constant"
+>pir</TT
+>/<TT
+CLASS="constant"
+>pbs</TT
+> bucket
+            (<TT
+CLASS="constant"
+>pir</TT
+> is peak information rate,
+            <TT
+CLASS="constant"
+>pbs</TT
+> is peak burst size).  This allows a
+            particular flow to be guaranteed one class of service up to a
+            given rate, and then be reclassified above that rate.
+          </DD
+><DD
+><P
+>&#13;            The meter is yellow.
+          </P
+></DD
+><DT
+><A
+HREF="#ex-1-red"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+></DT
+><DD
+>&#13;            Traffic flow exceeding the
+            <TT
+CLASS="constant"
+>pir</TT
+>/<TT
+CLASS="constant"
+>pbs</TT
+> bucket will be
+            classified here.  A common configuration causes traffic to be
+            dropped above peak rate, although traffic could be re-classified
+            into a best-effort class from a guaranteed class.
+          </DD
+><DD
+><P
+>&#13;            The meter is red.
+          </P
+></DD
+></DL
+></DIV
+></DIV
+><P
+>&#13;    </P
+></DIV
+></DIV
+><DIV
+CLASS="section"
+><HR><H1
+CLASS="section"
+><A
+NAME="misc"
+></A
+>4. Miscellaneous Notes</H1
+><P
+>&#13;    Thankfully, <B
+CLASS="command"
+>tcng</B
+> does away with one of the minor
+    annoyances of <B
+CLASS="command"
+>tc</B
+>.  The following table maps the syntax
+    and convention of these tools with English equivalents.
+  </P
+><DIV
+CLASS="table"
+><A
+NAME="tb-misc-rates"
+></A
+><P
+><B
+>Table 1. Speed/Rate syntax: tcng vs. tc</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>tcng</TH
+><TH
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>English</TH
+><TH
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>tc</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>bps</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>bit(s) per second</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>bit</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>Bps</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>byte(s) per second</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>bps (argh!)</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>kbps</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>kilobit(s) per second</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>kbit</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>kBps</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>kilobyte(s) per second</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>kbps</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>Mbps</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>megabit(s) per second</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>mbit or Mbit</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>MBps</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>megabyte(s) per second</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>mbps or Mbps</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>pps</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>packet per second</TD
+><TD
+ALIGN="LEFT"
+VALIGN="MIDDLE"
+>??</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>&#13;    Note that this means a slight adjustment for longtime users of
+    <B
+CLASS="command"
+>tc</B
+>, but a much better choice for intuitive usablity for
+    English speakers.
+  </P
+><P
+>&#13;    For example, we can use conventional expressions of rate in
+    <B
+CLASS="command"
+>tcng</B
+> configurations:  <TT
+CLASS="userinput"
+><B
+>100Mbps</B
+></TT
+>,
+    <TT
+CLASS="userinput"
+><B
+>128kbps</B
+></TT
+>, and even <TT
+CLASS="userinput"
+><B
+>2Gpps</B
+></TT
+>.
+    See also the <B
+CLASS="command"
+>tcng</B
+> manual
+    <A
+HREF="http://linux-ip.net/gl/tcng/node21.html"
+TARGET="_top"
+>on units</A
+>.
+  </P
+><P
+>&#13;    In order for traffic control to be effective, it is important to
+    understand where the bottlenecks are.  In most cases, you'll want to
+    perform the traffic control at or near the bottleneck.
+  </P
+><P
+>&#13;  </P
+></DIV
+><DIV
+CLASS="section"
+><HR><H1
+CLASS="section"
+><A
+NAME="further"
+></A
+>5. Links and Further documentation</H1
+><P
+>&#13;  </P
+><P
+></P
+><UL
+><LI
+><P
+>&#13;        <A
+HREF="http://diffserv.sourceforge.net/"
+TARGET="_top"
+>the linux DiffServ
+        project</A
+>
+      </P
+></LI
+><LI
+><P
+>&#13;        <A
+HREF="http://luxik.cdi.cz/~devik/qos/htb/"
+TARGET="_top"
+>HTB
+        site (<EM
+>Martin <SPAN
+CLASS="QUOTE"
+>"devik"</SPAN
+> Devera</EM
+>)</A
+>
+      </P
+></LI
+><LI
+><P
+>&#13;         <A
+HREF="http://tcng.sourceforge.net/"
+TARGET="_top"
+>Traffic Control Next
+         Generation (<B
+CLASS="command"
+>tcng</B
+>)</A
+>
+      </P
+><P
+>&#13;        <A
+HREF="http://linux-ip.net/gl/tcng/"
+TARGET="_top"
+>TCNG manual
+        (<EM
+>Werner Almesberger</EM
+>)</A
+>
+      </P
+></LI
+><LI
+><P
+>&#13;        <A
+HREF="ftp://ftp.inr.ac.ru/ip-routing/"
+TARGET="_top"
+>iproute2
+        (<EM
+>Alexey Kuznetsov</EM
+>)</A
+>
+      </P
+><P
+>&#13;        <A
+HREF="http://linux-ip.net/gl/ip-cref/"
+TARGET="_top"
+><B
+CLASS="command"
+>iproute2</B
+>
+        manual (<EM
+>Alexey Kuznetsov</EM
+>)</A
+>
+      </P
+></LI
+><LI
+><P
+>&#13;        <A
+HREF="http://www.docum.org/"
+TARGET="_top"
+>Research and documentation on
+        traffic control under linux (<EM
+>Stef Coene</EM
+>)</A
+>
+      </P
+></LI
+><LI
+><P
+>&#13;        <A
+HREF="http://lartc.org/howto/"
+TARGET="_top"
+>LARTC HOWTO (<EM
+>bert
+        hubert, et.  al.</EM
+>)</A
+>
+      </P
+></LI
+><LI
+><P
+>&#13;        <A
+HREF="http://linux-ip.net/"
+TARGET="_top"
+>guide to IP networking with
+        linux (<EM
+>Martin A. Brown</EM
+>)</A
+>
+      </P
+></LI
+></UL
+></DIV
+></DIV
+></BODY
+></HTML
+>

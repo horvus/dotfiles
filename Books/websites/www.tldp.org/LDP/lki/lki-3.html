@@ -1,0 +1,1228 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Kernel 2.4 Internals: Virtual Filesystem (VFS)</TITLE>
+ <LINK HREF="lki-4.html" REL=next>
+ <LINK HREF="lki-2.html" REL=previous>
+ <LINK HREF="lki.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="lki-4.html">Next</A>
+<A HREF="lki-2.html">Previous</A>
+<A HREF="lki.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Virtual Filesystem (VFS)</A></H2>
+
+<P>
+<P>
+<H2><A NAME="ss3.1">3.1 Inode Caches and Interaction with Dcache</A>
+</H2>
+
+<P>
+<P>In order to support multiple filesystems, Linux contains a special kernel
+interface level called VFS (Virtual Filesystem Switch). This is similar
+to the vnode/vfs interface found in SVR4 derivatives (originally it came from
+BSD and Sun original implementations).
+<P>Linux inode cache is implemented in a single file, <CODE>fs/inode.c</CODE>, which consists
+of 977 lines of code. It is interesting to note that not many changes have been
+made to it for the last 5-7 years: one can still recognise some of the code
+comparing the latest version with, say, 1.3.42.
+<P>The structure of Linux inode cache is as follows:
+<P>
+<OL>
+<LI> A global hashtable, <CODE>inode_hashtable</CODE>, where each inode is hashed by the
+value of the superblock pointer and 32bit inode number. Inodes without a
+superblock (<CODE>inode->i_sb == NULL</CODE>) are added to a doubly linked list
+headed by <CODE>anon_hash_chain</CODE> instead. Examples of anonymous inodes
+are sockets created by <CODE>net/socket.c:sock_alloc()</CODE>, by calling
+<CODE>fs/inode.c:get_empty_inode()</CODE>.
+</LI>
+<LI> A global type in_use list (<CODE>inode_in_use</CODE>), which contains valid inodes
+with <CODE>i_count>0</CODE> and <CODE>i_nlink>0</CODE>. Inodes newly allocated by
+<CODE>get_empty_inode()</CODE> and <CODE>get_new_inode()</CODE> are added to the <CODE>inode_in_use</CODE> list.
+</LI>
+<LI> A global type unused list (<CODE>inode_unused</CODE>), which contains valid inodes
+with <CODE>i_count = 0</CODE>.
+</LI>
+<LI> A per-superblock type dirty list (<CODE>sb->s_dirty</CODE>) which contains valid
+inodes with <CODE>i_count>0</CODE>, <CODE>i_nlink>0</CODE> and <CODE>i_state &amp; I_DIRTY</CODE>.
+When inode is marked
+dirty, it is added to the <CODE>sb->s_dirty</CODE> list if it is also hashed.
+Maintaining a per-superblock dirty list of inodes allows to quickly
+sync inodes.
+</LI>
+<LI> Inode cache proper - a SLAB cache called <CODE>inode_cachep</CODE>. As inode
+objects are allocated and freed, they are taken from and returned to
+this SLAB cache.</LI>
+</OL>
+<P>The type lists are anchored from <CODE>inode->i_list</CODE>, the hashtable from
+<CODE>inode->i_hash</CODE>. Each inode can be on a hashtable and one and only one type
+(in_use, unused or dirty) list.
+<P>All these lists are protected by a single spinlock: <CODE>inode_lock</CODE>.
+<P>The inode cache subsystem is initialised when <CODE>inode_init()</CODE> function is called from
+<CODE>init/main.c:start_kernel()</CODE>. The function is marked as <CODE>__init</CODE>, which means
+its code is thrown away later on. It is passed a single argument - the
+number of physical pages on the system. This is so that the inode cache can
+configure itself depending on how much memory is available, i.e. create
+a larger hashtable if there is enough memory.
+<P>The only stats information about inode cache is the number of unused inodes,
+stored in <CODE>inodes_stat.nr_unused</CODE> and accessible to user programs via files
+<CODE>/proc/sys/fs/inode-nr</CODE> and <CODE>/proc/sys/fs/inode-state</CODE>.
+<P>We can examine one of the lists from <B>gdb</B> running on a live kernel thus:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+(gdb) printf "%d\n", (unsigned long)(&amp;((struct inode *)0)->i_list)
+8
+(gdb) p inode_unused
+$34 = 0xdfa992a8
+(gdb) p (struct list_head)inode_unused
+$35 = {next = 0xdfa992a8, prev = 0xdfcdd5a8}
+(gdb) p ((struct list_head)inode_unused).prev
+$36 = (struct list_head *) 0xdfcdd5a8
+(gdb) p (((struct list_head)inode_unused).prev)->prev
+$37 = (struct list_head *) 0xdfb5a2e8
+(gdb) set $i = (struct inode *)0xdfb5a2e0
+(gdb) p $i->i_ino
+$38 = 0x3bec7
+(gdb) p $i->i_count
+$39 = {counter = 0x0}
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>Note that we deducted 8 from the address 0xdfb5a2e8 to obtain the address of
+the <CODE>struct inode</CODE> (0xdfb5a2e0) according to the definition of <CODE>list_entry()</CODE>
+macro from <CODE>include/linux/list.h</CODE>.
+<P>To understand how inode cache works, let us trace a lifetime of an inode
+of a regular file on ext2 filesystem as it is opened and closed:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+fd = open("file", O_RDONLY);
+close(fd);
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>The <B>open(2)</B> system call is implemented in <CODE>fs/open.c:sys_open</CODE> function and
+the real work is done by <CODE>fs/open.c:filp_open()</CODE> function, which is split into
+two parts:
+<P>
+<OL>
+<LI> <CODE>open_namei()</CODE>: fills in the nameidata structure containing the dentry
+and vfsmount structures.
+</LI>
+<LI> <CODE>dentry_open()</CODE>: given a dentry and vfsmount, this function allocates a new
+<CODE>struct file</CODE> and links them together; it also invokes the filesystem
+specific <CODE>f_op->open()</CODE> method which was set in <CODE>inode->i_fop</CODE> when inode
+was read in <CODE>open_namei()</CODE> (which provided inode via <CODE>dentry->d_inode</CODE>).</LI>
+</OL>
+<P>The <CODE>open_namei()</CODE> function interacts with dentry cache via <CODE>path_walk()</CODE>, which
+in turn calls <CODE>real_lookup()</CODE>, which invokes the filesystem specific <CODE>inode_operations->lookup()</CODE> method.
+The role of this method is to find the entry in the parent
+directory with the matching name and then do <CODE>iget(sb, ino)</CODE> to get the
+corresponding inode - which brings us to the inode cache. When the inode is
+read in, the dentry is instantiated by means of <CODE>d_add(dentry, inode)</CODE>. While
+we are at it, note that for UNIX-style filesystems which have the concept of
+on-disk inode number, it is the lookup method's job to map its endianness
+to current CPU format, e.g. if the inode number in raw (fs-specific) dir
+entry is in little-endian 32 bit format one could do:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+unsigned long ino = le32_to_cpu(de->inode);
+inode = iget(sb, ino);
+d_add(dentry, inode);
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>So, when we open a file we hit <CODE>iget(sb, ino)</CODE> which is really
+<CODE>iget4(sb, ino, NULL, NULL)</CODE>, which does:
+<P>
+<OL>
+<LI> Attempt to find an inode with matching superblock and inode number
+in the hashtable under protection of <CODE>inode_lock</CODE>. If inode is found,
+its reference count (<CODE>i_count</CODE>) is incremented; if it
+was 0 prior to incrementation and the inode is not dirty, it is removed from whatever
+type list (<CODE>inode->i_list</CODE>) it is currently on (it has to be
+<CODE>inode_unused</CODE> list, of course) and inserted into
+<CODE>inode_in_use</CODE> type list; finally, <CODE>inodes_stat.nr_unused</CODE> is decremented.
+</LI>
+<LI> If inode is currently locked, we wait until it is unlocked so that
+<CODE>iget4()</CODE> is guaranteed to return an unlocked inode.
+</LI>
+<LI> If inode was not found in the hashtable then it is the first time we
+encounter this inode, so we call <CODE>get_new_inode()</CODE>, passing it the pointer
+to the place in the hashtable where it should be inserted to.
+</LI>
+<LI> <CODE>get_new_inode()</CODE> allocates a new inode from the <CODE>inode_cachep</CODE> SLAB
+cache but this operation can block (<CODE>GFP_KERNEL</CODE> allocation), so it
+must drop the <CODE>inode_lock</CODE> spinlock which guards the hashtable. Since it
+has dropped the spinlock, it must retry searching the inode in the
+hashtable afterwards; if it is found this time, it returns (after incrementing
+the reference by <CODE>__iget</CODE>) the one found in the hashtable and destroys
+the newly allocated one. If it is still not found in the hashtable,
+then the new inode we have just allocated is the one to be used;
+therefore it is initialised to the required values and the fs-specific
+<CODE>sb->s_op->read_inode()</CODE> method is invoked to populate the rest of the
+inode. This brings us from inode cache back to the filesystem code -
+remember that we came to the inode cache when filesystem-specific
+<CODE>lookup()</CODE> method invoked <CODE>iget()</CODE>. While the <CODE>s_op->read_inode()</CODE> method
+is reading the inode from disk, the inode is locked (<CODE>i_state = I_LOCK</CODE>);
+it is unlocked after the <CODE>read_inode()</CODE> method returns and all the waiters for it are
+woken up.</LI>
+</OL>
+<P>Now, let's see what happens when we close this file descriptor. The <B>close(2)</B>
+system call is implemented in <CODE>fs/open.c:sys_close()</CODE> function, which calls
+<CODE>do_close(fd, 1)</CODE> which rips (replaces with NULL) the descriptor of the
+process' file descriptor table and invokes the <CODE>filp_close()</CODE> function which does
+most of the work. The interesting things happen in <CODE>fput()</CODE>, which checks if
+this was the last reference to the file, and if so calls
+<CODE>fs/file_table.c:_fput()</CODE> which calls <CODE>__fput()</CODE> which is where interaction with
+dcache (and therefore with inode cache - remember dcache is a Master of inode
+cache!) happens. The <CODE>fs/dcache.c:dput()</CODE> does <CODE>dentry_iput()</CODE> which brings us
+back to inode cache via <CODE>iput(inode)</CODE> so let us understand
+<CODE>fs/inode.c:iput(inode)</CODE>:
+<P>
+<OL>
+<LI> If parameter passed to us is NULL, we do absolutely nothing and return.
+</LI>
+<LI> if there is a fs-specific <CODE>sb->s_op->put_inode()</CODE> method, it is invoked
+immediately with no spinlocks held (so it can block).
+</LI>
+<LI> <CODE>inode_lock</CODE> spinlock is taken and <CODE>i_count</CODE> is decremented. If this was
+NOT the last reference to this inode then we simply check if
+there are too many references to it and so <CODE>i_count</CODE> can wrap around
+the 32 bits allocated to it and if so we print a warning and return.
+Note that we call <CODE>printk()</CODE> while holding the <CODE>inode_lock</CODE> spinlock -
+this is fine because <CODE>printk()</CODE> can never block, therefore it may be called in
+absolutely any context (even from interrupt handlers!).
+</LI>
+<LI> If this was the last active reference then some work needs to be done.</LI>
+</OL>
+<P>The work performed by <CODE>iput()</CODE> on the last inode reference is rather complex
+so we separate it into a list of its own:
+<P>
+<OL>
+<LI> If <CODE>i_nlink == 0</CODE> (e.g. the file was unlinked while we held it open)
+then the inode is removed from hashtable and from its type list; if
+there are any data pages held in page cache for this inode, they are
+removed by means of <CODE>truncate_all_inode_pages(&amp;inode->i_data)</CODE>. Then
+the filesystem-specific <CODE>s_op->delete_inode()</CODE> method is invoked,
+which typically deletes the on-disk copy of the inode. If there is no
+<CODE>s_op->delete_inode()</CODE> method registered by the filesystem (e.g. ramfs)
+then we call <CODE>clear_inode(inode)</CODE>, which invokes <CODE>s_op->clear_inode()</CODE> if
+registered and if inode corresponds to a block device, this device's
+reference count is dropped by <CODE>bdput(inode->i_bdev)</CODE>.
+</LI>
+<LI> if <CODE>i_nlink != 0</CODE> then we check if there are other inodes in the same
+hash bucket and if there is none, then if inode is not dirty we delete
+it from its type list and add it to <CODE>inode_unused</CODE> list, incrementing
+<CODE>inodes_stat.nr_unused</CODE>. If there are inodes in the same hashbucket
+then we delete it from the type list and add to <CODE>inode_unused</CODE> list.
+If this was an anonymous inode (NetApp .snapshot) then we delete it
+from the type list and clear/destroy it completely.</LI>
+</OL>
+<P>
+<P>
+<H2><A NAME="ss3.2">3.2 Filesystem Registration/Unregistration</A>
+</H2>
+
+<P>
+<P>The Linux kernel provides a mechanism for new filesystems to be written with
+minimum effort. The historical reasons for this are:
+<P>
+<OL>
+<LI> In the world where people still use non-Linux operating systems
+to protect their investment in legacy software, Linux had to provide
+interoperability by supporting a great multitude of different
+filesystems - most of which would not deserve to exist on their own
+but only for compatibility with existing non-Linux operating systems.
+</LI>
+<LI> The interface for filesystem writers had to be very simple so that
+people could try to reverse engineer existing proprietary filesystems
+by writing read-only versions of them. Therefore Linux VFS makes it
+very easy to implement read-only filesystems; 95% of the work is
+to finish them by adding full write-support. As a concrete example,
+I wrote read-only BFS filesystem for Linux in about 10 hours, but it
+took several weeks to complete it to have full write support (and
+even today some purists claim that it is not complete because "it
+doesn't have compactification support").
+</LI>
+<LI> The VFS interface is exported, and therefore all Linux filesystems can
+be implemented as modules.
+</LI>
+</OL>
+<P>Let us consider the steps required to implement a filesystem under Linux.
+The code to implement a filesystem can be either a dynamically loadable
+module or statically linked into the kernel, and the way it is done under
+Linux is very transparent. All that is needed is to fill in a
+<CODE>struct file_system_type</CODE> structure and register it with the VFS using
+the <CODE>register_filesystem()</CODE> function as in the following example from
+<CODE>fs/bfs/inode.c</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#include &lt;linux/module.h>
+#include &lt;linux/init.h>
+
+static struct super_block *bfs_read_super(struct super_block *, void *, int);
+
+static DECLARE_FSTYPE_DEV(bfs_fs_type, "bfs", bfs_read_super);
+
+static int __init init_bfs_fs(void)
+{
+        return register_filesystem(&amp;bfs_fs_type);
+}
+
+static void __exit exit_bfs_fs(void)
+{
+        unregister_filesystem(&amp;bfs_fs_type);
+}
+
+module_init(init_bfs_fs)
+module_exit(exit_bfs_fs)
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>The <CODE>module_init()/module_exit()</CODE> macros ensure that, when BFS is compiled as a
+module, the functions <CODE>init_bfs_fs()</CODE> and <CODE>exit_bfs_fs()</CODE> turn into <CODE>init_module()</CODE>
+and <CODE>cleanup_module()</CODE> respectively; if BFS is statically linked into the kernel,
+the <CODE>exit_bfs_fs()</CODE> code vanishes as it is unnecessary.
+<P>The <CODE>struct file_system_type</CODE> is declared in <CODE>include/linux/fs.h</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+struct file_system_type {
+        const char *name;
+        int fs_flags;
+        struct super_block *(*read_super) (struct super_block *, void *, int);
+        struct module *owner;
+        struct vfsmount *kern_mnt; /* For kernel mount, if it's FS_SINGLE fs */
+        struct file_system_type * next;
+};
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>The fields thereof are explained thus:
+<P>
+<UL>
+<LI><B>name</B>: human readable name, appears in <CODE>/proc/filesystems</CODE> file
+and is used as a key to find a filesystem by its name; this same name is
+used for the filesystem type in <B>mount(2)</B>, and it should be unique:  there
+can (obviously) be only one filesystem with a given name. For modules,
+name points to module's address spaces and not copied: this means <B>cat
+/proc/filesystems</B> can oops if the module was unloaded but filesystem is
+still registered.
+</LI>
+<LI><B>fs_flags</B>: one or more (ORed) of the flags: <CODE>FS_REQUIRES_DEV</CODE>
+for filesystems that can only be mounted on a block device, <CODE>FS_SINGLE</CODE>
+for filesystems that can have only one superblock, <CODE>FS_NOMOUNT</CODE> for
+filesystems that cannot be mounted from userspace by means of <B>mount(2)</B>
+system call: they can however be mounted internally using <CODE>kern_mount()</CODE>
+interface, e.g. pipefs.
+</LI>
+<LI><B>read_super</B>: a pointer to the function that reads the super
+block during mount operation. This function is required: if it is not
+provided, mount operation (whether from userspace or inkernel) will
+always fail except in <CODE>FS_SINGLE</CODE> case where it will Oops in
+<CODE>get_sb_single()</CODE>, trying to dereference a NULL pointer in
+<CODE>fs_type->kern_mnt->mnt_sb</CODE> with (<CODE>fs_type->kern_mnt = NULL</CODE>).
+</LI>
+<LI><B>owner</B>: pointer to the module that implements this filesystem.
+If the filesystem is statically linked into the kernel then this is
+NULL. You don't need to set this manually as the macro <CODE>THIS_MODULE</CODE>
+does the right thing automatically.
+</LI>
+<LI><B>kern_mnt</B>: for <CODE>FS_SINGLE</CODE> filesystems only. This is set by
+<CODE>kern_mount()</CODE> (TODO: <CODE>kern_mount()</CODE> should refuse to mount filesystems
+if <CODE>FS_SINGLE</CODE> is not set).
+</LI>
+<LI><B>next</B>: linkage into singly-linked list headed by <CODE>file_systems</CODE>
+(see <CODE>fs/super.c</CODE>). The list is protected by the <CODE>file_systems_lock</CODE>
+read-write spinlock and functions <CODE>register/unregister_filesystem()</CODE>
+modify it by linking and unlinking the entry from the list.</LI>
+</UL>
+<P>The job of the <CODE>read_super()</CODE> function is to fill in the fields of the superblock,
+allocate root inode and initialise any fs-private information associated with
+this mounted instance of the filesystem. So, typically the <CODE>read_super()</CODE> would
+do:
+<P>
+<OL>
+<LI> Read the superblock from the device specified via <CODE>sb->s_dev</CODE> argument,
+using buffer cache <CODE>bread()</CODE> function. If it anticipates to read a few
+more subsequent metadata blocks immediately then it makes sense to
+use <CODE>breada()</CODE> to schedule reading extra blocks asynchronously.
+</LI>
+<LI> Verify that superblock contains the valid magic number and overall
+"looks" sane.
+</LI>
+<LI> Initialise <CODE>sb->s_op</CODE> to point to <CODE>struct super_block_operations</CODE>
+structure. This structure contains filesystem-specific functions
+implementing operations like "read inode", "delete inode", etc.
+</LI>
+<LI> Allocate root inode and root dentry using <CODE>d_alloc_root()</CODE>.
+</LI>
+<LI> If the filesystem is not mounted read-only then set <CODE>sb->s_dirt</CODE> to 1
+and mark the buffer containing superblock dirty (TODO: why do we
+do this? I did it in BFS because MINIX did it...)</LI>
+</OL>
+<P>
+<H2><A NAME="ss3.3">3.3 File Descriptor Management</A>
+</H2>
+
+<P>
+<P>Under Linux there are several levels of indirection between user file
+descriptor and the kernel inode structure. When a process makes <B>open(2)</B>
+system call, the kernel returns a small non-negative integer which can be
+used for subsequent I/O operations on this file. This integer is an index
+into an array of pointers to <CODE>struct file</CODE>. Each file structure points to
+a dentry via <CODE>file->f_dentry</CODE>. And each dentry points to an inode via
+<CODE>dentry->d_inode</CODE>. 
+<P>Each task contains a field <CODE>tsk->files</CODE> which is a pointer to
+<CODE>struct files_struct</CODE> defined in <CODE>include/linux/sched.h</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+/*
+ * Open file table structure
+ */
+struct files_struct {
+        atomic_t count;
+        rwlock_t file_lock;
+        int max_fds;
+        int max_fdset;
+        int next_fd;
+        struct file ** fd;      /* current fd array */
+        fd_set *close_on_exec;
+        fd_set *open_fds;
+        fd_set close_on_exec_init;
+        fd_set open_fds_init;
+        struct file * fd_array[NR_OPEN_DEFAULT];
+};
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>The <CODE>file->count</CODE> is a reference count, incremented by <CODE>get_file()</CODE> (usually
+called by <CODE>fget()</CODE>) and decremented by <CODE>fput()</CODE> and by <CODE>put_filp()</CODE>. The difference
+between <CODE>fput()</CODE> and <CODE>put_filp()</CODE> is that <CODE>fput()</CODE> does more work usually needed
+for regular files, such as releasing flock locks, releasing dentry, etc, while
+<CODE>put_filp()</CODE> is only manipulating file table structures, i.e. decrements the
+count, removes the file from the <CODE>anon_list</CODE> and adds it to the <CODE>free_list</CODE>,
+under protection of <CODE>files_lock</CODE> spinlock.
+<P>The <CODE>tsk->files</CODE> can be shared between parent and child if the child thread
+was created using <CODE>clone()</CODE> system call with <CODE>CLONE_FILES</CODE> set in the clone flags
+argument. This can be seen in <CODE>kernel/fork.c:copy_files()</CODE> (called by
+<CODE>do_fork()</CODE>) which only increments the <CODE>file->count</CODE> if <CODE>CLONE_FILES</CODE> is set
+instead of the usual copying file descriptor table in time-honoured
+tradition of classical UNIX <B>fork(2)</B>.
+<P>When a file is opened, the file structure allocated for it is installed into
+<CODE>current->files->fd[fd]</CODE> slot and a <CODE>fd</CODE> bit is set in the bitmap
+<CODE>current->files->open_fds</CODE> . All this is done under the write protection of 
+<CODE>current->files->file_lock</CODE> read-write spinlock. When the descriptor is
+closed a <CODE>fd</CODE> bit is cleared in <CODE>current->files->open_fds</CODE> and
+<CODE>current->files->next_fd</CODE> is set equal to <CODE>fd</CODE> as a hint for finding the
+first unused descriptor next time this process wants to open a file.
+<P>
+<H2><A NAME="ss3.4">3.4 File Structure Management</A>
+</H2>
+
+<P>
+<P>The file structure is declared in <CODE>include/linux/fs.h</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+struct fown_struct {
+        int pid;                /* pid or -pgrp where SIGIO should be sent */
+        uid_t uid, euid;        /* uid/euid of process setting the owner */
+        int signum;             /* posix.1b rt signal to be delivered on IO */
+};
+
+struct file {
+        struct list_head        f_list;
+        struct dentry           *f_dentry;
+        struct vfsmount         *f_vfsmnt;
+        struct file_operations  *f_op;
+        atomic_t                f_count;
+        unsigned int            f_flags;
+        mode_t                  f_mode;
+        loff_t                  f_pos;
+        unsigned long           f_reada, f_ramax, f_raend, f_ralen, f_rawin;
+        struct fown_struct      f_owner;
+        unsigned int            f_uid, f_gid;
+        int                     f_error;
+
+        unsigned long           f_version;
+  
+        /* needed for tty driver, and maybe others */
+        void                    *private_data; 
+};
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>Let us look at the various fields of <CODE>struct file</CODE>:
+<P>
+<OL>
+<LI><B>f_list</B>: this field links file structure on one (and only one)
+of the lists: a) <CODE>sb->s_files</CODE> list of all open files on this filesystem,
+if the corresponding inode is not anonymous, then <CODE>dentry_open()</CODE> (called
+by <CODE>filp_open()</CODE>) links the file into this list; 
+b) <CODE>fs/file_table.c:free_list</CODE>, containing unused file structures;
+c) <CODE>fs/file_table.c:anon_list</CODE>, when a new file structure is created by
+<CODE>get_empty_filp()</CODE> it is placed on this list. All these lists are
+protected by the <CODE>files_lock</CODE> spinlock.
+</LI>
+<LI><B>f_dentry</B>: the dentry corresponding to this file. The dentry
+is created at nameidata lookup time by <CODE>open_namei()</CODE> (or
+rather <CODE>path_walk()</CODE>
+which it calls) but the actual <CODE>file->f_dentry</CODE> field is set by
+<CODE>dentry_open()</CODE> to contain the dentry thus found.
+</LI>
+<LI><B>f_vfsmnt</B>: the pointer to <CODE>vfsmount</CODE> structure of the filesystem
+containing the file. This is set by <CODE>dentry_open()</CODE> but is found as part
+of nameidata lookup by <CODE>open_namei()</CODE> (or rather <CODE>path_init()</CODE> which it
+calls).
+</LI>
+<LI><B>f_op</B>: the pointer to <CODE>file_operations</CODE> which contains various
+methods that can be invoked on the file. This is copied from
+<CODE>inode->i_fop</CODE> which is placed there by filesystem-specific
+<CODE>s_op->read_inode()</CODE> method during nameidata lookup. We will look at
+<CODE>file_operations</CODE> methods in detail later on in this section.
+</LI>
+<LI><B>f_count</B>: reference count manipulated by
+<CODE>get_file/put_filp/fput</CODE>.
+</LI>
+<LI><B>f_flags</B>: <CODE>O_XXX</CODE> flags from <B>open(2)</B> system call copied there
+(with slight modifications by <CODE>filp_open()</CODE>) by <CODE>dentry_open()</CODE> and after
+clearing <CODE>O_CREAT</CODE>, <CODE>O_EXCL</CODE>, <CODE>O_NOCTTY</CODE>, <CODE>O_TRUNC</CODE> - there is no point in
+storing these flags permanently since they cannot be modified by 
+<CODE>F_SETFL</CODE> (or queried by <CODE>F_GETFL</CODE>) <B>fcntl(2)</B> calls.
+</LI>
+<LI><B>f_mode</B>: a combination of userspace flags and mode, set
+by <CODE>dentry_open()</CODE>. The point of the conversion is to store read and
+write access in separate bits so one could do easy checks like
+<CODE>(f_mode &amp; FMODE_WRITE)</CODE> and <CODE>(f_mode &amp; FMODE_READ)</CODE>.
+</LI>
+<LI><B>f_pos</B>: a current file position for next read or write to
+the file. Under i386 it is of type <CODE>long long</CODE>, i.e. a 64bit value.
+</LI>
+<LI><B>f_reada, f_ramax, f_raend, f_ralen, f_rawin</B>: to support
+readahead - too complex to be discussed by mortals ;)
+</LI>
+<LI><B>f_owner</B>: owner of file I/O to receive asynchronous I/O 
+notifications via <CODE>SIGIO</CODE> mechanism (see <CODE>fs/fcntl.c:kill_fasync()</CODE>).
+</LI>
+<LI><B>f_uid, f_gid</B> - set to user id and group id of the process that
+opened the file, when the file structure is created in
+<CODE>get_empty_filp()</CODE>. If the file is a socket, used by ipv4 netfilter.
+</LI>
+<LI><B>f_error</B>: used by NFS client to return write errors. It is
+set in <CODE>fs/nfs/file.c</CODE> and checked in <CODE>mm/filemap.c:generic_file_write()</CODE>.
+</LI>
+<LI><B>f_version</B> - versioning mechanism for invalidating caches,
+incremented (using global <CODE>event</CODE>) whenever <CODE>f_pos</CODE> changes.
+</LI>
+<LI><B>private_data</B>: private per-file data which can be used by
+filesystems (e.g. coda stores credentials here) or by device drivers.
+Device drivers (in the presence of devfs) could use this field to
+differentiate between multiple instances instead of the classical
+minor number encoded in <CODE>file->f_dentry->d_inode->i_rdev</CODE>.
+          </LI>
+</OL>
+<P>Now let us look at <CODE>file_operations</CODE> structure which contains the methods that
+can be invoked on files. Let us recall that it is copied from <CODE>inode->i_fop</CODE>
+where it is set by <CODE>s_op->read_inode()</CODE> method. It is declared in
+<CODE>include/linux/fs.h</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+struct file_operations {
+        struct module *owner;
+        loff_t (*llseek) (struct file *, loff_t, int);
+        ssize_t (*read) (struct file *, char *, size_t, loff_t *);
+        ssize_t (*write) (struct file *, const char *, size_t, loff_t *);
+        int (*readdir) (struct file *, void *, filldir_t);
+        unsigned int (*poll) (struct file *, struct poll_table_struct *);
+        int (*ioctl) (struct inode *, struct file *, unsigned int, unsigned long);
+        int (*mmap) (struct file *, struct vm_area_struct *);
+        int (*open) (struct inode *, struct file *);
+        int (*flush) (struct file *);
+        int (*release) (struct inode *, struct file *);
+        int (*fsync) (struct file *, struct dentry *, int datasync);
+        int (*fasync) (int, struct file *, int);
+        int (*lock) (struct file *, int, struct file_lock *);
+        ssize_t (*readv) (struct file *, const struct iovec *, unsigned long, loff_t *);
+        ssize_t (*writev) (struct file *, const struct iovec *, unsigned long, loff_t *);
+};
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<OL>
+<LI><B>owner</B>: a pointer to the module that owns the subsystem in
+question. Only drivers need to set it to <CODE>THIS_MODULE</CODE>, filesystems can
+happily ignore it because their module counts are controlled at
+mount/umount time whilst the drivers need to control it at open/release
+time.
+</LI>
+<LI><B>llseek</B>: implements the <B>lseek(2)</B> system call. Usually it is
+omitted and <CODE>fs/read_write.c:default_llseek()</CODE> is used, which does the
+right thing (TODO: force all those who set it to NULL currently to use
+default_llseek - that way we save an <CODE>if()</CODE> in <CODE>llseek()</CODE>)
+</LI>
+<LI><B>read</B>: implements <CODE>read(2)</CODE> system call. Filesystems can use
+<CODE>mm/filemap.c:generic_file_read()</CODE> for regular files and
+<CODE>fs/read_write.c:generic_read_dir()</CODE> (which simply returns <CODE>-EISDIR</CODE>)
+for directories here.
+</LI>
+<LI><B>write</B>: implements <B>write(2)</B> system call. Filesystems can use
+<CODE>mm/filemap.c:generic_file_write()</CODE> for regular files and ignore it for
+directories here.
+      </LI>
+<LI><B>readdir</B>: used by filesystems. Ignored for regular files
+and implements <B>readdir(2)</B> and <B>getdents(2)</B> system calls for directories.
+</LI>
+<LI><B>poll</B>: implements <B>poll(2)</B> and <B>select(2)</B> system calls.
+</LI>
+<LI><B>ioctl</B>: implements driver or filesystem-specific
+ioctls. Note that generic file ioctls like <CODE>FIBMAP</CODE>, <CODE>FIGETBSZ</CODE>, <CODE>FIONREAD</CODE>
+are implemented by higher levels so they never read <CODE>f_op->ioctl()</CODE>
+method.
+</LI>
+<LI><B>mmap</B>: implements the <B>mmap(2)</B> system call. Filesystems can use
+<B>generic_file_mmap</B> here for regular files and ignore it on directories.
+</LI>
+<LI><B>open</B>: called at <B>open(2)</B> time by <CODE>dentry_open()</CODE>. Filesystems
+rarely use this, e.g. coda tries to cache the file locally at open
+time.
+</LI>
+<LI><B>flush</B>: called at each <B>close(2)</B> of this file, not necessarily
+the last one (see <CODE>release()</CODE> method below). The only filesystem that
+uses this is NFS client to flush all dirty pages. Note that this can
+return an error which will be passed back to userspace which made the
+<B>close(2)</B> system call.
+</LI>
+<LI><B>release</B>: called at the last <B>close(2)</B> of this file, i.e. when
+<CODE>file->f_count</CODE> reaches 0. Although defined as returning int, the return
+value is ignored by VFS (see <CODE>fs/file_table.c:__fput()</CODE>).
+</LI>
+<LI><B>fsync</B>: maps directly to <B>fsync(2)/fdatasync(2)</B> system calls,
+with the last argument specifying whether it is fsync or fdatasync.
+Almost no work is done by VFS around this, except to map file
+descriptor to a file structure (<CODE>file = fget(fd)</CODE>) and down/up
+<CODE>inode->i_sem</CODE> semaphore. Ext2 filesystem currently ignores the last
+argument and does exactly the same for <B>fsync(2)</B> and <B>fdatasync(2)</B>.
+</LI>
+<LI><B>fasync</B>: this method is called when <CODE>file->f_flags &amp; FASYNC</CODE>
+changes.
+</LI>
+<LI><B>lock</B>: the filesystem-specific portion of the POSIX <B>fcntl(2)</B>
+file region locking mechanism. The only bug here is that because it is
+called before fs-independent portion (<CODE>posix_lock_file()</CODE>), if it
+succeeds but the standard POSIX lock code fails then it will never be
+unlocked on fs-dependent level..
+      </LI>
+<LI><B>readv</B>: implements <B>readv(2)</B> system call.
+</LI>
+<LI><B>writev</B>: implements <B>writev(2)</B> system call.</LI>
+</OL>
+<P>
+<H2><A NAME="ss3.5">3.5 Superblock and Mountpoint Management</A>
+</H2>
+
+<P>
+<P>Under Linux, information about mounted filesystems is kept in two separate
+structures - <CODE>super_block</CODE> and <CODE>vfsmount</CODE>. The reason for this is that Linux
+allows to mount the same filesystem (block device) under multiple mount
+points, which means that the same <CODE>super_block</CODE> can correspond to multiple
+<CODE>vfsmount</CODE> structures.
+<P>Let us look at <CODE>struct super_block</CODE> first, declared in <CODE>include/linux/fs.h</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+struct super_block {
+        struct list_head        s_list;         /* Keep this first */
+        kdev_t                  s_dev;
+        unsigned long           s_blocksize;
+        unsigned char           s_blocksize_bits;
+        unsigned char           s_lock;
+        unsigned char           s_dirt;
+        struct file_system_type *s_type;
+        struct super_operations *s_op;
+        struct dquot_operations *dq_op;
+        unsigned long           s_flags;
+        unsigned long           s_magic;
+        struct dentry           *s_root;
+        wait_queue_head_t       s_wait;
+
+        struct list_head        s_dirty;        /* dirty inodes */
+        struct list_head        s_files;
+
+        struct block_device     *s_bdev;
+        struct list_head        s_mounts;       /* vfsmount(s) of this one */
+        struct quota_mount_options s_dquot;     /* Diskquota specific options */
+
+       union {
+                struct minix_sb_info    minix_sb;
+                struct ext2_sb_info     ext2_sb;
+                ..... all filesystems that need sb-private info ...
+                void                    *generic_sbp;
+        } u;
+       /*
+         * The next field is for VFS *only*. No filesystems have any business
+         * even looking at it. You had been warned.
+         */
+        struct semaphore s_vfs_rename_sem;      /* Kludge */
+
+        /* The next field is used by knfsd when converting a (inode number based)
+         * file handle into a dentry. As it builds a path in the dcache tree from
+         * the bottom up, there may for a time be a subpath of dentrys which is not
+         * connected to the main tree.  This semaphore ensure that there is only ever
+         * one such free path per filesystem.  Note that unconnected files (or other
+         * non-directories) are allowed, but not unconnected diretories.
+         */
+        struct semaphore s_nfsd_free_path_sem;
+};
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>The various fields in the <CODE>super_block</CODE> structure are:
+<P>
+<OL>
+<LI><B>s_list</B>: a doubly-linked list of all active superblocks; note
+I don't say "of all mounted filesystems" because under Linux one can
+have multiple instances of a mounted filesystem corresponding to a
+single superblock.
+</LI>
+<LI><B>s_dev</B>: for filesystems which require a block to be mounted
+on, i.e. for <CODE>FS_REQUIRES_DEV</CODE> filesystems, this is the <CODE>i_dev</CODE> of the
+block device. For others (called anonymous filesystems) this is an
+integer <CODE>MKDEV(UNNAMED_MAJOR, i)</CODE> where <CODE>i</CODE> is the first unset bit in
+<CODE>unnamed_dev_in_use</CODE> array, between 1 and 255 inclusive. See 
+<CODE>fs/super.c:get_unnamed_dev()/put_unnamed_dev()</CODE>. It has been suggested
+many times that anonymous filesystems should not use <CODE>s_dev</CODE> field.
+      </LI>
+<LI><B>s_blocksize, s_blocksize_bits</B>: blocksize and log2(blocksize).
+</LI>
+<LI><B>s_lock</B>: indicates whether superblock is currently locked by
+<CODE>lock_super()/unlock_super()</CODE>.
+</LI>
+<LI><B>s_dirt</B>: set when superblock is changed, and cleared whenever
+it is written back to disk.
+</LI>
+<LI><B>s_type</B>: pointer to <CODE>struct file_system_type</CODE> of the
+corresponding filesystem. Filesystem's <CODE>read_super()</CODE> method doesn't need
+to set it as VFS <CODE>fs/super.c:read_super()</CODE> sets it for you if
+fs-specific <CODE>read_super()</CODE> succeeds and resets to NULL if it fails.
+</LI>
+<LI><B>s_op</B>: pointer to <CODE>super_operations</CODE> structure which contains
+fs-specific methods to read/write inodes etc. It is the job of
+filesystem's <CODE>read_super()</CODE> method to initialise <CODE>s_op</CODE> correctly.
+</LI>
+<LI><B>dq_op</B>: disk quota operations.
+</LI>
+<LI><B>s_flags</B>: superblock flags.
+</LI>
+<LI><B>s_magic</B>: filesystem's magic number. Used by minix filesystem
+to differentiate between multiple flavours of itself.
+</LI>
+<LI><B>s_root</B>: dentry of the filesystem's root. It is the job of
+<CODE>read_super()</CODE> to read the root inode from the disk and pass it to
+<CODE>d_alloc_root()</CODE> to allocate the dentry and instantiate it. Some
+filesystems spell "root" other than "/" and so use more generic
+<CODE>d_alloc()</CODE> function to bind the dentry to a name, e.g. pipefs mounts
+itself on "pipe:" as its own root instead of "/".
+</LI>
+<LI><B>s_wait</B>: waitqueue of processes waiting for superblock to be
+unlocked.
+</LI>
+<LI><B>s_dirty</B>: a list of all dirty inodes. Recall that if inode
+is dirty (<CODE>inode->i_state &amp; I_DIRTY</CODE>) then it is on superblock-specific
+dirty list linked via <CODE>inode->i_list</CODE>.
+</LI>
+<LI><B>s_files</B>: a list of all open files on this superblock. Useful
+for deciding whether filesystem can be remounted read-only, see
+<CODE>fs/file_table.c:fs_may_remount_ro()</CODE> which goes through <CODE>sb->s_files</CODE> list
+and denies remounting if there are files opened for write
+(<CODE>file->f_mode &amp; FMODE_WRITE</CODE>) or files with pending 
+unlink (<CODE>inode->i_nlink == 0</CODE>).
+</LI>
+<LI><B>s_bdev</B>: for <CODE>FS_REQUIRES_DEV</CODE>, this points to the block_device
+structure describing the device the filesystem is mounted on.
+</LI>
+<LI><B>s_mounts</B>: a list of all <CODE>vfsmount</CODE> structures, one for each
+mounted instance of this superblock.
+</LI>
+<LI><B>s_dquot</B>: more diskquota stuff.</LI>
+</OL>
+<P>The superblock operations are described in the <CODE>super_operations</CODE> structure
+declared in <CODE>include/linux/fs.h</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+struct super_operations {
+        void (*read_inode) (struct inode *);
+        void (*write_inode) (struct inode *, int);
+        void (*put_inode) (struct inode *);
+        void (*delete_inode) (struct inode *);
+        void (*put_super) (struct super_block *);
+        void (*write_super) (struct super_block *);
+        int (*statfs) (struct super_block *, struct statfs *);
+        int (*remount_fs) (struct super_block *, int *, char *);
+        void (*clear_inode) (struct inode *);
+        void (*umount_begin) (struct super_block *);
+};
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<OL>
+<LI><B>read_inode</B>: reads the inode from the filesystem. It is only
+called from <CODE>fs/inode.c:get_new_inode()</CODE> from <CODE>iget4()</CODE> (and therefore
+<CODE>iget()</CODE>). If a filesystem wants to use <CODE>iget()</CODE> then <CODE>read_inode()</CODE> must be
+implemented - otherwise <CODE>get_new_inode()</CODE> will panic.
+While inode is being read it is locked (<CODE>inode->i_state = I_LOCK</CODE>). When
+the function returns, all waiters on <CODE>inode->i_wait</CODE> are woken up. The job
+of the filesystem's <CODE>read_inode()</CODE> method is to locate the disk block which
+contains the inode to be read and use buffer cache <CODE>bread()</CODE> function to
+read it in and initialise the various fields of inode structure, for
+example the <CODE>inode->i_op</CODE> and <CODE>inode->i_fop</CODE> so that VFS level knows what
+operations can be performed on the inode or corresponding file. 
+Filesystems that don't implement <CODE>read_inode()</CODE> are ramfs and
+pipefs. For example, ramfs has its own inode-generating function
+<CODE>ramfs_get_inode()</CODE> with all the inode operations calling it as needed.
+</LI>
+<LI><B>write_inode</B>: write inode back to disk. Similar to
+<CODE>read_inode()</CODE> in that it needs to locate the relevant block on
+disk and interact with buffer cache by calling
+<CODE>mark_buffer_dirty(bh)</CODE>. This method is called on dirty inodes
+(those marked dirty with <CODE>mark_inode_dirty()</CODE>) when the inode needs
+to be sync'd either individually or as part of syncing the
+entire filesystem.
+</LI>
+<LI><B>put_inode</B>: called whenever the reference count is decreased.
+</LI>
+<LI><B>delete_inode</B>: called whenever both <CODE>inode->i_count</CODE> and
+<CODE>inode->i_nlink</CODE> reach 0. Filesystem deletes the on-disk copy of the
+inode and calls <CODE>clear_inode()</CODE> on VFS inode to "terminate it with
+extreme prejudice".
+</LI>
+<LI><B>put_super</B>: called at the last stages of <B>umount(2)</B> system
+call to notify the filesystem that any private information held by
+the filesystem about this instance should be freed. Typically this
+would <CODE>brelse()</CODE> the block containing the superblock and <CODE>kfree()</CODE> any
+bitmaps allocated for free blocks, inodes, etc.
+</LI>
+<LI><B>write_super</B>: called when superblock needs to be
+written back to disk. It should find the block containing the
+superblock (usually kept in <CODE>sb-private</CODE> area) and
+<CODE>mark_buffer_dirty(bh)</CODE> . It should also clear <CODE>sb->s_dirt</CODE> flag.
+</LI>
+<LI><B>statfs</B>: implements <B>fstatfs(2)/statfs(2)</B> system calls. Note
+that the pointer to <CODE>struct statfs</CODE> passed as argument is a kernel
+pointer, not a user pointer so we don't need to do any I/O to
+userspace. If not implemented then <CODE>statfs(2)</CODE> will fail with <CODE>ENOSYS</CODE>.
+</LI>
+<LI><B>remount_fs</B>: called whenever filesystem is being remounted.
+</LI>
+<LI><B>clear_inode</B>: called from VFS level <CODE>clear_inode()</CODE>. Filesystems
+that attach private data to inode structure (via <CODE>generic_ip</CODE> field) must
+free it here.
+</LI>
+<LI><B>umount_begin</B>: called during forced umount to notify the
+filesystem beforehand, so that it can do its best to make sure that
+nothing keeps the filesystem busy. Currently used only by NFS. This
+has nothing to do with the idea of generic VFS level forced umount
+support.</LI>
+</OL>
+<P>So, let us look at what happens when we mount a on-disk (<CODE>FS_REQUIRES_DEV</CODE>)
+filesystem. The implementation of the <B>mount(2)</B> system call is in
+<CODE>fs/super.c:sys_mount()</CODE> which is the just a wrapper that copies the options,
+filesystem type and device name for the <CODE>do_mount()</CODE> function which does the
+real work:
+<P>
+<OL>
+<LI>Filesystem driver is loaded if needed and its module's reference count
+is incremented. Note that during mount operation, the filesystem
+module's reference count is incremented twice - once by <CODE>do_mount()</CODE>
+calling <CODE>get_fs_type()</CODE> and once by <CODE>get_sb_dev()</CODE> calling <CODE>get_filesystem()</CODE>
+if <CODE>read_super()</CODE> was successful. The first increment is to prevent
+module unloading while we are inside <CODE>read_super()</CODE> method and the second
+increment is to indicate that the module is in use by this mounted
+instance. Obviously, <CODE>do_mount()</CODE> decrements the count before returning, so
+overall the count only grows by 1 after each mount.
+</LI>
+<LI>Since, in our case, <CODE>fs_type->fs_flags &amp; FS_REQUIRES_DEV</CODE> is true, the
+superblock is initialised by a call to <CODE>get_sb_bdev()</CODE> which obtains
+the reference to the block device and interacts with the filesystem's
+<CODE>read_super()</CODE> method to fill in the superblock. If all goes well, the
+<CODE>super_block</CODE> structure is initialised and we have an extra reference 
+to the filesystem's module and a reference to the underlying block
+device.
+</LI>
+<LI>A new <CODE>vfsmount</CODE> structure is allocated and linked to <CODE>sb->s_mounts</CODE> list
+and to the global <CODE>vfsmntlist</CODE> list. The <CODE>vfsmount</CODE> field <CODE>mnt_instances</CODE>
+allows to find all instances mounted on the same superblock as this
+one. The <CODE>mnt_list</CODE> field allows to find all instances for all
+superblocks system-wide.  The <CODE>mnt_sb</CODE> field
+points to this superblock and <CODE>mnt_root</CODE> has a new reference to the
+<CODE>sb->s_root</CODE> dentry.</LI>
+</OL>
+<P>
+<H2><A NAME="ss3.6">3.6 Example Virtual Filesystem: pipefs</A>
+</H2>
+
+<P>
+<P>As a simple example of Linux filesystem that does not require a block device
+for mounting, let us consider pipefs from <CODE>fs/pipe.c</CODE>. The filesystem's preamble
+is rather straightforward and requires little explanation:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+static DECLARE_FSTYPE(pipe_fs_type, "pipefs", pipefs_read_super,
+        FS_NOMOUNT|FS_SINGLE);
+
+static int __init init_pipe_fs(void)
+{
+        int err = register_filesystem(&amp;pipe_fs_type);
+        if (!err) {
+                pipe_mnt = kern_mount(&amp;pipe_fs_type);
+                err = PTR_ERR(pipe_mnt);
+                if (!IS_ERR(pipe_mnt))
+                        err = 0;
+        }
+        return err;
+}
+
+static void __exit exit_pipe_fs(void)
+{
+        unregister_filesystem(&amp;pipe_fs_type);
+        kern_umount(pipe_mnt);
+}
+
+module_init(init_pipe_fs)
+module_exit(exit_pipe_fs)
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>The filesystem is of type <CODE>FS_NOMOUNT|FS_SINGLE</CODE>, which means it cannot be
+mounted from userspace and can only have one superblock system-wide. The
+<CODE>FS_SINGLE</CODE> file also means that it must be mounted via <CODE>kern_mount()</CODE> after
+it is successfully registered via <CODE>register_filesystem()</CODE>, which is exactly
+what happens in <CODE>init_pipe_fs()</CODE>. The only bug in this function is that if
+<CODE>kern_mount()</CODE> fails (e.g. because <CODE>kmalloc()</CODE> failed in <CODE>add_vfsmnt()</CODE>) then the
+filesystem is left as registered but module initialisation fails. This will
+cause <B>cat /proc/filesystems</B> to Oops. (have just sent a patch to Linus
+mentioning that although this is not a real bug today as pipefs can't be
+compiled as a module, it should be written with the view that in the future
+it may become modularised).
+<P>The result of <CODE>register_filesystem()</CODE> is that <CODE>pipe_fs_type</CODE> is linked into
+the <CODE>file_systems</CODE> list so one can read <CODE>/proc/filesystems</CODE> and find "pipefs"
+entry in there with "nodev" flag indicating that <CODE>FS_REQUIRES_DEV</CODE> was not set.
+The <CODE>/proc/filesystems</CODE> file should really be enhanced to support all the new
+<CODE>FS_</CODE> flags (and I made a patch to do so) but it cannot be done because it will
+break all the user applications that use it. Despite Linux kernel interfaces
+changing every minute (only for the better) when it comes to the userspace
+compatibility, Linux is a very conservative operating system which allows
+many applications to be used for a long time without being recompiled.
+<P>The result of <CODE>kern_mount()</CODE> is that:
+<P>
+<OL>
+<LI>A new unnamed (anonymous) device number is allocated by setting a bit in
+<CODE>unnamed_dev_in_use</CODE> bitmap; if there are no more bits then <CODE>kern_mount()</CODE>
+fails with <CODE>EMFILE</CODE>.
+</LI>
+<LI>A new superblock structure is allocated by means of <CODE>get_empty_super()</CODE>.
+The <CODE>get_empty_super()</CODE> function walks the list of superblocks headed
+by <CODE>super_block</CODE> and looks for empty entry, i.e. <CODE>s->s_dev == 0</CODE>. If no
+such empty superblock is found then a new one is allocated using
+<CODE>kmalloc()</CODE> at <CODE>GFP_USER</CODE> priority. The maximum system-wide number of
+superblocks is checked in <CODE>get_empty_super()</CODE> so if it starts failing,
+one can adjust the tunable <CODE>/proc/sys/fs/super-max</CODE>.
+</LI>
+<LI>A filesystem-specific <CODE>pipe_fs_type->read_super()</CODE> method, i.e.
+<CODE>pipefs_read_super()</CODE>, is invoked which allocates root inode and root
+dentry <CODE>sb->s_root</CODE>, and sets <CODE>sb->s_op</CODE> to be <CODE>&amp;pipefs_ops</CODE>.
+</LI>
+<LI>Then <CODE>kern_mount()</CODE> calls <CODE>add_vfsmnt(NULL, sb->s_root, "none")</CODE> which
+allocates a new <CODE>vfsmount</CODE> structure and links it into <CODE>vfsmntlist</CODE> and
+<CODE>sb->s_mounts</CODE>.
+</LI>
+<LI>The <CODE>pipe_fs_type->kern_mnt</CODE> is set to this new <CODE>vfsmount</CODE> structure and
+it is returned. The reason why the return value of <CODE>kern_mount()</CODE> is a
+<CODE>vfsmount</CODE> structure is because even <CODE>FS_SINGLE</CODE> filesystems can be mounted
+multiple times and so their <CODE>mnt->mnt_sb</CODE> will point to the same thing
+which would be silly to return from multiple calls to <CODE>kern_mount()</CODE>.</LI>
+</OL>
+<P>Now that the filesystem is registered and inkernel-mounted we can use it.
+The entry point into the pipefs filesystem is the <B>pipe(2)</B> system call,
+implemented in arch-dependent function <CODE>sys_pipe()</CODE> but the real work is done
+by a portable <CODE>fs/pipe.c:do_pipe()</CODE> function. Let us look at <CODE>do_pipe()</CODE> then.
+The interaction with pipefs happens when <CODE>do_pipe()</CODE> calls <CODE>get_pipe_inode()</CODE>
+to allocate a new pipefs inode. For this inode, <CODE>inode->i_sb</CODE> is set to
+pipefs' superblock <CODE>pipe_mnt->mnt_sb</CODE>, the file operations <CODE>i_fop</CODE> is set to
+<CODE>rdwr_pipe_fops</CODE> and the number of readers and writers (held in <CODE>inode->i_pipe</CODE>)
+is set to 1. The reason why there is a separate inode field <CODE>i_pipe</CODE> instead
+of keeping it in the <CODE>fs-private</CODE> union is that pipes and FIFOs share the same
+code and FIFOs can exist on other filesystems which use the other access
+paths within the same union which is very bad C and can work only by pure
+luck. So, yes, 2.2.x kernels work only by pure luck and will stop working
+as soon as you slightly rearrange the fields in the inode.
+<P>Each <B>pipe(2)</B> system call increments a reference count on the <CODE>pipe_mnt</CODE>
+mount instance.
+<P>Under Linux, pipes are not symmetric (bidirection or STREAM pipes), i.e.
+two sides of the file have different <CODE>file->f_op</CODE> operations - the
+<CODE>read_pipe_fops</CODE> and <CODE>write_pipe_fops</CODE> respectively. The write on read side
+returns <CODE>EBADF</CODE> and so does read on write side.
+<P>
+<P>
+<H2><A NAME="ss3.7">3.7 Example Disk Filesystem: BFS</A>
+</H2>
+
+<P>
+<P>As a simple example of ondisk Linux filesystem, let us consider BFS. The
+preamble of the BFS module is in <CODE>fs/bfs/inode.c</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+static DECLARE_FSTYPE_DEV(bfs_fs_type, "bfs", bfs_read_super);
+
+static int __init init_bfs_fs(void)
+{
+        return register_filesystem(&amp;bfs_fs_type);
+}
+
+static void __exit exit_bfs_fs(void)
+{
+        unregister_filesystem(&amp;bfs_fs_type);
+}
+
+module_init(init_bfs_fs)
+module_exit(exit_bfs_fs)
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>A special fstype declaration macro <CODE>DECLARE_FSTYPE_DEV()</CODE> is used which
+sets the <CODE>fs_type->flags</CODE> to <CODE>FS_REQUIRES_DEV</CODE> to signify that BFS requires a
+real block device to be mounted on.
+<P>The module's initialisation function registers the filesystem with VFS and
+the cleanup function (only present when BFS is configured to be a module)
+unregisters it.
+<P>With the filesystem registered, we can proceed to mount it, which would
+invoke out <CODE>fs_type->read_super()</CODE> method which is implemented in
+<CODE>fs/bfs/inode.c:bfs_read_super().</CODE> It does the following:
+<P>
+<OL>
+<LI><CODE>set_blocksize(s->s_dev, BFS_BSIZE)</CODE>: since we are about to interact
+with the block device layer via the buffer cache, we must initialise a few
+things, namely set the block size and also inform VFS via fields
+<CODE>s->s_blocksize</CODE> and <CODE>s->s_blocksize_bits</CODE>.
+</LI>
+<LI><CODE>bh = bread(dev, 0, BFS_BSIZE)</CODE>: we read block 0 of the device
+passed via <CODE>s->s_dev</CODE>. This block is the filesystem's superblock.
+</LI>
+<LI>Superblock is validated against <CODE>BFS_MAGIC</CODE> number and, if valid, stored
+in the sb-private field <CODE>s->su_sbh</CODE> (which is really <CODE>s->u.bfs_sb.si_sbh</CODE>).
+</LI>
+<LI>Then we allocate inode bitmap using <CODE>kmalloc(GFP_KERNEL)</CODE> and clear all
+bits to 0 except the first two which we set to 1 to indicate that we
+should never allocate inodes 0 and 1. Inode 2 is root and the
+corresponding bit will be set to 1 a few lines later anyway - the
+filesystem should have a valid root inode at mounting time!
+</LI>
+<LI>Then we initialise <CODE>s->s_op</CODE>, which means that we can from this point
+invoke inode cache via <CODE>iget()</CODE> which results in <CODE>s_op->read_inode()</CODE> to
+be invoked. This finds the block that contains the specified (by
+<CODE>inode->i_ino</CODE> and <CODE>inode->i_dev</CODE>) inode and reads it in. If we fail to
+get root inode then we free the inode bitmap and release superblock
+buffer back to buffer cache and return NULL. If root inode was read OK,
+then we allocate a dentry with name <CODE>/</CODE> (as becometh root) and
+instantiate it with this inode.
+</LI>
+<LI>Now we go through all inodes on the filesystem and read them all in
+order to set the corresponding bits in our internal inode bitmap and
+also to calculate some other internal parameters like the offset of
+last inode and the start/end blocks of last file. Each inode we read
+is returned back to inode cache via <CODE>iput()</CODE> - we don't hold a reference
+to it longer than needed.
+</LI>
+<LI>If the filesystem was not mounted read-only, we mark the superblock
+buffer dirty and set <CODE>s->s_dirt</CODE> flag (TODO: why do I do this?
+Originally, I did it because <CODE>minix_read_super()</CODE> did but neither minix
+nor BFS seem to modify superblock in the <CODE>read_super()</CODE>).
+</LI>
+<LI>All is well so we return this initialised superblock back to the caller
+at VFS level, i.e. <CODE>fs/super.c:read_super()</CODE>.</LI>
+</OL>
+<P>After the <CODE>read_super()</CODE> function returns successfully, VFS obtains the
+reference to the filesystem module via call to <CODE>get_filesystem(fs_type)</CODE> in
+<CODE>fs/super.c:get_sb_bdev()</CODE> and a reference to the block device.
+<P>Now, let us examine what happens when we do I/O on the filesystem. We already
+examined how inodes are read when <CODE>iget()</CODE> is called and how they are released
+on <CODE>iput().</CODE> Reading inodes sets up, among other things, <CODE>inode->i_op</CODE> and
+<CODE>inode->i_fop</CODE>; opening a file will propagate <CODE>inode->i_fop</CODE> into <CODE>file->f_op</CODE>.
+<P>Let us examine the code path of the <B>link(2)</B> system call. The implementation
+of the system call is in <CODE>fs/namei.c:sys_link()</CODE>:
+<P>
+<OL>
+<LI>The userspace names are copied into kernel space by means of <CODE>getname()</CODE>
+function which does the error checking.
+</LI>
+<LI>These names are nameidata converted using <CODE>path_init()/path_walk()</CODE>
+interaction with dcache. The result is stored in <CODE>old_nd</CODE> and <CODE>nd</CODE>
+structures.
+</LI>
+<LI>If <CODE>old_nd.mnt != nd.mnt</CODE> then "cross-device link" <CODE>EXDEV</CODE> is returned - 
+one cannot link between filesystems, in Linux this translates into -
+one cannot link between mounted instances of a filesystem (or, in
+particular between filesystems).
+</LI>
+<LI>A new dentry is created corresponding to <CODE>nd</CODE> by <CODE>lookup_create()</CODE> .
+</LI>
+<LI>A generic <CODE>vfs_link()</CODE> function is called which checks if we can
+create a new entry in the directory and invokes the <CODE>dir->i_op->link()</CODE>
+method which brings us back to filesystem-specific
+<CODE>fs/bfs/dir.c:bfs_link()</CODE> function.
+</LI>
+<LI>Inside <CODE>bfs_link()</CODE>, we check if we are trying to link a directory and
+if so, refuse with <CODE>EPERM</CODE> error. This is the same behaviour as standard (ext2).
+</LI>
+<LI>We attempt to add a new directory entry to the specified directory
+by calling the helper function <CODE>bfs_add_entry()</CODE> which goes through all
+entries looking for unused slot (<CODE>de->ino == 0</CODE>) and, when found, writes
+out the name/inode pair into the corresponding block and marks it
+dirty (at non-superblock priority).
+</LI>
+<LI>If we successfully added the directory entry then there is no way
+to fail the operation so we increment <CODE>inode->i_nlink</CODE>, update
+<CODE>inode->i_ctime</CODE> and mark this inode dirty as well as instantiating the
+new dentry with the inode.</LI>
+</OL>
+<P>Other related inode operations like <CODE>unlink()/rename()</CODE> etc work in a similar
+way, so not much is gained by examining them all in details.
+<P>
+<H2><A NAME="ss3.8">3.8 Execution Domains and Binary Formats</A>
+</H2>
+
+<P>
+<P>Linux supports loading user application binaries from disk. More
+interestingly, the binaries can be stored in different formats and the
+operating system's response to programs via system calls can deviate from
+norm (norm being the Linux behaviour) as required, in order to emulate
+formats found in other flavours of UNIX (COFF, etc) and also to emulate
+system calls behaviour of other flavours (Solaris, UnixWare, etc). This is
+what execution domains and binary formats are for.
+<P>Each Linux task has a personality stored in its <CODE>task_struct</CODE> (<CODE>p->personality</CODE>).
+The currently existing (either in the official kernel or as addon patch)
+personalities include support for FreeBSD, Solaris, UnixWare, OpenServer and
+many other popular operating systems. 
+The value of <CODE>current->personality</CODE> is split into two parts:
+<P>
+<OL>
+<LI>high three bytes - bug emulation: <CODE>STICKY_TIMEOUTS</CODE>, <CODE>WHOLE_SECONDS</CODE>, etc.</LI>
+<LI>low byte - personality proper, a unique number.</LI>
+</OL>
+<P>By changing the personality, we can change
+the way the operating system treats certain system calls, for example
+adding a <CODE>STICKY_TIMEOUT</CODE> to <CODE>current->personality</CODE> makes <B>select(2)</B> system call
+preserve the value of last argument (timeout) instead of storing the
+unslept time. Some buggy programs rely on buggy operating systems (non-Linux)
+and so Linux provides a way to emulate bugs in cases where the source code
+is not available and so bugs cannot be fixed.
+<P>Execution domain is a contiguous range of personalities implemented by a
+single module. Usually a single execution domain implements a single
+personality but sometimes it is possible to implement "close" personalities
+in a single module without too many conditionals.
+<P>Execution domains are implemented in <CODE>kernel/exec_domain.c</CODE> and were completely
+rewritten for 2.4 kernel, compared with 2.2.x. The list of execution domains
+currently supported by the kernel, along with the range of personalities
+they support, is available by reading the <CODE>/proc/execdomains</CODE> file. Execution
+domains, except the <CODE>PER_LINUX</CODE> one, can be implemented as dynamically
+loadable modules.
+<P>The user interface is via <B>personality(2)</B> system call, which sets the current
+process' personality or returns the value of <CODE>current->personality</CODE> if the
+argument is set to impossible personality 0xffffffff. Obviously, the
+behaviour of this system call itself does not depend on personality..
+<P>The kernel interface to execution domains registration consists of two
+functions:
+<P>
+<UL>
+<LI><CODE>int register_exec_domain(struct exec_domain *)</CODE>: registers the
+execution domain by linking it into single-linked list <CODE>exec_domains</CODE>
+under the write protection of the read-write spinlock <CODE>exec_domains_lock</CODE>.
+Returns 0 on success, non-zero on failure.
+</LI>
+<LI><CODE>int unregister_exec_domain(struct exec_domain *)</CODE>: unregisters the
+execution domain by unlinking it from the <CODE>exec_domains</CODE> list, again using
+<CODE>exec_domains_lock</CODE> spinlock in write mode. Returns 0 on success.</LI>
+<LI></LI>
+</UL>
+<P>The reason why <CODE>exec_domains_lock</CODE> is a read-write is that only registration
+and unregistration requests modify the list, whilst doing
+<B>cat /proc/filesystems</B> calls <CODE>fs/exec_domain.c:get_exec_domain_list()</CODE>, which
+needs only read access to the list. Registering a new execution domain
+defines a "lcall7 handler" and a signal number conversion map. Actually,
+ABI patch extends this concept of exec domain to include extra information
+(like socket options, socket types, address family and errno maps).
+<P>The binary formats are implemented in a similar manner, i.e. a single-linked
+list formats is defined in <CODE>fs/exec.c</CODE> and is protected by a read-write lock
+<CODE>binfmt_lock</CODE>. As with <CODE>exec_domains_lock</CODE>, the <CODE>binfmt_lock</CODE> is taken read on
+most occasions except for registration/unregistration of binary formats.
+Registering a new binary format enhances the <B>execve(2)</B> system call with new
+<CODE>load_binary()/load_shlib()</CODE> functions as well as ability to <CODE>core_dump()</CODE> . The
+<CODE>load_shlib()</CODE> method is used only by the old <B>uselib(2)</B> system call while
+the <CODE>load_binary()</CODE> method is called by the <CODE>search_binary_handler()</CODE> from
+<CODE>do_execve()</CODE> which implements <B>execve(2)</B> system call.
+<P>The personality of the process is determined at binary format loading by
+the corresponding format's <CODE>load_binary()</CODE> method using some heuristics.
+For example to determine UnixWare7 binaries one first marks the binary
+using the <B>elfmark(1)</B> utility, which sets the ELF header's <CODE>e_flags</CODE> to the magic
+value 0x314B4455 which is detected at ELF loading time and
+<CODE>current->personality</CODE> is set to PER_UW7. If this heuristic fails, then a more
+generic one, such as treat ELF interpreter paths like <CODE>/usr/lib/ld.so.1</CODE> or
+<CODE>/usr/lib/libc.so.1</CODE> to
+indicate a SVR4 binary, is used and personality is set to PER_SVR4. One
+could write a little utility program that uses Linux's <B>ptrace(2)</B> capabilities
+to single-step the code and force a running program into any personality.
+<P>Once personality (and therefore <CODE>current->exec_domain</CODE>) is known, the system
+calls are handled as follows. Let us assume that a process makes a system
+call by means of lcall7 gate instruction. This transfers control to
+<CODE>ENTRY(lcall7)</CODE> of <CODE>arch/i386/kernel/entry.S</CODE> because it was prepared in
+<CODE>arch/i386/kernel/traps.c:trap_init()</CODE>. After appropriate stack layout
+conversion, <CODE>entry.S:lcall7</CODE> obtains the pointer to <CODE>exec_domain</CODE> from <CODE>current</CODE>
+and then an offset of lcall7 handler within the <CODE>exec_domain</CODE> (which is 
+hardcoded as 4 in asm code so you can't shift the <CODE>handler</CODE> field around in
+C declaration of <CODE>struct exec_domain</CODE>) and jumps to it. So, in C, it would
+look like this:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+static void UW7_lcall7(int segment, struct pt_regs * regs)
+{
+       abi_dispatch(regs, &amp;uw7_funcs[regs->eax &amp; 0xff], 1);
+}
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>where <CODE>abi_dispatch()</CODE> is a wrapper around the table of function pointers that
+implement this personality's system calls <CODE>uw7_funcs</CODE>.
+<P>
+<HR>
+<A HREF="lki-4.html">Next</A>
+<A HREF="lki-2.html">Previous</A>
+<A HREF="lki.html#toc3">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,173 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Root over nfs clients &amp; server Howto.  : Basic principle</TITLE>
+ <LINK HREF="Diskless-root-NFS-HOWTO-3.html" REL=next>
+ <LINK HREF="Diskless-root-NFS-HOWTO-1.html" REL=previous>
+ <LINK HREF="Diskless-root-NFS-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Diskless-root-NFS-HOWTO-3.html">Next</A>
+<A HREF="Diskless-root-NFS-HOWTO-1.html">Previous</A>
+<A HREF="Diskless-root-NFS-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. Basic principle</A> </H2>
+
+<P>As already said with this setup the clients share basicly the entire root-fs
+with the server. But the clients ofcourse only get read access to it. This
+is basicly how things work. 
+<H2><A NAME="ss2.1">2.1 Things can't be that simple</A>
+ </H2>
+
+<P>Unfortunatly things aren't that simple, there are a couple of problems
+the overcome with this simple setup.
+<H3>Each ws needs its own writable copy of a number of dirs </H3>
+
+<P>A normal linux setup needs to have write access to the following dirs:
+<P>
+<OL>
+<LI>/dev</LI>
+<LI>/var</LI>
+<LI>/tmp</LI>
+</OL>
+<P>There are 3 solutions for this, of which one will only work for /dev:
+<P>
+<OL>
+<LI>mount a ramdisk and populate it by untarring a tarball, or by copying a
+template dir.
+<UL>
+<LI>Advantages:
+<OL>
+<LI>It's cleaned up every reboot, which removes tmp files and logs. Thus it
+needs no maintaince unlike server sided dirs.</LI>
+<LI>It doesn't take up any space on the server, and that it doesn't generate
+any network traffic. A ramdisk takes less server and network resources, and
+is faster.</LI>
+</OL>
+</LI>
+<LI>Disadvantages:
+<OL>
+<LI>It takes memory.</LI>
+<LI>The logs aren't kept after a reboot, if you really want logging of all
+your clients tell syslog to redirect the logging to your server.</LI>
+</OL>
+</LI>
+</UL>
+</LI>
+<LI>create a dir for each ws on the server and mount it rw over nfs.
+<UL>
+<LI>Advantages &amp; disadvantages:
+<OL>
+<LI>The above arguments work in reverse for serversided dirs.</LI>
+</OL>
+</LI>
+</UL>
+</LI>
+<LI>With kernel 2.2 devfs can be used for /dev, this is a virtual filesystem
+ala /proc for /dev.
+<UL>
+<LI>Advantages:
+<OL>
+<LI>Devfs takes very little memory when compared to a ramdisk / no diskspace
+on the server and is very fast. A normal /dev takes at least 1.5 mb since the
+minimal size for a file (and thus for a device) is 1k, and there are somewhere
+around 1200 devices. You can offcourse use a template of a stripped /dev with
+only the entries you need to save some space. 1.5 Mb is a lott for a ramdisk
+and also isn't nice on a server.</LI>
+<LI>Devfs automagicly creates entries for newly added &amp; detected devices,
+so no maintainance is needed.</LI>
+</OL>
+</LI>
+<LI>Disadvantages:
+<OL>
+<LI>Any changes to /dev like creating symlinks for the mouse and cdrom are
+lost. Devfs comes with a script called rc.devfs to save these chances. The
+script's provided in this howto will automagicly restore these symlinks settings
+by calling rc.devfs If you make any changes to /dev you need to call the rc.devfs
+yourself to save them by typing:</LI>
+</OL>
+
+<BLOCKQUOTE>
+/etc/rc.d/rc.devfs save /etc/sysconfig
+</BLOCKQUOTE>
+</LI>
+</UL>
+</LI>
+</OL>
+<P>As you can see, there are a number of ways to solve this problem. For the
+rest of this Howto the following choices are assumed:
+<P>
+<UL>
+<LI>For /dev we'll use Devfs</LI>
+<LI>For /var and /tmp we'll use a shared ramdisk of 1mb. It's shared to use
+the space as effeciently as possible. /tmp is replaced by a symlink to /var/tmp
+to make the sharing possible.</LI>
+<LI>Populating the ramdisk with tarballs or template dirs, works equally well.
+But with template dirs it's much easier to make changes, thus we'll use template
+dirs.</LI>
+</UL>
+<H3>Write access to /home might be needed </H3>
+
+<P>Not really a problem in every unix client/server setup /home is mounted
+rw from the server so we'll just do that ;) 
+<H3>How does a ws find out it's ip so that it can communicate with the server? </H3>
+
+<P>Luckily for us, this problem has already been solved and the linux kernel
+has support for 2 ways of autoconfiguration of the ip-address:
+<P>
+<OL>
+<LI>RARP</LI>
+<LI>Bootp</LI>
+</OL>
+<P>Rarp is the easiest to setup, bootp is the most flexible. Since most bootroms
+only support bootp that's what we'll use.
+<H3>What about ws sepecific configuration </H3>
+
+<P>On redhat most system dependent config files are already in /etc/sysconfig
+We'll just move those which aren't there and add symlinks. Then we mount a
+seperate /etc/sysconfig on a per ws basis. This is really the only distribution
+dependent part on other distributions you can just create a sysconfig dir,
+move all config files which can't be shared there and create symlinks. Also
+/etc/rc.d/rc3.d, or symilar on other dists, might need to be different for
+the server resp the workstations. Assuming that all ws run the same services
+in runlevel 3, we'll just create a seperate 3th runlevel for the workstations
+and the server:
+<P>
+<OL>
+<LI>Create both a /etc/rc.d/rc3.ws and a /etc/rc.d/rc3.server</LI>
+<LI>make /etc/rc.d/rc3.d a symlink to /etc/sysconfig/rc3.d</LI>
+<LI>make /etc/sysconfig/rc3.d a symlink to the apropiate /etc/rc.d/rc3.xxx</LI>
+<LI>replace S99local in rc3.ws by a link to /etc/sysconfig/rc.local so that
+each ws can have it's own rc.local</LI>
+</OL>
+<H3>Miscelancious problems </H3>
+
+<P>There are a few problems left:
+<P>
+<OL>
+<LI>/etc/rc.d/rc.sysinit needs /var, so /var needs to be mounted or created
+before /etc/rc.d/rc.sysinit is run. It would also be nice if the ws-specific
+/etc/sysconfig is mounted before any initscripts are run.
+<UL>
+<LI>We'll just source a bootup script for the ws in the very top of /etc/rc.d/rc.sysinit.
+Note this script will then ofcourse also be sourced by the server itself on
+boot, so the script has to detect this and do nothing on the server.</LI>
+</UL>
+</LI>
+<LI>/etc/mtab needs to be writable:
+<UL>
+<LI>This is a tricky one, just create a link to /proc/mounts and create an
+empty file mounts in /proc so that fsck and mount don't complain during the
+initscripts when /proc isn't mounted yet. One note smb(u)mount doesn't respect
+mtab being a link and overwrites it. Thus if you want to use smb(u)mount create
+wrapper scripts that restore the symlink.</LI>
+</UL>
+</LI>
+</OL>
+<HR>
+<A HREF="Diskless-root-NFS-HOWTO-3.html">Next</A>
+<A HREF="Diskless-root-NFS-HOWTO-1.html">Previous</A>
+<A HREF="Diskless-root-NFS-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

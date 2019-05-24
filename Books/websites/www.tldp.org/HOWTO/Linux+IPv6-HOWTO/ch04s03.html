@@ -1,0 +1,85 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>3. IPv6-ready test/debug programs</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="ch04.html" title="Chapter 4. IPv6-ready system check"><link rel="prev" href="ch04s02.html" title="2. IPv6-ready network configuration tools"><link rel="next" href="ch04s04.html" title="4. IPv6-ready programs"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">3. IPv6-ready test/debug programs</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch04s02.html">Prev</a> </td><th width="60%" align="center">Chapter 4. IPv6-ready system check</th><td width="20%" align="right"> <a accesskey="n" href="ch04s04.html">Next</a></td></tr></table><hr></div><div class="sect1"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="idp50586864"></a>3. IPv6-ready test/debug programs</h2></div></div></div><p>After you have prepared your system for IPv6, you now want to use IPv6 for network communications. First you should learn how to examine IPv6 packets with a sniffer program. This is strongly recommended because for debugging/troubleshooting issues this can aide in providing a diagnosis very quickly.</p><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="program-ping6."></a>3.1. IPv6 ping</h3></div></div></div><p>This program is normally included in package <span class="emphasis"><em>iputils</em></span>. It is designed for simple transport tests sending ICMPv6 echo-request packets and wait for ICMPv6 echo-reply packets.</p><p>Usage</p><pre class="screen">
+# ping6 &lt;hostwithipv6address&gt;
+# ping6 &lt;ipv6address&gt;
+# ping6 [-I &lt;device&gt;] &lt;link-local-ipv6address&gt;
+</pre><p>Some implementation also support %&lt;device&gt; suffix instead of using -I &lt;device&gt;, e.g.</p><pre class="screen">
+# ping6 &lt;link-local-ipv6address&gt;%&lt;device&gt;
+</pre><p>Example</p><pre class="screen">
+# ping6 -c 1 ::1 
+PING ::1(::1) from ::1 : 56 data bytes 
+64 bytes from ::1: icmp_seq=0 hops=64 time=292 usec
+
+--- ::1 ping statistics --- 
+1 packets transmitted, 1 packets received, 0% packet loss 
+round-trip min/avg/max/mdev = 0.292/0.292/0.292/0.000 ms
+</pre><p>Hint: ping6 needs raw access to socket and therefore root permissions. So if non-root users cannot use ping6 then there are two possible problems:</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>ping6 is not in users path (probably, because ping6 is generally stored in /usr/sbin -&gt; add path (not really recommended)</p></li><li class="listitem"><p>ping6 doesn't execute properly, generally because of missing root permissions -&gt; chmod u+s /usr/sbin/ping6</p></li></ol></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50595632"></a>3.1.1. Specifying interface for IPv6 ping</h4></div></div></div><p>Using link-local addresses for an IPv6 ping, the kernel does not know through which (physically or virtual) device it must send the packet - each device has a link-local address. A try will result in following error message:</p><pre class="screen">
+# ping6 fe80::212:34ff:fe12:3456 
+connect: Invalid argument
+</pre><p>In this case you have to specify the interface additionally like shown here:</p><pre class="screen">
+# ping6 -I eth0 -c 1 fe80::2e0:18ff:fe90:9205
+PING fe80::212:23ff:fe12:3456(fe80::212:23ff:fe12:3456) from
+¬ fe80::212:34ff:fe12:3478 eth0: 56 data bytes 
+64 bytes from fe80::212:23ff:fe12:3456: icmp_seq=0 hops=64 time=445 usec
+
+--- fe80::2e0:18ff:fe90:9205 ping statistics --- 
+1 packets transmitted, 1 packets received, 0% packet loss round-trip
+¬ min/avg/max/mdev = 0.445/0.445/0.445/0.000 ms
+</pre><p>Example for %&lt;device&gt; notation:</p><pre class="screen">
+# ping6 -c 1 fe80::2e0:18ff:fe90:9205%eth0
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50600240"></a>3.1.2. Ping6 to multicast addresses</h4></div></div></div><p>An interesting mechanism to detect IPv6-active hosts on a link is to ping6 to the link-local all-node multicast address:</p><pre class="screen">
+# ping6 -I eth0 ff02::1
+PING ff02::1(ff02::1) from fe80:::2ab:cdff:feef:0123 eth0: 56 data bytes
+64 bytes from ::1: icmp_seq=1 ttl=64 time=0.104 ms
+64 bytes from fe80::212:34ff:fe12:3450: icmp_seq=1 ttl=64 time=0.549 ms (DUP!) 
+</pre><p>Example for %&lt;device&gt; notation:</p><pre class="screen">
+# ping6 ff02::1%eth0
+</pre><p>Unlike in IPv4, where replies to a ping on the broadcast address can be disabled, in IPv6 currently this behavior cannot be disable except by local IPv6 firewalling.</p></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="program-traceroute6."></a>3.2. IPv6 traceroute6</h3></div></div></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50604496"></a>3.2.1. IPv6 traceroute6 (old)</h4></div></div></div><p>This older program is normally included in package <span class="emphasis"><em>iputils</em></span>. It's a program similar to IPv4 traceroute. Below you will see an example:</p><pre class="screen">
+# traceroute6 www.6bone.net 
+traceroute to 6bone.net (3ffe:b00:c18:1::10) from 2001:0db8:0000:f101::2, 30
+¬ hops max, 16 byte packets 
+ 1 localipv6gateway (2001:0db8:0000:f101::1) 1.354 ms 1.566 ms 0.407 ms 
+ 2 swi6T1-T0.ipv6.switch.ch (3ffe:2000:0:400::1) 90.431 ms 91.956 ms 92.377 ms 
+ 3 3ffe:2000:0:1::132 (3ffe:2000:0:1::132) 118.945 ms 107.982 ms 114.557 ms 
+ 4 3ffe:c00:8023:2b::2 (3ffe:c00:8023:2b::2) 968.468 ms 993.392 ms 973.441 ms 
+ 5 3ffe:2e00:e:c::3 (3ffe:2e00:e:c::3) 507.784 ms 505.549 ms 508.928 ms 
+ 6 www.6bone.net (3ffe:b00:c18:1::10) 1265.85 ms * 1304.74 ms
+</pre><p>Note: unlike some modern versions of IPv4 traceroute, which can use ICMPv4 echo-request packets as well as UDP packets (default), current IPv6-traceroute is only able to send UDP packets. As you perhaps already know, ICMP echo-request packets are more accepted by firewalls or ACLs on routers inbetween than UDP packets. </p><p>If a dedicated interface must be specified, this can be done by -i &lt;device&gt; or using &lt;address&gt;%&lt;device&gt;.</p></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp45242912"></a>3.2.2. traceroute since version 2</h4></div></div></div><p>traceroute got native IPv6 support with version 2 and support all features as for IPv4. Below you will see an example for an ICMP (ping) traceroute (root permissions required) </p><pre class="screen">
+# traceroute -I -n ipv6.google.com
+traceroute to ipv6.google.com (2a00:1450:4016:804::200e), 30 hops max, 80 byte packets
+ 1  2001:a61:***  0.410 ms  0.510 ms  0.655 ms
+ 2  2001:a60::89:705:1  26.428 ms  34.361 ms  41.777 ms
+ 3  2001:a60::89:0:1:2  19.131 ms  19.163 ms  19.248 ms
+ 4  2001:a60:0:106::2  20.464 ms  20.467 ms  20.457 ms
+ 5  2001:4860::9:4000:cf86  21.836 ms *  21.852 ms
+ 6  2001:4860:0:1::19  21.690 ms  21.585 ms  22.919 ms
+ 7  2a00:1450:4016:804::200e  23.176 ms  19.310 ms  20.065 ms
+</pre><p>If a dedicated interface must be specified, this can be done by -i &lt;device&gt;.</p></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="program-tracepath6."></a>3.3. IPv6 tracepath6</h3></div></div></div><p>This program is normally included in package <span class="emphasis"><em>iputils</em></span>. It's a program like traceroute6 and traces the path to a given destination discovering the MTU along this path. Below you will see an example:</p><pre class="screen">
+# tracepath6 www.6bone.net 
+ 1?: [LOCALHOST] pmtu 1480 
+ 1: 3ffe:401::2c0:33ff:fe02:14 150.705ms 
+ 2: 3ffe:b00:c18::5 267.864ms 
+ 3: 3ffe:b00:c18::5 asymm 2 266.145ms pmtu 1280 
+ 3: 3ffe:3900:5::2 asymm 4 346.632ms 
+ 4: 3ffe:28ff:ffff:4::3 asymm 5 365.965ms 
+ 5: 3ffe:1cff:0:ee::2 asymm 4 534.704ms 
+ 6: 3ffe:3800::1:1 asymm 4 578.126ms !N 
+Resume: pmtu 1280
+</pre></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="program-tcpdump"></a>3.4. IPv6 tcpdump</h3></div></div></div><p>On Linux, tcpdump is the major tool for packet capturing. Below you find some examples. IPv6 support is normally built-in in current releases of version 3.6.</p><p>tcpdump uses expressions for filtering packets to minimize the noise:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>icmp6: filters native ICMPv6 traffic</p></li><li class="listitem"><p>ip6: filters native IPv6 traffic (including ICMPv6)</p></li><li class="listitem"><p>proto ipv6: filters tunneled IPv6-in-IPv4 traffic</p></li><li class="listitem"><p>not port ssh: to suppress displaying SSH packets for running tcpdump in a remote SSH session</p></li></ul></div><p>Also some command line options are very useful to catch and print more information in a packet, mostly interesting for digging into ICMPv6 packets:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>&#8220;-s 512&#8221;: increase the snap length during capturing of a packet to 512 bytes</p></li><li class="listitem"><p>&#8220;-vv&#8221;: really verbose output</p></li><li class="listitem"><p>&#8220;-n&#8221;: don't resolve addresses to names, useful if reverse DNS resolving isn't working proper</p></li></ul></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50629008"></a>3.4.1. IPv6 ping to 2001:0db8:100:f101::1 native over a local link</h4></div></div></div><pre class="screen">
+# tcpdump -t -n -i eth0 -s 512 -vv ip6 or proto ipv6 
+tcpdump: listening on eth0 
+2001:0db8:100:f101:2e0:18ff:fe90:9205 &gt; 2001:0db8:100:f101::1: icmp6: echo
+¬ request (len 64, hlim 64) 
+2001:0db8:100:f101::1 &gt; 2001:0db8:100:f101:2e0:18ff:fe90:9205: icmp6: echo
+¬ reply (len 64, hlim 64)
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50630224"></a>3.4.2. IPv6 ping to 2001:0db8:100::1 routed through an IPv6-in-IPv4-tunnel</h4></div></div></div><p>1.2.3.4 and 5.6.7.8 are tunnel endpoints (all addresses are examples)</p><pre class="screen">
+# tcpdump -t -n -i ppp0 -s 512 -vv ip6 or proto ipv6 
+tcpdump: listening on ppp0 
+1.2.3.4 &gt; 5.6.7.8: 2002:ffff:f5f8::1 &gt; 2001:0db8:100::1: icmp6: echo request
+¬ (len 64, hlim 64) (DF) (ttl 64, id 0, len 124) 
+5.6.7.8 &gt; 1.2.3.4: 2001:0db8:100::1 &gt; 2002:ffff:f5f8::1: icmp6: echo reply (len
+¬ 64, hlim 61) (ttl 23, id 29887, len 124) 
+1.2.3.4 &gt; 5.6.7.8: 2002:ffff:f5f8::1 &gt; 2001:0db8:100::1: icmp6: echo request
+¬ (len 64, hlim 64) (DF) (ttl 64, id 0, len 124) 
+5.6.7.8 &gt; 1.2.3.4: 2001:0db8:100::1 &gt; 2002:ffff:f5f8::1: icmp6: echo reply (len
+¬ 64, hlim 61) (ttl 23, id 29919, len 124)
+</pre></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch04s02.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ch04.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch04s04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">2. IPv6-ready network configuration tools </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 4. IPv6-ready programs</td></tr></table></div></body></html>

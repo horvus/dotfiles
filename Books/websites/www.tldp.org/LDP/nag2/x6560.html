@@ -1,0 +1,346 @@
+<HTML
+><HEAD
+><TITLE
+>Running pppd</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Point-to-Point Protocol"
+HREF="x-087-2-ppp.html"><LINK
+REL="PREVIOUS"
+TITLE="PPP on Linux"
+HREF="x6507.html"><LINK
+REL="NEXT"
+TITLE="Using Options Files"
+HREF="x-087-2-ppp.options.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x6507.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. The Point-to-Point Protocol</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-ppp.options.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN6560"
+>8.2. Running pppd</A
+></H1
+><P
+>&#13;
+
+
+When you want to connect to the Internet through a PPP link, you have
+to set up basic networking capabilities, such as the loopback device
+and the resolver. Both have been covered in <A
+HREF="x-087-2-iface.html"
+>Chapter 5</A
+>, and <A
+HREF="x-087-2-resolv.html"
+>Chapter 6</A
+>. You can
+simply configure the name server of your Internet Service Provider in
+the <TT
+CLASS="FILENAME"
+>/etc/resolv.conf</TT
+> file, but this will mean
+that every DNS request is sent across your serial link. This situation is not
+optimal; the closer (network-wise) you are to your name server, the
+faster the name lookups will be. An alternative solution is to
+configure a caching-only name server at a host on your network.  This
+means that the first time you make a DNS query for a particular
+host, your request will be sent across your serial link, but every
+subsequent request will be answered directly by your local name
+server, and will be much faster. This configuration is described in Chapter 6, in 
+<A
+HREF="x-087-2-resolv.named.html#X-087-2-RESOLV.NAMED-CACHINGONLY"
+>Section 6.3.4</A
+>.&#8221;</P
+><P
+>As an introductory example of how to establish a PPP connection with
+<B
+CLASS="COMMAND"
+>pppd</B
+>, assume you are at <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> again. First, dial in to the PPP
+server <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> and log in to the
+<SPAN
+CLASS="SYSTEMITEM"
+>ppp</SPAN
+> account.  <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> will execute its PPP driver. After
+exiting the communications program you used for dialing, execute the
+following command, substituting the name of the serial device you used
+for the <TT
+CLASS="LITERAL"
+>ttyS3</TT
+> shown here:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>pppd /dev/ttyS3 38400 crtscts defaultroute</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;
+This command flips the serial line <TT
+CLASS="FILENAME"
+>ttyS3</TT
+> to the
+PPP line discipline and negotiates an IP link with <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>. The transfer speed used on the
+serial port will be 38,400 bps. The <SPAN
+CLASS="SYSTEMITEM"
+>crtscts</SPAN
+> option turns on hardware handshake
+on the port, which is an absolute must at speeds above 9,600 bps.</P
+><P
+>The first thing <B
+CLASS="COMMAND"
+>pppd</B
+> does after starting up is
+negotiate several link characteristics with the remote end using
+LCP. Usually, the default set of options <B
+CLASS="COMMAND"
+>pppd</B
+> tries
+to negotiate will work, so we won't go into this here. Expect to say
+that part of this negotiation involves requesting or assigning the IP
+addresses at each end of the link.</P
+><P
+>For the time being, we also assume that
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> doesn't require
+any authentication from us, so the configuration phase is completed
+successfully.</P
+><P
+>&#13;
+
+<B
+CLASS="COMMAND"
+>pppd</B
+> will then negotiate the IP parameters with its
+peer using IPCP, the IP control protocol. Since we didn't specify any
+particular IP address to <B
+CLASS="COMMAND"
+>pppd</B
+> earlier, it will try to
+use the address obtained by having the resolver look up the local hostname.
+Both will then announce their addresses to each other.</P
+><P
+>Usually, there's nothing wrong with these defaults. Even if your
+machine is on an Ethernet, you can use the same IP address for both
+the Ethernet and the PPP interface.  Nevertheless,
+<B
+CLASS="COMMAND"
+>pppd</B
+> allows you to use a different address, or even
+to ask your peer to use some specific address.  These options are
+discussed later in the <A
+HREF="x-087-2-ipconfig.options.html"
+>Section 8.5</A
+>&#8221;
+section.</P
+><P
+>&#13;
+
+
+After going through the IPCP setup phase, <B
+CLASS="COMMAND"
+>pppd</B
+> will
+prepare your host's networking layer to use the PPP link. It first
+configures the PPP network interface as a point-to-point link, using
+<TT
+CLASS="FILENAME"
+>ppp0</TT
+> for the first PPP link that is active,
+<B
+CLASS="COMMAND"
+>ppp1</B
+> for the second, and so on. Next, it sets up a
+routing table entry that points to the host at the other end of the
+link. In the previous example, <B
+CLASS="COMMAND"
+>pppd</B
+> made the
+default network route point to <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>, because we gave it the <SPAN
+CLASS="SYSTEMITEM"
+>defaultroute</SPAN
+> option.<A
+NAME="X-087-2-FNPP05"
+HREF="#FTN.X-087-2-FNPP05"
+>[1]</A
+> The default route simplifies
+your routing by causing any IP datagram destined to a nonlocal host to
+be sent to <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>; this makes
+sense since it is the only way they can be reached. There are a number of
+different routing schemes <B
+CLASS="COMMAND"
+>pppd</B
+> supports, which we will
+cover in detail later in this chapter.</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP05"
+HREF="x6560.html#X-087-2-FNPP05"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> The default network route is installed only
+if none is already present.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x6507.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-ppp.options.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>PPP on Linux</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ppp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Using Options Files</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

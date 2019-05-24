@@ -1,0 +1,329 @@
+<HTML
+><HEAD
+><TITLE
+>Passing Command Line Arguments to a Module</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux Kernel Module Programming Guide"
+HREF="book1.htm"><LINK
+REL="UP"
+TITLE="Hello World"
+HREF="c147.htm"><LINK
+REL="PREVIOUS"
+TITLE="Hello World (part 4): Licensing and Module Documentation"
+HREF="x321.htm"><LINK
+REL="NEXT"
+TITLE="Modules Spanning Multiple Files"
+HREF="x385.htm"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux Kernel Module Programming Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x321.htm"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Hello World</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x385.htm"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN354"
+></A
+>Passing Command Line Arguments to a Module</H1
+><P
+>Modules can take command line arguments, but not with the <TT
+CLASS="VARNAME"
+>argc</TT
+>/<TT
+CLASS="VARNAME"
+>argv</TT
+> you might be
+	used to.</P
+><P
+>To allow arguments to be passed to your module, declare the variables that will take the values of the command line
+	arguments as global and then use the <TT
+CLASS="FUNCTION"
+>MODULE_PARM()</TT
+> macro, (defined in <TT
+CLASS="FILENAME"
+>linux/module.h</TT
+>) to set the mechanism up.  At runtime, insmod will fill the variables with any
+	command line arguments that are given, like <B
+CLASS="COMMAND"
+>./insmod mymodule.o myvariable=5</B
+>.  The variable declarations
+	and macros should be placed at the beginning of the module for clarity.  The example code should clear up my admittedly lousy
+	explanation.</P
+><P
+>The <TT
+CLASS="FUNCTION"
+>MODULE_PARM()</TT
+> macro takes 2 arguments: the name of the variable and its type.  The supported
+	variable types are "<TT
+CLASS="LITERAL"
+>b</TT
+>": single byte, "<TT
+CLASS="LITERAL"
+>h</TT
+>": short int, "<TT
+CLASS="LITERAL"
+>i</TT
+>": integer,
+	"<TT
+CLASS="LITERAL"
+>l</TT
+>": long int and "<TT
+CLASS="LITERAL"
+>s</TT
+>": string, and the integer types can be signed as usual or unsigned.
+	Strings should be declared as "<SPAN
+CLASS="TYPE"
+>char *</SPAN
+>" and insmod will allocate memory for them.  You should always try to give
+	the variables an initial default value.  This is kernel code, and you should program defensively.  For example:</P
+><PRE
+CLASS="SCREEN"
+>    int myint = 3;
+    char *mystr;
+
+    MODULE_PARM(myint, "i");
+    MODULE_PARM(mystr, "s");
+	</PRE
+><P
+>Arrays are supported too.  An integer value preceding the type in MODULE_PARM will indicate an array of some maximum
+	length.  Two numbers separated by a '-' will give the minimum and maximum number of values.  For example, an array of shorts
+	with at least 2 and no more than 4 values could be declared as:</P
+><PRE
+CLASS="SCREEN"
+>    int myshortArray[4];
+    MODULE_PARM (myintArray, "3-9i");
+	</PRE
+><P
+>A good use for this is to have the module variable's default values set, like an port or IO address.  If the variables
+	contain the default values, then perform autodetection (explained elsewhere).  Otherwise, keep the current value.  This will
+	be made clear later on.</P
+><P
+>Lastly, there's a macro function, <TT
+CLASS="FUNCTION"
+>MODULE_PARM_DESC()</TT
+>, that is used to document arguments that the
+	module can take.  It takes two parameters: a variable name and a free form string describing that variable.</P
+><A
+NAME="AEN377"
+></A
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="AEN380"
+></A
+><P
+><B
+>Example 2-7. hello-5.c</B
+></P
+><PRE
+CLASS="PROGRAMLISTING"
+>/*  hello-5.c - Demonstrates command line argument passing to a module.
+ *
+ *  Copyright (C) 2001 by Peter Jay Salzman
+ *
+ *  08/02/2006 - Updated by Rodrigo Rubira Branco &#60;rodrigo@kernelhacking.com&#62;
+ */
+
+/* Kernel Programming */
+#define MODULE
+#define LINUX
+#define __KERNEL__
+
+#include &#60;linux/module.h&#62;
+#include &#60;linux/kernel.h&#62;
+#include &#60;linux/init.h&#62;
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Peter Jay Salzman");
+
+// These global variables can be set with command line arguments when you insmod
+// the module in. 
+//
+static u8             mybyte = 'A';
+static unsigned short myshort = 1;
+static int            myint = 20;
+static long           mylong = 9999;
+static char           *mystring = "blah";
+static int            myintArray[2] = { 0, 420 };
+
+/*  Now we're actually setting the mechanism up -- making the variables command
+ *  line arguments rather than just a bunch of global variables.
+ */
+MODULE_PARM(mybyte, "b");
+MODULE_PARM(myshort, "h");
+MODULE_PARM(myint, "i");
+MODULE_PARM(mylong, "l");
+MODULE_PARM(mystring, "s");
+MODULE_PARM(myintArray, "1-2i");
+
+MODULE_PARM_DESC(mybyte, "This byte really does nothing at all.");
+MODULE_PARM_DESC(myshort, "This short is *extremely* important.");
+// You get the picture.  Always use a MODULE_PARM_DESC() for each MODULE_PARM().
+
+
+static int __init hello_5_init(void)
+{
+   printk(KERN_ALERT "mybyte is an 8 bit integer: %i\n", mybyte);
+   printk(KERN_ALERT "myshort is a short integer: %hi\n", myshort);
+   printk(KERN_ALERT "myint is an integer: %i\n", myint);
+   printk(KERN_ALERT "mylong is a long integer: %li\n", mylong);
+   printk(KERN_ALERT "mystring is a string: %s\n", mystring);
+   printk(KERN_ALERT "myintArray is %i and %i\n", myintArray[0], myintArray[1]);
+   return 0;
+}
+
+
+static void __exit hello_5_exit(void)
+{
+   printk(KERN_ALERT "Goodbye, world 5\n");
+}
+
+
+module_init(hello_5_init);
+module_exit(hello_5_exit);</PRE
+></DIV
+><P
+>I would recommend playing around with this code:</P
+><PRE
+CLASS="SCREEN"
+>    satan# insmod hello-5.o mystring="bebop" mybyte=255 myintArray=-1
+    mybyte is an 8 bit integer: 255
+    myshort is a short integer: 1
+    myint is an integer: 20
+    mylong is a long integer: 9999
+    mystring is a string: bebop
+    myintArray is -1 and 420
+    
+    satan# rmmod hello-5
+    Goodbye, world 5
+    
+    satan# insmod hello-5.o mystring="supercalifragilisticexpialidocious" \
+    &#62; mybyte=256 myintArray=-1,-1
+    mybyte is an 8 bit integer: 0
+    myshort is a short integer: 1
+    myint is an integer: 20
+    mylong is a long integer: 9999
+    mystring is a string: supercalifragilisticexpialidocious
+    myintArray is -1 and -1
+    
+    satan# rmmod hello-5
+    Goodbye, world 5
+    
+    satan# insmod hello-5.o mylong=hello
+    hello-5.o: invalid argument syntax for mylong: 'h'</PRE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x321.htm"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="book1.htm"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x385.htm"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Hello World (part 4): Licensing and Module Documentation</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c147.htm"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Modules Spanning Multiple Files</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

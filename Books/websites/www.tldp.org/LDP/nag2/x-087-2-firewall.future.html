@@ -1,0 +1,1429 @@
+<HTML
+><HEAD
+><TITLE
+>Netfilter and IP Tables (2.4 Kernels)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="TCP/IP Firewall"
+HREF="x-087-2-firewall.html"><LINK
+REL="PREVIOUS"
+TITLE="IP Firewall Chains (2.2 Kernels)"
+HREF="x-087-2-firewall.fwchains.html"><LINK
+REL="NEXT"
+TITLE="TOS Bit Manipulation"
+HREF="x-087-2-firewall.tos.manipulation.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.fwchains.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. TCP/IP Firewall</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.tos.manipulation.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-FIREWALL.FUTURE"
+>9.8. Netfilter and IP Tables (2.4 Kernels)</A
+></H1
+><P
+>While developing IP Firewall Chains, Paul Russell decided that IP firewalling
+should be less difficult; he soon set about the task of simplifying aspects of
+datagram processing in the kernel firewalling code and produced a filtering
+framework that was both much cleaner and much more flexible. He called
+this new framework <I
+CLASS="EMPHASIS"
+>netfilter</I
+>.</P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>At the time of preparation of this book the
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> design had not yet stabilized. We hope
+you'll forgive any errors in the description of
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> or its associated configuration tools
+that result from changes that occurred after preparation of this
+material. We considered the <I
+CLASS="EMPHASIS"
+>netfilter</I
+> work
+important enough to justify the inclusion of this material, despite
+parts of it being speculative in nature. If you're in any doubt, the
+relevant HOWTO documents will contain the most accurate and up-to-date
+information on the detailed issues associated with the
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> configuration.</P
+></BLOCKQUOTE
+></DIV
+><P
+>So what was wrong with IP chains? They vastly improved the efficiency
+and management of firewall rules. But the way they processed datagrams
+was still complex, especially in conjunction with firewall-related
+features like IP masquerade (discussed in <A
+HREF="x-087-2-ipmasq.html"
+>Chapter 11</A
+>) and other forms of address
+translation. Part of this complexity existed because IP masquerade and
+Network Address Translation were developed independently of the IP
+firewalling code and integrated later, rather than having been
+designed as a true part of the firewall code from the start. If a
+developer wanted to add yet more features in the datagram processing
+sequence, he would have had difficulty finding a place to insert the
+code and would have been forced to make changes in the kernel in order
+to do so.</P
+><P
+>Still, there were other problems. In particular, the
+&#8220;input&#8221; chain described input to the IP networking layer
+as a whole. The input chain affected both datagrams to be
+<I
+CLASS="EMPHASIS"
+>destined for</I
+> this host and datagrams to be
+<I
+CLASS="EMPHASIS"
+>routed by</I
+> this host. This was somewhat
+counterintuitive because it confused the function of the input chain
+with that of the forward chain, which applied only to datagrams to be
+forwarded, but which always followed the input chain. If you wanted to
+treat datagrams for this host differently from datagrams to be
+forwarded, it was necessary to build complex rules that excluded one
+or the other. The same problem applied to the output chain.</P
+><P
+>Inevitably some of this complexity spilled over into the system
+administrator's job because it was reflected in the way that rulesets
+had to be designed.  Moreover, any extensions to filtering required
+direct modifications to the kernel, because all filtering policies
+were implemented there and there was no way of providing a transparent
+interface into it. <I
+CLASS="EMPHASIS"
+>netfilter</I
+> addresses both the
+complexity and the rigidity of older solutions by implementing a
+generic framework in the kernel that streamlines the way datagrams are
+processed and provides a capability to extend filtering policy without
+having to modify the kernel.</P
+><P
+>&#13;Let's take a look at two of the key changes made.  <A
+HREF="x-087-2-firewall.future.html#X-087-2-FIREWALL.ROUTING.IPCHAINS"
+>Figure 9-8</A
+> illustrates how datagrams
+are processed in the IP chains implementation, while <A
+HREF="x-087-2-firewall.future.html#X-087-2-FIREWALL.ROUTING.NETFILTER"
+>Figure 9-9</A
+> illustrates how they are
+processed in the <I
+CLASS="EMPHASIS"
+>netfilter</I
+> implementation. The
+key differences are the removal of the masquerading function from the
+core code and a change in the locations of the input and output
+chains. To accompany these changes, a new and extensible configuration
+tool called <B
+CLASS="COMMAND"
+>iptables</B
+> was created.</P
+><P
+>In IP chains, the input chain applies to all datagrams received by the
+host, irrespective of whether they are destined for the local host or routed to some other host. In <I
+CLASS="EMPHASIS"
+>netfilter</I
+>,
+the input chain applies <I
+CLASS="EMPHASIS"
+>only</I
+> to datagrams
+destined for the local host, and the forward chain applies only to
+datagrams destined for <I
+CLASS="EMPHASIS"
+>another</I
+> host. Similarly,
+in IP chains, the output chain applies to all datagrams leaving the
+local host, irrespective of whether the datagram is generated on the
+local host or routed from some other host. In
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+>, the output chain applies
+<I
+CLASS="EMPHASIS"
+>only</I
+> to datagrams generated on this host and does
+not apply to datagrams being routed from another host. This change
+alone offers a huge simplification of many firewall configurations.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-FIREWALL.ROUTING.IPCHAINS"
+></A
+><P
+><B
+>Figure 9-8. Datagram processing chain in IP chains</B
+></P
+><P
+><IMG
+SRC="lag2_0908.jpg"></P
+></DIV
+><P
+>In <A
+HREF="x-087-2-firewall.future.html#X-087-2-FIREWALL.ROUTING.IPCHAINS"
+>Figure 9-8</A
+>, the components
+labeled &#8220;demasq&#8221; and &#8220;masq&#8221; are separate
+kernel components responsible for the incoming and outgoing processing
+of masqueraded datagrams.  These have been reimplemented as
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> modules.</P
+><P
+>Consider the case of a configuration for which the default policy for each
+of the input, forward, and output chains is
+<TT
+CLASS="LITERAL"
+>deny</TT
+>. In IP chains, six rules would
+be needed to allow any session through a firewall host: two each in
+the input, forward, and output chains (one would cover each forward
+path and one would cover each return path). You can imagine how this
+could easily become extremely complex and difficult to manage when you
+want to mix sessions that could be routed and sessions that could
+connect to the local host without being routed. IP chains allow
+you to create chains that would simplify this task a little, but the
+design isn't obvious and requires a certain level of expertise.</P
+><P
+>In the <I
+CLASS="EMPHASIS"
+>netfilter</I
+> implementation with
+<B
+CLASS="COMMAND"
+>iptables</B
+>, this complexity disappears
+completely. For a service to be routed across the firewall host, but
+not terminate on the local host, only two rules are required: one
+each for the forward and the reverse directions in the forward
+chain. This is the obvious way to design firewalling rules, and will
+serve to simplify the design of firewall configurations immensely.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-FIREWALL.ROUTING.NETFILTER"
+></A
+><P
+><B
+>Figure 9-9. Datagram processing chain in netfilter</B
+></P
+><P
+><IMG
+SRC="lag2_0909.jpg"></P
+></DIV
+><P
+>&#13;
+The PACKET-FILTERING-HOWTO offers a detailed list of the
+changes that have been made, so let's focus on the more practical
+aspects here.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN8603"
+>9.8.1. Backward Compatability with ipfwadmand ipchains</A
+></H2
+><P
+>The remarkable flexibility of Linux <I
+CLASS="EMPHASIS"
+>netfilter</I
+> is
+illustrated by its ability to emulate the <B
+CLASS="COMMAND"
+>ipfwadm</B
+> and
+<B
+CLASS="COMMAND"
+>ipchains</B
+> interfaces. Emulation makes transition to the new
+generation of firewall software a little easier.</P
+><P
+>&#13;The two <I
+CLASS="EMPHASIS"
+>netfilter</I
+> kernel modules called
+<TT
+CLASS="FILENAME"
+>ipfwadm.o</TT
+> and <TT
+CLASS="FILENAME"
+>ipchains.o</TT
+>
+provide backward compatibility for <B
+CLASS="COMMAND"
+>ipfwadm</B
+> and
+<B
+CLASS="COMMAND"
+>ipchains</B
+>. You may load only one of these modules at
+a time, and use one only if the <TT
+CLASS="FILENAME"
+>ip_tables.o</TT
+>
+module is not loaded.  When the appropriate module is loaded,
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> works exactly like the former
+firewall implementation.</P
+><P
+><I
+CLASS="EMPHASIS"
+>netfilter</I
+> mimics the
+<B
+CLASS="COMMAND"
+>ipchains</B
+> interface with the following commands:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>rmmod ip_tables
+modprobe ipchains
+ipchains <TT
+CLASS="REPLACEABLE"
+><I
+>...</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.USINGIPTABLES"
+>9.8.2. Using iptables</A
+></H2
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>iptables</B
+> utility is used to configure
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> filtering rules. Its syntax borrows
+heavily from the <B
+CLASS="COMMAND"
+>ipchains</B
+> command, but differs in
+one very significant respect: it is
+<I
+CLASS="EMPHASIS"
+>extensible</I
+>. What this means is that its
+functionality can be extended without recompiling it. It manages this
+trick by using shared libraries. There are standard extensions
+and we'll explore some of them in a moment.</P
+><P
+>Before you can use the <B
+CLASS="COMMAND"
+>iptables</B
+> command, you must
+load the <I
+CLASS="EMPHASIS"
+>netfilter</I
+> kernel module that provides
+support for it. The easiest way to do this is to use the
+<B
+CLASS="COMMAND"
+>modprobe</B
+> command as follows:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>modprobe ip_tables</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <B
+CLASS="COMMAND"
+>iptables</B
+> command is used to configure both IP
+filtering and Network Address Translation. To facilitate this, there are two
+tables of rules called <I
+CLASS="EMPHASIS"
+>filter</I
+> and
+<I
+CLASS="EMPHASIS"
+>nat</I
+>. The filter table is assumed if you do not
+specify the <TT
+CLASS="OPTION"
+>-t</TT
+> option to override
+it. Five built-in chains are also provided. The
+<TT
+CLASS="LITERAL"
+>INPUT</TT
+> and <TT
+CLASS="LITERAL"
+>FORWARD</TT
+> chains are
+available for the <TT
+CLASS="LITERAL"
+>filter</TT
+> table, the
+<TT
+CLASS="LITERAL"
+>PREROUTING</TT
+> and <TT
+CLASS="LITERAL"
+>POSTROUTING</TT
+>
+chains are available for the <TT
+CLASS="LITERAL"
+>nat</TT
+> table, and the
+<TT
+CLASS="LITERAL"
+>OUTPUT</TT
+> chain is available for both tables.  In this
+chapter we'll discuss only the <I
+CLASS="EMPHASIS"
+>filter</I
+> table. We'll look 
+at the <I
+CLASS="EMPHASIS"
+>nat</I
+> table in <A
+HREF="x-087-2-ipmasq.html"
+>Chapter 11</A
+></P
+><P
+>The general syntax of most <B
+CLASS="COMMAND"
+>iptables</B
+> commands is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><B
+CLASS="COMMAND"
+>iptables</B
+> <TT
+CLASS="REPLACEABLE"
+><I
+>command</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>rule-specification</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>extensions</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+Now we'll take a look at some options in detail, after which we'll review
+some examples.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPTABLES.COMMANDS"
+>9.8.2.1. Commands</A
+></H3
+><P
+>There are a number of ways we can manipulate rules and rulesets with the
+<B
+CLASS="COMMAND"
+>iptables</B
+> command. Those relevant to IP firewalling are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-A chain</DT
+><DD
+><P
+>Append one or more rules to the end of the nominated chain. If a hostname is
+supplied as either a source or destination and it resolves to more than one IP
+address, a rule will be added for each address.</P
+></DD
+><DT
+>-I chain rulenum</DT
+><DD
+><P
+>Insert one or more rules to the start of the nominated chain. Again, if a
+hostname is supplied in the rule specification, a rule will be added for each
+of the addresses to which it resolves.</P
+></DD
+><DT
+>-D chain</DT
+><DD
+><P
+>Delete one or more rules from the specified chain matching the rule
+specification.</P
+></DD
+><DT
+>-D chain rulenum</DT
+><DD
+><P
+>Delete the rule residing at position <TT
+CLASS="REPLACEABLE"
+><I
+>rulenum</I
+></TT
+> in the
+specified chain. Rule positions start at 1 for the first rule in the chain.</P
+></DD
+><DT
+>-R chain rulenum</DT
+><DD
+><P
+>Replace the rule residing at position <TT
+CLASS="REPLACEABLE"
+><I
+>rulenum</I
+></TT
+>
+in the specific chain with the supplied rule specification.</P
+></DD
+><DT
+>-C chain</DT
+><DD
+><P
+>Check the datagram described by the rule specification against the specific
+chain. This command will return a message describing how the chain processed the datagram. This is very useful for testing your firewall
+configuration and we will look at it in detail later.</P
+></DD
+><DT
+>-L [chain]</DT
+><DD
+><P
+>List the rules of the specified chain, or for all chains if no chain is
+specified.</P
+></DD
+><DT
+>-F [chain]</DT
+><DD
+><P
+>Flush the rules of the specified chain, or for all chains if no chain is
+ specified.</P
+></DD
+><DT
+>-Z [chain]</DT
+><DD
+><P
+>Zero the datagram and byte counters for all rules of the specified chain, or
+for all chains if no chain is specified.</P
+></DD
+><DT
+>-N chain</DT
+><DD
+><P
+>Create a new chain with the specified name. A chain of the same name must not
+ already exist. This is how user-defined chains are created.</P
+></DD
+><DT
+>-X [chain]</DT
+><DD
+><P
+>Delete the specified user-defined chain, or all user-defined chains if no chain
+is specified. For this command to be successful, there must be no references
+to the specified chain from any other rules chain.</P
+></DD
+><DT
+>-P chain policy</DT
+><DD
+><P
+>Set the default policy of the specified chain to the specified policy. Valid
+firewalling policies are <TT
+CLASS="LITERAL"
+>ACCEPT</TT
+>, <TT
+CLASS="LITERAL"
+>DROP</TT
+>,
+<TT
+CLASS="LITERAL"
+>QUEUE</TT
+>, and <TT
+CLASS="LITERAL"
+>RETURN</TT
+>.
+<TT
+CLASS="LITERAL"
+>ACCEPT</TT
+> allows the datagram to pass. <TT
+CLASS="LITERAL"
+>DROP</TT
+>
+causes the datagram to be discarded. <TT
+CLASS="LITERAL"
+>QUEUE</TT
+> causes the
+datagram to be passed to userspace for further processing. The
+<TT
+CLASS="LITERAL"
+>RETURN</TT
+> target causes the IP firewall code to return to the
+Firewall Chain that called the one containing this rule, and continue starting
+at the rule after the calling rule.</P
+></DD
+></DL
+></DIV
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPTABLES.RULESPEC"
+>9.8.2.2. Rule specification parameters</A
+></H3
+><P
+>There are a number of <B
+CLASS="COMMAND"
+>iptables</B
+> parameters that constitute
+a rule specification. Wherever a rule specification is required, each of these
+parameters must be supplied or their default will be assumed.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-p [!]protocol</DT
+><DD
+><P
+>Specifies the protocol of the datagram that will match this rule. Valid
+protocol names are <TT
+CLASS="LITERAL"
+>tcp</TT
+>, <TT
+CLASS="LITERAL"
+>udp</TT
+>,
+<TT
+CLASS="LITERAL"
+>icmp</TT
+>, or a number, if you know the IP protocol
+number.<A
+NAME="X-087-2-X-087-2-FW-FN06"
+HREF="#FTN.X-087-2-X-087-2-FW-FN06"
+>[1]</A
+>
+For example, you might use <TT
+CLASS="LITERAL"
+>4</TT
+> to match the
+<TT
+CLASS="LITERAL"
+>ipip</TT
+> encapsulation protocol. If the <TT
+CLASS="LITERAL"
+>!</TT
+>
+character is supplied, the rule is negated and the datagram will match any
+protocol other than the specified protocol. If this parameter isn't supplied, it
+will default to match all protocols.</P
+></DD
+><DT
+>-s [!]address[/mask]</DT
+><DD
+><P
+>Specifies the source address of the datagram that will match this rule. The
+address may be supplied as a hostname, a network name, or an IP address. The
+optional <TT
+CLASS="LITERAL"
+>mask</TT
+> is the netmask to use and may be supplied
+either in the traditional form (e.g., /255.255.255.0) or in the modern form
+(e.g., /24).</P
+></DD
+><DT
+>-d [!]address[/mask]</DT
+><DD
+><P
+>Specifies the destination address and port of the datagram that will
+match this rule. The coding of this parameter is the same as that of the
+<TT
+CLASS="OPTION"
+>-s</TT
+> parameter.</P
+></DD
+><DT
+>-j target</DT
+><DD
+><P
+>Specifies what action to take when this rule matches. You can think of
+this parameter as meaning &#8220;jump to.&#8221; Valid targets are
+<TT
+CLASS="LITERAL"
+>ACCEPT</TT
+>, <TT
+CLASS="LITERAL"
+>DROP</TT
+>, <TT
+CLASS="LITERAL"
+>QUEUE</TT
+>,
+and <TT
+CLASS="LITERAL"
+>RETURN</TT
+>. We described the meanings of each of these previously in the "Commands" section. You may also specify the name of a user-defined chain where
+processing will continue. You may also supply the name of a target supplied
+by an extension. We'll talk about extensions shortly. If this parameter is
+omitted, no action is taken on matching datagrams at all, other than to
+update the datagram and byte counters of this rule.</P
+></DD
+><DT
+>-i [!]interface-name</DT
+><DD
+><P
+>Specifies the interface on which the datagram was received. Again, the
+<TT
+CLASS="LITERAL"
+>!</TT
+> inverts the result of the match. If the interface name
+ends with &#8220;<TT
+CLASS="LITERAL"
+>+</TT
+>&#8221; then any interface that begins
+with the supplied string will match. For example, <TT
+CLASS="LITERAL"
+>-i ppp+</TT
+>
+would match any PPP network device and <TT
+CLASS="LITERAL"
+>-i ! eth+</TT
+> would
+match all interfaces except ethernet devices.</P
+></DD
+><DT
+>-o [!]interface-name</DT
+><DD
+><P
+>Specifies the interface on which the datagram is to be transmitted. This
+argument has the same coding as the <TT
+CLASS="OPTION"
+>-i</TT
+> argument.</P
+></DD
+><DT
+>[!] -f</DT
+><DD
+><P
+>Specifies that this rule applies only to the second and later fragments
+of a fragmented datagram, not to the first fragment.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPTABLES.OPTIONS"
+>9.8.2.3. Options</A
+></H3
+><P
+>The following <B
+CLASS="COMMAND"
+>iptables</B
+> options are more general in nature.
+Some of them control rather esoteric features of the
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> software.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-v</DT
+><DD
+><P
+>causes <B
+CLASS="COMMAND"
+>iptables</B
+> to be verbose in its output; it
+will supply more information.</P
+></DD
+><DT
+>-n</DT
+><DD
+><P
+>causes <B
+CLASS="COMMAND"
+>iptables</B
+> to display IP address and ports as
+numbers without attempting to resolve them to their corresponding names.</P
+></DD
+><DT
+>-x</DT
+><DD
+><P
+>causes any numbers in the <B
+CLASS="COMMAND"
+>iptables</B
+> output to be
+expanded to their exact values with no rounding.</P
+></DD
+><DT
+>- -line-numbers</DT
+><DD
+><P
+>causes line numbers to be displayed when listing rulesets. The line number
+will correspond to the rule's position within the chain.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPTABLES.EXTENSIONS"
+>9.8.2.4. Extensions</A
+></H3
+><P
+>&#13;We said earlier that the <B
+CLASS="COMMAND"
+>iptables</B
+> utility is
+extensible through optional shared library modules. There are some standard
+extensions that provide some of the features <B
+CLASS="COMMAND"
+>ipchains</B
+>
+provided. To make use of an extension, you must specify its name through the
+<TT
+CLASS="OPTION"
+>-m</TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>name</I
+></TT
+> argument to
+<B
+CLASS="COMMAND"
+>iptables</B
+>. The following list shows the
+<TT
+CLASS="OPTION"
+>-m</TT
+> and <TT
+CLASS="OPTION"
+>-p</TT
+> options that set up the extension's
+context, and the options provided by
+that extension.</P
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN8816"
+>9.8.2.4.1. TCP Extensions: used with -m tcp -p tcp</A
+></H4
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>- -sport [!] [port[:port]]</DT
+><DD
+><P
+>Specifies the port that the datagram source must be using to match this rule.
+Ports may be specified as a range by specifying the upper and lower limits of
+the range using the colon as a delimiter. For example, <TT
+CLASS="LITERAL"
+>20:25</TT
+>
+described all of the ports numbered 20 up to and including 25. Again, the
+<TT
+CLASS="LITERAL"
+>!</TT
+> character may be used to negate the values.</P
+></DD
+><DT
+>- -dport [!] [port[:port]]</DT
+><DD
+><P
+>Specifies the port that the datagram destination must be using to match this
+rule. The argument is coded identically to the <TT
+CLASS="OPTION"
+>- -sport</TT
+>
+option.</P
+></DD
+><DT
+>- -tcp-flags [!] mask comp</DT
+><DD
+><P
+>&#13;Specifies that this rule should match when the TCP flags in the
+datagram match those specified by <TT
+CLASS="REPLACEABLE"
+><I
+>mask</I
+></TT
+> and
+<TT
+CLASS="REPLACEABLE"
+><I
+>comp</I
+></TT
+>. <TT
+CLASS="REPLACEABLE"
+><I
+>mask</I
+></TT
+> is a
+comma-separated list of flags that should be examined when making the
+test. <TT
+CLASS="REPLACEABLE"
+><I
+>comp</I
+></TT
+> is a comma-separated list of
+flags that must be set for the rule to match. Valid flags are:
+<I
+CLASS="EMPHASIS"
+>SYN</I
+>, <I
+CLASS="EMPHASIS"
+>ACK</I
+>,
+<I
+CLASS="EMPHASIS"
+>FIN</I
+>, <I
+CLASS="EMPHASIS"
+>RST</I
+>,
+<I
+CLASS="EMPHASIS"
+>URG</I
+>, <I
+CLASS="EMPHASIS"
+>PSH</I
+>, <I
+CLASS="EMPHASIS"
+>ALL</I
+>
+or <I
+CLASS="EMPHASIS"
+>NONE</I
+>. This is an advanced option: refer to a
+good description of the TCP protocol, such as RFC-793, for a
+description of the meaning and implication of each of these flags.
+The <TT
+CLASS="LITERAL"
+>!</TT
+> character negates the rule.</P
+></DD
+><DT
+>[!] - -syn</DT
+><DD
+><P
+>Specifies the rule to match only datagrams with the
+<TT
+CLASS="LITERAL"
+>SYN</TT
+> bit set and the <TT
+CLASS="LITERAL"
+>ACK</TT
+> and
+<TT
+CLASS="LITERAL"
+>FIN</TT
+> bits cleared. Datagrams with these options are used
+to open TCP connections, and this option can therefore be used to manage
+connection requests. This option is shorthand for:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="LITERAL"
+>- -tcp-flags SYN,RST,ACK SYN</TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+ When you use the negation
+operator, the rule will match all datagrams that do not have both the
+<TT
+CLASS="LITERAL"
+>SYN</TT
+> and <TT
+CLASS="LITERAL"
+>ACK</TT
+> bits set.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN8860"
+>9.8.2.4.2. UDP Extensions: used with -m udp -p udp</A
+></H4
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>- -sport [!] [port[:port]]</DT
+><DD
+><P
+>Specifies the port that the datagram source must be using to match this rule.
+Ports may be specified as a range by specifying the upper and lower limits of
+the range using the colon as a delimiter. For example, <TT
+CLASS="LITERAL"
+>20:25</TT
+>
+describes all of the ports numbered 20 up to and including 25. Again, the
+<TT
+CLASS="LITERAL"
+>!</TT
+> character may be used to negate the values.</P
+></DD
+><DT
+>- -dport [!] [port[:port]]</DT
+><DD
+><P
+>Specifies the port that the datagram destination must be using to match this
+rule. The argument is coded identically to the <TT
+CLASS="OPTION"
+>- -sport</TT
+>
+option.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN8874"
+>9.8.2.4.3. ICMP Extensions: used with <TT
+CLASS="LITERAL"
+>-m icmp -p icmp</TT
+></A
+></H4
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>- -icmp-type [!] typename</DT
+><DD
+><P
+>Specifies the ICMP message type that this rule will match. The type may be
+specified by number or name. Some valid names are:
+<TT
+CLASS="LITERAL"
+>echo-request</TT
+>, <TT
+CLASS="LITERAL"
+>echo-reply</TT
+>,
+<TT
+CLASS="LITERAL"
+>source-quench</TT
+>, <TT
+CLASS="LITERAL"
+>time-exceeded</TT
+>,
+<TT
+CLASS="LITERAL"
+>destination-unreachable</TT
+>,
+<TT
+CLASS="LITERAL"
+>network-unreachable</TT
+>, <TT
+CLASS="LITERAL"
+>host-unreachable</TT
+>,
+<TT
+CLASS="LITERAL"
+>protocol-unreachable</TT
+>, and
+<TT
+CLASS="LITERAL"
+>port-unreachable</TT
+>.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN8891"
+>9.8.2.4.4. MAC Extensions: used with <TT
+CLASS="LITERAL"
+>-m mac</TT
+></A
+></H4
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>- -mac-source [!] address</DT
+><DD
+><P
+>Specifies the host's Ethernet address that transmitted the datagram
+that this rule will match. This only makes sense in a rule in the input or
+forward chains because we will be transmitting any datagram that passes the
+output chain.</P
+></DD
+></DL
+></DIV
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN8900"
+>9.8.3. Our Naïve Example Revisited, Yet Again</A
+></H2
+><P
+>To implement our naïve example using the <I
+CLASS="EMPHASIS"
+>netfilter</I
+>,
+you could simply load the <TT
+CLASS="FILENAME"
+>ipchains.o</TT
+> module and pretend
+it is the <B
+CLASS="COMMAND"
+>ipchains</B
+> version. Instead, we'll reimplement
+it using <B
+CLASS="COMMAND"
+>iptables</B
+> to illustrate how similar it is.</P
+><P
+>Yet again, let's suppose that we have a network in our organization
+and that we are using a Linux-based firewall machine to allow our
+users to be able to access WWW servers on the Internet, but to allow
+no other traffic to be passed.</P
+><P
+>If our network has a 24-bit network mask (class C) and has an address of
+172.16.1.0, then we'd use the following <B
+CLASS="COMMAND"
+>iptables</B
+> rules:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>modprobe ip_tables</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>iptables -F FORWARD</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>iptables -P FORWARD DROP</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -m tcp -p tcp -s 0/0 --sport 80 -d 172.16.1.0/24 /
+    --syn -j DROP</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -m tcp -p tcp -s 172.16.1.0/24 --sport /
+    80 -d 0/0 -j ACCEPT</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -m tcp -p tcp -d 172.16.1.0/24 --dport 80 -s 0/0 -j /
+    ACCEPT</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>In this example the <B
+CLASS="COMMAND"
+>iptables</B
+> commands are interpreted
+exactly as the equivalent <B
+CLASS="COMMAND"
+>ipchains</B
+> commands. The major
+exception that the <TT
+CLASS="FILENAME"
+>ip_tables.o</TT
+>
+module must load. Note that <B
+CLASS="COMMAND"
+>iptables</B
+> doesn't support the
+<TT
+CLASS="OPTION"
+>-b</TT
+> option, so we must supply a rule for each
+direction.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-X-087-2-FW-FN06"
+HREF="x-087-2-firewall.future.html#X-087-2-X-087-2-FW-FN06"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Take a look at <TT
+CLASS="FILENAME"
+>/etc/protocols</TT
+> for protocol names and numbers.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.fwchains.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.tos.manipulation.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>IP Firewall Chains (2.2 Kernels)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>TOS Bit Manipulation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

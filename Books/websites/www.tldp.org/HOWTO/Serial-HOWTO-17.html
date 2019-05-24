@@ -1,0 +1,211 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Serial HOWTO: Interrupt Problem Details </TITLE>
+ <LINK HREF="Serial-HOWTO-18.html" REL=next>
+ <LINK HREF="Serial-HOWTO-16.html" REL=previous>
+ <LINK HREF="Serial-HOWTO.html#toc17" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Serial-HOWTO-18.html">Next</A>
+<A HREF="Serial-HOWTO-16.html">Previous</A>
+<A HREF="Serial-HOWTO.html#toc17">Contents</A>
+<HR>
+<H2><A NAME="irq_prob_details"></A> <A NAME="s17">17.</A> <A HREF="Serial-HOWTO.html#toc17">Interrupt Problem Details </A></H2>
+
+<P> While the section 
+<A HREF="Serial-HOWTO-16.html#trouble_shoot">Troubleshooting</A>
+lists problems by symptom, this section explains what will happen if
+interrupts are set incorrectly.  This section helps you understand what
+caused the symptom, what other symptoms might be due to the same
+problem, and what to do about it.</P>
+
+<H2><A NAME="ss17.1">17.1</A> <A HREF="Serial-HOWTO.html#toc17.1">Types of interrupt problems</A>
+</H2>
+
+<P> The "setserial" program will show you how serial driver thinks the
+interrupts are set.  If the serial driver (and setserial) has it right
+then everything regarding interrupts should be OK.  Of course a
+/dev/ttyS must exist for the device and Plug-and-Play (or jumpers)
+must have set an address and IRQ in the hardware.  Linux will not
+knowingly permit an interrupt conflict and you will get a "Device or
+resource busy" error message if you attempt to do something that would
+create a conflict.</P>
+<P>Since the kernel tries to avoid interrupt conflicts and gives you the
+"resource busy" message if you try to create a conflict, how can
+interrupt conflicts happen?  Easy.  "setserial" may have it wrong and
+erroneously predicts no conflict when there will actually be a real
+conflict based on what is set in the hardware.  When this happens
+there will be no "... busy" message but a conflict will physically
+happen.  Performance is likely to be extremely slow.  Both devices
+will send identical interrupt signals on the same wire and the CPU
+will erroneously think that the interrupts only come from one device.
+This will be explained in detail in the following sections.</P>
+<P>Linux doesn't complain when you assign two devices the same IRQ
+provided that neither device is in use.  As each device starts up
+(initializes), it asks Linux for permission to use its hardware
+interrupt.  Linux keeps track of which interrupt is assigned to whom,
+and if your interrupt is already in use, you'll see this "... busy"
+error message.  Thus if two devices use the same IRQ and you start up
+only one of the devices, everything is OK.  But when you next try to
+start the second device (without quitting the first device) you get
+"... busy" error message.</P>
+
+<H2><A NAME="ss17.2">17.2</A> <A HREF="Serial-HOWTO.html#toc17.2">Symptoms of Mis-set or Conflicting Interrupts</A>
+</H2>
+
+<P> The symptoms depend on whether or not you have a modern serial port
+with FIFO buffers or an obsolete serial port without FIFO buffers.
+It's important to understand the symptoms for the obsolete ones also
+since sometimes modern ports seem to behave that way.</P>
+<P>For the obsolete serial ports, only one character gets thru every
+several seconds.  This is so slow that it seems almost like nothing is
+working (especially if the character that gets thru is invisible (such
+a space or newline).  For the modern ports with FIFO buffers you
+will likely see bursts of up to 16 characters every several seconds.</P>
+<P>If you have a modem on the port and dial a number, it seemingly may
+not connect since the CONNECT message may not make it thru.  But after
+a long wait it may finally connect and you may see part of a login
+message (or the like).  The response from your side of the connection
+may be so delayed that the other side gives up and disconnects you,
+resulting in a NO CARRIER message.</P>
+<P>If you use minicom, a common test to see if things are working is to
+type the simplest "AT" command and see if the modem responds.  Typing
+just at&lt;enter&gt; should normally (if interrupts are OK) result in
+an immediate "OK" response from the modem.  With bad interrupts you
+type at&lt;enter&gt; and may see nothing.  But then after 10 seconds
+or so you see the cursor drop down one line.  What is going on is that
+the FIFO is behaving like it can only hold one byte.  The "at" you
+typed caused it to overrun and both letters were lost.  But the final
+&lt;enter&gt; eventually got thru and you "see" this invisible
+character by noticing that the cursor jumped down one line.  If you were
+to type a single letter and then wait about 10 seconds, you should see
+it echo back to the screen.  This is fine if your typing speed is less
+that one word per minute :-)</P>
+
+<H2><A NAME="irq_ng"></A> <A NAME="ss17.3">17.3</A> <A HREF="Serial-HOWTO.html#toc17.3">Mis-set Interrupts </A>
+</H2>
+
+<P> If you don't understand what an interrupt does see 
+<A HREF="Serial-HOWTO-4.html#interrupt_">Interrupts</A>.  If a serial port has one IRQ set
+in the hardware but a different one set in the device driver, the
+device driver will not catch any interrupts sent by the serial port.
+Since the serial port uses interrupts to call its driver to service
+the port (fetching bytes from its 16-byte receive buffer or putting
+another 16-bytes in its transmit buffer) one might expect that the
+serial port would not work at all.</P>
+<P>But it still may work anyway --sort of.  Why?  Well, besides the
+interrupt method of servicing the port there's an undocumented slow
+polling method that doesn't need interrupts.  The way it works is that
+every so often the device driver checks the serial port to see if it
+needs anything such as if it has some bytes that need fetching from
+its receive buffer.  If interrupts don't work, the serial driver falls
+back to this polling method.  But this polling method was not intended
+to be used a substitute for interrupts.  It's so slow that it's not
+practical to use and may cause buffer overruns.  Its purpose may have
+been to get things going again if just one interrupt is lost or fails
+to do the right thing.  It's also useful in showing you that
+interrupts have failed.  Don't confuse this slow polling method with
+the fast polling method that operates on ports that have their IRQs
+set to 0.</P>
+<P>For the 16-byte transmit buffer, 16 bytes will be transmitted and then
+it will wait until the next polling takes place (several seconds
+later) before the next 16 bytes are sent out.  Thus transmission is
+very slow and in small chunks.  Receiving is slow too since bytes that
+are received by the receive buffer are likely to remain there for
+several seconds until it is polled.</P>
+<P>This explains why it takes so long before you see what you typed.
+When you type say AT to a modem, the AT goes out the serial port to
+the modem.  The modem then echos the AT back thru the serial port to
+the screen.  Thus the AT characters have to pass twice thru the serial
+port.  Normally this happens so fast that AT seems to appear on the
+screen at the same time you hit the keys on the keyboard.  With slow
+polling delays at the serial port, you don't see what you typed
+until perhaps 15 seconds later.  Even then, you don't often see all
+you typed but only the first several characters.        </P>
+<P>What about overruns of the 16-byte receive buffer?  This will happen
+with an external modem since the modem just sends to the serial port
+at high speed which is likely to overrun the 16-byte buffer.  But for
+an internal modem, the serial port is on the same card and it's likely
+to check that this 16-byte receive buffer has room for more bytes
+before putting received bytes into it.  In this case there will be no
+overrun of this receive buffer, but text will just appear on your
+screen in 16-byte chunks spaced at intervals of several seconds.</P>
+<P>Even with an external modem you might not get overruns.  If just a few
+characters (under 16) are sent you don't get overruns since the buffer
+likely has room for them.  But attempts to send a larger number of
+bytes from your modem to your screen may result in overruns.  However,
+more than 16 (with no gaps) can get thru without overruns if the
+timing is right.  For example, suppose a burst of 32 bytes is sent
+into the port from the external cable.  The polling might just happen
+after the first 16 bytes came in so it would pick up these 16 bytes
+OK.  Then there would be space for the next 16 bytes so that entire 32
+bytes gets thru OK.  While this scenario is not very likely, similar
+cases where 17 to 31 bytes make thru are more likely.  But it's even
+more likely that only an occasional 16-byte chunk will get thru with
+possible loss of data.</P>
+<P>If you have an obsolete serial port with only a 1-byte buffer (or it's
+been incorrectly set to work like a 1-byte buffer) then the situation
+will be much worse than described above and only one character will
+occasionally make it thru the port.  Every character received causes
+an overrun (and is lost) except for the last character received.  This
+character is likely to be just a line-feed since this is often the
+last character to be transmitted in a burst of characters sent to your
+screen.  Thus you may type AT&lt;return&gt; to the modem but never see
+AT on the screen.  All you see several seconds later is that the
+cursor drops down one line (a line feed).  This has happened to me
+with a 16-byte FIFO buffer that was behaving like a 1-byte buffer.</P>
+<P>When a communication program starts up, it expects interrupts to be
+working.  It's not geared to using this slow polling-like mode of
+operation.  Thus all sorts of mistakes may be made such as setting up
+the serial port and/or modem incorrectly.  It may fail to realize when
+a connection has been made.  If a script is being used for login, it
+may fail (caused by timeout) due to the polling delays.</P>
+
+<H2><A NAME="irq_conflict"></A> <A NAME="ss17.4">17.4</A> <A HREF="Serial-HOWTO.html#toc17.4">Interrupt Conflicts </A>
+</H2>
+
+<P> When two devices have the same IRQ number it's called sharing
+interrupts.  Under some conditions this sharing works out OK.
+Starting with kernel version 2.2, ISA serial ports may, if the
+hardware is designed for this, share interrupts with other serial
+ports.  Devices on the PCI bus may share the same IRQ interrupt with
+other devices on the PCI bus (provided the software supports this).
+In other cases where there is potential for conflict, there should be
+no problem if no two devices with the same IRQ are ever "in use" at
+the same time.   More precisely, "in use" really means "open" (in
+programmer jargon).  In cases other than the exceptions mentioned
+above (unless special software and hardware permit sharing), sharing
+is not allowed and conflicts arise if sharing is attempted.</P>
+<P>Even if two processes with conflicting IRQs run at the same time, one
+of the devices will likely have its interrupts caught by its device
+driver and may work OK.  The other device will not have its interrupts
+caught by the correct driver and will likely behave just like a
+process with mis-set interrupts.  See 
+<A HREF="#irq_ng">Mis-set Interrupts</A> for more details.</P>
+
+<H2><A NAME="ss17.5">17.5</A> <A HREF="Serial-HOWTO.html#toc17.5">Resolving Interrupt Problems</A>
+</H2>
+
+<P> If you are getting a very slow response as described above, then
+one test is to change the IRQ to 0 (uses fast polling instead of
+interrupts) and see if the problem goes away.  Note that the polling
+due to IRQ=0 is orders of magnitude faster than the slow "polling" due
+to bad interrupts.  If IRQ=0 seems to fix the problem, then there was
+likely something wrong with the interrupts.  Using IRQ=0 is very
+resource intensive and is only a temporary fix.  You should try to
+find the cause of the interrupt problem and not permanently use IRQ=0.</P>
+<P>Check /proc/interrupts to see if the IRQ is currently in use by another
+process. If it's in use by another serial port you could try "top"
+(type f and then enable the TTY display) or "ps -e" to find out which
+serial ports are in use.  If you suspect that setserial has a wrong
+IRQ then see 
+<A HREF="Serial-HOWTO-8.html#what_is_io_irq">What is the current IO address and IRQ of my Serial Port ?</A></P>
+
+<HR>
+<A HREF="Serial-HOWTO-18.html">Next</A>
+<A HREF="Serial-HOWTO-16.html">Previous</A>
+<A HREF="Serial-HOWTO.html#toc17">Contents</A>
+</BODY>
+</HTML>

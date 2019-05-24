@@ -1,0 +1,217 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Text-Terminal-HOWTO: Special Uses for a Terminal</TITLE>
+ <LINK HREF="Text-Terminal-HOWTO-19.html" REL=next>
+ <LINK HREF="Text-Terminal-HOWTO-17.html" REL=previous>
+ <LINK HREF="Text-Terminal-HOWTO.html#toc18" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Text-Terminal-HOWTO-19.html">Next</A>
+<A HREF="Text-Terminal-HOWTO-17.html">Previous</A>
+<A HREF="Text-Terminal-HOWTO.html#toc18">Contents</A>
+<HR>
+<H2><A NAME="s18">18.</A> <A HREF="Text-Terminal-HOWTO.html#toc18">Special Uses for a Terminal</A></H2>
+
+<H2><A NAME="term_as_console"></A> <A NAME="ss18.1">18.1</A> <A HREF="Text-Terminal-HOWTO.html#toc18.1">Make a Serial Terminal the Console </A>
+</H2>
+
+<P> This will turn a text-terminal (or emulator PC) into a "serial
+console".  Many messages from the system are normally only sent to the
+console (the PC monitor).  Some of the messages sent to the console at
+boot-time may also be seen on any terminal after the boot succeeds by
+typing the command: dmesg.  If the boot failed this will not be of any
+use since the terminal can't work without an operating system.  It's
+possible to modify the Linux kernel so as to make a terminal serve as
+the console and receive all the messages from Linux intended for the
+console.  Unfortunately, the messages from the BIOS (which display on
+the monitor when a PC is first started) will not display on this
+terminal (but still display on the monitor).</P>
+<P>There's a Remote-Serial-Console-HOWTO on this topic.  Some people use
+a serial console when they run a PC without a monitor or keyboard.
+Normally, a PC will not start up without a keyboard and video card but
+some BIOSs permit it.  If you are lucky enough to have such a BIOS
+that supports "console re-direct" you will likely then need to setup
+the BIOS using the CMOS menus when you start your PC.</P>
+<P>The method of creating a "serial console" depends on your kernel
+version.  In any case serial support needs to be compiled into the
+kernel and not supplied as a module.</P>
+
+<H3>For Kernels 2.2 or higher</H3>
+
+<P> The instructions for creating a serial-console are included with
+the kernel documentation in: Documentation/serial-console.txt.
+Kernel 2.4+ has better documentation and mentions the need to run
+getty on the serial port.  Normally, the device /dev/console is linked
+to tty0 (the PC console).  For a serial-console you create a new
+/dev/console by
+<BLOCKQUOTE><CODE>
+<PRE>
+mknod -m 622 console c 5 1
+</PRE>
+</CODE></BLOCKQUOTE>
+
+You must also put statements regarding the serial-console into
+/etc/lilo.conf and then run lilo.  This is because the equivalent of
+"setserial" needs to be run early before the kernel is loaded so that
+the serial-console can display the booting.  See the above mentioned
+kernel documentation and the man page for lilo.conf for more details.</P>
+<P>Here is an example <CODE>/etc/lilo.conf</CODE> file contents (for ttyS0):
+<BLOCKQUOTE><CODE>
+<PRE>
+prompt
+timeout=50
+boot = /dev/sda
+vga = normal # force sane state
+install = /boot/boot.b
+message = /boot/message
+image = /vmlinuz
+root = /dev/sda1
+label = console
+serial = 0,9600n8
+append = "console=ttyS0"
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>The same PC may have more than one serial console but the last console
+mentioned in the "append" statement becomes the main console that you
+interact with ??  See the kernel docs (but it's not too clear).</P>
+
+<H3>Serial-Console For Kernels before 2.2</H3>
+
+<P> The Linux Journal in April 1997 had an article on patching
+the Linux kernel.  You add a couple of #defines at the start of
+src/linux/drivers/char/console.c:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#define CONFIG_SERIAL_ECHO
+#define SERIAL_ECHO_PORT 0x2f8  /* Serial port address  */
+
+The following was not in the Linux Journal article.
+In kernel 2.+ (and earlier ??) you need to also set the baud
+rate (unless 9600 is OK).  Find these 2 lines:
+
+serial_echo_outb(0x00, UART_DLM); /* 9600 baud */
+serial_echo_outb(0x0c, UART_DLL);
+
+Change 0x0c in the line above (depending on the baud rate you want):
+
+115200 baud: 0x01       19200 baud: 0x06        2400 baud: 0x30
+57600 baud: 0x02         9600 baud: 0x0c        1200 baud: 0x60
+38400 baud: 0x03         4800 baud: 0x18
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>If you currently use the console to select which operating system to
+boot (using LILO), but would like to do this from a terminal, then you
+need to add a line to the /etc/lilo.conf file.   See the manual page
+for lilo.conf and search for "serial=".</P>
+
+<H2><A NAME="ss18.2">18.2</A> <A HREF="Text-Terminal-HOWTO.html#toc18.2">Run Linux without a Monitor</A>
+</H2>
+
+<P> One way to do this is to just use a terminal (serial console) for
+the monitor See 
+<A HREF="#term_as_console">Make a Serial Terminal the Console</A>.  You may still need a video card since many BIOSs
+require one to get the PC started.  Your BIOS may also require a
+keyboard to get started or it may have an option where you can set the
+BIOS not to require a keyboard.</P>
+<P>If you boot without a monitor, make sure that the boot loader (such as
+LILO or GRUB) doesn't try to present any image on the screen.  A
+text-terminal can't display it and the booting may hang.</P>
+<P>If you have a keyboardless terminal, it can also be used as a monitor
+by use of the ttysnoop program.  As of yet, it doesn't work like a
+console since it doesn't get all the initial boot-time messages.  See
+<A HREF="#keyboardless_terminal">Use a Keyboardless Terminal as the Monitor</A></P>
+
+<H2><A NAME="keyboardless_terminal"></A> <A NAME="ss18.3">18.3</A> <A HREF="Text-Terminal-HOWTO.html#toc18.3">Use a Keyboardless Terminal as the Monitor </A>
+</H2>
+
+<H3>How it works</H3>
+
+<P> While you might think that a terminal without a keyboard is
+useless it is possible to use it as the monitor and type on the PC's
+own keyboard.  This may be done by using the spy program
+<CODE>ttysnoop</CODE>.  This program permits a person at one terminal to spy
+on (or snoop) what someone else is typing at another terminal (or the
+PC console-monitor).</P>
+<P>Now suppose you are typing away at the monitor tty1.  Imagine that
+someone with a terminal on ttyS2 is spying on you (with ttysnoop) and
+has a screen that looks just like your screen.  Everything you type
+at tty1 also displays on ttyS2.  Now move the spy terminal (on ttyS2)
+so it is side-by-side with your monitor (on tty1).  Everything you
+type on the PC keyboard will now display on the two screens in front
+of you: the monitor and the spy terminal.  Now just look only at the
+spy terminal as you type.  Disconnect both the monitor and the
+terminal keyboard since you're not using either.  Thus you are now
+using a keyboardless terminal as a monitor.  What a simple but clever
+solution!</P>
+<P>One possible problem (which turns out to be no problem at all) is
+that normally, the type of spy terminal should be the same as the type
+of terminal being spied upon.  Since the monitor is normally declared
+as a terminal of type "linux" (which is close to vt100), you might
+think that the real terminal should also be (or at least emulate) a
+vt100.  Not necessarily so!  For example, if you have a wyse60
+terminal you simply falsely declare that you have a wyse terminal on
+tty1 (tell the getty program for tty1 that it's a wyse60).</P>
+<P>Here's why you can get away with this.  Go back the scenario where
+you have both the monitor and the wyse60 terminal in front of you,
+both displaying the same thing (or trying to).  Ttysnoop will be
+sending the wyse60 the same bytes as are going to the monitor.  If
+you've falsely claimed that the monitor is a wyse60, then you'll have
+wyse60  escape sequences going to both the monitor and the wyse60
+terminal (via ttysnoops).  The display on the wyse60 is fine but the
+display on the monitor is corrupted since it's getting wyse60 escape
+sequences.  Since you will not use the monitor (and are about to
+disconnect it) this corruption is never a problem (you simply don't
+see it).</P>
+
+<H3>Example configuration</H3>
+
+<P> This is not the ideal setup since ttysnoop runs so late that the
+login prompt doesn't appear.  This example is for a wyse60 terminal on
+ttyS2 and the missing monitor/PC-keyboard on tty1.  It uses the agetty
+program for getty as supplied by the Debian distribution.   Your getty
+may require a different format.</P>
+<P>In <CODE>/etc/inittab:</CODE>
+<BLOCKQUOTE><CODE>
+<PRE>
+1:2345:respawn:/sbin/getty 38400 tty1 wyse60 -ln /usr/sbin/ttysnoops
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Note that <CODE>ttysnoop/ttysnoops</CODE> is a client-server combo so the
+"s" is not a typo.  If you don't use -n you may not see a login prompt
+on the terminal.  With no -n, agetty issues the prompt before the
+ttysnoop is activated.  With -n, agetty doesn't issue the prompt (but
+login does instead).  If you use -n, agetty will no longer
+automatically detect parity but if you don't use parity all is OK.</P>
+<P>In <CODE>/etc/snooptab:</CODE>
+<BLOCKQUOTE><CODE>
+<PRE>
+# tty       snoopdev      type    execpgm
+tty1        /dev/ttyS3    init    /usr/local/bin/sterm
+</PRE>
+</CODE></BLOCKQUOTE>
+
+In the above, a script named sterm is used to run the stty program.
+You may not need this or may want to use it for another purpose.
+Here's the example sterm script in <CODE>/usr/local/bin/sterm:</CODE></P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/sh
+stty rows 24
+/bin/login $@
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<HR>
+<A HREF="Text-Terminal-HOWTO-19.html">Next</A>
+<A HREF="Text-Terminal-HOWTO-17.html">Previous</A>
+<A HREF="Text-Terminal-HOWTO.html#toc18">Contents</A>
+</BODY>
+</HTML>

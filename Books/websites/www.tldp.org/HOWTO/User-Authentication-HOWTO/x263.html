@@ -1,0 +1,383 @@
+<HTML
+><HEAD
+><TITLE
+>Securing User Authentication</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="  User Authentication HOWTO
+ "
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="  PAM (Pluggable Authentication Modules)
+ "
+HREF="x115.html"><LINK
+REL="NEXT"
+TITLE="Tying it all together"
+HREF="x316.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>User Authentication HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x115.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x316.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN263"
+></A
+>4. Securing User Authentication</H1
+><P
+>   Many linux distributions ship with user authentication that is not adequately secure. This section discusses some of the ways you make user authentication secure on your system. While doing these things will make your system more secure, do not be so naive as to think they make you invulnerable.
+  </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN266"
+></A
+>4.1. A strong <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+></H2
+><P
+>    All of the files in <TT
+CLASS="FILENAME"
+>/etc/pam.d/</TT
+> contain the configuration for a particular service. The notable exception to this rule is the <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+> file. This file contains the configuration for any services which do not have their own configuration file. For example, if the (imaginary) <SPAN
+CLASS="APPLICATION"
+>xyz</SPAN
+> service attempted authentication, PAM would look for a <TT
+CLASS="FILENAME"
+>/etc/pam.d/xyz</TT
+> file. Not finding one, authentication for <SPAN
+CLASS="APPLICATION"
+>xyz</SPAN
+> would be determined by the <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+> file. Since <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+> is the configuration to which PAM services fallback, it is important that it is secure. We will discuss two secure configurations of <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+>, one which is quite nearly paranoid and one which is gentler.
+   </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN278"
+></A
+>4.1.1. A paranoid configuration</H3
+><P
+>     A paranoid configuration of <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+> is as follows:
+    </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>    auth	required	pam_deny.so
+    auth	required	pam_warn.so
+    account	required	pam_deny.so
+    account	required	pam_warn.so
+    password	required	pam_deny.so
+    password	required	pam_warn.so
+    session	required	pam_deny.so
+    session	required	pam_warn.so
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>     With this configuration, whenever an unknown service attempts to access any of the four configuration types, PAM denies authentication (via the pam_deny.so module) and then logs a syslog warning (via the pam_warn.so module). Short of a bug in PAM, this configuration is brutally secure. The only problem with that brutality is it may cause problems if your accidentally delete the configuration of another service. If your <TT
+CLASS="FILENAME"
+>/etc/pam.d/login</TT
+> was mistakenly deleted, no one would be able to login!
+    </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN285"
+></A
+>4.1.2. A kinder configuration</H3
+><P
+>     Here's configuration that isn't quite so mean:
+    </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>    auth	required	pam_unix.so
+    auth	required	pam_warn.so
+    account	required	pam_unix.so
+    account	required	pam_warn.so
+    password	required	pam_deny.so
+    password	required	pam_warn.so
+    session	required	pam_unix.so
+    session	required	pam_warn.so
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>     This configuration will allow an unknown service to authenticate (via the pam_unix.so module), although it will not allow it to change the user's password. Although it allows authentication by unknown services, it logs a syslog warning whenever such a service attempts authentication.
+    </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN290"
+></A
+>4.1.3. Choosing a <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+></H3
+><P
+>     I would strongly reccomend that you implement the first <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+> configuration unless you have a very good reason not to. It always a good idea to be 'secure by default'. If you ever do need to grant a new service authentication privileges, you can simply create a PAM configuration file for that service.
+    </P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN295"
+></A
+>4.2. Disabling logins for user with null passwords</H2
+><P
+>    On most linux systems, there a number of "dummy" user accounts, used to assign privileges to certain system services like ftp, webservers, and mail gateways. Having these accounts allows your system to be more secure, because if these services are compromised, an attacker will only gain the limited privileges available to the dummy account, rather than the full privileges of a service running as root. However, allowing these dummy account login privileges is a security risk, as they usually have blank (null) passwords. The configuration option that enables null passwords is the "nullok" module-argument. You'll want to remove this argument from any modules of 'auth' type for services that allow login. This is usually the login service, but it may also include services like rlogin and ssh. Hence, the following line in <TT
+CLASS="FILENAME"
+>/etc/pam.d/login</TT
+>:
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>   auth		required	pam_unix.so	nullok
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    should be changed to:
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>   auth		required	pam_unix.so
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN302"
+></A
+>4.3. Disable unused services</H2
+><P
+>    Looking at the files in <TT
+CLASS="FILENAME"
+>/etc/pam.d/</TT
+>, you'll probably see configuration files for a number of programs you don't use and maybe even a few you've never heard of. Although allowing authentication to these services probably won't open any huge security holes, you're better off denying them authentication. The best way to disable PAM authentication for these programs is to rename these files. Not finding the file named after the service requesting authentication, PAM will fallback to the (hopefully) very secure <TT
+CLASS="FILENAME"
+>/etc/pam.d/other</TT
+>. If you later find that you need one of these programs, you can simply rename the file to its original name and everything will work as it was intended.
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN307"
+></A
+>4.4. Password-cracking tools</H2
+><P
+>    While password-cracking tools can be used by attackers to compromise a system, they can also be used by system administrators as proactive tool to ensure the strength of passwords on their system. The two most commonly used password-cracking tools are "crack" and "John the Ripper". Crack is probably included in your favorite distribution. John the Ripper can be obtained from <A
+HREF="http://www.false.com/security/john/index.html"
+TARGET="_top"
+>http://www.false.com/security/john/index.html</A
+>. Run the tools against your password database and you'll probably be surprised with what they come up with.
+   </P
+><P
+>    Additionally, there is a PAM module which utilizes the crack library to check the strength of a users password whenever it changed. When this module is installed, the user can only change their password to one which meets the minimum password strength.
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN312"
+></A
+>4.5. Shadow and MD5 passwords</H2
+><P
+>    As was discussed in the first section of this document, Shadow and MD5 passwords can make your system more secure. During the installation procedure, most modern distributions will ask whether you want to install MD5 and/or Shadow passwords. Unless you have a good reason not to, you should enable these. The process of converting from non-shadowed/non-MD5 passwords is a complicated process, and is beyond the scope of this document. The <A
+HREF="http://www.linuxdoc.org/HOWTO/Shadow-Password-HOWTO.html"
+TARGET="_top"
+>Shadow Password HOWTO</A
+> is outdated, but it might be of some help.
+   </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x115.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x316.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>PAM (Pluggable Authentication Modules)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Tying it all together</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

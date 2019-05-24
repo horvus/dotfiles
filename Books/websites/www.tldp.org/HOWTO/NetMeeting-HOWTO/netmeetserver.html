@@ -1,0 +1,1020 @@
+<HTML
+><HEAD
+><TITLE
+>NetMeeting directory kit</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux NETMEETING HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="OpenH323"
+HREF="openh323.html"><LINK
+REL="NEXT"
+TITLE="Using the Software"
+HREF="using.html"></HEAD
+><BODY
+CLASS="SECTION"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux NETMEETING HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="openh323.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="using.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECTION"
+><H1
+CLASS="SECTION"
+><A
+NAME="NETMEETSERVER"
+>3. NetMeeting directory kit</A
+></H1
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="WHATISNETMEET"
+>3.1. What is it?</A
+></H2
+><P
+>	  Each NetMeeting client can register with an LDAP server and
+	  has a directory window that lists other
+	  NetMeeting clients registered with the same server.
+          The NetMeeting directory kit is an extension to the OpenLDAP server
+          that provides directory service to NetMeeting clients.
+        </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="WHYNEEDNETMEET"
+>3.2. Why is it needed?</A
+></H2
+><P
+>        While NetMeeting can connect directly to another H.323 device by
+        specifying an IP address or DNS name, normally you'll want to use
+        an LDAP directory server.  Using an LDAP server lets users see
+        a directory listing of available destinations, and is required
+        if you need to resolve aliases, for example if you want to serve
+        multiple H.323 destinations from a single IP address.  A directory
+        server isn't required to connect directly from Linux
+	to a NetMeeting client; use OpenH323 for this.
+      </P
+><P
+>        The NetMeeting client violates the LDAP protocol in several ways,
+        so you'll have problems if you try using a standard LDAP server.
+	The NetMeeting directory kit corrects for these problems and allows
+	an OpenLDAP server to be used for NetMeeting directory service.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="HOWITWORKS"
+>3.3. How it works</A
+></H2
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>                 Block diagram of NetMeeting directory kit
+
+___________________         _______    __________________        ______________
+|    LDAP server  | request |      |   |   LDAP server  | request|            |
+|                 | &#60;-------| Perl |&#60;--|                | &#60;------| NetMeeting |
+| on private port |         |script|   | on public port |        |  client    |
+|  (i.e, 2345)    |-------&#62; |      |--&#62;|     389        |-------&#62;|            |
+|                 | reply   --------   |                |  reply --------------
+|                 |                    |                |      
+-------------------                    ------------------</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        The directory server consists of a 'master' LDAP server to
+	receive requests, a Perl script to correctly interpret
+        the Microsoft NetMeeting requests and, after interrogation
+        of a 'hidden' LDAP server, formats the results in a way that the
+        NetMeeting client can understand.
+	OpenLDAP's 'shell backend' is used to call the Perl script.
+        A custom schema is also required.
+        The script presently handles all of the above problems, with the
+        exception of timing out entries, which it doesn't do.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="WHERETOGETSOFTWARE"
+>3.4. Where to get the software</A
+></H2
+><P
+>        First of all you need to get the OpenLDAP software.
+      </P
+><DIV
+CLASS="NOTE"
+><P
+></P
+><TABLE
+CLASS="NOTE"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>          Pre-built OpenLDAP software (i.e, RPMs) won't work unless
+          configured with support for the shell backend.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>        You can download OpenLDAP from the main site located at
+        <A
+HREF="ftp://ftp.OpenLDAP.org/pub/OpenLDAP/openldap-release/"
+TARGET="_top"
+>ftp://ftp.OpenLDAP.org/pub/OpenLDAP/openldap-release/</A
+>
+        or any mirror.
+	I've successfully used OpenLDAP 2.0.7.
+      </P
+><P
+>        The NetMeeting directory kit is available from
+        <A
+HREF="http://www.freesoft.org/software/NetMeeting/download"
+TARGET="_top"
+>http://www.freesoft.org/software/NetMeeting/download</A
+>.
+      </P
+><P
+>        You need Perl 5, available from
+	<A
+HREF="http://www.perl.org/"
+TARGET="_top"
+>http://www.perl.org</A
+>,
+	but already included in all common Linux distributions.
+	You will also need the Net::LDAP module from the Perl CPAN archive,
+	which can be downloaded and installed directly from Perl:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>[root@y2k baccala]# <TT
+CLASS="USERINPUT"
+><B
+>perl -MCPAN -e shell</B
+></TT
+>
+
+cpan shell -- CPAN exploration and modules installation (v1.58)
+ReadLine support enabled
+
+cpan&#62; <TT
+CLASS="USERINPUT"
+><B
+>install Net::LDAP</B
+></TT
+>
+
+... much output omitted ...
+
+  /usr/bin/make install -- OK
+
+cpan&#62;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        If you've never used CPAN before, you will be prompted first with
+        a series of configuration questions.  Once CPAN is configured,
+        the Net::LDAP module will be downloaded, compiled, and installed
+        automatically.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="INSTALLSOFTWARE"
+>3.5. Installation</A
+></H2
+><P
+>        Building OpenLDAP will require approximately 60 MB of free disk
+        space.  Untar OpenLDAP and configure it.
+      </P
+><DIV
+CLASS="NOTE"
+><P
+></P
+><TABLE
+CLASS="NOTE"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>          Be sure to specify the shell backend function "--enable-shell"
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>        I also recommend specifying "--disable-debug" to prevent OpenLDAP
+	from exiting if an assertion fails.
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ <TT
+CLASS="USERINPUT"
+><B
+>./configure --enable-shell --disable-debug</B
+></TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        Now build and install it with:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ <TT
+CLASS="USERINPUT"
+><B
+>make</B
+></TT
+>
+
+... much output omitted ...
+
+bash# <TT
+CLASS="USERINPUT"
+><B
+>make install</B
+></TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        It will normally install under <TT
+CLASS="FILENAME"
+>/usr/local</TT
+>:
+      </P
+><DIV
+CLASS="TABLE"
+><A
+NAME="AEN174"
+></A
+><P
+><B
+>Table 2.           Directories used by OpenLDAP
+        </B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        <TT
+CLASS="FILENAME"
+>/usr/local/lib</TT
+>
+	      </TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Shared and static libraries
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  <TT
+CLASS="FILENAME"
+>/usr/local/bin</TT
+>
+              </TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  Client binaries for adding, deleting,
+		  and searching LDAP servers
+              </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        <TT
+CLASS="FILENAME"
+>/usr/local/sbin</TT
+>
+	      </TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Utility programs for manipulating the raw database files.
+		Not needed for normal operation.
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  <TT
+CLASS="FILENAME"
+>/usr/local/libexec</TT
+>
+              </TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  Various server programs,
+		  including the <B
+CLASS="COMMAND"
+>slapd</B
+> binary
+              </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  <TT
+CLASS="FILENAME"
+>/usr/local/etc/openldap</TT
+>
+              </TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  Contains the default configuration files
+              </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  <TT
+CLASS="FILENAME"
+>/usr/local/etc/openldap/schema</TT
+>
+              </TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  The different schemas used by the LDAP servers.
+              </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  <TT
+CLASS="FILENAME"
+>/usr/local/var/...</TT
+>
+              </TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>                  The location of the LDAP databases (in subdirectories)
+              </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        <TT
+CLASS="FILENAME"
+>/usr/local/man/...</TT
+>
+	      </TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Documentation
+	      </TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>        Once OpenLDAP has been installed, next install the NetMeeting
+	directory kit.
+        Untar <TT
+CLASS="FILENAME"
+>ndk.tgz</TT
+>.
+	It contains these files:
+      </P
+><DIV
+CLASS="TABLE"
+><A
+NAME="AEN213"
+></A
+><P
+><B
+>Table 3. 	  NetMeeting directory kit files
+	</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>netmeeting.perl</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Perl script used to correct NetMeeting protocol violations
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>netmeeting.schema</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Custom NetMeeting schema used by the LDAP server
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>core.schema.patch</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Patch to LDAP server's core schema
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>slapd.conf</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Sample config file for the master LDAP server
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>slapd2.conf</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Sample config file for the slave LDAP server
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>initialize</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Shell script used once to initialize the slave LDAP database
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>slapd.rc</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        <TT
+CLASS="FILENAME"
+>/etc/rc.d/</TT
+> script
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>nmaddentry</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Perl script to add entries to the NetMeeting directory
+	      </TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>nmdirectory</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>	        Perl/Tk script to query the NetMeeting directory
+	      </TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>        Copy <TT
+CLASS="FILENAME"
+>netmeeting.perl</TT
+> to the
+	<TT
+CLASS="FILENAME"
+>/usr/local/libexec</TT
+> directory,
+        <TT
+CLASS="FILENAME"
+>netmeeting.schema</TT
+> to the
+	<TT
+CLASS="FILENAME"
+>/usr/local/etc/openldap/schema</TT
+>
+	directory,
+        and copy both <TT
+CLASS="FILENAME"
+>slapd.conf</TT
+>
+	and <TT
+CLASS="FILENAME"
+>slapd2.conf</TT
+> to the
+        <TT
+CLASS="FILENAME"
+>/usr/local/etc/openldap</TT
+> directory.
+      </P
+><P
+>        Be sure to use <TT
+CLASS="FILENAME"
+>core.schema.patch</TT
+> to patch
+	openldap's core schema in the
+	<TT
+CLASS="FILENAME"
+>/usr/local/etc/openldap/schema</TT
+>
+	directory:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ <TT
+CLASS="USERINPUT"
+><B
+>cd /usr/local/etc/openldap/schema</B
+></TT
+>
+bash$ <TT
+CLASS="USERINPUT"
+><B
+>ls</B
+></TT
+>
+corba.schema   inetorgperson.schema  misc.schema        nis.schema
+core.schema    java.schema           nadf.schema        openldap.schema
+cosine.schema  krb5-kdc.schema       netmeeting.schema
+bash$ <TT
+CLASS="USERINPUT"
+><B
+>cp core.schema core.schema.bak</B
+></TT
+>
+bash$ <TT
+CLASS="USERINPUT"
+><B
+>patch core.schema &#60; ~/core.schema.patch</B
+></TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        Create the directory
+	<TT
+CLASS="FILENAME"
+>/usr/local/var/openldap-netmeeting</TT
+>
+	to store the LDAP database, and make it world writable.
+      </P
+><P
+>        Especially if you're using directories from the samples, edit
+	<TT
+CLASS="FILENAME"
+>slapd.conf</TT
+> and <TT
+CLASS="FILENAME"
+>slapd2.conf</TT
+>
+	and verify their configuration settings.
+      </P
+><P
+>        You will need to run two copies of <B
+CLASS="COMMAND"
+>slapd</B
+>.
+	One uses <TT
+CLASS="FILENAME"
+>slapd.conf</TT
+>
+        and must be started as root, since it binds to port 389.
+	The <TT
+CLASS="OPTION"
+>-u</TT
+> option can be specified to cause
+	<B
+CLASS="COMMAND"
+>slapd</B
+> to <TT
+CLASS="FUNCTION"
+>chown</TT
+>
+	to an unprivileged user after binding the port (a wise precaution).
+	The other <B
+CLASS="COMMAND"
+>slapd</B
+>
+	uses <TT
+CLASS="FILENAME"
+>slapd2.conf</TT
+>, binds to an unprivileged
+	port, and only needs
+	sufficient privilege to write the database directory.
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <TT
+CLASS="USERINPUT"
+><B
+>/usr/local/libexec/slapd -f /usr/local/etc/openldap/slapd.conf -u nobody</B
+></TT
+>
+bash$ <TT
+CLASS="USERINPUT"
+><B
+>/usr/local/libexec/slapd -h ldap://localhost:2345/ -f /usr/local/etc/openldap/slapd2.conf</B
+></TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        You now have to initialize the slave database with a single entry.
+        This is only done once, by running the <TT
+CLASS="FILENAME"
+>initialize</TT
+>
+	script
+        included in the kit.  The "rootdn" and "rootpw" entries are
+        in the slave config file to allow access for the initialization
+        script, and must match the <TT
+CLASS="OPTION"
+>-D</TT
+> and <TT
+CLASS="OPTION"
+>-w</TT
+>
+	options in the script.
+        Once you've initialized the database with a single parent
+        entry, you can comment out the "rootdn" and "rootpw" lines
+	from <TT
+CLASS="FILENAME"
+>slapd2.conf</TT
+>, though this is not critical.
+      </P
+><P
+>        The server should now be up and running.
+	For systems with <TT
+CLASS="FILENAME"
+>/etc/rc.d/</TT
+>
+	style initialization scripts (like RedHat),
+	the <TT
+CLASS="FILENAME"
+>slapd.rc</TT
+> is provided to automate the
+	starting and stopping of the <B
+CLASS="COMMAND"
+>slapd</B
+>s.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="SECURITY"
+>3.6. Server Security</A
+></H2
+><P
+>        As shown above, I run both <B
+CLASS="COMMAND"
+>slapd</B
+>s
+	as an unprivileged user, minimizing the possibility of compromised
+	security due to a bug in either the server software or the Perl
+	script.  Of course, this requires the database directory
+	to be world writable so that the unprivileged slave server can
+	update it.  This isn't as glaring a hole as it might first appear,
+	since the NetMeeting clients themselves use no authentication.
+	Thus, even if the database directory were better protected,
+	anyone on a local or remote host could use LDAP client
+	programs to delete or modify any of the database entries.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="WINDOWS2000LDAP"
+>3.7. LDAP issues with Windows 2000</A
+></H2
+><P
+>        Recent NetMeeting releases initially attempt to connect
+	to the LDAP directory server on port 1002.  As described in a
+	<A
+HREF="http://www.microsoft.com/TechNet/chats/trans/iis1208.asp"
+TARGET="_top"
+>TechNet chat</A
+>,
+	<A
+NAME="AEN303"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>Prior to Windows
+2000, an ILS server would listen on port 389 for NetMeeting clients. When an
+ILS server is set up on a Windows 2000 machine, it will default to port 1002.
+	</P
+></BLOCKQUOTE
+>
+	If a connection to port 1002 is rejected, NetMeeting will fall back
+	on the standard LDAP port 389.  However, at least one user has reported
+	trouble with a firewall that blocks port 1002, discards the
+	connection attempts, and thus no replies are received to
+	reject the connection.  In this case, NetMeeting takes about a minute
+	to timeout and fall back to port 389.  Opening the firewall to
+	port 1002 allowed the rejects through and triggered a rapid fallback.
+      </P
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="INTEROPERATION"
+>3.8. Interoperation with other LDAP service</A
+></H2
+><P
+>        The instructions above assume that your LDAP server is only
+	being used for NetMeeting directory service.  Yet what if you
+	want to use a single server for both NetMeeting directory service
+	and other LDAP service?  Only one server can be bound to port 389,
+	but OpenLDAP allows multiple database sections to be specified
+	in its configuration file, each serving different parts of the
+	LDAP namespace.  NetMeeting uses only the "objectClass=RTPerson"
+	subtree, so as long as you avoid this subtree, you can configure
+	additional database sections to serve other subtrees with other
+	databases.  The biggest problem you are likely to encounter is
+	the custom NetMeeting schema, which conflicts slightly with the
+	standard schema.  Since the NetMeeting schema is more liberal
+	than the standard schema, I'd suggest commenting out the conflicting
+	parts of the standard schema.  NetMeeting clients won't work with
+	the standard schema.  See the LDAP RFCs and the OpenLDAP documentation
+	for more information about configuring LDAP servers.
+      </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="openh323.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="using.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>OpenH323</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Using the Software</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

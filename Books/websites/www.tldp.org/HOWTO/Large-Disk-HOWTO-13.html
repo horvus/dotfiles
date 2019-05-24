@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Large Disk HOWTO: Extended and logical partitions</TITLE>
+ <LINK HREF="Large-Disk-HOWTO-14.html" REL=next>
+ <LINK HREF="Large-Disk-HOWTO-12.html" REL=previous>
+ <LINK HREF="Large-Disk-HOWTO.html#toc13" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Large-Disk-HOWTO-14.html">Next</A>
+<A HREF="Large-Disk-HOWTO-12.html">Previous</A>
+<A HREF="Large-Disk-HOWTO.html#toc13">Contents</A>
+<HR>
+<H2><A NAME="s13">13. Extended and logical partitions</A></H2>
+
+<P>
+<A HREF="Large-Disk-HOWTO-6.html#partitiontable">Above,</A> we saw the structure of
+the MBR (sector 0): boot loader code followed by 4 partition
+table entries of 16 bytes each, followed by an AA55 signature.
+Partition table entries of type 5 or F or 85 (hex) have a special
+significance: they describe <I>extended</I> partitions: blobs of
+space that are further partitioned into <I>logical</I> partitions.
+(So, an extended partition is only a box, it cannot be used itself,
+one uses the logical partitions inside.)
+Only the location of the first sector of an extended partition is
+important. This first sector contains a partition table with four
+entries: one a logical partition, one an extended partition, and
+two unused. In this way one gets a chain of partition table sectors,
+scattered over the disk, where the first one describes three primary
+partitions and the extended partition, and each following partition
+table sector describes one logical partition and the location of
+the next partition table sector.
+<P>It is important to understand this: When people do something stupid
+while partitioning a disk, they want to know: Is my data still there?
+And the answer is usually: Yes. But if logical partitions were created
+then the partition table sectors describing them are written at the
+beginning of these logical partitions, and data that was there before is lost.
+<P>The program sfdisk will show the full chain. E.g.,
+<BLOCKQUOTE><CODE>
+<PRE>
+# sfdisk -l -x /dev/hda
+
+Disk /dev/hda: 16 heads, 63 sectors, 33483 cylinders
+Units = cylinders of 516096 bytes, blocks of 1024 bytes, counting from 0
+
+   Device Boot Start     End   #cyls   #blocks   Id  System
+/dev/hda1          0+    101     102-    51376+  83  Linux
+/dev/hda2        102    2133    2032   1024128   83  Linux
+/dev/hda3       2134   33482   31349  15799896    5  Extended
+/dev/hda4          0       -       0         0    0  Empty
+
+/dev/hda5       2134+   6197    4064-  2048224+  83  Linux
+    -           6198   10261    4064   2048256    5  Extended
+    -           2134    2133       0         0    0  Empty
+    -           2134    2133       0         0    0  Empty
+
+/dev/hda6       6198+  10261    4064-  2048224+  83  Linux
+    -          10262   16357    6096   3072384    5  Extended
+    -           6198    6197       0         0    0  Empty
+    -           6198    6197       0         0    0  Empty
+...
+/dev/hda10     30581+  33482    2902-  1462576+  83  Linux
+    -          30581   30580       0         0    0  Empty
+    -          30581   30580       0         0    0  Empty
+    -          30581   30580       0         0    0  Empty
+
+#
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>It is possible to construct bad partition tables.
+Many kernels get into a loop if some extended partition points back
+to itself or to an earlier partition in the chain.
+It is possible to have two extended partitions in one of these
+partition table sectors so that the partition table chain forks.
+(This can happen for example with an fdisk that does not recognize
+each of 5, F, 85 as an extended partition, and creates a 5 next to an F.)
+No standard fdisk type program can handle such situations, and some
+handwork is required to repair them.
+The Linux kernel will accept a fork at the outermost level.
+That is, you can have two chains of logical partitions.
+Sometimes this is useful - for example, one can use type 5 and be
+seen by DOS, and the other type 85, invisible for DOS, so that
+DOS FDISK will not crash because of logical partitions past cylinder 1024.
+Usually one needs <CODE>sfdisk</CODE> to create such a setup.
+<P>
+<P>
+<HR>
+<A HREF="Large-Disk-HOWTO-14.html">Next</A>
+<A HREF="Large-Disk-HOWTO-12.html">Previous</A>
+<A HREF="Large-Disk-HOWTO.html#toc13">Contents</A>
+</BODY>
+</HTML>

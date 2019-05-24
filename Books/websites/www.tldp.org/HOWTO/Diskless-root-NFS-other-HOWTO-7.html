@@ -1,0 +1,306 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Root over NFS - Another Approach: Appendix</TITLE>
+ <LINK HREF="Diskless-root-NFS-other-HOWTO-6.html" REL=previous>
+ <LINK HREF="Diskless-root-NFS-other-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+Next
+<A HREF="Diskless-root-NFS-other-HOWTO-6.html">Previous</A>
+<A HREF="Diskless-root-NFS-other-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Appendix</A></H2>
+
+<P>
+<H2><A NAME="ss7.1">7.1 Appendix A - A script for creating host directories</A>
+</H2>
+
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/usr/bin/bash
+#This is a script for creating host directories using the
+#directory scheme illustrated before in this document.
+#It is written on Solaris and I did not test it on Linux.
+#Execute it at the ws directory.
+#Needs as input a file containing space separeted IP
+#addresses named addr, for example bash# ./script addr
+#This file must be like this: 195.251.160.10 195.251.160.11 195.251.160.13 ....
+
+echo "Creating the tar archive"; echo
+
+cd base
+tar cpf linux.tar ./bin ./dev ./etc ./lib ./sbin ./var
+mv linux.tar /usr/local/linux/ws/linux.tar
+cd ..
+
+echo "Creating host directories"; echo
+
+for addr in $(cat addr)
+do
+        echo "Working on host $addr"
+        mkdir $addr
+        cd $addr
+        echo "   ---Creating nessesary directores"
+        mkdir boot
+        mkdir cdrom
+        mkdir floppy
+        mkdir home
+        mkdir mnt
+        mkdir opt
+        mkdir proc
+        mkdir root
+        mkdir tmp
+        mkdir usr
+        echo "   ---Extracting tar archive"
+
+        ln -s ../linux.tar ./linux.tar
+        tar xf linux.tar
+        rm linux.tar
+
+        echo "   ---Removing unnessesary files"
+        rm -R ./lib/modules/*
+        rm -R ./var/yp
+        rm -R ./var/X11R6/sax
+        rm -R ./var/tmp
+        rm -R ./var/state/dhcp
+        rm -R ./var/squid
+        rm -R ./var/run/*
+        rm -R ./var/opt
+        rm -R ./var/named
+        rm -R ./var/mysql
+        rm -R ./var/lib/amanda
+        rm -R ./var/lib/codadmin
+        rm -R ./var/lib/firewall
+        rm -R ./var/lib/apsfilter
+        rm -R ./var/lib/gdm
+        rm -R ./var/lib/misc
+        rm -R ./var/lib/nobody
+        rm -R ./var/lib/pcmcia
+        rm -R ./var/lib/pgsql
+        rm -R ./var/lib/rpm/*
+        rm -R ./var/lib/setup
+        rm -R ./var/lib/wvdial
+        rm -R ./var/lib/wwwrun
+        rm -R ./var/lib/xdm
+        rm -R ./var/lib/xkb
+        rm -R ./var/lib/YaST/*
+        rm -R ./var/lib/zope
+        rm -R ./var/log/*
+        rm -R ./var/cache/*
+        rm -R ./var/games
+        rm -R ./var/adm/*
+
+        echo "   ---Deciding the hostname"
+        nslookup $addr |sed -n "s/^Name: *//p" >etc/HOSTNAME
+        cd ..
+        i=$(($i+1))
+        echo
+
+done
+echo "Removing the tar archive"
+rm linux.tar
+echo
+exit  0
+</PRE>
+</CODE></BLOCKQUOTE>
+<H2><A NAME="ss7.2">7.2 Appendix B - A script to create the dhcpd.conf file using <CODE>arpwatch</CODE></A>
+</H2>
+
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/bash
+#A script that starts arpwatch, pings a range of addresses and creates an
+#/etc/dhcpd.conf file from the output of arpwatch.
+#The arp.dat2dhcpd.conf programm is described later.
+#Do not forget to edit the i variable and the while statement to specify
+#the range of the addresses you want to ping
+
+i=128;
+
+echo "Starting arpwatch";echo
+arpwatch
+
+while [ "$i" -lt 253 ]
+do
+        addr=195.251.160.$i
+        echo "Now pinging $addr"
+        ping -c 5 $addr >/dev/null
+        i=$(($i+1))
+done
+echo
+exit
+killproc arpwatch
+echo "Creating /etc/dhcpd.conf"
+cat /var/lib/arpwatch/arp.dat |arp.dat2dhcpd.conf >/etc/dhcpd.conf
+</PRE>
+</CODE></BLOCKQUOTE>
+<H3>The arp.dat2dhcpd.conf script</H3>
+
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/usr/bin/perl -n
+($ether, $ip,$stup1,$name) = split;
+if ($name eq "") {
+print "
+host host$i {
+        hardware ethernet $ether;
+        fixed-address $ip;
+}
+";
+$i++;}
+else{
+        print "
+host $name {
+        hardware ethernet $ether;
+        fixed-address $ip;
+}
+"}
+</PRE>
+</CODE></BLOCKQUOTE>
+<H2><A NAME="ss7.3">7.3 Appendix C - A sample XF86Config file</A>
+</H2>
+
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#This file should let X 4.0.1 work in 1024x768@16M colors
+#with the fbdev driver using the linux's framebuffer
+Section "Files"
+  RgbPath       "/usr/X11R6/lib/X11/rgb"
+  FontPath      "/usr/X11R6/lib/X11/fonts/75dpi:unscaled"
+  FontPath      "/usr/X11R6/lib/X11/fonts/local"
+  FontPath      "/usr/X11R6/lib/X11/fonts/misc:unscaled"
+  FontPath      "/usr/X11R6/lib/X11/fonts/100dpi:unscaled"
+  FontPath      "/usr/X11R6/lib/X11/fonts/Type1"
+  FontPath      "/usr/X11R6/lib/X11/fonts/URW"
+  FontPath      "/usr/X11R6/lib/X11/fonts/Speedo"
+  FontPath      "/usr/X11R6/lib/X11/fonts/misc"
+  FontPath      "/usr/X11R6/lib/X11/fonts/75dpi"
+  FontPath      "/usr/X11R6/lib/X11/fonts/100dpi"
+  FontPath      "/usr/X11R6/lib/X11/fonts/PEX"
+  FontPath      "/usr/X11R6/lib/X11/fonts/cyrillic"
+  FontPath      "/usr/X11R6/lib/X11/fonts/latin2/misc"
+  FontPath      "/usr/X11R6/lib/X11/fonts/latin2/75dpi"
+  FontPath      "/usr/X11R6/lib/X11/fonts/latin2/100dpi"
+  FontPath      "/usr/X11R6/lib/X11/fonts/latin7/75dpi"
+  FontPath      "/usr/X11R6/lib/X11/fonts/kwintv"
+  FontPath      "/usr/X11R6/lib/X11/fonts/truetype"
+  FontPath      "/usr/X11R6/lib/X11/fonts/uni"
+  FontPath      "/usr/X11R6/lib/X11/fonts/ucs/misc"
+  FontPath      "/usr/X11R6/lib/X11/fonts/ucs/75dpi"
+  FontPath      "/usr/X11R6/lib/X11/fonts/ucs/100dpi"
+  FontPath      "/usr/X11R6/lib/X11/fonts/xtest"
+EndSection
+
+Section "ServerFlags"
+  AllowMouseOpenFail
+EndSection
+
+Section "Module"
+EndSection
+
+# This section is no longer supported
+# See a template below
+# Section "XInput"
+# EndSection
+
+Section "Keyboard"
+  Protocol      "Standard"
+  XkbRules      "xfree86"
+  XkbModel      "microsoft"
+  XkbLayout     "us"
+EndSection
+
+Section "Pointer"
+  Protocol              "PS/2"
+  Device                "/dev/psaux"
+  SampleRate            60
+  BaudRate              1200
+  Buttons               5
+EndSection
+
+Section "Monitor"
+  Identifier    "Primary-Monitor"
+  VendorName    "Unknown"
+  ModelName     "Unknown"
+  HorizSync     29-64
+  VertRefresh   47-90
+  Modeline "1400x1050" 59.93 1400 1416 1704 1816 1050 1050 1055 1097
+  Modeline "1280x960" 59.90 1280 1296 1552 1664 960 960 965 1003
+  Modeline "1600x1000" 59.90 1600 1616 1968 2080 1000 1000 1004 1044
+  Modeline "1024x864" 59.89 1024 1040 1216 1328 864 864 870 902
+  Modeline "800x600" 58.55 800 816 928 1040 600 600 608 626
+  Modeline "1152x864" 59.99 1152 1168 1384 1496 864 864 870 902
+  Modeline "1280x1024" 59.90 1280 1296 1552 1664 1024 1024 1029 1070
+  Modeline "640x480" 37.44 640 656 720 832 480 480 486 501
+  Modeline "1024x768" 59.89 1024 1040 1216 1328 768 768 774 802
+  Modeline "1600x1200" 59.90 1600 1616 1968 2080 1200 1200 1204 1253
+EndSection
+
+Section "Device"
+  Identifier    "Primary-Card"
+  VendorName    "---AUTO DETECTED---"
+  BoardName     "---AUTO DETECTED---"
+EndSection
+
+Section "Screen"
+  Driver        "fbdev"
+  Device        "Primary-Card"
+  Monitor       "Primary-Monitor"
+  DefaultColorDepth     16
+  SubSection "Display"
+    Depth       32
+    Modes       "default"
+  EndSubSection
+  SubSection "Display"
+    Depth       24
+    Modes       "default"
+  EndSubSection
+  SubSection "Display"
+    Depth       16
+    Modes       "default"
+    Virtual     1024 768
+  EndSubSection
+  SubSection "Display"
+    Depth       8
+    Modes       "default"
+  EndSubSection
+EndSection
+
+Section "Screen"
+  Driver        "fbdev"
+  Device        "Primary-Card"
+  Monitor       "Primary-Monitor"
+  DefaultColorDepth     16
+  SubSection "Display"
+    Depth       32
+    Modes       "default"
+  EndSubSection
+  SubSection "Display"
+    Depth       24
+    Modes       "default"
+  EndSubSection
+  SubSection "Display"
+    Depth       16
+    Modes       "default"
+    Virtual     1024 768
+  EndSubSection
+  SubSection "Display"
+    Depth       8
+    Modes       "default"
+  EndSubSection
+EndSection
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<HR>
+Next
+<A HREF="Diskless-root-NFS-other-HOWTO-6.html">Previous</A>
+<A HREF="Diskless-root-NFS-other-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

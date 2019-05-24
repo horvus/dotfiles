@@ -1,0 +1,344 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>proc interface</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux 2.4 SCSI subsystem HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Mid Level, Unifying layer"
+HREF="mlevel.html"><LINK
+REL="PREVIOUS"
+TITLE="module parameters"
+HREF="mlmparams.html"><LINK
+REL="NEXT"
+TITLE="Upper level drivers"
+HREF="ulevel.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux 2.4 SCSI subsystem HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="mlmparams.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. Mid Level, Unifying layer</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="ulevel.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="mlproc"
+></A
+>8.3. proc interface</H1
+><P
+>&#13;To display the SCSI devices currently attached (and recognized) by the SCSI
+subsystem use <B
+CLASS="command"
+>cat /proc/scsi/scsi</B
+>.
+</P
+><P
+>&#13;The output looks like this:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;    Attached devices:
+    Host: scsi0 Channel: 00 Id: 02 Lun: 00
+      Vendor: PIONEER  Model: DVD-ROM DVD-303  Rev: 1.10
+      Type:   CD-ROM              ANSI SCSI revision: 02
+    Host: scsi1 Channel: 00 Id: 00 Lun: 00
+      Vendor: IBM      Model: DNES-309170W     Rev: SA30
+      Type:   Direct-Access       ANSI SCSI revision: 03
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;After the "Attached devices:" line there are 3 lines for each recognized
+device. The first of these lines is SCSI address information discussed in
+<A
+HREF="scsiaddr.html"
+>Section 3.1</A
+>. The following 2 lines of data are
+obtained from a INQUIRY
+command that was performed on the device when it was attached. See
+<A
+HREF="sg.html"
+>Section 9.4</A
+> for the relationship between the ordering of these
+devices compared with the sg driver's ordering (which most of the time is
+the same).
+</P
+><P
+>&#13;Existing devices can be removed using <B
+CLASS="command"
+>&#13;  echo "scsi remove-single-device &#60;h&#62; &#60;b&#62; &#60;t&#62; &#60;l&#62;"
+                      &#62; /proc/scsi/scsi</B
+>
+where the variables are host, bus (channel), target (scsi id) and lun. The
+success (or otherwise) of this command can be determined by sending a
+subsequent <B
+CLASS="command"
+>cat /proc/scsi/scsi</B
+> command. The removal
+will fail if the
+device is busy (e.g. if a file system on the device is mounted).
+</P
+><P
+>&#13;New devices can be added using <B
+CLASS="command"
+>&#13;    echo "scsi add-single-device &#60;h&#62; &#60;b&#62; &#60;t&#62; &#60;l&#62;"
+                      &#62; /proc/scsi/scsi</B
+>
+where the variables are host, bus (channel), target (scsi id) and lun. The
+success (or otherwise) of this command can be determined by sending a
+subsequent <B
+CLASS="command"
+>cat /proc/scsi/scsi</B
+> command.
+<A
+NAME="AEN407"
+HREF="#FTN.AEN407"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>
+</P
+><P
+>&#13;The SCSI subsystem does not support hot-plugging of SCSI devices (there may
+also be electrical issues on the associated SCSI parallel bus). It is 
+recommended that those who use add+remove-single-device make sure that
+other devices on that SCSI bus are inactive if re-plugging is going to
+take place.
+</P
+><P
+>&#13;To output a list of internal SCSI command blocks use <B
+CLASS="command"
+>&#13;    echo "scsi dump &#60;n&#62;" &#62; /proc/scsi/scsi</B
+>
+where the numeric value of &#60;n&#62; doesn't matter. This is probably only of
+interest to people chasing down bugs within the SCSI subsystem.
+</P
+><P
+>&#13;To start (or stop) logging information being sent to the console/log use
+<B
+CLASS="command"
+>&#13;    echo "scsi log &#60;token&#62; &#60;n&#62;" &#62; /proc/scsi/scsi
+</B
+>
+where &#60;token&#62; is one of: {all, none, error, timeout, scan, mlqueue,
+mlcomplete, llqueue, llcomplete, hlqueue, hlcomplete, ioctl}
+and &#60;n&#62; is a number between 0 and 7. The tokens "all" and "none" don't
+take an &#60;n&#62; argument. Prefix meanings:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;    hl    upper level drivers [exception: sg uses "timeout"]
+    ml    mid level
+    ll    lower level drivers
+           [adapter drivers often have there own flags]
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+The value "0" turns off logging while "7" maximizes the volume of output.
+Logging information will only be output if CONFIG_SCSI_LOGGING was selected
+in the kernel build.
+</P
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;Warning: "scsi log all" (and several other variants) can cause a logging
+infinite loop if the log file (typically <TT
+CLASS="filename"
+>/var/log/messages
+</TT
+>) lies on a SCSI disk. Either turn off the kernel logging
+daemon or direct its output to a non SCSI device.
+</P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN407"
+HREF="mlproc.html#AEN407"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;The parsing of "add-single-device" and "remove-single-device" is rather
+inflexible. Hence it is best to stay close to the demonstrated syntax
+with no extra spaces (and no tabs).
+</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="mlmparams.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="ulevel.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>module parameters</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="mlevel.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Upper level drivers</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

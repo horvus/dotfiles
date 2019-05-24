@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Serial HOWTO: Speed (Flow Rate) </TITLE>
+ <LINK HREF="Serial-HOWTO-13.html" REL=next>
+ <LINK HREF="Serial-HOWTO-11.html" REL=previous>
+ <LINK HREF="Serial-HOWTO.html#toc12" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Serial-HOWTO-13.html">Next</A>
+<A HREF="Serial-HOWTO-11.html">Previous</A>
+<A HREF="Serial-HOWTO.html#toc12">Contents</A>
+<HR>
+<H2><A NAME="speed_"></A> <A NAME="s12">12.</A> <A HREF="Serial-HOWTO.html#toc12">Speed (Flow Rate) </A></H2>
+
+<P> By "speed" we really mean the "data flow rate" but almost everybody
+incorrectly calls it speed.  The speed is measured in bits/sec (or
+baud).  Speed is set using the "stty" command or by a program which
+uses the serial port.  See 
+<A HREF="Serial-HOWTO-11.html#stty_">Stty</A></P>
+
+<H2><A NAME="high_speed"></A> <A NAME="ss12.1">12.1</A> <A HREF="Serial-HOWTO.html#toc12.1">Very High Speeds </A>
+</H2>
+
+<H3>Speeds over 115.2kbps</H3>
+
+<P> The top speed of 115.2k has been standard since the mid 1990's.
+But by the year 2000, most new serial ports supported higher speeds of
+230.4k and 460.8k.  Some also support 921.6k.  Unfortunately Linux
+seldom uses these speeds due to lack of drivers.  Thus such ports
+behave just like 115.2k ports unless the higher speeds are enabled by
+special software.  To get these speeds you need to compile the kernel
+with special patches or use modules until support is built into the
+kernel's serial driver.</P>
+<P>Unfortunately serial port manufacturers never got together on a
+standard way to support high speeds, so the serial driver needs to
+support a variety of hardware.  Once high speed is enabled, a standard
+way to choose it is to set baud_base to the highest speed with
+setserial (unless the serial driver does this for you).  The software
+will then use a divisor of 1 to set the highest speed.  All this will 
+hopefully be supported by the Linux kernel sometime in 2003.</P>
+<P>A driver for the w83627hf chip (used on many motherboards such as 
+the Tyan S2460) is at 
+<A HREF="https://www.muru.com/linux/w83627hf/">https://www.muru.com/linux/w83627hf/</A></P>
+<P>A non-standard way that some manufacturers have implemented high speed
+is to use a very large number for the divisor to get the high speed.
+This number isn't really a divisor at all since it doesn't divide
+anything.  It's just serves as a code number to tell the hardware what
+speed to use.  In such cases you need to compile the kernel with
+special patches. </P>
+<P>One patch to support this second type of high-speed hardware is called
+shsmod (Super High Speed Mode).  There are both Windows and Linux
+versions of this patch.  See 
+<A HREF="http://www.devdrv.com/shsmod/">http://www.devdrv.com/shsmod/</A>.  There is also a module for the
+VIA VT82C686 chip 
+<A HREF="http://www.kati.fi/viahss/">http://www.kati.fi/viahss/</A>.  Using it
+may result in buffer overflow.  </P>
+<P>For internal modems, only a minority of them advertise that they
+support speeds of over 115.2k for their built-in serial ports.
+Does shsmod support these ??</P>
+
+<H3><A NAME="divisor_"></A> How speed is set in hardware: the divisor and baud_base </H3>
+
+<P> Speed is set by having the serial port's clock change frequency.
+But this change happens not by actually changing the frequency of the
+oscillator driving the clock but by "dividing" the clock's frequency.
+For example, to divide by two, just ignore every other clock tick.
+This cuts the speed in half.  Dividing by 3 makes the clock run at 1/3
+frequency, etc.  So to slow the clock down (meaning set speed), we
+just send the clock a divisor.  It's sent by the serial driver to a
+register in the port.  Thus speed is set by a divisor.</P>
+<P>If the clock runs at a top speed of 115,000 bps (common), then here
+are the divisors for various speeds (assuming a maximum speed of
+115,200): 1 (115.2k), 2 (57.6k), 3 (38.4k), 6 (19.2k), 12 (9.6k), 24
+(4.8k), 48 (2.4k), 96 (1.2k), etc.  The serial driver sets the speed
+in the hardware by sending the hardware only a "divisor" (a positive
+integer).  This "divisor" divides the "maximum speed" of the hardware
+resulting in a slower speed (except a divisor of 1 obviously tells the
+hardware to run at maximum speed).</P>
+<P>There are exceptions to the above since for certain serial port
+hardware, speeds above 115.2k are set by using a very high divisor.
+Keep that exception in mind as you read the rest of this section.
+Normally, if you specify a speed of 115.2k (in your communication
+program or by stty) then the serial driver sets the port hardware to
+divisor 1 which sets the highest speed.</P>
+<P>Besides using a very high divisor to set high speed, the conventional
+way to do it is as follows: If you happen to have hardware with a
+maximum speed of say 230.4k (and the 230.4k speed has been enabled in
+the hardware), then specifying 115.2k will result in divisor 1.  For
+some hardware this will actually give you 230.4k.  This is double the
+speed that you set.  In fact, for any speed you set, the actual speed
+will be double.  If you had hardware that could run at 460.8k then the
+actual speed would be quadruple what you set.  All the above assumes
+that you don't use "setserial" to modify things.</P>
+
+<H3>Setting the divisor, speed accounting</H3>
+
+<P> To correct this accounting (but not always fix the problem) you
+may use "setserial" to change the baud_base to the actual maximal
+speed of your port such as 230.4k.  Then if you set the speed (by your
+application or by stty) to 230.4k, a divisor of 1 will be used and
+you'll get the same speed as you set.</P>
+<P>If you have very old software which will not allow you to tell it such
+a high speed (but your hardware has it enabled) then you might want to
+look into using the "spd_cust" parameter.  This allows you to tell the
+application that the speed is 38,400 but the actual speed for this
+case is determined by the value of "divisor" which has also been set
+in setserial.  I think it best to try to avoid using this kludge.</P>
+<P>There are some brands of UARTs that uses a very high divisor to set
+high speeds.  There isn't any satisfactory way to use "setserial" (say
+set "divisor 32770") to get such a speed since then setserial would
+then think that the speed is very low and disable the FIFO in the
+UART.</P>
+
+<H3>Crystal frequency is higher than baud_base</H3>
+
+<P> Note that the baud_base setting is usually much lower than the
+frequency of the crystal oscillator since the crystal frequency of say
+1.8432 MHz is divided by 16 in the hardware to get the actual top
+speed of 115.2k.  The reason the crystal frequency needs to be higher
+is so that this high crystal speed can generate clock ticks to take a
+number of samples of each  bit to determine if it's a 1 or a 0.</P>
+<P>Actually, the 1.8432 MHz "crystal frequency" may be obtained from a
+18.432 MHz crystal oscillator by dividing by 10 before being fed to
+the UART.  Other schemes are also possible as long as the UART
+performs properly.</P>
+
+
+
+<H2><A NAME="higher_thruput"></A> <A NAME="ss12.2">12.2</A> <A HREF="Serial-HOWTO.html#toc12.2">Higher Serial Throughput </A>
+</H2>
+
+<P>If you are seeing slow throughput and serial port overruns on a
+system with (E)IDE disk drives, you can get <CODE>hdparm</CODE>.  This
+is a utility that can modify (E)IDE parameters, including unmasking
+other IRQs during a disk IRQ.  This will improve responsiveness
+and will help eliminate overruns.  Be sure to read the man page very
+carefully, since some drive/controller combinations don't like this
+and may corrupt the filesystem.</P>
+<P>Also have a look at a utility called <CODE>irqtune</CODE> that will change
+the IRQ priority of a device, for example the serial port that your
+modem is on.  This may improve the serial throughput on your system.
+The <CODE>irqtune</CODE> FAQ is at 
+<A HREF="http://www.best.com/~cae/irqtune">http://www.best.com/~cae/irqtune</A></P>
+
+<HR>
+<A HREF="Serial-HOWTO-13.html">Next</A>
+<A HREF="Serial-HOWTO-11.html">Previous</A>
+<A HREF="Serial-HOWTO.html#toc12">Contents</A>
+</BODY>
+</HTML>

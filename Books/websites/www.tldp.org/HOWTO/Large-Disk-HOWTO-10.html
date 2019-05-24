@@ -1,0 +1,264 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Large Disk HOWTO: Details</TITLE>
+ <LINK HREF="Large-Disk-HOWTO-11.html" REL=next>
+ <LINK HREF="Large-Disk-HOWTO-9.html" REL=previous>
+ <LINK HREF="Large-Disk-HOWTO.html#toc10" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Large-Disk-HOWTO-11.html">Next</A>
+<A HREF="Large-Disk-HOWTO-9.html">Previous</A>
+<A HREF="Large-Disk-HOWTO.html#toc10">Contents</A>
+<HR>
+<H2><A NAME="s10">10. Details</A></H2>
+
+<P>
+<H2><A NAME="ss10.1">10.1 IDE details - the seven geometries</A>
+</H2>
+
+<P>
+<!--
+disk!IDE geometry setting
+-->
+
+The IDE driver has five sources of information about the geometry.
+The first (G_user) is the one specified by the user on the command line.
+The second (G_bios) is the BIOS Fixed Disk Parameter Table
+(for first and second disk only) that is read on system startup,
+before the switch to 32-bit mode.
+The third (G_phys) and fourth (G_log) are returned by the IDE controller
+as a response to the 
+<A HREF="#identify">IDENTIFY command</A> - they
+are the `physical' and `current logical' geometries.
+<P>On the other hand, the driver needs two values for the geometry:
+on the one hand G_fdisk, returned by a <CODE>HDIO_GETGEO</CODE> ioctl, and
+on the other hand G_used, which is actually used for doing I/O.
+Both G_fdisk and G_used are initialized to G_user if given, to
+G_bios when this information is present according to CMOS, and
+to G_phys otherwise.  If G_log looks reasonable then G_used is set
+to that.  Otherwise, if G_used is unreasonable and G_phys looks
+reasonable then G_used is set to G_phys.  Here `reasonable' means
+that the number of heads is in the range 1-16.
+<P>To say this in other words: the command line overrides the BIOS,
+and will determine what <CODE>fdisk</CODE> sees, but if it specifies a
+translated geometry (with more than 16 heads), then for kernel I/O
+it will be overridden by output of the IDENTIFY command.
+<P>Note that G_bios is rather unreliable: for systems booting from SCSI
+the first and second disk may well be SCSI disks, and the geometry
+that the BIOS reported for sda is used by the kernel for hda.
+Moreover, disks that are not mentioned in the BIOS Setup are not
+seen by the BIOS. This means that, e.g., in an IDE-only system where
+hdb is not given in the Setup, the geometries reported by the BIOS
+for the first and second disk will apply to hda and hdc.
+<P>In order to avoid such confusion, since Linux 2.5.51 G_bios is
+not used anymore.
+<P>
+<H3><A NAME="identify"></A> The IDENTIFY DRIVE command</H3>
+
+<P>When an IDE drive is sent the IDENTIFY DRIVE (0xec) command,
+it will return 256 words (512 bytes) of information.
+This contains lots of technical stuff.
+Let us only describe here what plays a role in geometry matters.
+The words are numbered 0-255.
+<P>We find four pieces of information here: DefaultCHS (words 1,3,6),
+CurrentCHS (words 54-58) and LBAcapacity (words 60-61) and
+48-bit capacity (words 100-103).
+<P>
+<P>
+<CENTER><TABLE BORDER><TR><TD>
+<BR>
+</TD><TD> Description </TD><TD> Example </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+0 </TD><TD> bit field: bit 6: fixed disk, bit 7: removable medium </TD><TD> 0x0040 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+1 </TD><TD> Default number of cylinders </TD><TD> 16383 </TD></TR><TR><TD>
+3 </TD><TD> Default number of heads </TD><TD> 16 </TD></TR><TR><TD>
+6 </TD><TD> Default number of sectors per track </TD><TD> 63 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+10-19 </TD><TD> Serial number (in ASCII) </TD><TD> G8067TME </TD></TR><TR><TD>
+23-26 </TD><TD> Firmware revision (in ASCII) </TD><TD> GAK&amp;1B0 </TD></TR><TR><TD>
+27-46 </TD><TD> Model name (in ASCII) </TD><TD> Maxtor 4G160J8 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+49 </TD><TD> bit field: bit 9: LBA supported </TD><TD> 0x2f00 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+53 </TD><TD> bit field: bit 0: words 54-58 are valid </TD><TD> 0x0007 </TD></TR><TR><TD>
+54 </TD><TD> Current number of cylinders </TD><TD> 16383 </TD></TR><TR><TD>
+55 </TD><TD> Current number of heads </TD><TD> 16 </TD></TR><TR><TD>
+56 </TD><TD> Current number of sectors per track </TD><TD> 63 </TD></TR><TR><TD>
+57-58 </TD><TD> Current LBA capacity </TD><TD> 16514064 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+60-61 </TD><TD> Default LBA capacity </TD><TD> 268435455 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+82-83 </TD><TD> Command sets supported </TD><TD> 7c69 4f09 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+85-86 </TD><TD> Command sets enabled </TD><TD> 7c68 0e01 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+100-103 </TD><TD> Maximum user LBA for 48-bit addressing </TD><TD> 320173056 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+255 </TD><TD> Checksum and signature (0xa5) </TD><TD> 0x44a5 </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+
+</TD></TR></TABLE></CENTER>
+<P>In the ASCII strings each word contains two characters,
+the high order byte the first, the low order byte the second.
+The 32-bit values are given with low order word first.
+Words 54-58 are set by the command INITIALIZE DRIVE PARAMETERS (0x91).
+They are significant only when CHS addressing is used, but may
+help to find the actual disk size in case the disk sets
+DefaultCHS to 4092/16/63 in order to avoid BIOS problems.
+<P>Sometimes, when a jumper causes a big drive to misreport LBAcapacity
+(often to 66055248 sectors, in order to stay below the 33.8 GB limit),
+one needs a fourth piece of information to find the actual disk size,
+namely the result of the READ NATIVE MAX ADDRESS (0xf8) command.
+<P>
+<H2><A NAME="ss10.2">10.2 SCSI details</A>
+</H2>
+
+<P>
+<!--
+disk!SCSI geometry setting
+-->
+
+The situation for SCSI is slightly different, as the SCSI commands
+already use logical block numbers, so a `geometry' is entirely
+irrelevant for actual I/O.
+However, the format of the partition table is still the same,
+so <CODE>fdisk</CODE> has to invent some geometry, and also uses <CODE>HDIO_GETGEO</CODE> here -
+indeed, <CODE>fdisk</CODE> does not distinguish between IDE and SCSI disks.
+As one can see from the detailed description below, the various
+drivers each invent a somewhat different geometry.  Indeed, one big mess.
+<P>If you are not using DOS or so, then avoid all extended translation
+settings, and just use 64 heads, 32 sectors per track (for a nice,
+convenient 1 MiB per cylinder), if possible, so that no problems
+arise when you move the disk from one controller to another.
+Some SCSI disk drivers (aha152x, pas16, ppa, qlogicfas, qlogicisp)
+are so nervous about DOS compatibility that they will not allow
+a Linux-only system to use more than about 8 GiB.  This is a bug.
+<P>What is the real geometry?
+The easiest answer is that there is no such thing.
+And if there were, you wouldn't want to know, and certainly
+NEVER, EVER tell <CODE>fdisk</CODE> or LILO or the kernel about it.
+It is strictly a business between the SCSI controller and the disk.
+Let me repeat that: only silly people tell <CODE>fdisk</CODE>/LILO/kernel about
+the true SCSI disk geometry.
+<P>But if you are curious and insist, you might ask the disk itself.
+There is the important command READ CAPACITY that will give the total
+size of the disk, and there is the MODE SENSE command, that in the
+Rigid Disk Drive Geometry Page (page 04) gives the number of cylinders
+and heads (this is information that cannot be changed), and in the
+Format Page (page 03) gives the number of bytes per sector,
+and sectors per track.  This latter number is typically dependent upon
+the notch, and the number of sectors per track varies - the outer
+tracks have more sectors than the inner tracks.
+The Linux program <CODE>scsiinfo</CODE> will give this information.
+There are many details and complications, and it is clear that nobody
+(probably not even the operating system) wants to use this information.
+Moreover, as long as we are only concerned about <CODE>fdisk</CODE> and LILO,
+one typically gets answers like C/H/S=4476/27/171 - values that
+cannot be used by <CODE>fdisk</CODE> because the partition table reserves only
+10 resp. 8 resp. 6 bits for C/H/S.
+<P>Then where does the kernel <CODE>HDIO_GETGEO</CODE> get its information from?
+Well, either from the SCSI controller, or by making an educated guess.
+Some drivers seem to think that we want to know `reality', but
+of course we only want to know what the DOS or OS/2 FDISK
+(or Adaptec AFDISK, etc) will use.
+<P>Note that Linux <CODE>fdisk</CODE> needs the numbers H and S of heads and sectors
+per track to convert LBA sector numbers into c/h/s addresses, but the
+number C of cylinders does not play a role in this conversion.
+Some drivers use (C,H,S) = (1023,255,63) to signal that the drive
+capacity is at least 1023<CODE>*</CODE>255<CODE>*</CODE>63 sectors.  This is unfortunate,
+since it does not reveal the actual size, and will limit the
+users of most <CODE>fdisk</CODE> versions to about 8 GiB of their disks -
+a real limitation in these days.
+<P>In the description below, M denotes the total disk capacity,
+and C, H, S the number of cylinders, heads and sectors per track.
+It suffices to give H, S if we regard C as defined by M / (H<CODE>*</CODE>S).
+<P>By default, H=64, S=32.
+<P>
+<DL>
+<DT><B>aha1740, dtc, g_NCR5380, t128, wd7000:</B><DD><P>H=64, S=32.
+<P>
+<DT><B>aha152x, pas16, ppa, qlogicfas, qlogicisp:</B><DD><P>H=64, S=32 unless C &gt; 1024, in which case
+H=255, S=63, C = min(1023, M/(H<CODE>*</CODE>S)).
+(Thus C is truncated, and H<CODE>*</CODE>S<CODE>*</CODE>C is not an approximation to
+the disk capacity M.  This will confuse most versions of <CODE>fdisk</CODE>.)
+The <CODE>ppa.c</CODE> code uses M+1 instead of M and says that due to a
+bug in <CODE>sd.c</CODE> M is off by 1.
+<P>
+<DT><B>advansys:</B><DD><P>H=64, S=32 unless C &gt; 1024 and moreover the `&gt; 1 GB' option
+in the BIOS is enabled, in which case H=255, S=63.
+<P>
+<DT><B>aha1542:</B><DD><P>Ask the controller which of two possible translation schemes
+is in use, and use either H=255, S=63 or H=64, S=32.  In the former
+case there is a boot message "aha1542.c: Using extended bios translation".
+<P>
+<DT><B>aic7xxx:</B><DD><P>H=64, S=32 unless C &gt; 1024, and moreover
+either the "extended" boot parameter was given,
+or the `extended' bit was set in the SEEPROM or BIOS,
+in which case H=255, S=63.
+In Linux 2.0.36 this extended translation would always be set
+in case no SEEPROM was found, but in Linux 2.2.6 if no SEEPROM
+is found extended translation is set only when the user asked
+for it using this boot parameter (while when a SEEPROM is found,
+the boot parameter is ignored).
+This means that a setup that works under 2.0.36 may fail to boot
+with 2.2.6 (and require the <CODE>linear</CODE> keyword for LILO, or
+the <CODE>aic7xxx=extended</CODE> kernel boot parameter).
+<P>
+<DT><B>buslogic:</B><DD><P>H=64, S=32 unless C &gt;= 1024, and moreover extended translation
+was enabled on the controller, in which case if M &lt; 2^22 then
+H=128, S=32; otherwise H=255, S=63.  However, after making this choice
+for (C,H,S), the partition table is read, and if for one of the
+three possibilities (H,S) = (64,32), (128,32), (255,63) the value
+endH=H-1 is seen somewhere then that pair (H,S) is used, and a boot message
+is printed "Adopting Geometry from Partition Table".
+<P>
+<DT><B>fdomain:</B><DD><P>Find the geometry information in the BIOS Drive Parameter Table,
+or read the partition table and use H=endH+1, S=endS for the first
+partition, provided it is nonempty, or use H=64, S=32 for M &lt; 2^21 (1 GiB),
+H=128, S=63 for M &lt; 63<CODE>*</CODE>2^17 (3.9 GiB) and H=255, S=63 otherwise.
+<P>
+<DT><B>in2000:</B><DD><P>Use the first of (H,S) = (64,32), (64,63), (128,63), (255,63)
+that will make C &lt;= 1024.  In the last case, truncate C at 1023.
+<P>
+<DT><B>seagate:</B><DD><P>Read C,H,S from the disk.  (Horrors!)  If C or S is too large, then
+put S=17, H=2 and double H until C &lt;= 1024.  This means that H will
+be set to 0 if M &gt; 128<CODE>*</CODE>1024<CODE>*</CODE>17 (1.1 GiB).  This is a bug.
+<P>
+<DT><B>ultrastor and u14_34f:</B><DD><P>One of three mappings
+((H,S) = (16,63), (64,32), (64,63))
+is used depending on the controller mapping mode.
+<P>
+</DL>
+
+If the driver does not specify the geometry, we fall back
+on an educated guess using the partition table, or using the
+total disk capacity.
+<P>Look at the partition table.  Since by convention partitions end
+on a cylinder boundary, we can, given <CODE>end = (endC,endH,endS)</CODE>
+for any partition, just put H = <CODE>endH+1</CODE> and S = <CODE>endS</CODE>.  (Recall
+that sectors are counted from 1.)
+More precisely, the following is done.
+If there is a nonempty partition, pick the partition with the largest <CODE>beginC</CODE>.
+For that partition, look at <CODE>end+1</CODE>, computed
+both by adding <CODE>start</CODE> and <CODE>length</CODE> and by assuming that this
+partition ends on a cylinder boundary.  If both values agree, or
+if <CODE>endC</CODE> = 1023 and <CODE>start+length</CODE> is an integral multiple of
+<CODE>(endH+1)<CODE>*</CODE>endS</CODE>,
+then assume that this partition really was aligned on a cylinder
+boundary, and put H = <CODE>endH+1</CODE> and S = <CODE>endS</CODE>.
+If this fails, either because there are no partitions, or because
+they have strange sizes, then look only at the disk capacity M.
+Algorithm: put H = M/(62<CODE>*</CODE>1024) (rounded up), S = M/(1024<CODE>*</CODE>H)
+(rounded up), C = M/(H<CODE>*</CODE>S) (rounded down).
+This has the effect of producing a (C,H,S) with C at most 1024
+and S at most 62.
+<P>
+<HR>
+<A HREF="Large-Disk-HOWTO-11.html">Next</A>
+<A HREF="Large-Disk-HOWTO-9.html">Previous</A>
+<A HREF="Large-Disk-HOWTO.html#toc10">Contents</A>
+</BODY>
+</HTML>

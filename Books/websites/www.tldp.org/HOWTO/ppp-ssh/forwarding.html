@@ -1,0 +1,316 @@
+<HTML
+><HEAD
+><TITLE
+>Forwarding Between Subnets</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="VPN PPP-SSH Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Integrating the VPN into your system"
+HREF="integration.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>VPN PPP-SSH Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="integration.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="FORWARDING"
+>8. Forwarding Between Subnets</A
+></H1
+><P
+>You only need to read this section if you're trying to connect
+networks, not just hosts.  I assume your host-to
+host tunnel works so now your client and
+server computers can exchange pings flawlessly.  Now, it's time
+to allow networks connected to the client and server machines to
+use the tunnel as well.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN393"
+>8.1. Forwarding</A
+></H2
+><P
+>First of all, you need to be sure that you're allowing packets
+to be forwarded across your interfaces.  You turn this on through
+the proc configuration interface.  It's best to do this once at
+boot time, but you can also put it in the vpn-pppssh script or even
+create a script in the /etc/init.d/ip-up.d directory (see
+<A
+HREF="integration.html#CONNDIALUP"
+>Section 7.2</A
+>) if you want.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>echo 1 &#62; /proc/sys/net/ipv4/ip_forward
+echo 1 &#62; /proc/sys/net/ipv4/conf/ppp1<A
+NAME="FWDIF"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>/forwarding</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="CALLOUTLIST"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="forwarding.html#FWDIF"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>Of course, you need to replace ppp1 with the appropriate VPN interface
+(the interface associated with SERVER_IFIPADDR or CLIENT_IFIPADDR
+depending on if you're doing this on the server or the client).</DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN402"
+>8.2. Gatewaying</A
+></H2
+><P
+>On all computers in the subnet, you need to set up the local VPN host as the
+gateway to all the networks on the other side of the tunnel.
+This just tells the
+computers "if you have any packets destined for the opposite side of
+the VPN, send them to the local VPN host".
+Note that if the VPN host
+is already the default gateway for all the computers, then you don't need
+to worry about this step -- the packets will be forwarded automatically.</P
+><P
+>In the example below, my VPN host has IP address 192.168.1.1 on the local network.
+and IP address 192.168.3.2 on the VPN network.  The VPN network, containing both
+the client and server VPN interfaces and all computers on the opposite side of the
+link, is 192.168.3.0/24.
+Therefore, on every local computer that I want to be able to send packets through
+the VPN, I need to run the following command:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># route add -net 192.168.3.0 netmask 255.255.255.0 gw 192.168.1.1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>Now, any packet destined for the 192.168.3.0/24 network on the local machine
+will be relayed to host 192.168.1.1 on the local network to be forwarded through
+the VPN.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN408"
+>8.3. Routing</A
+></H2
+><P
+>There should be no need to set up custom routing -- pppd 
+tries to do it all for you.  However, if you find that pppd
+doesn't cover your needs, the place for your routing commands is in
+the vpn-pppssh script itself.  To change the routing on the client,
+simply run route.  To change the route on the server, use
+ssh to send those commands to the server.
+Here's an example:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>route add -net $NET1 gw $SERVER_IFIPADDR
+ssh -o Batchmode=yes $SERVER_HOSTNAME -l$SERVER_USERNAME route add -net $NET2 gw $CLIENT_IFIPADDR</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN412"
+>8.4. Masquerading</A
+></H2
+><P
+>You can even set up one or both hosts to masquerade all
+connections through the VPN tunnel.
+See the <A
+HREF="http://www.linuxdoc.org/HOWTO/IP-Masquerade-HOWTO.html"
+TARGET="_top"
+>IP Masquerade HOWTO</A
+> for more.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># ipchains -A forward -i ppp1 -s 192.168.0.0/24 -j MASQ</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN417"
+>8.5. Now try it</A
+></H2
+><P
+>That should be all you need to forward packets from subnets
+connected to the client or server to the opposite machine.
+May your PPP-SSH VPNs serve you quietly and reliably for many
+years to come.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="integration.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Integrating the VPN into your system</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,863 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Setting Up Your New Domain Mini-HOWTO.: Configuring Your Hosted Services</TITLE>
+ <LINK HREF="Domain-8.html" REL=next>
+ <LINK HREF="Domain-6.html" REL=previous>
+ <LINK HREF="Domain.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Domain-8.html">Next</A>
+<A HREF="Domain-6.html">Previous</A>
+<A HREF="Domain.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Configuring Your Hosted Services</A></H2>
+
+<H2><A NAME="setup-nameres"></A> <A NAME="ss7.1">7.1 Setting up Name Resolution</A>
+</H2>
+
+<P>You will want some way for the computers on your network to refer to
+one another by name, and also a way for people in the outside world to
+refer to your exposed hosts by name. There are several ways to go
+about doing this.
+<P>
+<H3><A NAME="dns-and-isp"></A> DNS On Private Network, ISP Handles Domain</H3>
+
+<P>[ Note: if you have chosen not to implement a private network, go to
+section 
+<A HREF="#fully-exposed-isp">Fully Exposed Network, Hosted By ISP</A>. ]
+<P>
+<P>In this configuration, you have delegated responsibility for the
+primary DNS authority on your domain to the ISP. You still use DNS
+within your private network when hosts there want to talk to one
+another. You have given your ISP a list of the names and IP numbers of
+all exposed hosts. If you want one externally visible machine, for
+instance betty.example.com, to act both as web and FTP server, you
+should ask the ISP to make CNAME entries for www.example.com and
+ftp.example.com pointing to betty.example.com.
+<P>
+<P>Set up DNS on your private network gateway machine. This can be done
+securely, and makes upgrading easier, should you later decide to host
+primary DNS authority for your domain.
+<P>
+<P>I will assume that you have decided to host DNS from the machine
+dns.example.com, which is on the private network gateway, and an alias
+for fred.example.com at 192.168.1.1. Some small modifications have to
+be made to this configuration if this is not the case. I will not
+cover that in this HOWTO unless there is significant interest.
+<P>
+<P>You will have to download and compile a recent
+version of BIND, the Berkeley Internet Name Domain. It is available at
+the 
+<A HREF="http://www.isc.org/products/BIND/">BIND web site</A>. Next, you have to configure the daemon.
+Create the following file, <CODE>/etc/named.conf</CODE>:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+options {
+        directory "/var/named";
+        listen-on { 192.168.1.1 };
+};
+
+zone "." {
+        type hint;
+        file "root.hints";
+};
+
+zone "0.0.127.in-addr.arpa" {
+        type master;
+        file "pz/127.0.0";
+};
+
+
+zone "1.168.192.in-addr.arpa" {
+        type master;
+        file "pz/1.168.192";
+};
+
+zone "example.com" {
+        type master;
+        notify no;
+        file "pz/example.com";
+};
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>Note that we are declaring ourselves the master for the example.com
+domain. Meanwhile, our ISP is also declaring itself to be the master
+for the same domain. This is not a problem, as long as you are careful
+about the setup. All of the machines on the private network must use
+dns.example.com to perform their name resolution. They must
+<EM>not</EM> use the name resolvers of the ISP, as the ISP name server
+believes itself to be authoritative over your entire domain, but it
+doesn't know the IP numbers or names of any machines on your private
+network. Similarly, hosts on exposed IP numbers in your domain
+<EM>must</EM> use the ISP name server, not the private name server on
+dns.example.com.
+<P>
+<P>The various files under <CODE>/var/named</CODE> must now be
+created.
+<P>
+<P>The <CODE>root.hints</CODE> file is exactly as described in the
+BIND documentation, or in the 
+<A HREF="ftp://metalab.unc.edu/pub/Linux/docs/HOWTO/DNS-HOWTO">DNS HOWTO</A>. At the time of this writing, the following is a valid
+root.hints file:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+H.ROOT-SERVERS.NET.     6d15h26m24s IN A  128.63.2.53
+C.ROOT-SERVERS.NET.     6d15h26m24s IN A  192.33.4.12
+G.ROOT-SERVERS.NET.     6d15h26m24s IN A  192.112.36.4
+F.ROOT-SERVERS.NET.     6d15h26m24s IN A  192.5.5.241
+B.ROOT-SERVERS.NET.     6d15h26m24s IN A  128.9.0.107
+J.ROOT-SERVERS.NET.     6d15h26m24s IN A  198.41.0.10
+K.ROOT-SERVERS.NET.     6d15h26m24s IN A  193.0.14.129
+L.ROOT-SERVERS.NET.     6d15h26m24s IN A  198.32.64.12
+M.ROOT-SERVERS.NET.     6d15h26m24s IN A  202.12.27.33
+I.ROOT-SERVERS.NET.     6d15h26m24s IN A  192.36.148.17
+E.ROOT-SERVERS.NET.     6d15h26m24s IN A  192.203.230.10
+D.ROOT-SERVERS.NET.     6d15h26m24s IN A  128.8.10.90
+A.ROOT-SERVERS.NET.     6d15h26m24s IN A  198.41.0.4
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The <CODE>pz/127.0.0</CODE> file is as follows:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+$TTL 86400
+
+@               IN      SOA     example.com. root.example.com. (
+                                1       ; Serial
+                                8H      ; Refresh
+                                2H      ; Retry
+                                1W      ; Expire
+                                1D)     ; Minimum TTL
+                        NS      dns.example.com.
+1                       PTR     localhost.
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The <CODE>pz/1.168.192</CODE> file is as follows:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+$TTL 86400
+
+@       IN      SOA             dns.example.com. root.dns.example.com. (
+                                1       ; Serial
+                                8H      ; Refresh 8 hours
+                                2H      ; Retry   2 hours
+                                1W      ; Expire  1 week
+                                1D      ; Minimum 1 day
+                        )
+                NS      dns.example.com.
+
+1               PTR     fred.example.com.
+                PTR     dns.example.com.
+                PTR     mail.example.com.
+2               PTR     barney.example.com.
+3               PTR     wilma.example.com.
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+and so on, where you create one PTR record for each machine with an
+interface on the private network. In this example, fred.example.com is
+on IP number 192.168.1.1, and is pointed to by the dns.example.com and
+mail.example.com aliases. The machine barney.example.com is on IP
+number 192.168.1.2, and so on.
+<P>
+<P>The <CODE>pz/example.com</CODE> file is as follows:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+$TTL 86400
+
+@               IN      SOA     example.com. root.dns.example.com. (
+                                1       ; Serial
+                                8H      ; Refresh 8 hours
+                                2H      ; Retry   2 hours
+                                1W      ; Expire  1 week
+                                1D      ; Minimum 1 day
+                        )
+                        NS              dns.example.com.
+        IN              A               192.168.1.1
+        IN              MX          10  mail.example.com.
+        IN              MX          20  &lt;ISP mail machine IP>.
+
+
+localhost               A           127.0.0.1
+fred                    A           192.168.1.1
+                        A           10.1.1.9
+dns                     CNAME       fred
+mail                    CNAME       fred
+barney                  A           192.168.1.2
+wilma                   A           192.168.1.3
+betty                   A           10.1.1.10
+www                     CNAME       betty
+ftp                     CNAME       betty
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+Note that we create entries for machines both within the private
+network and on external IPs, since machines within the private network
+will not query the ISP's name servers for a request on, say,
+betty.example.com. We also provide both IP numbers for fred, the
+private and external IP numbers.
+<P>
+<P>One line in the ``options'' section of
+<CODE>/etc/named.conf</CODE> bears discussion:
+<BLOCKQUOTE><CODE>
+<PRE>
+listen-on { 192.168.1.1 };
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This will prevent your named daemon from answering DNS requests on the
+outside interface (all requests from the outside must go through the
+ISP's name resolver, not yours).
+<P>
+<P>
+<H3>Non-DNS Resolution On Private Network, ISP Handles Domain</H3>
+
+<P>[ Note: if you have chosen not to implement a private network, go to
+section 
+<A HREF="#fully-exposed-isp">Fully Exposed Network, Hosted By ISP</A>. ]
+<P>
+<P>In this configuration, you have decided that your private network is
+fairly small and unlikely to change often. You have decided not to use
+the centralized database of a DNS server, and instead to maintain the
+host resolution separately on each machine. All machines should use
+the ISP's DNS server for their host name resolution for machines
+beyond the private network gateway. For name resolution on the private
+network, a hosts table has to be created. For Linux, this means
+entering the names and IP numbers of all of the machines on the
+private network into the <CODE>/etc/hosts</CODE> on each
+machine. Any time a new machine is added, or a name or IP number is
+changed, this file has to be updated on each Linux box.
+<P>
+<P>As in section 
+<A HREF="#dns-and-isp">DNS Resolution on Private Network, ISP Handles Domain</A>, the list of host names on exposed IP
+numbers must be sent to the ISP, and any aliases (such as for www and
+ftp names) should be specified so that a CNAME entry can be created by
+the ISP.
+<P>
+<P>
+<H3>You Are Primary DNS Authority For Domain</H3>
+
+<P>While you could set up <EM>named</EM> resolution on the exposed hosts, and
+private database resolution for the private network, I will not cover
+that case. If you're going to be running named for one service, you
+ought really to do it for both, just to simplify the configuration. In
+this section I will assume that the private network gateway machine is
+handling name resolution both for the private network and for outside
+requests.
+<P>
+<P>At the time of this writing, under version 8.2.2 of the BIND package,
+there is no way for a single <EM>named</EM> daemon to produce
+different answers to requests, depending on which interface the
+request arrives on. We want name resolution to act differently if the
+query comes from the outside world, because IP numbers on the private
+network shouldn't be sent out, but have to be available in answer to
+requests from within the private network. There is some discussion of
+a new ``views'' keyword which may be added to BIND to fill this need
+at a later date, but until that happens, the solution is to run two
+<EM>named</EM> daemons with different configurations.
+<P>
+<P>First, set up the private network domain name server as described in
+section 
+<A HREF="#dns-and-isp">DNS Resolution on Private Network, ISP Handles Domain</A>. This will be the name resolver visible
+from within your private network.
+<P>
+<P>Next, you have to set up DNS for your domain, as visible to hosts in
+the outside world. First, check with your provider to see if they will
+delegate reverse lookups of your IP numbers to them. While the
+original DNS standard didn't account for the possibility of
+controlling reverse DNS on subnets smaller than a class C network, a
+workaround has been developed which works with all compliant DNS
+clients, and has been outlined in 
+<A HREF="http://www.ietf.org/rfc/rfc2317.txt">RFC 2317</A>. If
+your provider is willing to delegate control of reverse DNS on your IP
+block, you will have to determine from them the exact name of the in-addr
+pseudo-domain they have chosen to delegate to (the RFC does not offer
+a convention they recommend for everyday use), and you will have to
+register control for that pseudo-domain. I will assume that the
+provider has delegated control to you, and the name of the
+pseudo-domain is 8.1.1.10.in-addr.arpa. The provider would create
+CNAME entries of the form
+<BLOCKQUOTE><CODE>
+<PRE>
+8.1.1.10.in-addr.arpa.     2H IN CNAME 8.8.1.1.10.in-addr.arpa.
+9.1.1.10.in-addr.arpa.     2H IN CNAME 9.8.1.1.10.in-addr.arpa.
+10.1.1.10.in-addr.arpa.    2H IN CNAME 10.8.1.1.10.in-addr.arpa.
+etc.
+</PRE>
+</CODE></BLOCKQUOTE>
+
+in their zone file for the 1.1.10.in-addr.arpa domain. The
+configuration of your 8.1.1.10.in-addr.arpa zone file is given later
+in this section.
+<P>
+<P>If your provider is willing to delegate control of the reverse DNS to
+you, they will create CNAME entries in their reverse DNS zone table
+for those IP numbers you control, pointing to the corresponding
+records in your pseudo-domain, as shown above. If they are not willing
+to delegate control to you, you will have to ask them to update their
+reverse DNS entries any time you add, delete, or change the name of an
+externally visible host in your domain. If the reverse DNS table is
+not synchronized with your forward DNS entries, certain services may
+generate warnings, or refuse to handle requests issued by machines
+affected by the mismatch.
+<P>
+<P>You now have to create a second <EM>named</EM> setup, this one to handle
+requests issued by machines outside the private network gateway. This
+setup lists only those hosts and IP numbers which are externally
+visible, and responds only to requests on the outside interface of the
+private network gateway machine.
+<P>
+<P>First, create a second configuration file, for instance
+<CODE>/etc/named.ext.conf</CODE> for requests from the external
+interface. In our example, it might be as follows:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+options {
+        directory "/var/named";
+        listen-on { 10.1.1.9; };
+};
+
+zone "." {
+        type hint;
+        file "root.hints";
+};
+
+zone "0.0.127.in-addr.arpa" {
+        type master;
+        file "pz/127.0.0";
+};
+
+
+zone "8.1.1.10.in-addr.arpa" {
+        type master;
+        file "ext/8.1.1.10";
+};
+
+zone "example.com" {
+        type master;
+        notify no;
+        file "ext/example.com";
+};
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The <CODE>root.hints</CODE> and <CODE>pz/127.0.0</CODE>
+files, both under <CODE>/var/named</CODE> are shared with the
+other running daemon. The file <CODE>ext/8.1.1.10</CODE> is as
+follows:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+$TTL 86400
+
+@       IN      SOA             fred.example.com. root.fred.example.com. (
+                                1               ; Serial
+                                10800           ; Refresh       3 hours
+                                3600            ; Retry         1 hour
+                                3600000         ; Expire        1000 hours
+                                86400 )         ; Minimum       24 hours
+                NS      dns.example.com.
+9       IN      PTR     fred.example.com.
+                PTR     dns.example.com.
+                PTR     mail.example.com.
+10      IN      PTR     betty.example.com.
+                PTR     www.example.com.
+                PTR     ftp.example.com.
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The file <CODE>ext/example.com</CODE> contains the following:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+
+$TTL 86400
+
+@               IN      SOA     example.com. root.fred.example.com. (
+                                10021   ; Serial
+                                8H      ; Refresh 8 hours
+                                2H      ; Retry   2 hours
+                                1W      ; Expire  1 week
+                                1D      ; Minimum 1 day
+                        )
+                        NS              fred.example.com.
+        IN              A               10.1.1.9
+        IN              MX          10  mail.example.com.
+        IN              MX          20  &lt;ISP Mail Machine>.
+
+
+localhost               A           127.0.0.1
+fred                    A           10.1.1.9
+betty                   A           10.1.1.10
+dns                     CNAME       fred
+mail                    CNAME       fred
+www                     CNAME       betty
+ftp                     CNAME       betty
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Start the two daemons on the private network gateway machine. Put the
+following into your network daemon initialization scripts:
+<BLOCKQUOTE><CODE>
+<PRE>
+/usr/sbin/named -u dnsuser -g dnsgroup /etc/named.conf
+/usr/sbin/named -u dnsuser -g dnsgroup /etc/named.ext.conf
+</PRE>
+</CODE></BLOCKQUOTE>
+
+I've assumed here that you have created the unprivileged user
+``dnsuser, and the corresponding unprivileged group ``dnsgroup''. If a
+bug in bind turns up, which allows an attacker to execute code from
+within <EM>named</EM>, the attacker will find himself restricted to
+those operations available to the unprivileged user. The
+<CODE>/var/named</CODE> directory and the files within should not be
+writable by ``dnsuser''.
+<P>
+<P>The machines on the private network must have their name resolution
+configured to ask dns.example.com (at IP 192.168.1.1 in our example),
+while the externally visible machines can either query the network
+gateway's outside interface (at IP 10.1.1.9 in our example), or the
+ISP's DNS servers.
+<P>
+<P>
+<P>
+<H3><A NAME="fully-exposed-isp"></A> Fully Exposed Network, Hosted By ISP</H3>
+
+<P>In this configuration, you have chosen to expose all of your
+hosts. You have a real IP number for each machine in your domain, and
+you've given your ISP the list of machine names and IP numbers. The
+ISP has given you at least one IP number for their DNS host(s). Your
+Linux boxes are now configured for name resolution in
+/etc/resolv.conf:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+search example.com
+nameserver &lt;DNS host 1>
+nameserver &lt;DNS host 2>
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Windows boxes are configured with the same parameters, in the network
+settings dialogues.
+<P>
+<P>
+<H3>Preparing DNS Before Moving Your Domain</H3>
+
+<P>If you decide to move your domain to a new IP number, either because
+you have to change your ISP or because you've changed some details of
+your service which require you to move to a new IP number from the
+same ISP, you will have to make a few preparations ahead of the move.
+<P>
+<P>You want to set things up so that the IP number fetched by a DNS
+lookup somewhere in the outside world points properly to the original
+IP number until you move, and then quickly points to the new IP number
+after you move. Remote sites can have cached your IP number, and
+subsequent queries may be answered locally from the cache, rather than
+querying the appropriate servers. The effect of this might be that
+people who had visited your site recently are unable to connect, while
+new visitors have no problems, because only the new visitors are
+getting valid uncached data. Complicating things further is the fact
+that the root-level servers are only updated twice a day, so it's
+difficult to time a change to the identities of your primary and
+secondary DNS servers in the root servers.
+<P>
+<P>The easiest way to make the transition is probably to duplicate the
+entire site, or at least the publicly visible components of it, on the
+new IP number, submit the changes, and then wait for the traffic to
+shift completely to the new IP number. This is probably not very
+practical, though.
+<P>
+<P>What you should do first is to arrange with your new ISP (or your
+current ISP if you've just changing IP numbers within a single ISP) to
+host primary and secondary DNS during the transition. This should be
+done at least a day before the move. Ask them to set the TTL on this
+record to something appropriately small (for instance, five
+minutes). The sample DNS files given earlier in this section all have
+TTL values set to 86400 seconds (1 day). If your TTL is longer than
+this, you will have to arrange the change that much more in advance of
+the move. Ultimately, here's what you have to achieve. If your current
+domain information TTL is, say, N hours, then the following have
+to be finished more than N hours before the move:
+<UL>
+<LI>Your domain registration entry must show primary and secondary
+DNS on the new ISP's machines in the root database. Allow at least a
+day between the time you submit the change and the time the change
+enters the database.</LI>
+<LI>The new primary and DNS servers should point to the original IP
+numbers of your site, with a fairly small TTL.</LI>
+</UL>
+
+Note that you cannot accelerate this process by reducing your current
+domain TTL value, unless you've also done this at least N hours before
+the move.
+<P>
+<P>Now, you're ready for the move. Move your machines over to the new IP
+numbers. Synchronize this with an update of the DNS records on your
+ISP to point to the new numbers. Within five minutes (the small TTL
+you set for the move), the traffic should have switched over to the
+new site. You can now rearrange the DNS authority to your liking,
+making yourself primary if that's how you want it, and putting the TTL
+back up to a reasonably large value.
+<P>
+<P>
+<H2><A NAME="dns-no-email"></A> <A NAME="ss7.2">7.2 DNS Configuration If You Are Not Hosting Email</A>
+</H2>
+
+<P>The configurations described in section 
+<A HREF="#setup-nameres">Setting Up Name Resolution</A> have MX records pointing to a
+machine ``mail.example.com''. The MX record with the lowest priority
+number following tells remote sites where to send email. Other MX
+records with higher priority numbers are used as backup email
+receivers. These backups will hold the mail for a certain period of
+time if the primary email receiver is not able to accept the messages
+for some reason. In the examples in that section, I have assumed that
+fred.example.com, under its alias of mail.example.com, is handling
+email for the domain. If you have chosen to let the ISP handle all of
+your email hosting, you should change those MX records to point to the
+appropriate ISP machines. Ask your ISP technical support
+representative what host names you should use for the MX records in
+the various files.
+<P>
+<P>
+<H2><A NAME="setup-email"></A> <A NAME="ss7.3">7.3 Setting up Electronic Mail</A>
+</H2>
+
+<P>If you have chosen to do full electronic mail hosting for your domain,
+you'll have to take special actions for email coming from hosts on the
+private network, and for allowing transparent mail reading from
+anywhere within the private network. Unless you're careful, messages
+are likely to sit around for long times if they are waiting on one
+host, and the intended recipient is logged on another machine. For
+security reasons, I recommend that the incoming email not be
+accessible from the externally visible hosts (this might help to
+discourage a PHB who wants his desktop machine to be on a real IP,
+then wonders why he gets brought down by a ping of death twice a
+day). A transparent email sharing system on the private network fairly
+straight-forward in sendmail. If anybody wants to provide
+<EM>tested</EM> solutions for other mail handling daemons, I welcome
+additions.
+<P>
+<H3>A Solution Using "sendmail"</H3>
+
+<P>In order that email delivered to one host be visible on all machines,
+the simplest solution is to export the mail spool directory with
+read-write privileges over the entire private network. The private
+network gateway machine will also act as mail collector and forwarder
+for the entire private network, and so must have root write privileges
+to the mail spool drive. The other clients may or may not squash root,
+at your discretion. My general security philosophy is not to grant
+privileges unless there is a clear reason for it, so I squash root on
+the mail spool network drive for all hosts except the private network
+gateway machine. This has the effect that root can only read his mail
+from that machine, but this is not a particularly serious
+handicap. Note that the mail spool drive can be a directory on the
+private network gateway machine, exported via NFS, or it can be a
+directory on one of the internal servers, exported to the entire
+private network. If the mail spool drive is resident on the private
+network gateway, there is no issue of squashing root for that
+machine. If it is on another server, then note that email will be
+undeliverable if that server, the gateway machine, or the network
+connecting them, is down.
+<P>
+<P>For Windows machines on your private network, you may either set up a
+POP server on the mail spool host, or use samba to export the mail
+spool to those machines. The Windows machines should be configured to
+send and retrieve mail under a Linux username, such as
+joeuser@example.com, so that the email address host name is the bare
+domain name, not a machine name like barney.example.com. The outgoing
+SMTP host should be set to the private network gateway machine, which
+will be responsible for forwarding the mail and doing any address
+rewriting.
+<P>
+<P>Next, you should configure sendmail to forward email from the machines
+on the private network, rewriting the addresses if necessary. Obtain
+the latest sources to sendmail from the 
+<A HREF="http://www.sendmail.org/">sendmail.org WWW site</A>. Compile
+the binaries, then go to the <CODE>cf/domain</CODE> subdirectory
+within the sendmail source tree, and create the following new file:
+<CODE>example.com.m4</CODE>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+divert(-1)
+#
+# Copyright (c) 1998 Sendmail, Inc.  All rights reserved.
+# Copyright (c) 1983 Eric P. Allman.  All rights reserved.
+# Copyright (c) 1988, 1993
+#       The Regents of the University of California.  All rights reserved.
+#
+# By using this file, you agree to the terms and conditions set
+# forth in the LICENSE file which can be found at the top level of
+# the sendmail distribution.
+#
+#
+
+#
+#  The following is a generic domain file.  You should be able to
+#  use it anywhere.  If you want to customize it, copy it to a file
+#  named with your domain and make the edits; then, copy the appropriate
+#  .mc files and change `DOMAIN(generic)' to reference your updated domain
+#  files.
+#
+divert(0)
+define(`confFORWARD_PATH', `$z/.forward.$w+$h:$z/.forward+$h:$z/.forward.$w:$z/.forward')dnl
+FEATURE(redirect)dnl
+MASQUERADE_AS(example.com)dnl
+FEATURE(masquerade_envelope)dnl
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>This defines the domain ``example.com''. Next, you have to create the
+<CODE>sendmail.cf</CODE> files which will be used on the mail
+host (the private network gateway), and on the other Linux nodes on
+the private network.
+<P>
+<P>Create the following file in the sendmail source tree, under
+<CODE>cf/cf</CODE>:
+<CODE>example.master.m4</CODE>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+divert(-1)
+#
+# Copyright (c) 1998 Sendmail, Inc.  All rights reserved.
+# Copyright (c) 1983 Eric P. Allman.  All rights reserved.
+# Copyright (c) 1988, 1993
+#       The Regents of the University of California.  All rights reserved.
+#
+# By using this file, you agree to the terms and conditions set
+# forth in the LICENSE file which can be found at the top level of
+# the sendmail distribution.
+#
+#
+
+#
+#  This is the prototype file for a configuration that supports nothing
+#  but basic SMTP connections via TCP.
+#
+#  You MUST change the `OSTYPE' macro to specify the operating system
+#  on which this will run; this will set the location of various
+#  support files for your operating system environment.  You MAY
+#  create a domain file in ../domain and reference it by adding a
+#  `DOMAIN' macro after the `OSTYPE' macro.  I recommend that you
+#  first copy this to another file name so that new sendmail releases
+#  will not trash your changes.
+#
+
+divert(0)dnl
+OSTYPE(linux)dnl
+DOMAIN(example.com)dnl
+FEATURE(nouucp)
+FEATURE(relay_entire_domain)
+FEATURE(`virtusertable', `hash /etc/sendmail/virtusertable')dnl
+FEATURE(`genericstable', `hash /etc/sendmail/genericstable')dnl
+define(`confPRIVACY_FLAGS', ``noexpn,novrfy'')dnl
+MAILER(local)
+MAILER(smtp)
+Cw fred.example.com
+Cw example.com
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+In this example we have disabled the ``expn'' and ``vrfy''
+commands. An attacker could troll for aliases with ``expn'', trying
+names like ``staff'', ``allstaff'', ``office'', and so on, until he
+hits an alias which expands out several usernames for him. He can then
+try the usernames against certain weak passwords in hopes of getting
+in (assuming he can get a login prompt - the security settings
+described in section 
+<A HREF="Domain-8.html#security">Securing Your Domain</A>
+are set up so that no login prompt is available for off-site attackers).
+<P>
+<P>The other file you should create will define the sendmail.cf for the
+slave machines:
+<CODE>example.slave.m4</CODE>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+divert(-1)
+#
+# Copyright (c) 1998 Sendmail, Inc.  All rights reserved.
+# Copyright (c) 1983 Eric P. Allman.  All rights reserved.
+# Copyright (c) 1988, 1993
+#       The Regents of the University of California.  All rights reserved.
+#
+# By using this file, you agree to the terms and conditions set
+# forth in the LICENSE file which can be found at the top level of
+# the sendmail distribution.
+#
+#
+
+#
+#  This the prototype for a "null client" -- that is, a client that
+#  does nothing except forward all mail to a mail hub.  IT IS NOT
+#  USABLE AS IS!!!
+#
+#  To use this, you MUST use the nullclient feature with the name of
+#  the mail hub as its argument.  You MUST also define an `OSTYPE' to
+#  define the location of the queue directories and the like.
+#  In addition, you MAY select the nocanonify feature.  This causes
+#  addresses to be sent unqualified via the SMTP connection; normally
+#  they are qualified with the masquerade name, which defaults to the
+#  name of the hub machine.
+#  Other than these, it should never contain any other lines.
+#
+
+divert(0)dnl
+
+OSTYPE(linux)
+FEATURE(nullclient, fred.$m)
+Cm example.com
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>You build the appropriate sendmail.cf files with the command:
+<BLOCKQUOTE><CODE>
+<PRE>
+make example.master.cf example.slave.cf
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and then copy the files to the appropriate machines under the name
+<CODE>sendmail.cf</CODE>.
+<P>
+<P>This configuration puts most of the sendmail configuration files under
+the <CODE>/etc/sendmail/</CODE> subdirectory. This configuration
+causes <EM>sendmail</EM> to parse and use two special files,
+<CODE>virtusertable.db</CODE> and
+<CODE>genericstable.db</CODE>. To use these special files,
+create their parent files. First,
+<CODE>virtusertable.src</CODE>:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+John.Public@example.com                 jpublic
+Jane.Doe@example.com                    jdoe@somemachine.somedomain
+abuse@example.com                       root
+Pointyhaired.Boss@example.com           #phb#@hotmail.com
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+This maps the email addresses on incoming email to new
+destinations. Mail sent to John.Public@example.com is delivered
+locally to the Linux account jpublic. Mail to Jane.Doe@example.com is
+redirected to another email account, possibly in a different
+domain. Mail to abuse@example.com is sent to root, and so on.
+The other file is <CODE>genericstable.src</CODE>:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+jpublic                                 John.Public@example.com
+janedoe                                 Jane.Doe@example.com
+whgiii                                  Pointyhaired.Boss@example.com
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+This file renames the sender on outgoing email from locally-sourced
+mail. While it clearly can't affect the return address for mail sent
+directly from jdoe@somemachine.somedomain, it allows you to rewrite
+the sender's email address from the internal usernames to whatever
+email address convention you've chosen. Finally, create the following
+<CODE>Makefile</CODE> in <CODE>/etc/sendmail/</CODE>:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+all : genericstable.db virtusertable.db
+
+virtusertable.db : virtusertable.src
+        makemap hash virtusertable &lt; virtusertable.src
+
+genericstable.db : genericstable.src
+        makemap hash genericstable &lt; genericstable.src
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+Run <EM>make</EM> to create the hashed files which <EM>sendmail</EM>
+can use, and remember to re-run <EM>make</EM> and restart
+<EM>sendmail</EM> (or send it a SIGHUP) after any changes to either of
+these ``.src'' files.
+<P>
+<P>
+<H3>Solutions Using Other Mail Transfer Agents</H3>
+
+<P>My experience is only with sendmail. If anybody would like to write
+this section, please contact me. Otherwise, I may, at some later time,
+try to provide details myself on such MTAs as <EM>Postfix</EM>,
+<EM>Exim</EM>, or <EM>smail</EM>.  I'd really rather somebody wrote
+these sections who uses those programs.
+<P>
+<P>
+<H2><A NAME="setup-www"></A> <A NAME="ss7.4">7.4 Setting up Web Space Hosting</A>
+</H2>
+
+<P>You should set up your externally visible web server on a machine
+outside the private network, and not on the private network gateway
+machine, for security reasons. If the web server needs access to
+databases or other resources stored on the private network, the
+situation becomes more complicated, both from a network and a security
+standpoint. Such configurations are beyond the scope of this
+document.
+<P>
+<P>The details of setting up the server itself can be found in 
+the apache documentation, and in the 
+<A HREF="ftp://metalab.unc.edu/pub/Linux/docs/HOWTO/WWW-HOWTO">Linux WWW HOWTO</A> document.
+<P>
+<P>
+<P>
+<P>
+<H2><A NAME="setup-ftp"></A> <A NAME="ss7.5">7.5 Setting up FTP Hosting</A>
+</H2>
+
+<P>Once again, your FTP host should be an externally visible machine, and
+not the private network gateway machine. Follow the setup directions
+which ship with your FTP daemon package. Be sure to download the most
+recent version of the daemon, as there are security vulnerabilities in
+some older versions of many daemons. If your FTP site does not require
+anonymous users to upload files, be sure to disable that feature in
+the daemon. I recommend that user (non-anonymous) FTP logins not be
+permitted on the FTP host, that you require your regular users to use
+scp, the secure shell remote copy command, for any file updating they
+may have to do on the FTP host. This is to help build secure habits in
+the users, and to protect against the ``hostile router'' problem
+described in section 
+<A HREF="Domain-8.html#security">Securing Your Domain</A>.
+<P>
+<P>
+<H2><A NAME="setup-filtering"></A> <A NAME="ss7.6">7.6 Setting up Packet Filtering</A>
+</H2>
+
+<P>This is discussed in detail in section 
+<A HREF="Domain-8.html#filtering">Configuring Your Firewall</A>.
+<P>
+<P>
+<HR>
+<A HREF="Domain-8.html">Next</A>
+<A HREF="Domain-6.html">Previous</A>
+<A HREF="Domain.html#toc7">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The Unicode HOWTO: Locale setup</TITLE>
+ <LINK HREF="Unicode-HOWTO-4.html" REL=next>
+ <LINK HREF="Unicode-HOWTO-2.html" REL=previous>
+ <LINK HREF="Unicode-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Unicode-HOWTO-4.html">Next</A>
+<A HREF="Unicode-HOWTO-2.html">Previous</A>
+<A HREF="Unicode-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Locale setup</A></H2>
+
+<P>
+<P>
+<H2><A NAME="ss3.1">3.1 Files &amp; the kernel</A>
+</H2>
+
+<P>
+<P>You can now already use any Unicode characters in file names. No kernel
+or file utilities need modifications. This is because file names in the
+kernel can be anything not containing a null byte, and '/' is used to
+delimit subdirectories. When encoded using UTF-8, non-ASCII characters
+will never be encoded using null bytes or slashes. All that happens is
+that file and directory names occupy more bytes than they contain characters.
+For example, a filename consisting of five greek characters will appear
+to the kernel as a 10-byte filename. The kernel does not know (and does
+not need to know) that these bytes are displayed as greek.
+<P>This is the general theory, as long as your files stay inside Linux. On
+filesystems which are used from other operating systems, you have mount
+options to control conversion of filenames to/from UTF-8:
+<UL>
+<LI>The "vfat" filesystems has a mount option "utf8".
+See 
+<A HREF="file:/usr/src/linux/Documentation/filesystems/vfat.txt">file:/usr/src/linux/Documentation/filesystems/vfat.txt</A>.
+When you give an "iocharset" mount option different from the default
+(which is "iso8859-1"), the results with and without "utf8" are not
+consistent. Therefore I don't recommend the "iocharset" mount option.</LI>
+<LI>The "msdos", "umsdos" filesystems have the same mount option, but it
+appears to have no effect.</LI>
+<LI>The "iso9660" filesystem has a mount option "utf8".
+See 
+<A HREF="file:/usr/src/linux/Documentation/filesystems/isofs.txt">file:/usr/src/linux/Documentation/filesystems/isofs.txt</A>.</LI>
+<LI>Since Linux 2.2.x kernels, the "ntfs" filesystem has a mount option
+"utf8". See
+<A HREF="file:/usr/src/linux/Documentation/filesystems/ntfs.txt">file:/usr/src/linux/Documentation/filesystems/ntfs.txt</A>.</LI>
+</UL>
+
+The other filesystems (nfs, smbfs, ncpfs, hpfs, etc.) don't convert
+filenames; therefore they support Unicode file names in UTF-8 encoding only
+if the other operating system supports them.
+Recall that to enable a mount option for all future remounts, you add it to
+the fourth column of the corresponding /etc/fstab line.
+<P>
+<P>
+<P>
+<H2><A NAME="ss3.2">3.2 Upgrading the C library</A>
+</H2>
+
+<P>
+<P>glibc-2.2 supports multibyte locales, in particular UTF-8 locales. But
+glibc-2.1.x and earlier C libraries do not support it. Therefore you need
+to upgrade to glibc-2.2. Upgrading from glibc-2.1.x is riskless, because
+glibc-2.2 is binary compatible with glibc-2.1.x (at least on i386 platforms,
+and except for IPv6). Nevertheless, I recommend to have a bootable rescue
+disk handy in case something goes wrong.
+<P>Prepare the kernel sources. You must have them unpacked and configured.
+/usr/src/linux/include/linux/autoconf.h must exist. Building the kernel
+is not needed.
+<P>Retrieve the glibc sources
+<A HREF="ftp://ftp.gnu.org/pub/gnu/glibc/">ftp://ftp.gnu.org/pub/gnu/glibc/</A>,
+su to root, then unpack, build and install it:
+<BLOCKQUOTE><CODE>
+<PRE>
+# unset LD_PRELOAD
+# unset LD_LIBRARY_PATH
+# tar xvfz glibc-2.2.tar.gz
+# tar xvfz glibc-linuxthreads-2.2.tar.gz -C glibc-2.2
+# mkdir glibc-2.2-build
+# cd glibc-2.2-build
+# ../glibc-2.2/configure --prefix=/usr --with-headers=/usr/src/linux/include --enable-add-ons
+# make
+# make check
+# make info
+# LC_ALL=C make install
+# make localedata/install-locales
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Upgrading from glibc versions earlier than 2.1.x cannot be done this way;
+consider first installing a Linux distribution based on glibc-2.1.x, and
+then upgrading to glibc-2.2 as described above.
+<P>Note that if -- for any reason -- you want to rebuild GCC after having
+installed glibc-2.2, you need to first apply this patch
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/gcc-glibc-2.2-compat.diff">gcc-glibc-2.2-compat.diff</A>
+to the GCC sources.
+<P>
+<H2><A NAME="ss3.3">3.3 General data conversion</A>
+</H2>
+
+<P>
+<P>You will need a program to convert your locally (probably ISO-8859-1) encoded
+texts to UTF-8. (The alternative would be to keep using texts in different
+encodings on the same machine; this is not fun in the long run.)
+One such program is `iconv', which comes with glibc-2.2. Simply use
+<BLOCKQUOTE><CODE>
+<PRE>
+$ iconv --from-code=ISO-8859-1 --to-code=UTF-8 &lt; old_file &gt; new_file
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Here are two handy shell scripts, called "i2u"
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/i2u.sh">i2u.sh</A>
+(for ISO to UTF conversion) and "u2i"
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/u2i.sh">u2i.sh</A>
+(for UTF to ISO conversion).
+Adapt according to your current 8-bit character set.
+<P>If you don't have glibc-2.2 and iconv installed, you can use GNU recode 3.6
+instead.
+"i2u" 
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/i2u_recode.sh">i2u_recode.sh</A> is
+"recode ISO-8859-1..UTF-8", and
+"u2i" 
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/u2i_recode.sh">u2i_recode.sh</A> is
+"recode UTF-8..ISO-8859-1".
+<A HREF="ftp://ftp.gnu.org/pub/gnu/recode/recode-3.6.tar.gz">ftp://ftp.gnu.org/pub/gnu/recode/recode-3.6.tar.gz</A><P>Or you can also use CLISP instead. Here are
+"i2u" 
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/i2u.lisp">i2u.lisp</A> and
+"u2i" 
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/u2i.lisp">u2i.lisp</A>
+written in Lisp. Note: You need a CLISP version from July 1999 or newer.
+<A HREF="ftp://clisp.cons.org/pub/lisp/clisp/source/clispsrc.tar.gz">ftp://clisp.cons.org/pub/lisp/clisp/source/clispsrc.tar.gz</A>.
+<P>Other data conversion programs, less powerful than GNU recode, are
+`trans'
+<A HREF="ftp://ftp.informatik.uni-erlangen.de/pub/doc/ISO/charsets/trans113.tar.gz">ftp://ftp.informatik.uni-erlangen.de/pub/doc/ISO/charsets/trans113.tar.gz</A>,
+`tcs' from the Plan9 operating system
+<A HREF="ftp://ftp.informatik.uni-erlangen.de/pub/doc/ISO/charsets/tcs.tar.gz">ftp://ftp.informatik.uni-erlangen.de/pub/doc/ISO/charsets/tcs.tar.gz</A>,
+and
+`utrans'/`uhtrans'/`hutrans'
+<A HREF="ftp://ftp.cdrom.com/pub/FreeBSD/distfiles/i18ntools-1.0.tar.gz">ftp://ftp.cdrom.com/pub/FreeBSD/distfiles/i18ntools-1.0.tar.gz</A>
+by G. Adam Stanislav
+<A HREF="mailto:adam@whizkidtech.net">&lt;adam@whizkidtech.net&gt;</A>.
+<P>For the repeated conversion of files to UTF-8 from different character sets,
+a semi-automatic tool can be used:
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/to-utf8">to-utf8</A>
+presents the non-ASCII parts of a file to the user, lets him decide about the
+file's original character set, and then converts the file to UTF-8.
+<P>
+<H2><A NAME="ss3.4">3.4 Locale environment variables</A>
+</H2>
+
+<P>
+<P>You may have the following environment variables set, containing locale
+names:
+<DL>
+<DT><B>LANGUAGE</B><DD><P>override for LC_MESSAGES, used by GNU gettext only
+<DT><B>LC_ALL</B><DD><P>override for all other LC_* variables
+<DT><B>LC_CTYPE, LC_MESSAGES, LC_COLLATE, LC_NUMERIC, LC_MONETARY, LC_TIME</B><DD><P>individual variables for:
+character types and encoding,
+natural language messages,
+sorting rules,
+number formatting,
+money amount formatting,
+date and time display
+<DT><B>LANG</B><DD><P>default value for all LC_* variables
+</DL>
+
+(See `<CODE>man 7 locale</CODE>' for a detailed description.)
+<P>Each of the LC_* and LANG variables can contain a locale name of the
+following form:
+<P>
+<BLOCKQUOTE>
+language[_territory[.codeset]][@modifier]
+</BLOCKQUOTE>
+<P>where language is an
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/ISO_639.html">ISO 639</A>
+language code (lower case), territory is an
+<A HREF="ftp://ftp.ilog.fr/pub/Users/haible/utf8/ISO_3166.html">ISO 3166</A>
+country code (upper case), codeset denotes a character set, and
+modifier stands for other particular attributes (for example indicating
+a particular language dialect, or a nonstandard orthography).
+<P>LANGUAGE can contain several locale names, separated by colons.
+<P>In order to tell your system and all applications that you are using UTF-8,
+you need to add a codeset suffix of UTF-8 to your locale names. For example,
+if you were using
+<BLOCKQUOTE><CODE>
+<PRE>
+LC_CTYPE=de_DE
+</PRE>
+</CODE></BLOCKQUOTE>
+
+you would change this to
+<BLOCKQUOTE><CODE>
+<PRE>
+LC_CTYPE=de_DE.UTF-8
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You do <EM>not</EM> need to change your LANGUAGE environment variable.
+GNU gettext in glibc-2.2 has the ability to convert translations to the right
+encoding.
+<P>
+<H2><A NAME="ss3.5">3.5 Creating the locale support files</A>
+</H2>
+
+<P>
+<P>You create using <CODE>localedef</CODE> the support files for each UTF-8 locale
+you intend to use, for example:
+<BLOCKQUOTE><CODE>
+<PRE>
+$ localedef -v -c -i de_DE -f UTF-8 de_DE.UTF-8
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You typically don't need to create locales named "de" or "fr" without
+country suffix, because these locales are normally only used by the
+LANGUAGE variable and not by the LC_* variables, and LANGUAGE is only
+used as an override for LC_MESSAGES.
+<P>
+<HR>
+<A HREF="Unicode-HOWTO-4.html">Next</A>
+<A HREF="Unicode-HOWTO-2.html">Previous</A>
+<A HREF="Unicode-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

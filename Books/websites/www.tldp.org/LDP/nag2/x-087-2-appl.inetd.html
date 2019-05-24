@@ -1,0 +1,530 @@
+<HTML
+><HEAD
+><TITLE
+>The inetd Super Server</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="ImportantNetwork Features"
+HREF="x-087-2-appl.html"><LINK
+REL="PREVIOUS"
+TITLE="ImportantNetwork Features"
+HREF="x-087-2-appl.html"><LINK
+REL="NEXT"
+TITLE="The tcpd Access Control Facility"
+HREF="x-087-2-appl.tcpd.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-appl.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 12. ImportantNetwork Features</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-appl.tcpd.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-APPL.INETD"
+>12.1. The inetd Super Server</A
+></H1
+><P
+>Programs that provide application services via the network are called
+network <I
+CLASS="EMPHASIS"
+>daemons</I
+>. A daemon is a program that opens a
+port, most commonly a well-known service port, and waits for incoming
+connections on it. If one occurs, the daemon creates a child process that 
+accepts the connection, while the parent continues to listen for further
+requests. This mechanism works well, but has a few disadvantages; at
+least one instance of every possible service you wish to provide must be
+active in memory at all times. In addition, the software routines that 
+do the listening and port handling must be replicated in every network daemon.</P
+><P
+>To overcome these inefficiencies, most Unix installations run a special
+network daemon, what you might consider a &#8220;super server.&#8221; This
+daemon creates sockets on behalf of a number of services and listens on
+all of them simultaneously. When an incoming connection is received on
+any of these sockets, the super server accepts the connection and spawns
+the server specified for this port, passing the socket across to the child
+to manage. The server then returns to listening.</P
+><P
+>&#13;
+
+The most common super server is called <B
+CLASS="COMMAND"
+>inetd</B
+>,
+the Internet Daemon. It is started at system boot time and takes the list
+of services it is to manage from a startup file named
+<TT
+CLASS="FILENAME"
+>/etc/inetd.conf</TT
+>. In addition to those servers,
+there are a number of trivial services performed by <B
+CLASS="COMMAND"
+>inetd</B
+>
+itself called <I
+CLASS="EMPHASIS"
+>internal services</I
+>. They include
+<B
+CLASS="COMMAND"
+>chargen</B
+>, which simply generates a string of characters,
+and <B
+CLASS="COMMAND"
+>daytime</B
+>, which returns the system's idea of the time
+of day.</P
+><P
+>An entry in this file consists of a single line made up of the
+following fields:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="REPLACEABLE"
+><I
+>service</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>type</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>protocol</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>wait</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>user</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>server</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>cmdline</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Each of the fields is described in the following list:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>service</I
+></TT
+></DT
+><DD
+><P
+>Gives the service name. The service name has to be translated to a port
+number by looking it up in the <TT
+CLASS="FILENAME"
+>/etc/services</TT
+> file. This
+file will be described later in this chapter in the section <A
+HREF="x-087-2-appl.services.html"
+>Section 12.3</A
+>.&#8221;</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>type</I
+></TT
+></DT
+><DD
+><P
+>Specifies a socket type, either <SPAN
+CLASS="SYSTEMITEM"
+>stream</SPAN
+>
+(for connection-oriented protocols) or
+<SPAN
+CLASS="SYSTEMITEM"
+>dgram</SPAN
+> (for datagram protocols).
+TCP-based services should therefore always use
+<SPAN
+CLASS="SYSTEMITEM"
+>stream</SPAN
+>, while UDP-based services
+should always use <SPAN
+CLASS="SYSTEMITEM"
+>dgram</SPAN
+>.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>protocol</I
+></TT
+></DT
+><DD
+><P
+>Names the transport protocol used by the service. This must be a valid
+protocol name found in the <TT
+CLASS="FILENAME"
+>protocols</TT
+> file, explained
+later.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>wait</I
+></TT
+></DT
+><DD
+><P
+>This option applies only to <SPAN
+CLASS="SYSTEMITEM"
+>dgram</SPAN
+>
+sockets. It can be either <SPAN
+CLASS="SYSTEMITEM"
+>wait</SPAN
+> or
+<SPAN
+CLASS="SYSTEMITEM"
+>nowait</SPAN
+>. If
+<SPAN
+CLASS="SYSTEMITEM"
+>wait</SPAN
+> is specified,
+<B
+CLASS="COMMAND"
+>inetd</B
+> executes only one server for the specified
+port at any time. Otherwise, it immediately continues to listen on
+the port after executing the server.</P
+><P
+>This is useful for &#8220;single-threaded&#8221; servers that read all
+incoming datagrams until no more arrive, and then exit. Most RPC servers
+are of this type and should therefore specify
+<SPAN
+CLASS="SYSTEMITEM"
+>wait</SPAN
+>. The opposite type,
+&#8220;multi-threaded&#8221; servers, allow an unlimited number of
+instances to run concurrently. These servers should specify
+<SPAN
+CLASS="SYSTEMITEM"
+>nowait</SPAN
+>.</P
+><P
+><SPAN
+CLASS="SYSTEMITEM"
+>stream</SPAN
+> sockets should always use
+<SPAN
+CLASS="SYSTEMITEM"
+>nowait</SPAN
+>.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>user</I
+></TT
+></DT
+><DD
+><P
+>This is the login ID of the user who will own the process when it is
+executing. This will frequently be the <SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+>
+user, but some services may use different accounts. It is a very good idea to
+apply the principle of least privilege here, which states that you shouldn't
+run a command under a privileged account if the program doesn't require this for
+proper functioning. For example, the NNTP news server runs as
+<SPAN
+CLASS="SYSTEMITEM"
+>news</SPAN
+>, while services that may pose
+a security risk (such as <B
+CLASS="COMMAND"
+>tftp</B
+> or <B
+CLASS="COMMAND"
+>finger</B
+>)
+are often run as <SPAN
+CLASS="SYSTEMITEM"
+>nobody</SPAN
+>.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>server</I
+></TT
+></DT
+><DD
+><P
+>Gives the full pathname of the server program to be executed. Internal
+services are marked by the keyword
+<SPAN
+CLASS="SYSTEMITEM"
+>internal</SPAN
+>.</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>cmdline</I
+></TT
+></DT
+><DD
+><P
+>This is the command line to be passed to the server. It starts with the
+name of the server to be executed and can include any arguments that need
+to be passed to it. If you are using the TCP wrapper, you specify
+the full pathname to the server here. If not, then you just specify the
+server name as you'd like it to appear in a process list. We'll talk about
+the TCP wrapper shortly.</P
+><P
+>This field is empty for internal services.</P
+></DD
+></DL
+></DIV
+><P
+>&#13;
+A sample <TT
+CLASS="FILENAME"
+>inetd.conf</TT
+> file is shown in
+<A
+HREF="x-087-2-appl.inetd.html#X-087-2-APPL.FIG.INETD.CONF"
+>Example 12-1</A
+>. The <B
+CLASS="COMMAND"
+>finger</B
+>
+service is commented out so that it is not available. This is often done
+for security reasons, because it can be used by attackers to obtain names
+and other details of users on your system.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-APPL.FIG.INETD.CONF"
+></A
+><P
+><B
+>Example 12-1. A Sample /etc/inetd.conf File</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># 
+# inetd services
+ftp      stream tcp nowait root  /usr/sbin/ftpd    in.ftpd -l
+telnet   stream tcp nowait root  /usr/sbin/telnetd in.telnetd -b/etc/issue
+#finger  stream tcp nowait bin   /usr/sbin/fingerd in.fingerd
+#tftp    dgram  udp wait  nobody /usr/sbin/tftpd   in.tftpd
+#tftp    dgram  udp wait  nobody /usr/sbin/tftpd   in.tftpd /boot/diskless
+#login   stream tcp nowait root  /usr/sbin/rlogind in.rlogind
+#shell   stream tcp nowait root  /usr/sbin/rshd    in.rshd
+#exec    stream tcp nowait root  /usr/sbin/rexecd  in.rexecd
+#
+#       inetd internal services
+#
+daytime  stream tcp nowait root internal
+daytime  dgram  udp nowait root internal
+time     stream tcp nowait root internal
+time     dgram  udp nowait root internal
+echo     stream tcp nowait root internal
+echo     dgram  udp nowait root internal
+discard  stream tcp nowait root internal
+discard  dgram  udp nowait root internal
+chargen  stream tcp nowait root internal
+chargen  dgram  udp nowait root internal</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13; 
+The <B
+CLASS="COMMAND"
+>tftp</B
+> daemon is shown commented out as well.
+<B
+CLASS="COMMAND"
+>tftp</B
+> implements the <I
+CLASS="EMPHASIS"
+>Trivial File Transfer
+Protocol</I
+> (TFTP), which allows someone to transfer any
+world-readable files from your system without password checking.
+This is especially harmful with the <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> file, and even more so when you don't use shadow passwords.</P
+><P
+>TFTP is commonly used by diskless clients and Xterminals to download their
+code from a boot server. If you need to run <B
+CLASS="COMMAND"
+>tftpd</B
+> for this
+reason, make sure to limit its scope to those directories from which clients 
+will retrieve files; you will need to add those directory names to
+<B
+CLASS="COMMAND"
+>tftpd</B
+>'s command line. This is shown in the second
+<B
+CLASS="COMMAND"
+>tftp</B
+> line in the example.
+
+ &#13;</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.tcpd.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>ImportantNetwork Features</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The tcpd Access Control Facility</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

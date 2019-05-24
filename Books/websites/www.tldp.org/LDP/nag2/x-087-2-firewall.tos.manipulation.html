@@ -1,0 +1,622 @@
+<HTML
+><HEAD
+><TITLE
+>TOS Bit Manipulation</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="TCP/IP Firewall"
+HREF="x-087-2-firewall.html"><LINK
+REL="PREVIOUS"
+TITLE="Netfilter and IP Tables (2.4 Kernels)"
+HREF="x-087-2-firewall.future.html"><LINK
+REL="NEXT"
+TITLE="Testing a
+Firewall Configuration"
+HREF="x-087-2-firewall.checkingconf.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.future.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. TCP/IP Firewall</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.checkingconf.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-FIREWALL.TOS.MANIPULATION"
+>9.9. TOS Bit Manipulation</A
+></H1
+><P
+>&#13;
+
+The Type Of Service (TOS) bits are a set of four-bit flags in
+the IP header. When any one of these bit flags is set, routers may handle the
+datagram differently than datagrams with no TOS bits set. Each of the four bits
+has a different purpose and only one of the TOS bits may be set at any time, so
+combinations are not allowed. The bit flags are called Type of Service bits
+because they enable the application transmitting the data to tell the network
+the type of network service it requires.</P
+><P
+>The classes of network service available are:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>Minimum delay</DT
+><DD
+><P
+>Used when the time it takes for a datagram to travel from the source host
+to destination host (latency) is most important. A network provider might, for
+example, use both optical fiber and satellite network connections. Data carried
+across satellite connections has farther to travel and their latency is
+generally therefore higher than for terrestrial-based network connections
+between the same endpoints. A network provider might choose to ensure that
+datagrams with this type of service set are not carried by satellite.</P
+></DD
+><DT
+>Maximum throughput</DT
+><DD
+><P
+>Used when the volume of data transmitted in any period of time is
+important. There are many types of network applications for which latency
+is not particularly important but the network throughput is; for
+example, bulk-file transfers. A network provider might choose to route
+datagrams with this type of service set via high-latency,
+high-bandwidth routes, such as satellite connections.</P
+></DD
+><DT
+>Maximum reliability</DT
+><DD
+><P
+>Used when it is important that you have some certainty that the data
+will arrive at the destination without retransmission being
+required. The IP protocol may be carried over any number of underlying
+transmission mediums.  While SLIP and PPP are adequate datalink
+protocols, they are not as reliable as carrying IP over some other
+network, such as an X.25 network. A network provider might make
+an alternate network available, offering high reliability, to carry IP
+that would be used if this type of service is selected.</P
+></DD
+><DT
+>Minimum cost</DT
+><DD
+><P
+>Used when it is important to minimize the cost of data
+transmission. Leasing bandwidth on a satellite for a transpacific
+crossing is generally less costly than leasing space on a
+fiber-optical cable over the same distance, so network providers may
+choose to provide both and charge differently depending on which you
+use. In this scenario, your &#8220;minimum cost&#8221; type of service
+bit may cause your datagrams to be routed via the lower-cost satellite
+route.</P
+></DD
+></DL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN8961"
+>9.9.1. Setting the TOS Bits Using ipfwadm or ipchains</A
+></H2
+><P
+>&#13;
+The <B
+CLASS="COMMAND"
+>ipfwadm</B
+> and <B
+CLASS="COMMAND"
+>ipchains</B
+> commands deal
+with the TOS bits in much the same manner. In both cases you specify a rule
+that matches the datagrams with particular TOS bits set, and
+use the <TT
+CLASS="OPTION"
+>-t</TT
+> argument to specify the change you wish to make.</P
+><P
+>The changes are specified using two-bit masks. The first of these bit masks is
+logically ANDed with the IP options field of the datagram and the second is
+logically eXclusive-ORd with it. If this sounds complicated, we'll give you
+the recipes required to enable each of the types of service in a moment.</P
+><P
+>The bit masks are specified using eight-bit hexadecimal values. Both
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> and <B
+CLASS="COMMAND"
+>ipchains</B
+> use the same
+argument syntax:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="LITERAL"
+>-t <TT
+CLASS="REPLACEABLE"
+><I
+>andmask</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>xormask</I
+></TT
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>Fortunately the same mask arguments can be used each time you wish to set a
+particular type of service, to save you having to work them out. They are
+presented with some suggested uses in
+<A
+HREF="x-087-2-firewall.tos.manipulation.html#X-087-2-FIREWALL.IPCHAINS.TOS.RECIPES"
+>Table 9-3</A
+>.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS.TOS.RECIPES"
+></A
+><P
+><B
+>Table 9-3. Suggested Uses for TOS Bitmasks</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="2"
+ALIGN="LEFT"
+VALIGN="TOP"
+>TOS</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>ANDmask</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>XORmask</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Suggested Use</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="2"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Minimum Delay</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>0x01</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>0x10</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ftp, telnet, ssh</TD
+></TR
+><TR
+><TD
+WIDTH="2"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Maximum Throughput</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>0x01</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>0x08</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ftp-data, www</TD
+></TR
+><TR
+><TD
+WIDTH="2"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Maximum Reliability</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>0x01</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>0x04</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>snmp, dns</TD
+></TR
+><TR
+><TD
+WIDTH="2"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Minimum Cost</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>0x01</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>0x02</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>nntp, smtp</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN9022"
+>9.9.2. Setting the TOS Bits Using iptables</A
+></H2
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>iptables</B
+> tool allows you to specify rules that
+capture only datagrams with TOS bits matching some predetermined value
+using the <TT
+CLASS="OPTION"
+>-m tos</TT
+> option, and for setting the TOS
+bits of IP datagrams matching a rule using the <TT
+CLASS="LITERAL"
+>-j
+TOS</TT
+> target. You may set TOS bits only on the
+<TT
+CLASS="LITERAL"
+>FORWARD</TT
+> and <TT
+CLASS="LITERAL"
+>OUTPUT</TT
+> chains. The
+matching and the setting occur quite independently. You can configure
+all sort of interesting rules. For example, you can configure a rule
+that discads all datagrams with certain TOS bit combinations, or a
+rule that sets the TOS bits of datagrams only from certain hosts. Most
+often you will use rules that contain both matching and setting to
+perform TOS bit translations, just as you could for
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> or <B
+CLASS="COMMAND"
+>ipchains</B
+>.</P
+><P
+>Rather than the complicated two-mask configuration of
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> and <B
+CLASS="COMMAND"
+>ipchains</B
+>,
+<B
+CLASS="COMMAND"
+>iptables</B
+> uses the simpler approach of plainly specifying
+what the TOS bits should match, or to what the TOS bits should be set.
+Additionally, rather than having to remember and use the hexadecimal value,
+you may specify the TOS bits using the more friendly mnemonics listed in
+the upcoming table.</P
+><P
+>The general syntax used to match TOS bits looks like:
+ 
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="LITERAL"
+>-m tos --tos <TT
+CLASS="REPLACEABLE"
+><I
+>mnemonic</I
+></TT
+> [<TT
+CLASS="REPLACEABLE"
+><I
+>other-args</I
+></TT
+>] -j <TT
+CLASS="REPLACEABLE"
+><I
+>target</I
+></TT
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The general syntax used to set TOS bits looks like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="LITERAL"
+>[<TT
+CLASS="REPLACEABLE"
+><I
+>other-args</I
+></TT
+>] -j TOS --set <TT
+CLASS="REPLACEABLE"
+><I
+>mnemonic</I
+></TT
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Remember that these would typically be used together, but they can be
+used quite independently if you have a configuration that
+requires it.</P
+><DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="X-087-2-FIREWALL.IPTABLES.TOS.RECIPES"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Mnemonic</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Hexadecimal</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Normal-Service</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0x00</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Minimize-Cost</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0x02</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Maximize-Reliability</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0x04</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Maximize-Throughput</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0x08</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Minimize-Delay</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0x10</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.future.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.checkingconf.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Netfilter and IP Tables (2.4 Kernels)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Testing a
+Firewall Configuration</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

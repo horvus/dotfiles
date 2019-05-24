@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Large Disk HOWTO: Translation and Disk Managers</TITLE>
+ <LINK HREF="Large-Disk-HOWTO-8.html" REL=next>
+ <LINK HREF="Large-Disk-HOWTO-6.html" REL=previous>
+ <LINK HREF="Large-Disk-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Large-Disk-HOWTO-8.html">Next</A>
+<A HREF="Large-Disk-HOWTO-6.html">Previous</A>
+<A HREF="Large-Disk-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Translation and Disk Managers</A></H2>
+
+<P>
+<!--
+disk!geometry translation
+-->
+
+<!--
+BIOS!translating
+-->
+
+<!--
+BIOS!LBA support
+-->
+
+Disk geometry (with heads, cylinders and tracks) is something
+from the age of MFM and RLL. In those days it corresponded to
+a physical reality. Nowadays, with IDE or SCSI, nobody is
+interested in what the `real' geometry of a disk is.
+Indeed, the number of sectors per track is variable - there are
+more sectors per track close to the outer rim of the disk - so there
+is no `real' number of sectors per track.
+Quite the contrary: the IDE command INITIALIZE DRIVE PARAMETERS (91h)
+serves to tell the disk how many heads and sectors per track
+it is supposed to have today.
+It is quite normal to see a large modern disk that has 2 heads
+report 15 or 16 heads to the BIOS, while the BIOS may again report
+255 heads to user software.
+<P>For the user it is best to regard a disk as just a linear array
+of sectors numbered 0, 1, ..., and leave it to the firmware
+to find out where a given sector lives on the disk. This linear
+numbering is called LBA.
+<P>So now the conceptual picture is the following.
+DOS, or some boot loader, talks to the BIOS, using (c,h,s) notation.
+The BIOS converts (c,h,s) to LBA notation using the fake geometry
+that the user is using. If the disk accepts LBA then this value
+is used for disk I/O. Otherwise, it is converted back to (c',h',s')
+using the geometry that the disk uses today, and that is used for
+disk I/O.
+<P>Note that there is a bit of confusion in the use of the expression `LBA':
+As a term describing disk capabilities it means `Linear Block Addressing'
+(as opposed to CHS Addressing). As a term in the BIOS Setup, it describes
+a translation scheme sometimes called `assisted LBA' - see above
+under `
+<A HREF="Large-Disk-HOWTO-4.html#The 8.4 GB limit">The 8.4 GB limit</A>
+'.
+<P>Something similar works when the firmware doesn't speak LBA
+but the BIOS knows about translation.  (In the setup this is
+often indicated as `Large'.)  Now the BIOS will present
+a geometry (C,H,S) to the operating system, and use
+(C',H',S') while talking to the disk controller.  Usually S = S',
+C = C'/N and H = H'<CODE>*</CODE>N, where N is the smallest power of
+two that will ensure C' &lt;= 1024 (so that least capacity
+is wasted by the rounding down in C' = C/N).
+Again, this allows access of up to 8.4 GB (7.8 GiB).
+<P>(The third setup option usually is `Normal', where no translation
+is involved.)
+<P>If a BIOS does not know about `Large' or `LBA', then there are
+software solutions around.  Disk Managers like OnTrack or EZ-Drive
+replace the BIOS disk handling routines by their own.
+Often this is accomplished by having the disk manager code live
+in the MBR and subsequent sectors (OnTrack calls this code DDO:
+Dynamic Drive Overlay), so that it is booted before any other
+operating system.  That is why one may have problems
+when booting from a floppy when a Disk Manager has been installed.
+<P>The effect is more or less the same as with a translating BIOS -
+but especially when running several different operating systems
+on the same disk, disk managers can cause a lot of trouble.
+<P>Linux did support OnTrack Disk Manager since version 1.3.14,
+and EZ-Drive since version 1.3.29.  Some more details are
+given in the next section.
+<P>In 2.5.70 the automatic disk manager support was removed.
+Instead, two boot options were added: "hda=remap" to do
+the EZ-Drive remapping of sector 0 to sector 1, and
+"hda=remap63" to do the OnTrack Disk Manager shift over 63 sectors.
+<P>
+<HR>
+<A HREF="Large-Disk-HOWTO-8.html">Next</A>
+<A HREF="Large-Disk-HOWTO-6.html">Previous</A>
+<A HREF="Large-Disk-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

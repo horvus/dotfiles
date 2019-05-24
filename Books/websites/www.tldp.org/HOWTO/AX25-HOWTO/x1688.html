@@ -1,0 +1,755 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring the node software</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Amateur Radio AX.25 HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring Linux to accept Packet connections"
+HREF="x1474.html"><LINK
+REL="NEXT"
+TITLE="Configuring axspawn"
+HREF="x1839.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Amateur Radio AX.25 HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1474.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1839.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN1688"
+>13. Configuring the <EM
+>node</EM
+> software</A
+></H1
+><P
+>The <EM
+>node</EM
+> software was developed by
+<A
+HREF="mailto:tomi.manninen@hut.fi"
+TARGET="_top"
+>Tomi Manninen</A
+>
+and was based on the original PMS program. It provides a fairly
+complete and flexible node capability that is easily configured. It
+allows users once they are connected to make Telnet, NET/ROM, ROSE, and
+AX.25 connections out and to obtain various sorts of information such
+as Finger, Nodes and Heard lists etc. You can configure the node to
+execute any Linux command you wish fairly simply.</P
+><P
+>The node would normally be invoked from the <EM
+>ax25d</EM
+>
+program although it is also capable of being invoked from the TCP/IP
+<EM
+>inetd</EM
+> program to allow users to telnet to your
+machine and obtain access to it, or by running it from the command
+line.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1697"
+>13.1. Creating the <TT
+CLASS="LITERAL"
+>/etc/ax25/node.conf</TT
+> file</A
+></H2
+><P
+>The <TT
+CLASS="LITERAL"
+>node.conf</TT
+> file is where the main configuration of the node
+takes place. It is a simple text file and its format is as follows:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># /etc/ax25/node.conf
+# configuration file for the node(8) program.
+#
+# Lines beginning with '#' are comments and are ignored.
+
+# Hostname
+# Specifies the hostname of the node machine
+hostname	radio.gw.vk2ktj.ampr.org
+
+# Local Network
+# allows you to specify what is consider 'local' for the
+# purposes of permission checking using nodes.perms.
+localnet	44.136.8.96/29
+
+# Hide Ports
+# If specified allows you to make ports invisible to users. The
+# listed ports will not be listed by the (P)orts command.
+hiddenports	rose netrom
+
+# Node Identification.
+# this will appear in the node prompt
+NodeId		LINUX:VK2KTJ-9
+
+# NET/ROM port
+# This is the name of the NET/ROM port that will be used for
+# outgoing NET/ROM connections from the node.
+NrPort		netrom
+
+# Node Idle Timeout
+# Specifies the idle time for connections to this node in seconds.
+idletimout	1800
+
+# Connection Idle Timeout
+# Specifies the idle timer for connections made via this node in
+# seconds.
+conntimeout	1800
+
+# Reconnect
+# Specifies whether users should be reconnected to the node
+# when their remote connections disconnect, or whether they
+# should be disconnected complete.
+reconnect	on
+
+# Command Aliases
+# Provide a way of making complex node commands simple.
+alias		CONV	"telnet vk1xwt.ampr.org 3600"
+alias		BBS	"connect radio vk2xsb"
+
+# External Command Aliases
+# Provide a means of executing external commands under the node.
+# extcmd &#60;cmdname&#62; &#60;flag&#62; &#60;userid&#62; &#60;command&#62;
+# Flag == 1 is the only implemented function.
+# &#60;command&#62; is formatted as per ax25d.conf
+extcmd		PMS	1	root	/usr/sbin/pms pms -u %U -o VK2KTJ
+
+# Logging
+# Set logging to the system log. 3 is the noisiest, 0 is disabled.
+loglevel	3
+
+# The escape character
+# 20 = (Control-T)
+EscapeChar      20</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1704"
+>13.2. Creating the <TT
+CLASS="LITERAL"
+>/etc/ax25/node.perms</TT
+> file</A
+></H2
+><P
+>The <EM
+>node</EM
+> allows you to assign permissions to users. These permissions
+allow you to determine which users should be allowed to make use of options
+such as the (T)elnet, and (C)onnect commands, for example, and which
+shouldn't. The <TT
+CLASS="LITERAL"
+>node.perms</TT
+> file is where this information is stored
+and contains five key fields. For all fields an asterisk `*'
+character matches anything. This is useful for building default rules.</P
+><P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>user</DT
+><DD
+><P
+>The first field is the callsign or user to which the permissions should apply.
+Any SSID value is ignored, so you should just place the base callsign here.</P
+></DD
+><DT
+>method</DT
+><DD
+><P
+>Each protocol or access method is also given permissions. For example you
+might allow users who have connected via AX.25 or NET/ROM to use the (C)onnect
+option, but prevent others, such as those who are telnet connected from a
+non-local node from having access to it. The second field therefore allows
+you to select which access method this permissions rule should apply to.
+The access methods allowed are:
+
+<DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN1720"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Method</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ampr</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>User is telnet connected from an amprnet address (44.0.0.0)</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ax25</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>User connected by AX.25</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>host</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>User started node from command line</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>inet</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>user is telnet connected from a non-loca, non-ampr address.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>local</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>User is telnet connected from a 'local' host</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>netrom</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>User connected by NET/ROM</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>rose</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>User connected by ROSE</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>*</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>User connected by any means.</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+>&#13;</P
+></DD
+><DT
+>port</DT
+><DD
+><P
+>For AX.25 users you can control permissions on a port by port basis too if you
+choose. This allows you to determine what AX.25 are allowed to do based on
+which of your ports they have connected to. The third field contains the port
+name if you are using this facility. This is useful only for AX.25 connections.</P
+></DD
+><DT
+>password</DT
+><DD
+><P
+>You may optionally configure the node so that it prompts users to enter a
+password when they connect. This might be useful to help protect specially
+configured users who have high authority levels. If the fourth field is
+set then its value will be the password that will be accepted.</P
+></DD
+><DT
+>permissions</DT
+><DD
+><P
+>The permissions field is the final field in each entry in the file.
+The permissions field is coded as a bit field, with each facility having a bit
+value which if set allows the option to be used and if not set prevents the
+facility being used. The list of controllable facilities and their
+corresponding bit values are:</P
+><P
+>&#13;<DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN1764"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Value</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>1</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Login allowed.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>2</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>AX.25 (C)onnects allowed.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>4</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>NET/ROM (C)onnects allowed.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>8</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>(T)elnet to local hosts allowed.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>16</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>(T)elnet to amprnet (44.0.0.0) hosts allowed.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>32</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>(T)elnet to non-local, non-amprnet hosts allowed.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>64</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Hidden ports allowed for AX.25 (C)onnects.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>128</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ROSE (C)onnects allowed.</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>To code the permissions value for a rule, simply take each of the permissions
+you want that user to have and add their values together. The resulting number
+is what you place in field five.</P
+></DD
+></DL
+></DIV
+></P
+><P
+>A sample <TT
+CLASS="LITERAL"
+>nodes.perms</TT
+> might look like:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># /etc/ax25/node.perms
+#
+# The node operator is VK2KTJ, has a password of 'secret' and
+# is allowed all permissions by all connection methods
+vk2ktj	*	*	secret	255
+
+# The following users are banned from connecting
+NOCALL	*	*	*	0
+PK232	*	*	*	0
+PMS	*	*	*	0
+
+# INET users are banned from connecting.
+*	inet	*	*	0
+
+# AX.25, NET/ROM, Local, Host and AMPR users may (C)onnect and (T)elnet
+# to local and ampr hosts but not to other IP addresses.
+*	ax25	*	*	159
+*	netrom	*	*	159
+*	local	*	*	159
+*	host	*	*	159
+*	ampr	*	*	159</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1800"
+>13.3. Configuring <EM
+>node</EM
+> to run from <EM
+>ax25d</EM
+></A
+></H2
+><P
+>The <EM
+>node</EM
+> program would normally be run by the
+<EM
+>ax25d</EM
+> program. To do this you need to add
+appropriate rules to the <TT
+CLASS="LITERAL"
+>/etc/ax25/ax25d.conf</TT
+>
+file. In my configuration I wanted users to have a choice of either
+connecting to the <EM
+>node</EM
+> or connecting to other
+services. <EM
+>ax25d</EM
+> allows you to do this by cleverly
+creating creating port aliases. For example, given the
+<EM
+>ax25d</EM
+> configuration presented above, I want to
+configure <EM
+>node</EM
+> so that all users who connect to
+<TT
+CLASS="LITERAL"
+>VK2KTJ-1</TT
+> are given the node. To do this I add the
+following to my <TT
+CLASS="LITERAL"
+>/etc/ax25/ax25d.conf</TT
+> file:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>[vk2ktj-1 via radio]
+default    *     *    *   *   *   0    root /usr/sbin/node node</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>This says that the Linux kernel code will answer any connection
+requests for the callsign `<TT
+CLASS="LITERAL"
+>VK2KTJ-1</TT
+>' heard on the
+AX.25 port named `<TT
+CLASS="LITERAL"
+>radio</TT
+>', and will cause the
+<EM
+>node</EM
+> program to be run.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1820"
+>13.4. Configuring <EM
+>node</EM
+> to run from <EM
+>inetd</EM
+></A
+></H2
+><P
+>If you want users to be able to telnet a port on your machine and obtain
+access to the <EM
+>node</EM
+> you can go this fairly easily. The first thing
+to decide is what port users should connect to. In this example I've
+arbitrarily chosen port 4000, though Tomi gives details on how you could
+replace the normal telnet daemon with the <EM
+>node</EM
+> in his documentation.</P
+><P
+>You need to modify two files.</P
+><P
+>To <TT
+CLASS="LITERAL"
+>/etc/services</TT
+> you should add:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>node	3694/tcp	#OH2BNS's node software</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>and to <TT
+CLASS="LITERAL"
+>/etc/inetd.conf</TT
+> you should add:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>node	stream	tcp	nowait	root	/usr/sbin/node node</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>When this is done, and you have restarted the <EM
+>inetd</EM
+> program any user
+who telnet connects to port 3694 of your machine will be prompted to login
+and if configured, their password and then they will be connected to the
+<EM
+>node</EM
+>.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1474.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1839.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring Linux to accept Packet connections</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Configuring <EM
+>axspawn</EM
+></TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

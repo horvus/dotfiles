@@ -1,0 +1,738 @@
+<HTML
+><HEAD
+><TITLE
+>Tips and Tricks</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Sendmail"
+HREF="x-087-2-sendmail.html"><LINK
+REL="PREVIOUS"
+TITLE="Running sendmail"
+HREF="x15649.html"><LINK
+REL="NEXT"
+TITLE="Getting EximUp and Running"
+HREF="x-087-2-exim.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x15649.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 18. Sendmail</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-exim.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN15691"
+>18.11. Tips and Tricks</A
+></H1
+><P
+>&#13;There are a number of things you can do to make managing a
+<B
+CLASS="COMMAND"
+>sendmail</B
+> site efficient. A number of management tools are
+provided in the <B
+CLASS="COMMAND"
+>sendmail</B
+> package; let's look at the most
+important of these.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN15699"
+>18.11.1. Managing the Mail Spool</A
+></H2
+><P
+>&#13;
+Mail is queued in the <TT
+CLASS="FILENAME"
+>/var/spool/mqueue</TT
+> directory
+before being transmitted. This directory is called the mail spool.
+The <B
+CLASS="COMMAND"
+>sendmail</B
+> program provides a means of displaying a
+formatted list of all spooled mail messages and their status.</P
+><P
+>The <B
+CLASS="COMMAND"
+>/usr/bin/mailq</B
+> command is a symbolic link to the
+<B
+CLASS="COMMAND"
+>sendmail</B
+> executable and behaves indentically to:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>sendmail -bp</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+The output displays the message ID, its size, the time it was placed in the
+queue, who sent it, and a message indicating its current status. The following
+example shows a mail message stuck in the queue with a  problem:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>mailq</B
+></TT
+>
+                Mail Queue (1 request)
+--Q-ID-- --Size-- -----Q-Time----- ------------Sender/Recipient------------
+RAA00275      124 Wed Dec  9 17:47 root
+                 (host map: lookup (tao.linux.org.au): deferred)
+                                   terry@tao.linux.org.au</PRE
+></TD
+></TR
+></TABLE
+>
+
+This message is still in the mail queue because the destination host
+IP address could not be resolved.</P
+><P
+>We can force <B
+CLASS="COMMAND"
+>sendmail</B
+> to process the queue now by issuing
+the <TT
+CLASS="FILENAME"
+>/usr/bin/runq</TT
+> command.</P
+><P
+>The <B
+CLASS="COMMAND"
+>runq</B
+> command produces no output.
+<B
+CLASS="COMMAND"
+>sendmail</B
+> will begin processing the mail queue in the
+background.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN15722"
+>18.11.2. Forcing a Remote Host to Process its Mail Queue</A
+></H2
+><P
+>&#13;
+If you use a temporary dial-up Internet connection with a
+<I
+CLASS="EMPHASIS"
+>fixed</I
+> IP address and rely on an MX host to collect your
+mail while you are disconnected, you will find it useful to force the MX host
+to process its mail queue soon after you establish your connection.</P
+><P
+>A small <B
+CLASS="COMMAND"
+>perl</B
+> program is included with the
+<B
+CLASS="COMMAND"
+>sendmail</B
+> distribution that makes this simple for mail
+hosts that support it. The <B
+CLASS="COMMAND"
+>etrn</B
+> script has much the same
+effect on a remote host as the <B
+CLASS="COMMAND"
+>runq</B
+> command has on our
+own. If we invoke the command as shown in this example:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>etrn vstout.vbrew.com</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+we will force the host <I
+CLASS="EMPHASIS"
+>vstout.vbrew.com</I
+> to process any mail queued for our local machine.</P
+><P
+>Typically you'd add this command to your PPP <TT
+CLASS="FILENAME"
+>ip-up</TT
+> script
+so that it is executed soon after your network connection is established.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN15742"
+>18.11.3. Analyzing Mail Statistics</A
+></H2
+><P
+>&#13;<B
+CLASS="COMMAND"
+>sendmail</B
+> collects data on mail traffic volumes and
+some information on hosts to which it has delivered mail. There are
+two commands available to display this information,
+<B
+CLASS="COMMAND"
+>mailstats</B
+>, and <B
+CLASS="COMMAND"
+>hoststat</B
+>.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN15751"
+>18.11.3.1. mailstats</A
+></H3
+><P
+>&#13;
+The <B
+CLASS="COMMAND"
+>mailstats</B
+> command displays statistics on the
+volume of mail processed by <B
+CLASS="COMMAND"
+>sendmail</B
+>. The time at
+which data collection commenced is printed first, followed by a table
+with one row for each configured mailer and one showing a summary
+total of all mail. Each line presents eight items of information:
+
+<DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN15761"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Field</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Meaning</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>M</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The mailer (transport protocol) number</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>msgsfr</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The number of messages received from the mailer</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>bytes_from</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The Kbytes of mail from the mailer</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>msgsto</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The number of messages sent to the mailer</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>bytes_to</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The Kbytes of mail sent to the mailer</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>msgsreg</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The number of messages rejected</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>msgsdis</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The number of messages discarded</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>Mailer</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The name of the mailer</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+>
+
+A sample of the output of the <B
+CLASS="COMMAND"
+>mailstats</B
+> command is shown
+in <A
+HREF="x15691.html#X-087-2-SENDMAIL.MAILSTATS"
+>Example 18-5</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SENDMAIL.MAILSTATS"
+></A
+><P
+><B
+>Example 18-5. Sample Output of the mailstats Command</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/mailstats</B
+></TT
+>
+Statistics from Sun Dec 20 22:47:02 1998
+ M   msgsfr  bytes_from   msgsto    bytes_to  msgsrej msgsdis  Mailer
+ 0        0          0K       19        515K        0       0  prog
+ 3       33        545K        0          0K        0       0  local
+ 5       88        972K      139       1018K        0       0  esmtp
+=============================================================
+ T      121       1517K      158       1533K        0       0</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>This data is collected if the <I
+CLASS="EMPHASIS"
+>StatusFile</I
+> option is enabled
+in the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file and the status file exists.
+Typically you'd add the following to your <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+>
+file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># status file
+O StatusFile=/var/log/sendmail.st</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>To restart the statistics collection, you need to make the statistics
+file zero length:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>&#62; /var/log/sendmail.st</PRE
+></TD
+></TR
+></TABLE
+>
+
+and restart <B
+CLASS="COMMAND"
+>sendmail</B
+>.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN15815"
+>18.11.3.2. hoststat</A
+></H3
+><P
+>&#13;
+The <B
+CLASS="COMMAND"
+>hoststat</B
+> command displays information about the
+status of hosts that
+<B
+CLASS="COMMAND"
+>sendmail</B
+> has attempted to deliver mail to. The
+<B
+CLASS="COMMAND"
+>hoststat</B
+> command is equivalent to invoking
+<B
+CLASS="COMMAND"
+>sendmail</B
+> as:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>sendmail -bh</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The output presents each host on a line of its own, and for each the
+time since delivery was attempted to it, and the status message
+received at that time.</P
+><P
+><A
+HREF="x15691.html#X-087-2-SENDMAIL.HOSTSTAT"
+>Example 18-6</A
+> shows the sort of output you can
+expect from the <B
+CLASS="COMMAND"
+>hoststat</B
+> command. Note that most of the
+results indicate successful delivery. The result for
+<I
+CLASS="EMPHASIS"
+>earthlink.net</I
+>, on the other hand, indicates
+that delivery was unsuccessful. The status message can sometimes help 
+determine the cause of the failure. In this case, the connection timed out, 
+probably because the host was down or unreachable at the time delivery was 
+attempted.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SENDMAIL.HOSTSTAT"
+></A
+><P
+><B
+>Example 18-6. Sample Output of the oststat Command</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>hoststat</B
+></TT
+>
+ -------------- Hostname ---------- How long ago ---------Results---------
+ mail.telstra.com.au                    04:05:41 250 Message accepted for
+ scooter.eye-net.com.au              81+08:32:42 250 OK id=0zTGai-0008S9-0
+ yarrina.connect.com.a               53+10:46:03 250 LAA09163 Message acce
+ happy.optus.com.au                  55+03:34:40 250 Mail accepted
+ mail.zip.com.au                        04:05:33 250 RAA23904 Message acce
+ kwanon.research.canon.com.au        44+04:39:10 250 ok 911542267 qp 21186
+ linux.org.au                        83+10:04:11 250 IAA31139 Message acce
+ albert.aapra.org.au                    00:00:12 250 VAA21968 Message acce
+ field.medicine.adelaide.edu.au      53+10:46:03 250 ok 910742814 qp 721
+ copper.fuller.net                   65+12:38:00 250 OAA14470 Message acce
+ amsat.org                            5+06:49:21 250 UAA07526 Message acce
+ mail.acm.org                        53+10:46:17 250 TAA25012 Message acce
+ extmail.bigpond.com                 11+04:06:20 250 ok
+ earthlink.net                       45+05:41:09 Deferred: Connection time </PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The <B
+CLASS="COMMAND"
+>purgestat</B
+> command flushes the collected host data and
+is equivalent to invoking sendmail as:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>sendmail -bH</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>The statistics will continue to grow until you purge them. You might 
+want to periodically run the <B
+CLASS="COMMAND"
+>purgestat</B
+> command to make it 
+easier to search and find recent entries, especially if you have a busy site. 
+You could put the command into a <TT
+CLASS="FILENAME"
+>crontab</TT
+> file so it 
+runs automatically, or just do it yourself occasionally.</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x15649.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-exim.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Running sendmail</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-sendmail.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Getting EximUp and Running</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

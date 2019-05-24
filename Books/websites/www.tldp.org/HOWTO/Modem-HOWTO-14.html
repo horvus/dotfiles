@@ -1,0 +1,209 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Modem-HOWTO: What Speed Should I Use with My Modem? </TITLE>
+ <LINK HREF="Modem-HOWTO-15.html" REL=next>
+ <LINK HREF="Modem-HOWTO-13.html" REL=previous>
+ <LINK HREF="Modem-HOWTO.html#toc14" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Modem-HOWTO-15.html">Next</A>
+<A HREF="Modem-HOWTO-13.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc14">Contents</A>
+<HR>
+<H2><A NAME="speed_"></A> <A NAME="s14">14.</A> <A HREF="Modem-HOWTO.html#toc14">What Speed Should I Use with My Modem? </A></H2>
+
+<P> By "speed" we really mean the "data flow rate" but almost everybody
+incorrectly calls it speed.  For all modern modems you have no choice
+of the speed that the modem uses on the telephone line since it will
+automatically choose the highest possible speed that is feasible under
+the circumstances.  If one modem is slower than the other, then the
+faster modem will operate at the slower modem's speed.  On a noisy
+line, the speed will drop still lower.</P>
+<P>While the above speeds are selected automatically by the modems you do
+have a choice as to what speed will be used between your modem and
+your computer (PC-to-modem speed).  This is sometimes called "DTE
+speed" where "DTE" stands for Data Terminal Equipment (Your computer
+is a DTE.)  You need to set this speed high enough so this part of the
+signal path will not be a bottleneck.  The setting for the DTE speed
+is the maximum speed of this link.  Most of the time it will likely
+actually operate at lower speeds.</P>
+<P>For an external modem, DTE speed is the speed (in bits/sec) of the
+flow over the cable between you modem and PC.  For an internal modem,
+it's the same idea since the modem also emulates a serial port.  It
+may seem ridiculous having a speed limit on communication between a
+computer and a modem card that is directly connected inside the
+computer to a much higher speed bus.  But it's usually that way since
+the modem card probably includes a dedicated serial port which does
+have speed limits (and settable speeds).  However, some software
+modems have no such speed limits.</P>
+
+<H2><A NAME="ss14.1">14.1</A> <A HREF="Modem-HOWTO.html#toc14.1">Speed and Data Compression</A>
+</H2>
+
+<P> What speed do you choose?  If it were not for "data compression"
+one might try to choose a DTE speed exactly the same as the modem
+speed.  Data compression takes the bytes sent to the modem from your
+computer and encodes them into a fewer number of bytes.  For example,
+if the flow (speed) from the PC to the modem was 20,000 bytes/sec
+(bps) and the compression ratio was 2 to 1, then only 10,000 bytes/sec
+would flow over the telephone line.  Thus for a 2:1 compression ratio
+you would need to set the DTE speed to double the maximum modem speed
+on the phone line.  If the compression ratio were 3 to 1 you would
+need to set it 3 times faster, etc.</P>
+
+<H2><A NAME="ss14.2">14.2</A> <A HREF="Modem-HOWTO.html#toc14.2">Where do I Set Speed ?</A>
+</H2>
+
+<P> This DTE (PC-to-modem) speed is normally set by a menu in your
+communications program or by an option given to the getty command if
+someone is dialing in.  You can't set the DCE modem-to-modem speed
+since this is set automatically by the modem to the highest feasible
+speed after negotiation with the other modem.  Well, actually you can
+set the modem-to-modem speed with the S37 register but you shouldn't
+do it.  If the two modems on a connection were to be set this way to
+different speeds, then they couldn't communicate with each other.</P>
+
+<H2><A NAME="high_speed"></A> <A NAME="ss14.3">14.3</A> <A HREF="Modem-HOWTO.html#toc14.3">Can't Set a High Enough Speed </A>
+</H2>
+
+<H3>Speeds over 115.2kbps</H3>
+
+<P> The top speed of 115.2k has been standard since the mid 1990's.
+But by the year 2000, most new serial ports supported higher speeds of
+230.4k and 460.8k.  Some also support 921.6k.  Unfortunately Linux
+seldom uses these speeds due to lack of drivers.  Thus such ports
+behave just like 115.2k ports unless the higher speeds are enabled by
+special software.  To get these speeds you need to compile the kernel
+with special patches or use modules until support is built into the
+kernel's serial driver.</P>
+<P>Unfortunately serial port manufacturers never got together on a
+standard way to support high speeds, so the serial driver needs to
+support a variety of hardware.  Once high speed is enabled, a standard
+way to choose it is to set baud_base to the highest speed with
+setserial (unless the serial driver does this for you).  The software
+will then use a divisor of 1 to set the highest speed.  All this will 
+hopefully be supported by the Linux kernel sometime in 2003.</P>
+<P>A driver for the w83627hf chip (used on many motherboards such as 
+the Tyan S2460) is at 
+<A HREF="https://www.muru.com/linux/w83627hf/">https://www.muru.com/linux/w83627hf/</A></P>
+<P>A non-standard way that some manufacturers have implemented high speed
+is to use a very large number for the divisor to get the high speed.
+This number isn't really a divisor at all since it doesn't divide
+anything.  It's just serves as a code number to tell the hardware what
+speed to use.  In such cases you need to compile the kernel with
+special patches. </P>
+<P>One patch to support this second type of high-speed hardware is called
+shsmod (Super High Speed Mode).  There are both Windows and Linux
+versions of this patch.  See 
+<A HREF="http://www.devdrv.com/shsmod/">http://www.devdrv.com/shsmod/</A>.  There is also a module for the
+VIA VT82C686 chip 
+<A HREF="http://www.kati.fi/viahss/">http://www.kati.fi/viahss/</A>.  Using it
+may result in buffer overflow.  </P>
+<P>For internal modems, only a minority of them advertise that they
+support speeds of over 115.2k for their built-in serial ports.
+Does shsmod support these ??</P>
+
+<H3><A NAME="divisor_"></A> How speed is set in hardware: the divisor and baud_base </H3>
+
+<P> Speed is set by having the serial port's clock change frequency.
+But this change happens not by actually changing the frequency of the
+oscillator driving the clock but by "dividing" the clock's frequency.
+For example, to divide by two, just ignore every other clock tick.
+This cuts the speed in half.  Dividing by 3 makes the clock run at 1/3
+frequency, etc.  So to slow the clock down (meaning set speed), we
+just send the clock a divisor.  It's sent by the serial driver to a
+register in the port.  Thus speed is set by a divisor.</P>
+<P>If the clock runs at a top speed of 115,000 bps (common), then here
+are the divisors for various speeds (assuming a maximum speed of
+115,200): 1 (115.2k), 2 (57.6k), 3 (38.4k), 6 (19.2k), 12 (9.6k), 24
+(4.8k), 48 (2.4k), 96 (1.2k), etc.  The serial driver sets the speed
+in the hardware by sending the hardware only a "divisor" (a positive
+integer).  This "divisor" divides the "maximum speed" of the hardware
+resulting in a slower speed (except a divisor of 1 obviously tells the
+hardware to run at maximum speed).</P>
+<P>There are exceptions to the above since for certain serial port
+hardware, speeds above 115.2k are set by using a very high divisor.
+Keep that exception in mind as you read the rest of this section.
+Normally, if you specify a speed of 115.2k (in your communication
+program or by stty) then the serial driver sets the port hardware to
+divisor 1 which sets the highest speed.</P>
+<P>Besides using a very high divisor to set high speed, the conventional
+way to do it is as follows: If you happen to have hardware with a
+maximum speed of say 230.4k (and the 230.4k speed has been enabled in
+the hardware), then specifying 115.2k will result in divisor 1.  For
+some hardware this will actually give you 230.4k.  This is double the
+speed that you set.  In fact, for any speed you set, the actual speed
+will be double.  If you had hardware that could run at 460.8k then the
+actual speed would be quadruple what you set.  All the above assumes
+that you don't use "setserial" to modify things.</P>
+
+<H3>Setting the divisor, speed accounting</H3>
+
+<P> To correct this accounting (but not always fix the problem) you
+may use "setserial" to change the baud_base to the actual maximal
+speed of your port such as 230.4k.  Then if you set the speed (by your
+application or by stty) to 230.4k, a divisor of 1 will be used and
+you'll get the same speed as you set.</P>
+<P>If you have very old software which will not allow you to tell it such
+a high speed (but your hardware has it enabled) then you might want to
+look into using the "spd_cust" parameter.  This allows you to tell the
+application that the speed is 38,400 but the actual speed for this
+case is determined by the value of "divisor" which has also been set
+in setserial.  I think it best to try to avoid using this kludge.</P>
+<P>There are some brands of UARTs that uses a very high divisor to set
+high speeds.  There isn't any satisfactory way to use "setserial" (say
+set "divisor 32770") to get such a speed since then setserial would
+then think that the speed is very low and disable the FIFO in the
+UART.</P>
+
+<H3>Crystal frequency is higher than baud_base</H3>
+
+<P> Note that the baud_base setting is usually much lower than the
+frequency of the crystal oscillator since the crystal frequency of say
+1.8432 MHz is divided by 16 in the hardware to get the actual top
+speed of 115.2k.  The reason the crystal frequency needs to be higher
+is so that this high crystal speed can generate clock ticks to take a
+number of samples of each  bit to determine if it's a 1 or a 0.</P>
+<P>Actually, the 1.8432 MHz "crystal frequency" may be obtained from a
+18.432 MHz crystal oscillator by dividing by 10 before being fed to
+the UART.  Other schemes are also possible as long as the UART
+performs properly.</P>
+
+
+
+<H2><A NAME="speed_table"></A> <A NAME="ss14.4">14.4</A> <A HREF="Modem-HOWTO.html#toc14.4">Speed Table </A>
+</H2>
+
+<P> It's best to have at least a 16650 UART for a 56k modem but few
+modems or serial ports provide it.  Second best is a 16550 that has
+been tweaked to give 230,400 bps (230.4 kbps).  Most people still use
+a 16550 that is only 115.2 kbps but it's claimed to only slow down
+thruput by a few percent (on average).  This is because a typical
+compression ratio is 2 to 1 and for downloading compressed files
+(packages) it's 1 to 1.  There's no degradation for these cases.  Here
+are some suggested speeds to set your serial line if your modem speed
+is:</P>
+<P>
+<UL>
+<LI> 56k (V.92): use 115.2 kbps or 230.4 kbps (best)</LI>
+<LI> 56k (V.90): use 115.2 kbps or 230.4 kbps (best)</LI>
+<LI> 33.6k (V.34bis): use 115.2 kbps</LI>
+<LI> 28.8k (V.34): use 115.2 kbps</LI>
+<LI> 14.4k (V.32bis): use 57600 bps</LI>
+<LI> 9.6k (V.32): use 38400 bps</LI>
+<LI> slower than a 9600 bps (V.32) modem: Set the speed to the
+same speed as the modem (unless you have data compression).</LI>
+</UL>
+</P>
+<P>All the above speeds may use V.42bis data compression and V.42 error
+correction.  If data compression is not used then the speed may be set
+lower so long as it's above the modem speed.</P>
+
+<HR>
+<A HREF="Modem-HOWTO-15.html">Next</A>
+<A HREF="Modem-HOWTO-13.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc14">Contents</A>
+</BODY>
+</HTML>

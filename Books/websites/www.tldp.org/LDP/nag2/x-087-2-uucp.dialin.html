@@ -1,0 +1,743 @@
+<HTML
+><HEAD
+><TITLE
+>Setting Up Your System for Dialing In</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="ManagingTaylor UUCP"
+HREF="x-087-2-uucp.html"><LINK
+REL="PREVIOUS"
+TITLE="Controlling Access to UUCP Features"
+HREF="x-087-2-uucp.permissions.html"><LINK
+REL="NEXT"
+TITLE="UUCP Low-Level Protocols"
+HREF="x-087-2-uucp.protocols.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-uucp.permissions.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 16. ManagingTaylor UUCP</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-uucp.protocols.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-UUCP.DIALIN"
+>16.4. Setting Up Your System for Dialing In</A
+></H1
+><P
+>&#13;
+
+If you want to set up your site for dialing in, you have to permit logins on
+your serial port and customize some system files to provide UUCP accounts, 
+which we will cover in this section. </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-UUCP.DIALIN.ACCOUNTS"
+>16.4.1. Providing UUCP Accounts</A
+></H2
+><P
+>&#13;
+To begin with, you have to set up user accounts that let remote sites log into
+your system and establish a UUCP connection. Generally, you will provide
+a separate login name to each system that polls you. When setting up an
+account for system <SPAN
+CLASS="SYSTEMITEM"
+>pablo</SPAN
+>, you might
+give it the username <SPAN
+CLASS="SYSTEMITEM"
+>Upablo</SPAN
+>. There is
+no enforced policy on login names; they can be just about anything, but it
+will be convenient for you if the login name is easily related to the remote
+host name.</P
+><P
+>For systems that dial in through the serial port, you usually have to add
+these accounts to the system password file <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>.
+It is good practice to put all UUCP logins in a special group, such as
+<SPAN
+CLASS="SYSTEMITEM"
+>uuguest</SPAN
+>. The account's home directory
+should be set to the public spool directory
+<TT
+CLASS="FILENAME"
+>/var/spool/uucppublic</TT
+>&#8201;; its login shell must be
+<B
+CLASS="COMMAND"
+>uucico</B
+>.</P
+><P
+> 
+To serve UUCP systems that connect to your site over TCP, you have to
+set up <B
+CLASS="COMMAND"
+>inetd</B
+> to handle incoming connections on the
+<SPAN
+CLASS="SYSTEMITEM"
+>uucp</SPAN
+> port by adding the
+following line to
+<TT
+CLASS="FILENAME"
+>/etc/inetd.conf</TT
+>&#8201;:<A
+NAME="X-087-2-FNUU14"
+HREF="#FTN.X-087-2-FNUU14"
+>[1]</A
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>uucp   stream  tcp   nowait  root  /usr/sbin/tcpd  /usr/lib/uucp/uucico -l</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13; 
+The <TT
+CLASS="OPTION"
+>&#8211;l</TT
+> option makes <B
+CLASS="COMMAND"
+>uucico</B
+> perform
+its own login authorization. It prompts for a login name and a password
+just like the standard <B
+CLASS="COMMAND"
+>login</B
+> program, but relies on its
+private password database instead of <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>. This
+private password file is named <TT
+CLASS="FILENAME"
+>/etc/uucp/passwd</TT
+> and
+contains pairs of login names and passwords:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Upablo  IslaNegra
+Ulorca  co'rdoba</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This file must be owned by
+<SPAN
+CLASS="SYSTEMITEM"
+>uucp</SPAN
+> and have permissions of 600.</P
+><P
+>&#13;Does this database sound like such a good idea that you would like to use
+it on normal serial logins, too? Well, in some cases you can. What you
+need is a <B
+CLASS="COMMAND"
+>getty</B
+> program that you can tell to invoke
+<B
+CLASS="COMMAND"
+>uucico</B
+> instead of <B
+CLASS="COMMAND"
+>/bin/login</B
+> for
+your UUCP users.<A
+NAME="X-087-2-FNUU15"
+HREF="#FTN.X-087-2-FNUU15"
+>[2]</A
+> The invocation of
+<B
+CLASS="COMMAND"
+>uucico</B
+> would look like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/usr/lib/uucp/uucico -l -u <TT
+CLASS="REPLACEABLE"
+><I
+>user</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+The <TT
+CLASS="OPTION"
+>&#8211;u</TT
+> option tells it to use the specified user
+name rather than prompting for it.<A
+NAME="X-087-2-FNUU16"
+HREF="#FTN.X-087-2-FNUU16"
+>[3]</A
+>&#13;</P
+><P
+>To protect your UUCP users from callers who might give a false system name and
+snarf all their mail, you should add
+<B
+CLASS="COMMAND"
+>called-login</B
+> commands to each system
+entry in the <TT
+CLASS="FILENAME"
+>sys</TT
+> file. This is described in the next
+section.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-UUCP.SECURITY.CALLED-LOGIN"
+>16.4.2. Protecting Yourself Against Swindlers</A
+></H2
+><P
+>&#13; 
+A major problem with UUCP is that the calling system can lie about its name;
+it announces its name to the called system after logging in, but the server
+doesn't have any way to check it. Thus, an attacker could log into his or her
+own UUCP account, pretend to be someone else, and pick up that other site's
+mail. This is particularly troublesome if you offer login via anonymous UUCP,
+where the password is made public.</P
+><P
+>You <I
+CLASS="EMPHASIS"
+>must</I
+> guard against this sort of impostor. The cure
+for this disease is to require each system to use a particular login name
+by specifying a <SPAN
+CLASS="SYSTEMITEM"
+>called-login</SPAN
+> in
+<TT
+CLASS="FILENAME"
+>sys</TT
+>. A sample system entry may look like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>system          pablo
+... usual options ...
+called-login    Upablo</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The upshot is that whenever a system logs in and pretends it is
+<SPAN
+CLASS="SYSTEMITEM"
+>pablo</SPAN
+>,
+<B
+CLASS="COMMAND"
+>uucico</B
+> checks whether it has logged in as
+<SPAN
+CLASS="SYSTEMITEM"
+>Upablo</SPAN
+>. If it hasn't, the
+calling system is turned down, and the connection is dropped. You
+should make it a habit to add the <B
+CLASS="COMMAND"
+>called-login</B
+> command to every system entry
+you add to your <TT
+CLASS="FILENAME"
+>sys</TT
+> file. It is important that
+you do this for <I
+CLASS="EMPHASIS"
+>all</I
+> systems in your
+<B
+CLASS="COMMAND"
+>sys</B
+> file, regardless of whether they will ever call
+your site or not. For those sites that never call you, you should
+probably set <SPAN
+CLASS="SYSTEMITEM"
+>called-login</SPAN
+> to
+some totally bogus user name, such as <SPAN
+CLASS="SYSTEMITEM"
+>neverlogsin</SPAN
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN13578"
+>16.4.3. Be Paranoid: Call Sequence Checks</A
+></H2
+><P
+>&#13;Another way to fend off and detect impostors is to use <B
+CLASS="COMMAND"
+>call sequence 
+checks</B
+>. These help you protect against intruders who somehow manage to find out the password with which you log into your UUCP system.</P
+><P
+>When using call sequence checks, both machines keep track of the number of
+connections established so far. The counter is incremented with each 
+connection. After logging in, the caller sends its call sequence number, and 
+the receiver checks it against its own number. If they don't match, the 
+connection attempt is rejected. If the initial number is chosen at 
+random, attackers will have a hard time guessing the correct call sequence 
+number.</P
+><P
+>But call sequence checks do more for you. Even if some very clever
+person should detect your call sequence number as well as your password, you
+will find out. When the attacker calls your UUCP feed and steals your
+mail, this will increase the feeds call sequence number by one. The next time
+<I
+CLASS="EMPHASIS"
+>you</I
+> call your feed and try to log in, the remote
+<B
+CLASS="COMMAND"
+>uucico</B
+> will refuse you, because the numbers don't match
+anymore!</P
+><P
+>If you have enabled call sequence checks, you should check your log files
+regularly for error messages that hint at possible attacks. If your system
+rejects the call sequence number the calling system offers,
+<B
+CLASS="COMMAND"
+>uucico</B
+> will put a message into the log file saying
+something like, &#8220;Out of sequence call rejected.&#8221; If your system
+is rejected by its feed because the sequence numbers are out of sync, it
+will put a message in the log file saying, &#8220;Handshake failed
+(RBADSEQ).&#8221;</P
+><P
+>To enable call sequence checks, add the following command to the
+system entry:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># enable call sequence checks
+sequence        true</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;In addition, you have to create the file containing the sequence
+number itself.  Taylor UUCP keeps the sequence number in a file called
+<TT
+CLASS="FILENAME"
+>.Sequence</TT
+> in the remote site's spool
+directory. It <I
+CLASS="EMPHASIS"
+>must</I
+> be owned by <SPAN
+CLASS="SYSTEMITEM"
+>uucp</SPAN
+> and must be mode 600 (i.e., readable
+and writeable only by <SPAN
+CLASS="SYSTEMITEM"
+>uucp</SPAN
+>). It
+is best to initialize this file with an arbitrary, previously
+agreed-upon start value. A simple way to create this file is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>cd /var/spool/uucp/pablo</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>echo 94316 &#62; .Sequence</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>chmod 600 .Sequence</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>chown uucp.uucp .Sequence</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Of course, the remote site has to enable call sequence checks as well and
+start by using exactly the same sequence number as you.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN13611"
+>16.4.4. Anonymous UUCP</A
+></H2
+><P
+>&#13;
+ 
+If you want to provide anonymous UUCP access to your system, you first have to
+set up a special account for it as previously described.  A common practice 
+is to give the anonymous account a login name and a password of
+<SPAN
+CLASS="SYSTEMITEM"
+>uucp</SPAN
+>.</P
+><P
+>In addition, you have to set a few of the security options for unknown systems.
+For instance, you may want to prohibit them from executing any commands on
+your system. However, you cannot set these parameters in a
+<TT
+CLASS="FILENAME"
+>sys</TT
+> file entry because the
+<B
+CLASS="COMMAND"
+>system</B
+> command requires the system's
+name, which you don't have. Taylor UUCP solves this dilemma through the
+<B
+CLASS="COMMAND"
+>unknown</B
+> command.
+<B
+CLASS="COMMAND"
+>unknown</B
+> can be used in the
+<TT
+CLASS="FILENAME"
+>config</TT
+> file to specify any command that can usually
+appear in a system entry:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>unknown         remote-receive ~/incoming
+unknown         remote-send ~/pub
+unknown         max-remote-debug none
+unknown         command-path /usr/lib/uucp/anon-bin
+unknown         commands rmail</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This will restrict unknown systems to downloading files from below the
+<TT
+CLASS="FILENAME"
+>pub</TT
+> directory and uploading files to the
+<TT
+CLASS="FILENAME"
+>incoming</TT
+> directory below
+<TT
+CLASS="FILENAME"
+>/var/spool/uucppublic</TT
+>. The next line will make
+<B
+CLASS="COMMAND"
+>uucico</B
+> ignore any requests from the remote system to
+turn on debugging locally. The last two lines permit unknown systems to
+execute <B
+CLASS="COMMAND"
+>rmail</B
+>&#8201;; but the command path specified makes
+<B
+CLASS="COMMAND"
+>uucico</B
+> look for the <B
+CLASS="COMMAND"
+>rmail</B
+> command in
+a private directory named <TT
+CLASS="FILENAME"
+>anon-bin</TT
+> only. This restriction
+allows you to provide some special <B
+CLASS="COMMAND"
+>rmail</B
+> that, for instance,
+forwards all mail to the superuser for examination. This allows anonymous
+users to reach the maintainer of the system, but at the same time prevents 
+them from injecting any mail to other sites.</P
+><P
+>To enable anonymous UUCP, you must specify at least one
+<SPAN
+CLASS="SYSTEMITEM"
+>unknown</SPAN
+> statement in
+<TT
+CLASS="FILENAME"
+>config</TT
+>. Otherwise <B
+CLASS="COMMAND"
+>uucico</B
+> will
+reject all unknown systems.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNUU14"
+HREF="x-087-2-uucp.dialin.html#X-087-2-FNUU14"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> Note that <B
+CLASS="COMMAND"
+>tcpd</B
+> usually
+has mode 700, so that you must invoke it as user <SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+>, not <SPAN
+CLASS="SYSTEMITEM"
+>uucp</SPAN
+>. <B
+CLASS="COMMAND"
+>tcpd</B
+> is discussed
+in more detail in <A
+HREF="x-087-2-appl.html"
+>Chapter 12</A
+>.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNUU15"
+HREF="x-087-2-uucp.dialin.html#X-087-2-FNUU15"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Gert Doering's <B
+CLASS="COMMAND"
+>mgetty</B
+> is such a beast. It runs on a
+variety of platforms, including SCO Unix, AIX, SunOS, HP-UX, and Linux.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNUU16"
+HREF="x-087-2-uucp.dialin.html#X-087-2-FNUU16"
+>[3]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>This option is not present in Version 1.04.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.permissions.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.protocols.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Controlling Access to UUCP Features</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>UUCP Low-Level Protocols</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

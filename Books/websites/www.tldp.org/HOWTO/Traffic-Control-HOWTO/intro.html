@@ -1,0 +1,442 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Introduction to Linux Traffic Control</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Traffic Control HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Traffic Control HOWTO"
+HREF="index.html"><LINK
+REL="NEXT"
+TITLE="Overview of Concepts"
+HREF="overview.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Traffic Control HOWTO: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="index.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="overview.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="intro"
+></A
+>1. Introduction to Linux Traffic Control</H1
+><P
+>&#13;    Linux offers a very rich set of tools for managing and manipulating the
+    transmission of packets.  The larger Linux community is very familiar with
+    the tools available under Linux for packet mangling and firewalling
+    (netfilter, and before that, ipchains) as well as hundreds of network
+    services which can run on the operating system.  Few inside the community
+    and fewer outside the Linux community are aware of the tremendous power of
+    the traffic control subsystem which has grown and matured under kernels
+    2.2 and 2.4.
+  </P
+><P
+>&#13;    This HOWTO purports to introduce the
+    <A
+HREF="overview.html"
+>concepts of traffic control</A
+>,
+    <A
+HREF="elements.html"
+>the traditional elements (in general)</A
+>,
+    <A
+HREF="components.html"
+>the components of the Linux traffic control
+    implementation</A
+> and provide some
+    <A
+HREF="rules.html"
+>guidelines</A
+>
+    .
+    This HOWTO represents the collection, amalgamation and synthesis of the
+    <A
+HREF="http://lartc.org/howto/"
+TARGET="_top"
+>LARTC HOWTO</A
+>, documentation from individual projects and importantly
+    the <A
+HREF="http://mailman.ds9a.nl/mailman/listinfo/lartc/"
+TARGET="_top"
+>LARTC
+         mailing list</A
+> over a period of study.
+  </P
+><P
+>&#13;    The impatient soul, who simply wishes to experiment right now, is
+    recommended to the <A
+HREF="http://tldp.org/HOWTO/Traffic-Control-tcng-HTB-HOWTO/"
+TARGET="_top"
+>&#13;           Traffic Control using tcng and HTB HOWTO</A
+> and <A
+HREF="http://lartc.org/howto/"
+TARGET="_top"
+>LARTC HOWTO</A
+> for
+    immediate satisfaction.
+  </P
+><P
+>&#13;  </P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="i-assumptions"
+></A
+>1.1. Target audience and assumptions about the reader</H2
+><P
+>&#13;      The target audience for this HOWTO is the network administrator or savvy
+      home user who desires an introduction to the field of traffic control
+      and an overview of the tools available under Linux for implementing
+      traffic control.
+    </P
+><P
+>&#13;      I assume that the reader is comfortable with UNIX concepts and the
+      command line and has a basic knowledge of IP networking.  Users who wish
+      to implement traffic control may require the ability to patch, compile
+      and install a kernel or software package
+      <A
+NAME="AEN91"
+HREF="#FTN.AEN91"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>.  For users with newer kernels
+      (2.4.20+, see also
+      <A
+HREF="software.html#s-kernel"
+>Section 5.1</A
+>), however, the ability to install and use
+      software may be all that is required.
+    </P
+><P
+>&#13;      Broadly speaking, this HOWTO was written with a sophisticated user in
+      mind, perhaps one who has already had experience with traffic control
+      under Linux.  I assume that the reader may have
+      no prior traffic control experience.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="i-conventions"
+></A
+>1.2. Conventions</H2
+><P
+>&#13;      This text was written in
+      <A
+HREF="http://www.docbook.org/"
+TARGET="_top"
+>DocBook</A
+>
+      (<A
+HREF="http://www.docbook.org/xml/4.2/index.html"
+TARGET="_top"
+>version 4.2</A
+>)
+      with
+      <A
+HREF="http://vim.sourceforge.net/"
+TARGET="_top"
+><B
+CLASS="command"
+>vim</B
+></A
+>.
+      All formatting has been applied by
+      <A
+HREF="http://xmlsoft.org/XSLT/"
+TARGET="_top"
+>xsltproc</A
+> based on
+      <A
+HREF="http://docbook.sourceforge.net/projects/xsl/"
+TARGET="_top"
+>DocBook
+      XSL</A
+> and
+      <A
+HREF="http://www.tldp.org/LDP/LDP-Author-Guide/usingldpxsl.html"
+TARGET="_top"
+>LDP
+      XSL</A
+> stylesheets.  Typeface formatting and display conventions
+      are similar to most printed and electronically distributed technical
+      documentation.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="i-recommendation"
+></A
+>1.3. Recommended approach</H2
+><P
+>&#13;      I strongly recommend to the eager reader making a first foray into the
+      discipline of traffic control, to become only casually familiar with the
+      <A
+HREF="software.html#s-iproute2-tc"
+><B
+CLASS="command"
+>tc</B
+></A
+> command line utility, before concentrating on <A
+HREF="software.html#s-tcng"
+><B
+CLASS="command"
+>tcng</B
+></A
+>.  The
+      <B
+CLASS="command"
+>tcng</B
+> software package defines an entire language for describing
+      traffic control structures.
+      At first, this language may seem daunting, but mastery of these basics
+      will quickly provide the user with a much wider ability to employ (and
+      deploy) traffic control configurations than the direct use of <B
+CLASS="command"
+>tc</B
+>
+      would afford.
+    </P
+><P
+>&#13;      Where possible, I'll try to prefer describing the behaviour of
+      the Linux traffic control system in an abstract manner, although in
+      many cases I'll need to supply the syntax of one or the other common
+      systems for defining these structures.  I may not supply examples in
+      both the <B
+CLASS="command"
+>tcng</B
+> language and the <B
+CLASS="command"
+>tc</B
+> command line, so the wise user
+      will have some familiarity with both.
+    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="i-missing"
+></A
+>1.4. Missing content, corrections and feedback</H2
+><P
+>&#13;      There is content yet missing from this HOWTO.  In particular, the
+      following items will be added at some point to this documentation.
+    </P
+><P
+></P
+><UL
+><LI
+><P
+>&#13;          A description and diagram of GRED, WRR, PRIO
+          and CBQ.
+        </P
+></LI
+><LI
+><P
+>&#13;          A section of examples.
+        </P
+></LI
+><LI
+><P
+>&#13;          A section detailing the classifiers.
+        </P
+></LI
+><LI
+><P
+>&#13;          A section discussing the techniques for measuring traffic.
+        </P
+></LI
+><LI
+><P
+>&#13;          A section covering meters.
+        </P
+></LI
+><LI
+><P
+>&#13;          More details on <B
+CLASS="command"
+>tcng</B
+>.
+        </P
+></LI
+></UL
+><P
+>&#13;      I welcome suggestions, corrections and feedback at <TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:martin@linux-ip.net"
+>martin@linux-ip.net</A
+>&#62;</TT
+>.  All errors
+      and omissions are strictly my fault.  Although I have made every effort
+      to verify the factual correctness of the content presented herein, I
+      cannot accept any responsibility for actions taken under the influence
+      of this documentation.
+    </P
+><P
+>&#13;    </P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN91"
+HREF="intro.html#AEN91"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;          See <A
+HREF="software.html"
+>Section 5</A
+> for more details on the use or
+          installation of a particular traffic control mechanism, kernel or
+          command line utility.
+        </P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="overview.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Traffic Control HOWTO</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Overview of Concepts</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

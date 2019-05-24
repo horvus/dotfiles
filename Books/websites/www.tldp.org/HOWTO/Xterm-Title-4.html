@@ -1,0 +1,268 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>How to change the title of an xterm: Examples for different shells</TITLE>
+ <LINK HREF="Xterm-Title-5.html" REL=next>
+ <LINK HREF="Xterm-Title-3.html" REL=previous>
+ <LINK HREF="Xterm-Title.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Xterm-Title-5.html">Next</A>
+<A HREF="Xterm-Title-3.html">Previous</A>
+<A HREF="Xterm-Title.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Examples for different shells</A></H2>
+
+<P>Below we provide an set of examples for some of the more common shells.
+We start with <CODE>zsh</CODE> as it provides several facilities that
+make our job much easier. We will then progress through increasingly
+difficult examples.
+<P>
+<P>In all the examples we test the environment variable <CODE>$TERM</CODE>
+to make sure we only apply the escapes to xterms. We test for
+<CODE>$TERM=xterm*</CODE>; the wildcard is because some variants (such as
+rxvt) can set <CODE>$TERM=xterm-color</CODE>.
+<P>
+<P>We should make an extra comment about C shell derivatives, such as
+<CODE>tcsh</CODE> and <CODE>csh</CODE>. In C shells, undefined variables are
+fatal errors. Therefore, before testing the variable <CODE>$TERM</CODE>, it
+is necessary to test for its existence so as not to break non-interactive
+shells. To achieve this you must wrap the examples below in something
+like:
+<BLOCKQUOTE><CODE>
+<PRE>
+  if ($?TERM) then
+      ...
+  endif
+</PRE>
+</CODE></BLOCKQUOTE>
+
+(In our opinion this is just one of many reasons not to use C shells. See
+<I>
+<A HREF="http://language.perl.com/versus/csh.whynot">Csh Programming Considered Harmful</A></I> for a useful
+discussion).
+<P>
+<P>The examples below should be used by inserting them into the appropriate
+shell initialisation file; i.e. one that is sourced by interactive shells
+on startup. In most cases this is called something like
+<CODE>.<I>shell</I>rc</CODE> (e.g. <CODE>.zshrc</CODE>, <CODE>.tcshrc</CODE>, etc).
+<P>
+<P>
+<P>
+<H2><A NAME="ss4.1">4.1 zsh</A>
+</H2>
+
+<P><CODE>zsh</CODE> provides some functions and expansions, which we will use:
+<BLOCKQUOTE><CODE>
+<PRE>
+precmd ()   a function which is executed just before each prompt
+chpwd ()    a function which is executed whenever the directory is changed
+\e          escape sequence for escape (ESC)
+\a          escape sequence for bell (BEL)
+%n          expands to $USERNAME
+%m          expands to hostname up to first '.'
+%~          expands to directory, replacing $HOME with '~'
+</PRE>
+</CODE></BLOCKQUOTE>
+
+There are many more expansions available: see the <CODE>zshmisc</CODE> man page.
+<P>
+<P>Thus, the following will set the xterm title to
+"<CODE><I>username</I>@<I>hostname</I>: <I>directory</I></CODE>":
+<BLOCKQUOTE><CODE>
+<PRE>
+case $TERM in
+    xterm*)
+        precmd () {print -Pn "\e]0;%n@%m: %~\a"}
+        ;;
+esac
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This could also be achieved by using <CODE>chpwd()</CODE> instead
+of <CODE>precmd()</CODE>. The <CODE>print</CODE> builtin works like
+<CODE>echo</CODE>, but gives us access to the <CODE>%</CODE> prompt escapes.
+<P>
+<P>
+<H2><A NAME="ss4.2">4.2 tcsh</A>
+</H2>
+
+<P><CODE>tcsh</CODE> has some functions and expansions similar to those of
+<CODE>zsh</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+precmd ()   a function which is executed just before each prompt
+cwdcmd ()   a function which is executed whenever the directory is changed
+%n          expands to username
+%m          expands to hostname
+%~          expands to directory, replacing $HOME with '~'
+%#          expands to '>' for normal users, '#' for root users
+%{...%}     includes a string as a literal escape sequence
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Unfortunately, there is no equivalent to <CODE>zsh</CODE>'s <CODE>print</CODE>
+command allowing us to use prompt escapes in the title string,
+so the best we can do is to use shell variables (in <CODE>~/.tcshrc</CODE>):
+<BLOCKQUOTE><CODE>
+<PRE>
+switch ($TERM)
+    case "xterm*":
+        alias precmd 'echo -n "\033]0;${HOST}:$cwd\007"'
+        breaksw
+endsw
+</PRE>
+</CODE></BLOCKQUOTE>
+
+However, this gives the directory's full path instead of using <CODE>~</CODE>.
+Instead you can insert the string in the prompt:
+<BLOCKQUOTE><CODE>
+<PRE>
+switch ($TERM)
+    case "xterm*":
+        set prompt="%{\033]0;%n@%m:%~\007%}tcsh%# "
+        breaksw
+    default:
+        set prompt="tcsh%# "
+        breaksw
+endsw
+</PRE>
+</CODE></BLOCKQUOTE>
+
+which sets a prompt of "<CODE>tcsh% </CODE>", and an xterm title and icon
+of "<CODE><I>username</I>@<I>hostname</I>: <I>directory</I></CODE>". Note that
+the "<CODE>%{...%}</CODE>" must be placed around escape sequences (and cannot
+be the last item in the prompt: see the <CODE>tcsh</CODE> man page for details).
+<P>
+<P>
+<H2><A NAME="ss4.3">4.3 bash</A>
+</H2>
+
+<P><CODE>bash</CODE> supplies a variable <CODE>$PROMPT_COMMAND</CODE> which contains a
+command to execute before the prompt. This example sets the title to
+<CODE>username@hostname: directory</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+</PRE>
+</CODE></BLOCKQUOTE>
+
+where <CODE>\033</CODE> is the character code for <CODE>ESC</CODE>,
+and <CODE>\007</CODE> for <CODE>BEL</CODE>.
+<P>
+<P>Note that the quoting is important here: variables are expanded in
+<CODE>"..."</CODE>, and not expanded in <CODE>'...'</CODE>. So
+<CODE>$PROMPT_COMMAND</CODE> is set to an unexpanded value, but the
+variables inside <CODE>"..."</CODE> are expanded when
+<CODE>$PROMPT_COMMAND</CODE> is used.
+<P>
+<P>However, <CODE>$PWD</CODE> produces the full directory path. If we want to
+use the <CODE>~</CODE> shorthand we need to embed the escape string in the
+prompt, which allows us to take advantage of the following prompt expansions
+provided by the shell:
+<BLOCKQUOTE><CODE>
+<PRE>
+\u          expands to $USERNAME
+\h          expands to hostname up to first '.'
+\w          expands to directory, replacing $HOME with '~'
+\$          expands to '$' for normal users, '#' for root
+\[...\]     embeds a sequence of non-printing characters
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Thus, the following produces a prompt of <CODE>bash$ </CODE>, and an xterm
+title of <CODE>username@hostname: directory</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+case $TERM in
+    xterm*)
+        PS1="\[\033]0;\u@\h: \w\007\]bash\\$ "
+        ;;
+    *)
+        PS1="bash\\$ "
+        ;;
+esac
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Note the use of <CODE>\[...\]</CODE>, which tells <CODE>bash</CODE> to ignore
+the non-printing control characters when calculating the width
+of the prompt. Otherwise line editing commands get confused while
+placing the cursor.
+<P>
+<P>
+<H2><A NAME="ss4.4">4.4 ksh</A>
+</H2>
+
+<P><CODE>ksh</CODE> provides little in the way of functions and expansions, so
+we have to insert the escape string in the prompt to have it updated
+dynamically. This example produces a title of 
+<CODE>username@hostname: directory</CODE> and a prompt of <CODE>ksh$ </CODE>.
+<BLOCKQUOTE><CODE>
+<PRE>
+case $TERM in
+    xterm*)
+        HOST=`hostname`
+        PS1='^[]0;${USER}@${HOST}: ${PWD}^Gksh$ '
+        ;;
+    *)
+        PS1='ksh$ '
+        ;;
+esac
+</PRE>
+</CODE></BLOCKQUOTE>
+
+However, <CODE>$PWD</CODE> produces the full directory path. We can remove the
+prefix of <CODE>$HOME/</CODE> from the directory using the <CODE>${...##...}</CODE>
+construct. We can also use <CODE>${...%%...}</CODE> to truncate the hostname:
+<BLOCKQUOTE><CODE>
+<PRE>
+HOST=`hostname`
+HOST=${HOST%%.*}
+PS1='^[]0;${USER}@${HOST}: ${PWD##${HOME}/}^Gksh$ '
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Note that the <CODE>^[</CODE> and <CODE>^G</CODE> in the prompt string are single
+characters for <CODE>ESC</CODE> and <CODE>BEL</CODE> (can be entered in emacs
+using <CODE>C-q ESC</CODE> and <CODE>C-q C-g</CODE>).
+<P>
+<P>
+<H2><A NAME="ss4.5">4.5 csh</A>
+</H2>
+
+<P>This is very difficult indeed in <CODE>csh</CODE>, and we end up doing something
+like the following:
+<BLOCKQUOTE><CODE>
+<PRE>
+switch ($TERM)
+    case "xterm*":
+        set host=`hostname`
+        alias cd 'cd \!*; echo -n "^[]0;${user}@${host}: ${cwd}^Gcsh% "'
+        breaksw
+    default:
+        set prompt='csh% '
+        breaksw
+endsw
+</PRE>
+</CODE></BLOCKQUOTE>
+
+where we have had to alias the <CODE>cd</CODE> command to do the work of
+sending the escape sequence. Note that the <CODE>^[</CODE> and <CODE>^G</CODE> in
+the string are single characters for <CODE>ESC</CODE> and <CODE>BEL</CODE>
+(can be entered in emacs using <CODE>C-q ESC</CODE> and <CODE>C-q C-g</CODE>).
+<P>
+<P>Notes: on some systems <CODE>hostname -s</CODE> may be used to get
+a short, rather than fully-qualified, hostname. Some users with
+symlinked directories may find <CODE>`pwd`</CODE> (backquotes to run the
+<CODE>pwd</CODE> command) gives a more accurate path than <CODE>$cwd</CODE>.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Xterm-Title-5.html">Next</A>
+<A HREF="Xterm-Title-3.html">Previous</A>
+<A HREF="Xterm-Title.html#toc4">Contents</A>
+</BODY>
+</HTML>

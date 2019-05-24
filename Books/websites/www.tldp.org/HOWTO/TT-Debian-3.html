@@ -1,0 +1,349 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>TrueType Fonts in Debian mini-HOWTO: Display (X and the font servers)</TITLE>
+ <LINK HREF="TT-Debian-4.html" REL=next>
+ <LINK HREF="TT-Debian-2.html" REL=previous>
+ <LINK HREF="TT-Debian.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="TT-Debian-4.html">Next</A>
+<A HREF="TT-Debian-2.html">Previous</A>
+<A HREF="TT-Debian.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Display (<CODE>X</CODE> and the font servers)</A></H2>
+
+<P>Strictly speaking, it is not absolutely necessary to set up font servers
+to use TrueType fonts with <CODE>X</CODE> servers.  If you wish to use 
+static files instead of a font server, please see the instructions for
+setting up TrueType fonts for <CODE>ghostscript</CODE>.
+<P>
+<H2><A NAME="ss3.1">3.1 Setting up the <CODE>xfs</CODE> Font Server</A>
+</H2>
+
+<P>At this point I assume you have a working <CODE>/etc/X11/XF86Config</CODE> 
+file that loads explicitly specifies each directory in the <CODE>FontPath</CODE>.
+We will convert it to use the <CODE>xfs</CODE> Font Server.
+<P>
+<UL>
+<LI>Install <CODE>XFS</CODE>
+<P>If you have not already done so, install <CODE>main/binary-*/x11/xfs_*.deb</CODE>.
+<P>
+</LI>
+<LI>Configure <CODE>XFS</CODE>
+<P>Edit <CODE>/etc/X11/xfs/config</CODE> and change the <CODE>catalogue</CODE> to
+contain the contents of your <CODE>FontList</CODE>.  You may also wish to
+change the <CODE>default-resolutions</CODE> value.
+<P>
+<BLOCKQUOTE><CODE>
+<EM>/etc/X11/xfs/config</EM>
+<HR>
+<PRE>
+# paths to search for fonts
+catalogue = 
+    /usr/X11R6/lib/X11/fonts/100dpi/:unscaled,
+    /usr/X11R6/lib/X11/fonts/75dpi/:unscaled,
+    /usr/X11R6/lib/X11/fonts/misc/,
+    /usr/X11R6/lib/X11/fonts/Speedo/,
+    /usr/X11R6/lib/X11/fonts/Type1/,
+    /usr/X11R6/lib/X11/fonts/100dpi/,
+    /usr/X11R6/lib/X11/fonts/75dpi/
+# x1,y1,x2,y2,...
+default-resolutions = 100,100,75,75
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+</LI>
+<LI>Restart <CODE>XFS</CODE>
+<P>Restart <CODE>XFS</CODE> in the usual Debian manner:
+<P>
+<BLOCKQUOTE><CODE>
+<EM>root shell</EM>
+<HR>
+<PRE>
+# /etc/init.d/xfs restart
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+</LI>
+<LI>Verify that <CODE>XFS</CODE> is working
+<P>Before we change our <CODE>XF86Config</CODE> file, we should verify that the <CODE>xfs</CODE>
+server is working by listing them through the font server:
+<P>
+<BLOCKQUOTE><CODE>
+<EM>user shell</EM>
+<HR>
+<PRE>
+$ fslsfonts -server unix/:7100
+-adobe-courier-bold-i-normal--0-0-0-0-m-0-iso8859-1
+-adobe-courier-bold-o-normal--0-0-100-100-m-0-iso8859-1
+-adobe-courier-bold-o-normal--0-0-75-75-m-0-iso8859-1
+....
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+</LI>
+<LI>Change <CODE>/etc/X11/XF86Config</CODE> to use <CODE>xfs</CODE>
+<P>We're now ready to tell the X server to use the <CODE>xfs</CODE> font server.
+We keep one static font path as a fallback position in case of a problem
+with <CODE>xfs</CODE>.  (We keep "misc" since it contains <CODE>fixed</CODE>, the
+default font.)
+<P>
+<BLOCKQUOTE><CODE>
+<EM>/etc/X11/XF86Config</EM>
+<HR>
+<PRE>
+Section "Files"
+    FontPath   "unix/:7100"
+    FontPath   "/usr/X11R6/lib/X11/fonts/misc/"
+EndSection
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+</LI>
+<LI>Restart <CODE>X</CODE>
+<P>Restart <CODE>X</CODE> with <CODE>startx</CODE>, unless you like living life dangerously.
+If that's the case, name me the beneficiary of your unusually large life
+insurance policy and restart <CODE>xdm</CODE>.
+<P>
+</LI>
+<LI>Verify that the <CODE>XFS</CODE> fonts are visible
+<P>Once we have an X session established, we can verify that our server
+sees all of the <CODE>xfs</CODE> fonts by listing them through the <CODE>X</CODE> server.
+<P>
+<BLOCKQUOTE><CODE>
+<EM>user shell</EM>
+<HR>
+<PRE>
+$ xlsfonts
+-adobe-courier-bold-i-normal--0-0-0-0-m-0-iso8859-1
+-adobe-courier-bold-o-normal--0-0-100-100-m-0-iso8859-1
+-adobe-courier-bold-o-normal--0-0-75-75-m-0-iso8859-1
+....
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<P>
+<H2><A NAME="ss3.2">3.2 Setting up the <CODE>xfstt</CODE> Font Server and installing TrueType fonts</A>
+</H2>
+
+<P>At this point I assume you have a working <CODE>xfs</CODE> font server and wish
+to add TrueType support via <CODE>xfstt</CODE>.
+<P>
+<UL>
+<LI>Install <CODE>XFSTT</CODE>
+<P>If you have not already done so, install <CODE>main/binary-*/x11/xfstt_*.deb</CODE>.
+<P>
+</LI>
+<LI>Installing the TrueType Fonts
+<P>Copy your TrueType fonts into the <CODE>/usr/share/fonts/truetype</CODE>
+directory.  These files usually have a <CODE>.ttf</CODE> extension, and they
+should have <CODE>0444</CODE> permissions.
+<P>
+</LI>
+<LI>Restart the <CODE>XFSTT</CODE> Font Server
+<P>Restart the <CODE>xfstt</CODE> server with the <CODE>force-reload</CODE> flag
+<P>
+<BLOCKQUOTE><CODE>
+<EM>root shell</EM>
+<HR>
+<PRE>
+# /etc/init.d/xfstt force-reload
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+</LI>
+<LI>Verify that <CODE>XFSTT</CODE> is working
+<P>Before we change our <CODE>XF86Config</CODE> file, we should verify that the <CODE>xfstt</CODE>
+server is working.
+<P><EM>Important: the Debian <CODE>xfstt</CODE> server listens to
+port 7101, not 7100.  Also, the default permissions will require you
+to run this query as root.</EM>
+<P>
+<BLOCKQUOTE><CODE>
+<EM>user and root shells</EM>
+<HR>
+<PRE>
+$ fslsfonts -server unix/:7101
+_FSTransSocketUNIXConnect: Can't connect: errno = 111
+fslsfonts:  unable to open server "unix/:7101"
+
+# fslsfonts -server unix/:7101
+-ttf-arial black-medium-r-normal-regular-0-0-0-0-p-0-iso8859-1
+-ttf-arial mt black-medium-r-normal-regular-0-0-0-0-p-0-iso8859-1
+-ttf-arial narrow-bold-i-normal-bold italic-0-0-0-0-p-0-iso8859-1
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+</LI>
+<LI>Change <CODE>/etc/X11/XF86Config</CODE> to use <CODE>xfstt</CODE>
+<P>We're now ready to tell the X server to use the <CODE>xfstt</CODE> font server.
+We want it to use TrueType fonts in preference to all others.
+<P>
+<BLOCKQUOTE><CODE>
+<EM>/etc/X11/XF86Config</EM>
+<HR>
+<PRE>
+Section "Files"
+    FontPath   "unix/:7101"
+    FontPath   "unix/:7100"
+    FontPath   "/usr/X11R6/lib/X11/fonts/misc/"
+EndSection
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+</LI>
+<LI>Verify that <CODE>XFSTT</CODE> fonts are visible
+<P>Once we have an X session established, we can verify that our server
+sees all of the TrueType fonts by listing them.
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+$ xlsfonts | grep ttf
+-ttf-arial black-medium-r-normal-regular-0-0-0-0-p-0-iso8859-1
+-ttf-arial mt black-medium-r-normal-regular-0-0-0-0-p-0-iso8859-1
+-ttf-arial narrow-bold-i-normal-bold italic-0-0-0-0-p-0-iso8859-1
+....
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</LI>
+</UL>
+<P>
+<H2><A NAME="ss3.3">3.3 Using TrueType fonts</A>
+</H2>
+
+<P>At this point it should be possible to use a TrueType font in
+applications like <CODE>GIMP</CODE>, <CODE>Netscape</CODE> or <CODE>StarOffice</CODE>.  
+Since most TrueType fonts aren't monospaced you probably don't want 
+to use one of them with <CODE>xterm</CODE> - these programs use monospacing 
+the size of the largest character cell.
+<P>
+<H2><A NAME="ss3.4">3.4 Installing additional TrueType fonts</A>
+</H2>
+
+<P>If you are using the <CODE>xfstt</CODE> font server, it's trivial to install
+additional TrueType fonts.
+<P>
+<UL>
+<LI>Copy the new font(s) into <CODE>/usr/share/fonts/truetype/</CODE></LI>
+<LI>Restart <CODE>xfs</CODE> with <CODE>/etc/init.d/xfs restart</CODE></LI>
+</UL>
+<P>
+<H2><A NAME="ss3.5">3.5 Internationalization</A>
+</H2>
+
+<P><CODE>xfstt</CODE> has the ability to generate multiple font encodings,
+provided that the TrueType font contains the necessary glyphs.
+To enable fonts other than iso8859-1/unicode-1, you must manually
+edit the <CODE>/etc/init.d/xfstt</CODE> script:
+<P>
+<BLOCKQUOTE><CODE>
+<EM>/etc/init.d/xfstt</EM>
+<HR>
+<PRE>
+- start-stop-daemon --start --quiet --exec $XFSTT -- \
+      --port $portno --daemon 
++ start-stop-daemon --start --quiet --exec $XFSTT -- \
+      --port $portno --encoding iso8859-1,koi8-r,windows-1252,symbol-0 \
+      --daemon 
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>The recognized encodings in Debian 2.1 are:
+<P>
+<UL>
+<LI>iso8859-1       (Latin 1 - Western Europe)</LI>
+<LI>iso8859-2     (Latin 2 - Central and Eastern Europe)</LI>
+<LI>iso8859-3     (Latin 3 - Esperanto and Maltese)</LI>
+<LI>iso8859-4     (Latin 4 - superceded by Latin 6)</LI>
+<LI>iso8859-5     (Cyrillic)</LI>
+<LI>iso8859-6     (Arabic)</LI>
+<LI>iso8859-7     (Greek)</LI>
+<LI>iso8859-8     (Hebrew)</LI>
+<LI>iso8859-9     (Latin 5 - Latin 1 with Turkish, not Icelandic)</LI>
+<LI>iso8859-10    (Latin 6 - Nordic languages, replaces Latin 4)</LI>
+<LI>koi8-r        (Cyrillic)</LI>
+<LI>windows-1250  (Central Europe)</LI>
+<LI>windows-1251  (Cyrillic)</LI>
+<LI>windows-1252</LI>
+<LI>windows-1253  (Greek)</LI>
+<LI>windows-1254</LI>
+<LI>windows-1255</LI>
+<LI>windows-1256</LI>
+<LI>windows-1257</LI>
+<LI>symbol-0</LI>
+<LI>wingding-0</LI>
+<LI>wingreek-0</LI>
+<LI>cp-437        (various IBM code pages)</LI>
+<LI>cp-737</LI>
+<LI>cp-850</LI>
+<LI>cp-851</LI>
+<LI>cp-852</LI>
+<LI>cp-853</LI>
+<LI>cp-855</LI>
+<LI>cp-857</LI>
+<LI>cp-860</LI>
+<LI>cp-861</LI>
+<LI>cp-862</LI>
+<LI>cp-863</LI>
+<LI>cp-864</LI>
+<LI>cp-865</LI>
+<LI>cp-866</LI>
+<LI>cp-869</LI>
+<LI>cp-895</LI>
+<LI>atari-st</LI>
+<LI>unicode-2</LI>
+</UL>
+<P>The first 128 characters in the <CODE>iso8859-x</CODE> encodings is always ASCII.
+The <CODE>windows-</CODE> fonts embrace and extend <CODE>iso8859-1</CODE> with additional
+characters such as "smart quotes."  (Since these extensions, such as "smart
+quotes" are undefined in <CODE>iso8859-1</CODE>, they are usually rendered as
+question marks.)
+<P>Excellent source for additional information on character set encodings
+are at
+<UL>
+<LI><CODE>
+<A HREF="http://ppewww.ph.gla.ac.uk/%7Eflavell/iso8859/iso8859-pointers.html">http://ppewww.ph.gla.ac.uk/%7Eflavell/iso8859/iso8859-pointers.html</A></CODE>,</LI>
+<LI><CODE>
+<A HREF="http://anubis.dkuug.dk/i18n/">http://anubis.dkuug.dk/i18n/</A></CODE> and</LI>
+<LI><CODE>
+<A HREF="http://czyborra.com/charsets/iso8859.html">http://czyborra.com/charsets/iso8859.html</A></CODE>.</LI>
+</UL>
+<P>
+<P>
+<H2><A NAME="ss3.6">3.6 Security Issues</A>
+</H2>
+
+<P>I used Unix sockets above, but the standard Debian packages also
+configure <CODE>xfs</CODE> and <CODE>xfstt</CODE> to listen to TCP/IP ports 7100 and 
+7101, respectively.  Access to these ports should be controlled
+by the <CODE>trusted-clients</CODE> field in <CODE>/etc/X11/xfs/config</CODE>,
+but this option is not implemented in XFree86 3.3.2.3a.
+<P>This means that anyone, anywhere, can connect to your font server.
+Since <CODE>xfs</CODE> (and presumably <CODE>xfsts</CODE>) "clone" to support
+more users there's a trivial denial-of-service attack against these
+systems.  It's probably safe to use the font servers on dialup
+lines (since you're present to handle problems), but DSL and cable
+modem users should use a firewall.
+<P>
+<HR>
+<A HREF="TT-Debian-4.html">Next</A>
+<A HREF="TT-Debian-2.html">Previous</A>
+<A HREF="TT-Debian.html#toc3">Contents</A>
+</BODY>
+</HTML>

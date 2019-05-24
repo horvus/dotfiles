@@ -1,0 +1,1587 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Software and Tools</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Traffic Control HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Components of Linux Traffic Control"
+HREF="components.html"><LINK
+REL="NEXT"
+TITLE="Classless Queuing Disciplines (qdiscs)"
+HREF="classless-qdiscs.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Traffic Control HOWTO: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="components.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="classless-qdiscs.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="software"
+></A
+>5. Software and Tools</H1
+><P
+>&#13;  </P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="s-kernel"
+></A
+>5.1. Kernel requirements</H2
+><P
+>&#13;      Many distributions provide kernels with modular or monolithic support
+      for traffic control (Quality of Service).  Custom kernels may not
+      already provide support (modular or not) for the required features.  If
+      not, this is a very brief listing of the required kernel options.
+    </P
+><P
+>&#13;      The user who has little or no experience compiling a kernel is
+      recommended to <A
+HREF="http://tldp.org/HOWTO/Kernel-HOWTO/"
+TARGET="_top"
+>Kernel
+         HOWTO</A
+>.  Experienced kernel compilers should
+      be able to determine which of the below options apply to the desired
+      configuration, after reading a bit more about traffic control and
+      planning.
+    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-s-kernel-options"
+></A
+><P
+><B
+>Example 1. Kernel compilation options
+        <A
+NAME="AEN542"
+HREF="#FTN.AEN542"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>
+      </B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;#
+# QoS and/or fair queueing
+#
+CONFIG_NET_SCHED=y
+CONFIG_NET_SCH_CBQ=m
+CONFIG_NET_SCH_HTB=m
+CONFIG_NET_SCH_CSZ=m
+CONFIG_NET_SCH_PRIO=m
+CONFIG_NET_SCH_RED=m
+CONFIG_NET_SCH_SFQ=m
+CONFIG_NET_SCH_TEQL=m
+CONFIG_NET_SCH_TBF=m
+CONFIG_NET_SCH_GRED=m
+CONFIG_NET_SCH_DSMARK=m
+CONFIG_NET_SCH_INGRESS=m
+CONFIG_NET_QOS=y
+CONFIG_NET_ESTIMATOR=y
+CONFIG_NET_CLS=y
+CONFIG_NET_CLS_TCINDEX=m
+CONFIG_NET_CLS_ROUTE4=m
+CONFIG_NET_CLS_ROUTE=y
+CONFIG_NET_CLS_FW=m
+CONFIG_NET_CLS_U32=m
+CONFIG_NET_CLS_RSVP=m
+CONFIG_NET_CLS_RSVP6=m
+CONFIG_NET_CLS_POLICE=y
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;      A kernel compiled with the above set of options will provide modular
+      support for almost everything discussed in this documentation.  The user
+      may need to <B
+CLASS="command"
+>modprobe
+      <TT
+CLASS="replaceable"
+><I
+>module</I
+></TT
+></B
+> before using a given
+      feature.  Again, the confused user is recommended to the
+      <A
+HREF="http://tldp.org/HOWTO/Kernel-HOWTO/"
+TARGET="_top"
+>Kernel
+         HOWTO</A
+>, as this document cannot adequately address questions
+      about the use of the Linux kernel.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="s-iproute2"
+></A
+>5.2. <B
+CLASS="command"
+>iproute2</B
+> tools (<B
+CLASS="command"
+>tc</B
+>)</H2
+><P
+>&#13;      <B
+CLASS="command"
+>iproute2</B
+> is a suite of command line utilities which
+      manipulate kernel structures for IP networking
+      configuration on a machine.  For technical documentation on these tools,
+      see the <A
+HREF="http://linux-ip.net/gl/ip-cref/"
+TARGET="_top"
+>iproute2
+         documentation</A
+> and for a more expository discussion, the
+      documentation at <A
+HREF="http://linux-ip.net/"
+TARGET="_top"
+>linux-ip.net</A
+>.  Of the tools in the <B
+CLASS="command"
+>iproute2</B
+>
+      package, the binary <B
+CLASS="command"
+>tc</B
+> is the only one used for traffic control.  This
+      HOWTO will ignore the other tools in the suite.
+    </P
+><A
+NAME="s-iproute2-tc"
+></A
+><P
+>&#13;      Because it interacts with the kernel to direct the creation, deletion
+      and modification of traffic control structures, the <B
+CLASS="command"
+>tc</B
+> binary needs to
+      be compiled with support for all of the <A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+>s you wish to use.
+      In particular, the HTB qdisc is not supported yet in the upstream
+      <B
+CLASS="command"
+>iproute2</B
+> package.  See
+      <A
+HREF="classful-qdiscs.html#qc-htb"
+>Section 7.1</A
+> for more information.
+    </P
+><P
+>&#13;      The <B
+CLASS="command"
+>tc</B
+> tool performs all of the configuration of the kernel structures
+      required to support traffic control.  As a result of its many uses, the
+      command syntax can be described (at best) as arcane.  The utility takes
+      as its first non-option argument one of three Linux traffic control
+      components, <A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+>, <A
+HREF="components.html#c-class"
+><TT
+CLASS="constant"
+>class</TT
+></A
+> or <A
+HREF="components.html#c-filter"
+><TT
+CLASS="constant"
+>filter</TT
+></A
+>.
+    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-s-iproute2-tc"
+></A
+><P
+><B
+>Example 2. <B
+CLASS="command"
+>tc</B
+> command usage</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>tc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+>Usage: tc [ OPTIONS ] OBJECT { COMMAND | help }
+where  OBJECT := { qdisc | class | filter }
+       OPTIONS := { -s[tatistics] | -d[etails] | -r[aw] }</TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;      Each object accepts further and different options, and will be
+      incompletely described and documented below.  The hints in the examples
+      below are designed to introduce the vagaries of <B
+CLASS="command"
+>tc</B
+> command line
+      syntax.  For more examples, consult the <A
+HREF="http://lartc.org/howto/"
+TARGET="_top"
+>LARTC HOWTO</A
+>.  For even
+      better understanding, consult the kernel and <B
+CLASS="command"
+>iproute2</B
+> code.
+    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-s-iproute2-tc-qdisc"
+></A
+><P
+><B
+>Example 3. <B
+CLASS="command"
+>tc</B
+> <A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>tc qdisc add    \</B
+></TT
+> <A
+NAME="ex-s-itcq-tc"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 dev eth0     \</B
+></TT
+> <A
+NAME="ex-s-itcq-dev"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 root         \</B
+></TT
+> <A
+NAME="ex-s-itcq-root"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 handle 1:0   \</B
+></TT
+> <A
+NAME="ex-s-itcq-handle"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 htb</B
+></TT
+>            <A
+NAME="ex-s-itcq-qdisc"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="calloutlist"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="software.html#ex-s-itcq-tc"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>&#13;            Add a queuing discipline.  The verb could also be
+            <TT
+CLASS="constant"
+>del</TT
+>.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcq-dev"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+></DT
+><DD
+>&#13;            Specify the device onto which we are attaching the new queuing
+            discipline.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcq-root"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+></DT
+><DD
+>&#13;            This means <SPAN
+CLASS="QUOTE"
+>"egress"</SPAN
+> to <B
+CLASS="command"
+>tc</B
+>.  The word
+            <TT
+CLASS="constant"
+>root</TT
+> must be used, however.  Another
+            qdisc with limited functionality, the <TT
+CLASS="constant"
+>ingress</TT
+> qdisc can be
+            attached to the same device.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcq-handle"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+></DT
+><DD
+>&#13;            The <A
+HREF="components.html#c-handle"
+><TT
+CLASS="constant"
+>handle</TT
+></A
+> is a user-specified number of the form
+            <TT
+CLASS="replaceable"
+><I
+>major</I
+></TT
+>:<TT
+CLASS="replaceable"
+><I
+>minor</I
+></TT
+>.
+            The minor number for any queueing discipline handle must always be
+            zero (0).  An acceptable shorthand for a <A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+> handle is
+            the syntax "1:", where the minor number is assumed to be zero (0)
+            if not specified.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcq-qdisc"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+></DT
+><DD
+>&#13;            This is the queuing discipline to attach, HTB in this
+            example.  Queuing discipline specific parameters will follow this.
+            In the example here, we add no qdisc-specific parameters.
+          </DD
+></DL
+></DIV
+></DIV
+><P
+>&#13;      Above was the simplest use of the <B
+CLASS="command"
+>tc</B
+> utility for adding a queuing
+      discipline to a device.  Here's an example of the use of <B
+CLASS="command"
+>tc</B
+> to add a
+      class to an existing parent class.
+    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-s-iproute2-tc-class"
+></A
+><P
+><B
+>Example 4. <B
+CLASS="command"
+>tc</B
+> <A
+HREF="components.html#c-class"
+><TT
+CLASS="constant"
+>class</TT
+></A
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>tc class add    \</B
+></TT
+> <A
+NAME="ex-s-itcc-tc"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 dev eth0     \</B
+></TT
+> <A
+NAME="ex-s-itcc-dev"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 parent 1:1   \</B
+></TT
+> <A
+NAME="ex-s-itcc-parent"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 classid 1:6  \</B
+></TT
+> <A
+NAME="ex-s-itcc-classid"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 htb          \</B
+></TT
+> <A
+NAME="ex-s-itcc-classtype"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 rate 256kbit \</B
+></TT
+> <A
+NAME="ex-s-itcc-htb-rate"
+><IMG
+SRC="../images/callouts/6.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(6)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 ceil 512kbit</B
+></TT
+>   <A
+NAME="ex-s-itcc-htb-ceil"
+><IMG
+SRC="../images/callouts/7.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(7)"></A
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="calloutlist"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="software.html#ex-s-itcc-tc"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>&#13;             Add a class. The verb could also be <TT
+CLASS="constant"
+>del</TT
+>.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcc-dev"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+></DT
+><DD
+>&#13;            Specify the device onto which we are attaching the new class.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcc-parent"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+></DT
+><DD
+>&#13;            Specify the parent <A
+HREF="components.html#c-handle"
+><TT
+CLASS="constant"
+>handle</TT
+></A
+> to which we are attaching the new class.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcc-classid"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+></DT
+><DD
+>&#13;            This is a unique <A
+HREF="components.html#c-handle"
+><TT
+CLASS="constant"
+>handle</TT
+></A
+>
+            (<TT
+CLASS="replaceable"
+><I
+>major</I
+></TT
+>:<TT
+CLASS="replaceable"
+><I
+>minor</I
+></TT
+>)
+            identifying this class.  The minor number must be any non-zero (0)
+            number.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcc-classtype"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+></DT
+><DD
+>&#13;            Both of the <A
+HREF="classful-qdiscs.html"
+>classful qdiscs</A
+> require that any children classes be
+            classes of the same type as the parent.  Thus an HTB qdisc
+            will contain HTB classes.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcc-htb-rate"
+><IMG
+SRC="../images/callouts/6.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(6)"></A
+><A
+HREF="software.html#ex-s-itcc-htb-ceil"
+><IMG
+SRC="../images/callouts/7.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(7)"></A
+></DT
+><DD
+>&#13;            This is a class specific parameter.  Consult
+            <A
+HREF="classful-qdiscs.html#qc-htb"
+>Section 7.1</A
+> for more detail on these parameters.
+          </DD
+></DL
+></DIV
+></DIV
+><P
+>&#13;    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-s-iproute2-tc-filter"
+></A
+><P
+><B
+>Example 5. <B
+CLASS="command"
+>tc</B
+> <A
+HREF="components.html#c-filter"
+><TT
+CLASS="constant"
+>filter</TT
+></A
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>tc filter add               \</B
+></TT
+> <A
+NAME="ex-s-itcf-tc"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 dev eth0                 \</B
+></TT
+> <A
+NAME="ex-s-itcf-dev"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 parent 1:0               \</B
+></TT
+> <A
+NAME="ex-s-itcf-parent"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 protocol ip              \</B
+></TT
+> <A
+NAME="ex-s-itcf-protocol"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 prio 5                   \</B
+></TT
+> <A
+NAME="ex-s-itcf-prio"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 u32                      \</B
+></TT
+> <A
+NAME="ex-s-itcf-classifier"
+><IMG
+SRC="../images/callouts/6.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(6)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 match ip port 22 0xffff  \</B
+></TT
+> <A
+NAME="ex-s-itcf-match-port"
+><IMG
+SRC="../images/callouts/7.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(7)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 match ip tos 0x10 0xff   \</B
+></TT
+> <A
+NAME="ex-s-itcf-match-tos"
+><IMG
+SRC="../images/callouts/8.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(8)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 flowid 1:6               \</B
+></TT
+> <A
+NAME="ex-s-itcf-flowid"
+><IMG
+SRC="../images/callouts/9.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(9)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 police                   \</B
+></TT
+> <A
+NAME="ex-s-itcf-police"
+><IMG
+SRC="../images/callouts/10.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(10)"></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 rate 32000bps            \</B
+></TT
+> <A
+NAME="ex-s-itcf-prate"
+><B
+>(11)</B
+></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 burst 10240              \</B
+></TT
+> <A
+NAME="ex-s-itcf-burst"
+><B
+>(12)</B
+></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 mpu 0                    \</B
+></TT
+> <A
+NAME="ex-s-itcf-mpu"
+><B
+>(13)</B
+></A
+>
+<TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>                 action drop/continue</B
+></TT
+>       <A
+NAME="ex-s-itcf-action"
+><B
+>(14)</B
+></A
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="calloutlist"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="software.html#ex-s-itcf-tc"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>&#13;            Add a filter.  The verb could also be <TT
+CLASS="constant"
+>del</TT
+>.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-dev"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+></DT
+><DD
+>&#13;            Specify the device onto which we are attaching the new filter.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-parent"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+></DT
+><DD
+>&#13;            Specify the parent handle to which we are attaching the new
+            filter.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-protocol"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+></DT
+><DD
+>&#13;            This parameter is required.  It's use should be obvious, although
+            I don't know more.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-prio"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+></DT
+><DD
+>&#13;            The <TT
+CLASS="parameter"
+><I
+>prio</I
+></TT
+> parameter allows a given filter to
+            be preferred above another.  The <TT
+CLASS="parameter"
+><I
+>pref</I
+></TT
+> is a
+            synonym.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-classifier"
+><IMG
+SRC="../images/callouts/6.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(6)"></A
+></DT
+><DD
+>&#13;            This is a <A
+HREF="components.html#c-classifier"
+><TT
+CLASS="constant"
+>classifier</TT
+></A
+>, and is a required phrase in every
+            <B
+CLASS="command"
+>tc</B
+> <A
+HREF="components.html#c-filter"
+><TT
+CLASS="constant"
+>filter</TT
+></A
+> command.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-match-port"
+><IMG
+SRC="../images/callouts/7.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(7)"></A
+><A
+HREF="software.html#ex-s-itcf-match-tos"
+><IMG
+SRC="../images/callouts/8.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(8)"></A
+></DT
+><DD
+>&#13;            These are parameters to the classifier.  In this case, packets
+            with a type of service flag (indicating interactive usage) and
+            matching port 22 will be selected by this statement.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-flowid"
+><IMG
+SRC="../images/callouts/9.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(9)"></A
+></DT
+><DD
+>&#13;            The <TT
+CLASS="parameter"
+><I
+>flowid</I
+></TT
+> specifies the <A
+HREF="components.html#c-handle"
+><TT
+CLASS="constant"
+>handle</TT
+></A
+> of
+            the target class (or qdisc) to which a matching filter should send
+            its selected packets.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-police"
+><IMG
+SRC="../images/callouts/10.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(10)"></A
+></DT
+><DD
+>&#13;            This is the <A
+HREF="components.html#c-police"
+><TT
+CLASS="constant"
+>policer</TT
+></A
+>, and is an optional phrase in every
+            <B
+CLASS="command"
+>tc</B
+> <A
+HREF="components.html#c-filter"
+><TT
+CLASS="constant"
+>filter</TT
+></A
+> command.
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-prate"
+><B
+>(11)</B
+></A
+></DT
+><DD
+>&#13;            The policer will perform one action above this rate, and another
+            action below (see
+            <A
+HREF="software.html#ex-s-itcf-action-text"
+>action parameter</A
+>).
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-burst"
+><B
+>(12)</B
+></A
+></DT
+><DD
+>&#13;            The <TT
+CLASS="parameter"
+><I
+>burst</I
+></TT
+> is an exact analog to <TT
+CLASS="parameter"
+><I
+>burst</I
+></TT
+> in
+            <A
+HREF="classful-qdiscs.html#qc-htb"
+>HTB</A
+> (<TT
+CLASS="parameter"
+><I
+>burst</I
+></TT
+> is a <A
+HREF="overview.html#o-buckets"
+>buckets</A
+> concept).
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-mpu"
+><B
+>(13)</B
+></A
+></DT
+><DD
+>&#13;            The minimum policed unit.  To count all traffic, use an
+            <TT
+CLASS="parameter"
+><I
+>mpu</I
+></TT
+> of zero (0).
+          </DD
+><DT
+><A
+HREF="software.html#ex-s-itcf-action"
+><B
+>(14)</B
+></A
+></DT
+><DD
+>&#13;            The <TT
+CLASS="parameter"
+><I
+>action</I
+></TT
+> indicates what should be done if
+            the <TT
+CLASS="parameter"
+><I
+>rate</I
+></TT
+> based on the attributes of the policer.  The
+            first word specifies the action to take if the policer has been
+            exceeded.  The second word specifies action to take otherwise.
+          </DD
+></DL
+></DIV
+></DIV
+><P
+>&#13;      As evidenced above, the <B
+CLASS="command"
+>tc</B
+> command line utility has an arcane and
+      complex syntax, even for simple operations such as these examples show.
+      It should come as no surprised to the reader that there exists an easier
+      way to configure Linux traffic control.  See the next section,
+      <A
+HREF="software.html#s-tcng"
+>Section 5.3</A
+>.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="s-tcng"
+></A
+>5.3. <B
+CLASS="command"
+>tcng</B
+>, Traffic Control Next Generation</H2
+><P
+>&#13;      FIXME; sing the praises of tcng.  See also <A
+HREF="http://tldp.org/HOWTO/Traffic-Control-tcng-HTB-HOWTO/"
+TARGET="_top"
+>&#13;           Traffic Control using tcng and HTB HOWTO</A
+> and
+      <A
+HREF="http://linux-ip.net/gl/tcng/"
+TARGET="_top"
+>tcng
+         documentation</A
+>.
+    </P
+><P
+>&#13;      Traffic control next generation (hereafter, <B
+CLASS="command"
+>tcng</B
+>) provides all of the
+      power of traffic control under Linux with twenty percent of the
+      headache.
+    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="s-imq"
+></A
+>5.4. IMQ, Intermediate Queuing device</H2
+><P
+>&#13;    </P
+><P
+>&#13;      FIXME; must discuss IMQ.  See also Patrick McHardy's website on 
+      <A
+HREF="http://trash.net/~kaber/imq/"
+TARGET="_top"
+>IMQ</A
+>.
+    </P
+><P
+>&#13;    </P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN542"
+HREF="software.html#AEN542"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;            The options listed in this example are taken from a 2.4.20 kernel
+            source tree.  The exact options may differ slightly from kernel
+            release to kernel release depending on patches and new schedulers
+            and classifiers.
+          </P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="components.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="classless-qdiscs.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Components of Linux Traffic Control</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Classless Queuing Disciplines (<A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+>s)</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

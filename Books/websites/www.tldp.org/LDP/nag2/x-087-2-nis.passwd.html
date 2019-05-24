@@ -1,0 +1,516 @@
+<HTML
+><HEAD
+><TITLE
+>Using the passwd and group Maps</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Network Information System"
+HREF="x-087-2-nis.html"><LINK
+REL="PREVIOUS"
+TITLE="Choosing the Right Maps"
+HREF="x-087-2-nis.nsswitch.html"><LINK
+REL="NEXT"
+TITLE="Using NIS with Shadow Support"
+HREF="x-087-2-nis.shadow.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.nsswitch.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. The Network Information System</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.shadow.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NIS.PASSWD"
+>13.8. Using the passwd and group Maps</A
+></H1
+><P
+>&#13;
+
+
+One of the major applications of NIS is synchronizing user and account
+information on all hosts in an NIS domain. Consequently, you usually keep
+only a small local <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> file, to which
+site-wide information from the NIS maps is appended. However, simply
+enabling NIS lookups for this service in <TT
+CLASS="FILENAME"
+>nsswitch.conf</TT
+>
+is not nearly enough.</P
+><P
+>When relying on the password information distributed by NIS, you first
+have to make sure that the numeric user IDs of any users you have in
+your local <TT
+CLASS="FILENAME"
+>passwd</TT
+> file match the NIS server's idea of
+user IDs. Consistency in user IDs is important for other purposes as
+well, like mounting NFS volumes from other hosts in your network.</P
+><P
+> 
+ 
+If any of the numeric IDs in <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> or
+<TT
+CLASS="FILENAME"
+>/etc/group</TT
+> differ from those in the maps, you have to
+adjust file ownerships for all files that belong to that user. First, you
+should change all uids and gids in <TT
+CLASS="FILENAME"
+>passwd</TT
+> and
+<TT
+CLASS="FILENAME"
+>group</TT
+> to the new values, then find that all files
+that belong to the users just changed and change their
+ownership.  Assume <SPAN
+CLASS="SYSTEMITEM"
+>news</SPAN
+>
+used to have a user ID of 9 and <SPAN
+CLASS="SYSTEMITEM"
+>okir</SPAN
+>
+had a user ID of 103, which were changed to some other value; you could
+then
+issue the following commands as root:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>find / -uid   9 -print &#62;/tmp/uid.9</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>find / -uid 103 -print &#62;/tmp/uid.103</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>cat /tmp/uid.9   | xargs chown news</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>cat /tmp/uid.103 | xargs chown okir</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>It is important that you execute these commands with the new
+<TT
+CLASS="FILENAME"
+>passwd</TT
+> file installed, and that you collect all
+filenames before you change the ownership of any of them. To update the
+group ownerships of files, use a similar method with the gid instead of the 
+uid, and chgrp instead of chown.</P
+><P
+>Once you do this, the numerical uids and gids on your system will
+agree with those on all other hosts in your NIS domain.  The next step
+is to add configuration lines to <TT
+CLASS="FILENAME"
+>nsswitch.conf</TT
+>
+that enable NIS lookups for user and group information:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/nsswitch.conf - passwd and group treatment
+passwd: nis files
+group:  nis files</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+> 
+This affects where the <B
+CLASS="COMMAND"
+>login</B
+> command and all its
+friends look for user information. When a user tries to log in,
+<B
+CLASS="COMMAND"
+>login</B
+> queries the NIS maps first, and if this
+lookup fails, falls back to the local files. Usually, you will remove
+almost all users from your local files, and only leave entries for
+<SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+> and generic accounts like
+<SPAN
+CLASS="SYSTEMITEM"
+>mail</SPAN
+> in it.  This is because
+some vital system tasks may have to map uids to usernames or vice
+versa.  For example, administrative <B
+CLASS="COMMAND"
+>cron</B
+> jobs may
+execute the <TT
+CLASS="FILENAME"
+>su</TT
+> command to temporarily become
+<SPAN
+CLASS="SYSTEMITEM"
+>news</SPAN
+>, or the UUCP subsystem may
+mail a status report.  If <SPAN
+CLASS="SYSTEMITEM"
+>news</SPAN
+>
+and <SPAN
+CLASS="SYSTEMITEM"
+>uucp</SPAN
+> don't have entries in
+the local <TT
+CLASS="FILENAME"
+>passwd</TT
+> file, these jobs will fail
+miserably during an NIS brownout.</P
+><P
+>Lastly, if you are using either the old NIS implementation (supported by the
+<SPAN
+CLASS="SYSTEMITEM"
+>compat</SPAN
+> mode for the
+<TT
+CLASS="FILENAME"
+>passwd</TT
+> and <TT
+CLASS="FILENAME"
+>group</TT
+> files in the
+NYS or glibc implementations), you must insert the unwieldy special entries
+into them. These entries represent where the NIS derived records will
+be inserted into the database of information. The entries can be added
+anywhere, but are usually just added to the end. The entries to add for the 
+<TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> file are:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>+::::::</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+and for the <TT
+CLASS="FILENAME"
+>/etc/groups</TT
+> file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>+:::</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>With both glibc 2.x and NYS you can override parameters in a user&#8217;s 
+record received from the NIS server by creating entries with a &#8220;+&#8221;
+prepended to the login name, and exclude specified users by creating
+entries with a &#8220;-&#8221; prepended to the login name.
+For example the entries:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>+stuart::::::/bin/jacl</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>-jedd::::::</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+would override the shell specified for the user
+<SPAN
+CLASS="SYSTEMITEM"
+>stuart</SPAN
+> supplied by the NIS server,
+and would disallow the user <SPAN
+CLASS="SYSTEMITEM"
+>jedd</SPAN
+> from
+logging in on this machine. Any fields left blank use the information
+supplied by the NIS server.</P
+><P
+>There are two big caveats in order here. First, the setup as described up to
+here works only for login suites that don't use shadow passwords. The
+intricacies of using shadow passwords with NIS will be discussed in the next 
+section.
+Second, the login commands are not the only ones that access the
+<TT
+CLASS="FILENAME"
+>passwd</TT
+> file&#8212;look at the <B
+CLASS="COMMAND"
+>ls</B
+>
+command, which most people use almost constantly. Whenever compiling a long
+listing, <B
+CLASS="COMMAND"
+>ls</B
+> displays the symbolic names for user
+and group owners of a file; that is, for each uid and gid it encounters,
+it has to query the NIS server. An NIS query takes slightly longer to
+perform than the equivalent lookup in a local file. You may find that sharing
+your <TT
+CLASS="FILENAME"
+>passwd</TT
+> and <TT
+CLASS="FILENAME"
+>group</TT
+> information
+using NIS causes a noticable reduction in the performance of some programs that
+use this information frequently.</P
+><P
+>Still, this is not the whole story. Imagine what happens if a user wants to
+change her password. Usually, she will invoke <B
+CLASS="COMMAND"
+>passwd</B
+>, which
+reads the new password and updates the local <TT
+CLASS="FILENAME"
+>passwd</TT
+> file.
+This is impossible with NIS, since that file isn't available locally anymore,
+but having users log into the NIS server whenever they want to change their
+passwords is not an option, either. Therefore, NIS provides a drop-in
+replacement for <B
+CLASS="COMMAND"
+>passwd</B
+> called <B
+CLASS="COMMAND"
+>yppasswd</B
+>,
+which handles password changes under NIS. To change the password
+on the server host, it contacts the <B
+CLASS="COMMAND"
+>yppasswdd</B
+> daemon on
+that host via RPC, and provides it with the updated password information.
+Usually you install <B
+CLASS="COMMAND"
+>yppasswd</B
+> over the normal program by
+doing something like this:
+
+ 
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>cd /bin</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>mv passwd passwd.old</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ln yppasswd passwd</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>At the same time, you have to install <B
+CLASS="COMMAND"
+>rpc.yppasswdd</B
+> on the
+server and start it from a network script. This will effectively hide any of
+the contortions of NIS from your users.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.nsswitch.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.shadow.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Choosing the Right Maps</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Using NIS with Shadow Support</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,276 @@
+<HTML
+><HEAD
+><TITLE
+>Remote Procedure Call</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="ImportantNetwork Features"
+HREF="x-087-2-appl.html"><LINK
+REL="PREVIOUS"
+TITLE="The Services and Protocols Files"
+HREF="x-087-2-appl.services.html"><LINK
+REL="NEXT"
+TITLE="Configuring Remote Loginand Execution"
+HREF="x-087-2-appl.remote.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-appl.services.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 12. ImportantNetwork Features</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-appl.remote.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-APPL.RPC"
+>12.4. Remote Procedure Call</A
+></H1
+><P
+>The general mechanism for client-server applications is provided by the
+<I
+CLASS="EMPHASIS"
+>Remote Procedure Call</I
+> (RPC) package. RPC was developed by Sun
+Microsystems and is a collection of tools and library functions. Important
+applications built on top of RPC are NIS, the Network Information System 
+(described in <A
+HREF="x-087-2-nis.html"
+>Chapter 13</A
+>), and NFS, the Network File System 
+(described in <A
+HREF="x-087-2-nfs.html"
+>Chapter 14</A
+>), which are both described in 
+this book.</P
+><P
+>&#13;
+An RPC server consists of a collection of procedures that a client can call
+by sending an RPC request to the server along with the procedure parameters.
+The server will invoke the indicated procedure on behalf of the client,
+handing back the return value, if there is any. In order to be
+machine-independent, all data exchanged between client and server is
+converted to the <I
+CLASS="EMPHASIS"
+>External Data Representation</I
+> format
+(XDR) by the sender, and converted back to the machine-local representation
+by the receiver. RPC relies on standard UDP and TCP sockets to transport the
+XDR formatted data to the remote host. Sun has graciously placed RPC in the
+public domain; it is described in a series of RFCs.</P
+><P
+>Sometimes improvements to an RPC application introduce incompatible changes
+in the procedure call interface. Of course, simply changing the server would
+crash all applications that still expect the original behavior. Therefore,
+RPC programs have version numbers assigned to them, usually starting with 1,
+and with each new version of the RPC interface, this counter will be bumped up.
+Often, a server may offer several versions simultaneously; clients then
+indicate by the version number in their requests which implementation of
+the service they want to use.</P
+><P
+>&#13;
+The communication between RPC servers and clients is somewhat peculiar. An
+RPC server offers one or more collections of procedures; each set is called
+a <I
+CLASS="EMPHASIS"
+>program</I
+> and is uniquely identified by a
+<I
+CLASS="EMPHASIS"
+>program number</I
+>. A list that maps service names to program
+numbers is usually kept in <TT
+CLASS="FILENAME"
+>/etc/rpc</TT
+>, an excerpt of which
+is shown in <A
+HREF="x-087-2-appl.rpc.html#X-087-2-RPC.FIG"
+>Example 12-4</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-RPC.FIG"
+></A
+><P
+><B
+>Example 12-4. A Sample /etc/rpc File</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#
+# /etc/rpc - miscellaneous RPC-based services
+#
+portmapper      100000  portmap sunrpc
+rstatd          100001  rstat rstat_svc rup perfmeter
+rusersd         100002  rusers
+nfs             100003  nfsprog
+ypserv          100004  ypprog
+mountd          100005  mount showmount
+ypbind          100007
+walld           100008  rwall shutdown
+yppasswdd       100009  yppasswd
+bootparam       100026
+ypupdated       100028  ypupdate</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>In TCP/IP networks, the authors of RPC faced the problem of mapping
+program numbers to generic network services. They designed each server to
+provide both a TCP and a UDP port for each program and each version. Generally,
+RPC applications use UDP when sending data, and fall back to TCP only
+when the data to be transferred doesn't fit into a single UDP datagram.</P
+><P
+>&#13;
+Of course, client programs need to find out to which port
+a program number maps. Using a configuration file for this would be
+too unflexible; since RPC applications don't use reserved ports, there's
+no guarantee that a port originally meant to be used by our database
+application hasn't been taken by some other process. Therefore, RPC
+applications pick any port they can get and register it with a special program
+called the <I
+CLASS="EMPHASIS"
+>portmapper daemon</I
+>. The portmapper acts as a
+service broker for all RPC servers running on its machine. A client that
+wishes to contact a service with a given program number first queries
+the portmapper on the server's host, which returns the TCP and UDP port
+numbers the service can be reached at.</P
+><P
+>&#13;This method introduces a single point of failure, much like the 
+<B
+CLASS="COMMAND"
+>inetd</B
+> daemon does for the standard
+Berkeley services. However, this case is even a little worse because
+when the portmapper dies, all RPC port information is lost; this
+usually means you have to restart all RPC servers manually or reboot
+the entire machine.</P
+><P
+> 
+ 
+On Linux, the portmapper is called <TT
+CLASS="FILENAME"
+>/sbin/portmap</TT
+>, or
+sometimes <TT
+CLASS="FILENAME"
+>/usr/sbin/rpc.portmap</TT
+>. Other than making sure
+it is started from your network boot scripts, the portmapper doesn't require
+any configuration.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.services.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.remote.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Services and Protocols Files</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Configuring Remote Loginand Execution</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,387 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The Linux Electronic Mail Administrator HOWTO: How Electronic Mail Works</TITLE>
+ <LINK HREF="Mail-Administrator-HOWTO-4.html" REL=next>
+ <LINK HREF="Mail-Administrator-HOWTO-2.html" REL=previous>
+ <LINK HREF="Mail-Administrator-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Mail-Administrator-HOWTO-4.html">Next</A>
+<A HREF="Mail-Administrator-HOWTO-2.html">Previous</A>
+<A HREF="Mail-Administrator-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. How Electronic Mail Works</A></H2>
+
+<P>Now we'll explain the flow of information that typically takes place when
+two people to communicate by email.  Let us suppose that 
+Alice, on her machine <CODE>wonderland.com</CODE>, wants to send mail to
+Bob, on his machine <CODE>dobbs.com</CODE>.  Both machines are connected
+to the Internet.
+<P>It helps to know that an Internet mail message consists of two parts;
+mail headers and a mail body, separated by a blank
+line.  The mail headers contain the source and destination of the
+mail, a user-supplied subject line, the date it was sent, and various
+other kinds of useful information.  The body is the actual content
+of the message.  Here's an example:
+<P>
+<PRE>
+From: "Alice" &lt;alice@wonderland.com>
+Message-Id: &lt;199711131704.MAA18447@wonderland.com>
+Subject: Have you seen my white rabbit?
+To: bob@dobbs.org (Bob)
+Date: Thu, 13 Nov 1997 12:04:05 -0500 (EST)
+Content-Type: text
+
+I'm most concerned.  I fear he may have fallen down a hole.
+-- 
+                                                >>alice>>
+</PRE>
+<P>The arrangement and meaning of Internet mail headers are defined by
+an Internet standard called 
+<A HREF="ftp://ftp.isi.edu/in-notes/rfc822.txt">RFC822</A>.
+<P>
+<H2><A NAME="ss3.1">3.1 Mail between full-time Internet machines</A>
+</H2>
+
+<P>Here's a diagram of the whole process -- I'll explain all the stages
+and terminology below.
+<P>
+<HR>
+<PRE>
+                   +---------+          +-------+
++-------+  types   | sending |  calls   |sending|  
+| Alice |--------->|   MUA   |--------->|  MTA  |::::>::::
++-------+          |         |          |       |       ::   on the
+                   +---------+          +-------+       ::   sending
+                                                        ::   machine
+.......................................................................
+                             SMTP                       ::
+ ::::::::::::::::::::::::::::&lt;::::::::::::::::::::::::::::
+ ::
+ ::   +---------+          +-----+                +-------+
+ ::   |receiving|  calls   |     |  delivers to   | Bob's |
+ ::::>|   MTA   |--------->| LDA |===============>|mailbox|  on the
+      |         |          |     |                |       |  receiving
+      +---------+          +-----+                +-------+  machine
+                                                    |   |
+                                                    |   |
+                     +----------------&lt;-------------+   |
+                     |                                  |
+                +---------+         +-------+           |
+                |  Bob's  |         | Bob's |&lt;----------+
+                | notifier|         |  MUA  |
+                +---------+         +-------+
+                     |                  |
+                     |      +-----+     |
+                     +----->| Bob |&lt;----+
+                            +-----+
+</PRE>
+<HR>
+<P>To send mail, Alice will invoke a program called a mail user agent
+(or MUA for short).  The MUA is what users think of as `the
+mailer'; it helps her compose the message, usually by calling out to a
+text editor of her choice.  When she hits the MUA `send' button, her
+part of the process is done.  Later in this HOWTO we will survey
+popular MUAs.
+<P>The MUA she uses immediately hands her message to a program called a
+mail transport agent (or MTA). Usually this
+program will be <CODE>sendmail</CODE>, though some alternative MTAs are
+gaining popularity and may appear in future Linux distributions.  Later
+in this HOWTO we will also survey MTAs.
+<P>The MTA's job is to pass the mail to an MTA on Bob's machine.  It
+determines Bob's machine by analyzing the To header and seeing the
+<CODE>dobbs.com</CODE> on the right-hand side of Bob's address.  It uses
+that address to open an Internet connection to Bob's machine.  The
+mechanics of making that connection are a whole other topic; for this 
+explanation, it's enough to know that that connection is a way for
+Alice's MTA to send text commands to Bob's machine and receive replies
+to those commands.
+<P>The MTA's commands don't go to a shell.  Instead they go to a service port on Alice's machine.  A service port is a sort of
+rendezvous, a known place where Internet service programs listen for
+incoming requests.  Service ports are numbered, and Alice's MTA knows
+that it needs to talk to port 25 on Bob's machine to pass mail.
+<P>On port 25, Bob's machine has its own MTA listening for commands
+(probably another copy of sendmail).  Alice's MTA will go through
+a dialogue with Bob's using Simple Mail Transfer Protocol
+(or SMTP).  Here is what an SMTP dialogue looks like.
+Lines sent by Alice's machine are shown with S:, responses from
+Bob's machine are shown with R:.
+<P>
+<PRE>
+      S: MAIL FROM:&lt;alice@wonderland.com>
+      R: 250 OK
+      S: RCPT TO:&lt;bob@dobbs.com>
+      R: 250 OK
+      S: DATA
+      R: 354 Start mail input; end with &lt;CRLF>.&lt;CRLF>
+      S: From: "Alice" &lt;alice@wonderland.com>
+      S: Message-Id: &lt;199711131704.MAA18447@wonderland.com>
+      S: Subject: Have you seen my white rabbit?
+      S: To: bob@dobbs.org (Bob)
+      S: Date: Thu, 13 Nov 1997 12:04:05 -0500 (EST)
+      S: Content-Type: text
+      S: 
+      S: I'm most concerned.  I fear he may have fallen down a hole.
+      S: -- 
+      S:                                                 >>alice>>
+      S: .
+      R: 250 OK
+</PRE>
+<P>Usually an SMTP command is a single text line and so is its response.
+The DATA command is an exception; after seeing that, the SMTP listener
+accepts message lines until it sees a period on a line by itself.
+(SMTP is defined by the Internet standard 
+<A HREF="ftp://ftp.isi.edu/in-notes/rfc821.txt">RFC821</A>.)
+<P>Now Bob's MTA has Alice's message.  It will add a header to the
+message that looks something like this:
+<P>
+<PRE>
+Received: (from alice@wonderland.com)
+        by mail.dobbs.com (8.8.5/8.8.5) id MAA18447
+        for bob@dobbs.com; Thu, 13 Nov 1997 12:04:05 -0500
+</PRE>
+<P>This is for tracking purposes in case of mail errors (sometimes a
+message has to be relayed through more than one machine and will have
+several of these).  Bob's MTA will pass the modified message to a
+local delivery agent or LDA.  On Linux systems
+the LDA is usually a program called <CODE>procmail</CODE>, though others
+exist.
+<P>The LDA's job is to append the message to Bob's mailbox.  It's
+separate from the MTA so that both programs can be simpler, and
+so the MTA can concentrate on doing Internet things without
+worrying about local details like where the user mailboxes live.
+<P>Bob's mailbox will normally be a file called /usr/spool/mail/bob
+or /var/mail/bob.  When he reads mail, he runs his own MUA (mail
+user agent) to look at and edit that file.
+<P>
+<H2><A NAME="ss3.2">3.2 Notifiers</A>
+</H2>
+
+<P>There's yet another kind of program that is important in the mail
+chain, though it does not itself read or transmit mail.  It's 
+a <EM>mail notifier</EM>, a program that watches your email in-box
+for activity and signals you when new mail is present.
+<P>The original notifier was a pair of Unix programs called biff(1) and
+comsat(8). The biff program is a front end that enables you to turn on the
+comsat service.  When this service is on, the header of new 
+mail will be dumped to your terminal as it arrived.  This facility
+was designed for people using line-oriented programs on CRTs; it's
+not really a good idea in today's environment.
+<P>Most Unix shells have built-in mailcheck facilities that allow them to
+function as notifiers in a rather less intrusive way (by emitting a
+message just before the prompt when new mail is detected).  Typically
+you can enable this by setting environment variables documented on the
+shell's manual page.  For shells in the sh/ksh/bash family, see the
+MAIL and MAILPATH variables
+<P>Systems supporting X come with one of several little desktop gadgets
+that check for new mail periodically and give you both visible and
+audible indication of new mail.  The oldest and most widely used of
+these is called <EM>xbiff</EM>; if your Linux has a preconfigured X desktop
+setup, xbiff is probably on it.  See the xbiff(1) manual page for
+details.
+<P>
+<H2><A NAME="ss3.3">3.3 Mail to part-time Internet machines</A>
+</H2>
+
+<P>If you were reading carefully, you may have noticed that the
+information flow we described above depends on Alice's machine 
+being able to talk to Bob's machine immediately.  What happens
+if Bob's machine is down, or is up but not connected to the
+Internet?
+<P>If Alice's MTA can't reach Bob's immediately, it will stash Alice's
+message in a mail queue on <CODE>wonderland.com</CODE>.  It will
+then retry sending the mail at intervals until an expiration time is
+reached, at which point a bounce message notifying Alice
+of the failure will be sent back to her.  In the default configuration
+of the most popular MTA (sendmail), the retry interval is 15 minutes and the 
+expiration time is 4 days.
+<P>
+<H2><A NAME="ss3.4">3.4 Remote mail and remote-mail protocols</A>
+</H2>
+
+<P>Many Linux users nowadays are connected to the Internet via ISPs
+(Internet Service Providers) and don't have their own Internet
+domains.  Instead they have accounts on an ISP machine.
+Their mail gets delivered to a mailbox on that ISP machine.  But
+typically these users want to read and reply to their mail using their
+own machines, which connect to the ISP intermittently using
+SLIP or PPP.  Linux supports remote mail
+protocols to support this.
+<P>Note how this is different from the scenario we discussed in the
+last section.  Mail sitting in a queue awaiting retransmission is not
+the same as mail dispatched to a server mailbox; mail in a queue is
+not considered to have been delivered and is subject to expiration,
+but mail delivered to an ISP server mailbox <EM>is</EM> considered
+`delivered' and can sit there indefinitely.
+<P>A remote-mail protocol allows mail on a server to be pulled across a
+network link by a client program (this is the opposite of normal
+delivery in which an MTA pushes mail to a receiving MTA).  There are
+two remote-mail protocols in common use; POP3 (defined by the Internet
+standard 
+<A HREF="ftp://ftp.isi.edu/in-notes/rfc1939.txt">RFC1939</A>)
+and IMAP (defined by the Internet
+standard 
+<A HREF="ftp://ftp.isi.edu/in-notes/rfc2060.txt">RFC2060</A>).
+Effectively all ISPs support POP3; a growing number support IMAP (which
+is more powerful).
+<P>Here is what an example POP3 session looks like:
+<P>
+<PRE>
+      S: &lt;client connects to service port 110>
+      R:    +OK POP3 server ready &lt;1896.697170952@mailgate.dobbs.org>
+      S:    USER bob
+      R:    +OK bob
+      S:    PASS redqueen
+      R:    +OK bob's maildrop has 2 messages (320 octets)
+      S:    STAT
+      R:    +OK 2 320
+      S:    LIST
+      R:    +OK 2 messages (320 octets)
+      R:    1 120
+      R:    2 200
+      R:    .
+      S:    RETR 1
+      R:    +OK 120 octets
+      R:    &lt;the POP3 server sends message 1>
+      R:    .
+      S:    DELE 1
+      R:    +OK message 1 deleted
+      S:    RETR 2
+      R:    +OK 200 octets
+      R:    &lt;the POP3 server sends message 2>
+      R:    .
+      S:    DELE 2
+      R:    +OK message 2 deleted
+      S:    QUIT
+      R:    +OK dewey POP3 server signing off (maildrop empty)
+      S:  &lt;client hangs up>
+</PRE>
+<P>An IMAP session uses different commands and responses, but is
+logically very similar.
+<P>
+<P>To take advantage of POP3 or IMAP, you need a remote mail
+client program to pull your mail.  Some mail user agents have
+client capabilities built in (which one supports which is noted
+below), and the Netscape browser's mail facility supports both POP and
+IMAP natively.
+<P>The main drawback of POP client facilities built into MUAs is that you
+have to explicitly tell your mailer to poll the server; you don't get
+notified by xbiff(1) or equivalent, as you would for mail that is
+either local or delivered by a conventional SMTP `push' connection.
+Also, of course, not all MUAs can do POP/IMAP, so you may find
+yourself compromising on other features.
+<P>Your Linux probably comes with a program called 
+<A HREF="http://www.tuxedo.org/~esr/fetchmail">fetchmail</A> that is designed
+specifically to talk to remote-mail servers, fetch mail, and feed it
+into your normal mail delivery path by speaking SMTP to your listener.
+<P>Unless you need to keep your mail on the server (for example, because
+you move around between client machines a lot) fetchmail is probably a
+better solution than whatever POP/IMAP features your user agent has.
+Fetchmail can be told to run in background and poll your server
+periodically, so your xbiff(1) or other mail-notifier program will
+work as it would for SMTP mail.  Also, fetchmail is rather more
+tolerant of various idiosyncracies and nonstandard server quirks than
+the clients in MUAs, and has better error recovery.
+<P>Here's a diagram showing how both cases (with and without fetchmail) work:
+<P>
+<HR>
+<PRE>
+                   +---------+          +-------+
++-------+  types   | sending |  calls   |sending|  
+| Alice |--------->|   MUA   |--------->|  MTA  |::::>::::
++-------+          |         |          |       |       ::
+                   +---------+          +-------+       ::   on the
+                                                        ::   sending
+                             SMTP                       ::   machine
+ ::::::::::::::::::::::::::::&lt;::::::::::::::::::::::::::::
+ ::
+.::.......................................................................
+ ::
+ ::   +---------+          +-----+             +-------+
+ ::   |receiving|  calls   |     |  delivers   | Bob's |
+ ::::>|   MTA   |--------->| LDA |============>|server |::::>::::
+      |         |          |     |    to       |mailbox|       ::  on the
+      +---------+          +-----+             +-------+       ::   mail
+                                                               ::  server
+                          POP or IMAP                          ::
+ ::::::::::::::::::::::::::::&lt;:::::::::::::::::::::::::::::::::::
+ ::
+.::........................................................................
+ ::
+ ::                  +-----------+ 
+ ::                  |           |
+ :::::::>::::::::::::| fetchmail |::::::::               on the
+ ::                  |           |      ::              receiving
+ ::                  +-----------+      ::               machine,
+ ::                                     ::             with fetchmail
+ ::   ::::::::::::::::&lt;:::::::::::::::::::
+ ::   :: 
+ ::   ::   +---------+          +-----+                +-------+
+ ::   ::   |receiving|  calls   |     |  delivers to   | Bob's |
+ ::   ::::>|   MTA   |--------->| LDA |===============>|mailbox|
+ ::        |         |          |     |                |       |
+ ::        +---------+          +-----+                +-------+
+ ::                                                      |   |
+ ::                                                      |   |
+ ::                       +----------------&lt;-------------+   |
+ ::                       |                                  |
+ ::                  +---------+         +-------+           |
+ ::                  |  Bob's  |         | Bob's |&lt;----------+
+ ::                  | notifier|         |  MUA  |
+ ::                  +---------+         +-------+
+ ::                       |                  |
+.::........................................................................
+ ::                   .   |                  |
+ ::     without       .   |                  |
+ ::    fetchmail      .   |                  |
+ ::                   .   |      +-----+     |
+ ::   +----------+    .   +----->|     |&lt;----+
+ ::   |  Bob's   |    .          | Bob |
+ :::::| POP/IMAP |----.--------->|     |
+      |   MUA    |    .          +-----+
+      +----------+    .
+</PRE>
+<HR>
+<P>
+<P>
+<H2><A NAME="ss3.5">3.5 Mailbox formats</A>
+</H2>
+
+<P>When incoming mail gets appended to a mailbox, it's up to the MTA 
+to provide some kind of delimiters that tell where one message stops
+and the next begins. 
+<P>Under Unix, the convention almost all mailers use is that each line
+beginning with ``From '' (the space is significant) begins a new
+message.  If ``From '' occurs at the beginning of a line in text, a
+Unix MTA will generally prefix it with a greater-than sign, so it looks
+like ``>From ''.  RFC822 headers follow this From line (which usually
+continues with the sender name and receipt date).
+<P>This convention originated with Unix Version 7, so this kind of
+mailbox is referred to as a ``V7 mailbox''; it is also sometimes
+called ``mbox format''.  Unless otherwise noted, all programs
+mentioned in this HOWTO expect this format.  It is not, however, quite
+universal, and tools expecting and generating different formats can
+confuse each other badly.
+<P>The four other formats to know about (and beware of!) are BABYL, 
+MMDF, MH, and qmail maildir.  Of these, MMDF is the simplest; 
+it uses a delimiter line consisting four control-As (ASCII 001) 
+characters followed by CR-LF.  MMDF was an early and rather 
+crude Internet mail transport; a descendant is still in use on
+SCO systems.
+<P>BABYL is another survival, from an early mail system at MIT.  It is
+still used by Emacs's mail-reader mode.
+<P>MH and qmail maildir are `mailbox' formats which actually burst 
+each mailbox into a directory of files, one per message.  Running
+grep on such a `mailbox' will get you nowhere, since all grep will
+see are the directory bits.
+<P>Microsoft Outlook Express .mbx mailboxes can be converted to 
+RFC822 format with mbx2mbox app.
+<P>
+<HR>
+<A HREF="Mail-Administrator-HOWTO-4.html">Next</A>
+<A HREF="Mail-Administrator-HOWTO-2.html">Previous</A>
+<A HREF="Mail-Administrator-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

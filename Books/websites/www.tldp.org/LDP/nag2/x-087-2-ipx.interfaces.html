@@ -1,0 +1,508 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring IPX Interfaces</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="IPX and the NCP Filesystem"
+HREF="x-087-2-ipx.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring the Kernel for IPXand NCPFS"
+HREF="x-087-2-ipx.kernel.html"><LINK
+REL="NEXT"
+TITLE="Configuring an IPX Router"
+HREF="x-087-2-ipx.router.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-ipx.kernel.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 15. IPX and the NCP Filesystem</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-ipx.router.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-IPX.INTERFACES"
+>15.4. Configuring IPX Interfaces</A
+></H1
+><P
+>Just as with TCP/IP, you must configure your IPX interfaces before you
+can use them. The IPX protocol has some unique requirements;
+consequently, a special set of configuration tools was developed. We
+will use these tools to configure our IPX interfaces and routes.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-IPX.DEVICES"
+>15.4.1. Network Devices Supporting IPX</A
+></H2
+><P
+>The IPX protocol assumes that any collection of hosts that can
+transmit datagrams to each other without routing belong to the same
+IPX network. All hosts belonging to a single Ethernet segment would
+all belong to the same IPX network. Similarly (but less intuitively),
+both hosts supporting a PPP-based serial link must belong to the IPX
+network that is the serial link itself. In an Ethernet environment,
+there are a number of different frame types that may be used to carry
+IPX datagrams. The frame types represent different Ethernet protocols
+and describe differing ways of carrying multiple protocols on the same
+Ethernet network. The most common frame types you will encounter are
+<TT
+CLASS="LITERAL"
+>802.2</TT
+> and <TT
+CLASS="LITERAL"
+>ethernet_II</TT
+>. We'll
+talk more about frame types in the next section.</P
+><P
+>The Linux network devices that currently support the IPX protocol are the
+Ethernet and PPP drivers. The Ethernet or PPP interface must be
+active before it can be configured for IPX use. Typically, you configure an Ethernet device with both IP and IPX, so the device already exists, but if your 
+network is IPX only, you need to use the <B
+CLASS="COMMAND"
+>ifconfig</B
+> to change the Ethernet device status to the following:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ifconfig eth0 up</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-IPX.TOOLS"
+>15.4.2. IPX Interface Configuration Tools</A
+></H2
+><P
+>Greg Page developed a set of configuration tools for IPX interfaces,
+which is a precompiled package in modern distributions and may
+also be obtained in source form by anonymous FTP from
+<I
+CLASS="EMPHASIS"
+>http://metalab.unc.edu/</I
+> in the
+<TT
+CLASS="FILENAME"
+>/pub/Linux/system/filesystems/ncpfs/ipx.tgz</TT
+>
+file.</P
+><P
+>An <TT
+CLASS="FILENAME"
+>rc</TT
+> script file usually runs the IPX tools at
+boot time. Your distribution may already do this for you if you have
+installed the prepackaged software.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-IPX.IPX-CONFIGURE"
+>15.4.3. The ipx_configure Command</A
+></H2
+><P
+>Each IPX interface must know which IPX network it belongs to and which
+frame type to use for IPX. Each host supporting IPX has at least one
+interface that the rest of the network will use to refer to it, known
+as the <I
+CLASS="FIRSTTERM"
+>primary</I
+> interface. The Linux kernel IPX
+support provides a means of automatically configuring these
+parameters; the <B
+CLASS="COMMAND"
+>ipx_configure</B
+> command enables or
+disables this automatic configuration feature.</P
+><P
+>With no arguments, the <B
+CLASS="COMMAND"
+>ipx_configure</B
+> command displays the
+current setting of the automatic configuration flags:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_configure</B
+></TT
+>
+Auto Primary Select is OFF
+Auto Interface Create is OFF</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Both the Auto Primary and Auto Interface flags
+are off by default. To set them and enable automatic configuration, you
+simply supply arguments like these:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_configure --auto_interface=on --auto_primary=on</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>When the <TT
+CLASS="LITERAL"
+>-&#8201;-auto_&#8201;primary</TT
+> argument is set to
+<TT
+CLASS="LITERAL"
+>on</TT
+>, the kernel will automatically ensure that at
+least one active interface operates as the primary interface for the
+host.</P
+><P
+>When the <TT
+CLASS="LITERAL"
+>-&#8201;-auto_interface</TT
+> argument is
+set to <TT
+CLASS="LITERAL"
+>on</TT
+>, the kernel IPX driver will listen to all of the
+frames received on the active network interfaces and attempt to determine
+the IPX network address and frame type used.</P
+><P
+>The auto-detection mechanism works well on properly managed networks.
+Sometimes network administrators take shortcuts and break rules, and
+this can cause problems for the Linux auto-detection code. The most common
+example of this is when one IPX network is configured to run over the same
+Ethernet with multiple frame types. This is technically an invalid
+configuration, as an <I
+CLASS="EMPHASIS"
+>802.2</I
+> host cannot directly communicate with an
+Ethernet-II host and therefore they cannot be on the same IPX network.
+The Linux IPX network software listens on the segment to IPX datagrams
+transmitted on it. From these, it attempts to identify which network
+addresses are in use and which frame type is associated with each. If the
+same network address is in use with multiple frame types or on multiple
+interfaces, the Linux code detects this as a network address collision
+and is unable to determine which is the correct frame type. You will know
+this is occurring if you see messages in your system log that look like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>IPX: Network number collision 0x3901ab00
+eth0 etherII and eth0 802.3</PRE
+></TD
+></TR
+></TABLE
+>
+
+If you see this problem, disable the auto-detection
+feature and configure the interfaces manually using the
+<B
+CLASS="COMMAND"
+>ipx_interface</B
+> command described in the next section.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-IPX.IPX-INTERFACE"
+>15.4.4. The ipx_interface Command</A
+></H2
+><P
+>The <B
+CLASS="COMMAND"
+>ipx_interface</B
+> command is used to manually add,
+modify, and delete IPX capability from an existing network device. You
+should use <B
+CLASS="COMMAND"
+>ipx_interface</B
+> when the automatic
+configuration method just described does not work for you, or if you
+don't want to leave your interface configuration to
+chance. <B
+CLASS="COMMAND"
+>ipx_interface</B
+> allows you to specify the IPX
+network address, primary interface status, and IPX frame type that a
+network device will use. If you are creating multiple IPX interfaces,
+you need one <B
+CLASS="COMMAND"
+>ipx_interface</B
+> for each.</P
+><P
+>The command syntax to add IPX to an existing device is straightforward
+and best explained with an example. Let's add IPX to an existing
+Ethernet device:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_interface add -p eth0 etherII 0x32a10103</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+The parameters in turn mean:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-p</DT
+><DD
+><P
+>This parameter specifies that this interface should be a primary interface.
+This parameter is optional.</P
+></DD
+><DT
+>eth0</DT
+><DD
+><P
+>This is the name of the network device to which we are adding IPX support.</P
+></DD
+><DT
+>etherII</DT
+><DD
+><P
+>This parameter is the frame type, in this case Ethernet-II. This value
+may also be coded as <TT
+CLASS="LITERAL"
+>802.2</TT
+>,
+<TT
+CLASS="LITERAL"
+>802.3</TT
+>, or <TT
+CLASS="LITERAL"
+>SNAP</TT
+>.</P
+></DD
+><DT
+>0x32a10103</DT
+><DD
+><P
+>This is the IPX network address to which this interface belongs.</P
+></DD
+></DL
+></DIV
+>&#13;</P
+><P
+>The following command removes IPX from an interface:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_interface del eth0 etherII</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Lastly, to display the current IPX configuration of a network device,
+use:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_interface check eth0 etherII</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <B
+CLASS="COMMAND"
+>ipx_interface</B
+> command is explained more fully in its
+manual page.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.kernel.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.router.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring the Kernel for IPXand NCPFS</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Configuring an IPX Router</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

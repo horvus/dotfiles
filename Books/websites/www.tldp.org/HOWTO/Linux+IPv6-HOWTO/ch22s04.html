@@ -1,0 +1,62 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>4. Router Advertisement Daemon (radvd)</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="ch22.html" title="Chapter 22. Hints for IPv6-enabled daemons"><link rel="prev" href="ch22s03.html" title="3. Webserver Apache2 (httpd2)"><link rel="next" href="ch22s05.html" title="5. Dynamic Host Configuration v6 Server (dhcp6s)"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">4. Router Advertisement Daemon (radvd)</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch22s03.html">Prev</a> </td><th width="60%" align="center">Chapter 22. Hints for IPv6-enabled daemons</th><td width="20%" align="right"> <a accesskey="n" href="ch22s05.html">Next</a></td></tr></table><hr></div><div class="sect1"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="hints-daemons-radvd"></a>4. Router Advertisement Daemon (radvd)</h2></div></div></div><p>The router advertisement daemon is very useful on a LAN, if clients should be auto-configured. The daemon itself should run on the Linux default IPv6 gateway router (it's not required that this is also the default IPv4 gateway, so pay attention who on your LAN is sending router advertisements). </p><p>You can specify some information and flags which should be contained in the advertisement. Common used are</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Prefix (needed)</p></li><li class="listitem"><p>Lifetime of the prefix</p></li><li class="listitem"><p>Frequency of sending advertisements (optional)</p></li></ul></div><p>After a proper configuration, the daemon sends advertisements through specified interfaces and clients are hopefully receive them and auto-magically configure addresses with received prefix and the default route.</p><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51473360"></a>4.1. Configuring radvd</h3></div></div></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51474000"></a>4.1.1. Simple configuration</h4></div></div></div><p>Radvd's config file is normally /etc/radvd.conf. An simple example looks like following:</p><pre class="screen">
+interface eth0 { 
+        AdvSendAdvert on;
+        MinRtrAdvInterval 3; 
+        MaxRtrAdvInterval 10;
+        prefix 2001:0db8:0100:f101::/64 { 
+                AdvOnLink on; 
+                AdvAutonomous on; 
+                AdvRouterAddr on; 
+        };
+};
+</pre><p>This results on client side in</p><pre class="screen">
+# ip -6 addr show eth0 
+3: eth0: &lt;BROADCAST,MULTICAST,UP&gt; mtu 1500 qdisc pfifo_fast qlen 100 
+    inet6 2001:0db8:100:f101:2e0:12ff:fe34:1234/64 scope global dynamic 
+       valid_lft 2591992sec preferred_lft 604792sec 
+    inet6 fe80::2e0:12ff:fe34:1234/10 scope link
+</pre><p>Because no lifetime was defined, a very high value was used.</p></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51477104"></a>4.1.2. Special 6to4 configuration</h4></div></div></div><p>Version since 0.6.2pl3 support the automatic (re)-generation of the prefix depending on an IPv4 address of a specified interface. This can be used to distribute advertisements in a LAN after the 6to4 tunneling has changed. Mostly used behind a dynamic dial-on-demand Linux router. Because of the sure shorter lifetime of such prefix (after each dial-up, another prefix is valid), the lifetime configured to minimal values:</p><pre class="screen">
+interface eth0 { 
+        AdvSendAdvert on;
+        MinRtrAdvInterval 3; 
+        MaxRtrAdvInterval 10;
+        prefix 0:0:0:f101::/64 { 
+                AdvOnLink off; 
+                AdvAutonomous on; 
+                AdvRouterAddr on; 
+                Base6to4Interface ppp0;
+                AdvPreferredLifetime 20; 
+                AdvValidLifetime 30;
+        };
+};
+</pre><p>This results on client side in (assuming, ppp0 has currently 1.2.3.4 as local IPv4 address):</p><pre class="screen">
+# /sbin/ip -6 addr show eth0 
+3: eth0: &lt;BROADCAST,MULTICAST,UP&gt; mtu 1500 qdisc pfifo_fast qlen 100 
+   inet6 2002:0102:0304:f101:2e0:12ff:fe34:1234/64 scope global dynamic 
+      valid_lft 22sec preferred_lft 12sec
+   inet6 fe80::2e0:12ff:fe34:1234/10 scope link
+</pre><p>Because a small lifetime was defined, such prefix will be thrown away quickly, if no related advertisement was received.</p><p>Additional note: if you do not used special 6to4 support in initscripts, you have to setup a special route on the internal interface on the router, otherwise you will get some backrouting problems. for the example showh here:</p><pre class="screen">
+# /sbin/ip -6 route add 2002:0102:0304:f101::/64 dev eth0 metric 1
+</pre><p>This route needs to be replaced every time the prefix changes, which is the case after a new IPv4 address was assigned to the dial-up interface.</p></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51483968"></a>4.2. Debugging</h3></div></div></div><p>A program called &#8221;radvdump&#8221; can help you looking into sent or received advertisements. Simple to use:</p><pre class="screen">
+# radvdump 
+Router advertisement from fe80::280:c8ff:feb9:cef9 (hoplimit 255) 
+        AdvCurHopLimit: 64 
+        AdvManagedFlag: off 
+        AdvOtherConfigFlag: off 
+        AdvHomeAgentFlag: off 
+        AdvReachableTime: 0 
+        AdvRetransTimer: 0 
+        Prefix 2002:0102:0304:f101::/64 
+                AdvValidLifetime: 30 
+                AdvPreferredLifetime: 20 
+                AdvOnLink: off 
+                AdvAutonomous: on 
+                AdvRouterAddr: on 
+        Prefix 2001:0db8:100:f101::/64 
+                AdvValidLifetime: 2592000 
+                AdvPreferredLifetime: 604800 
+                AdvOnLink: on 
+                AdvAutonomous: on 
+                AdvRouterAddr: on 
+        AdvSourceLLAddress: 00 80 12 34 56 78
+</pre><p>Output shows you each advertisement package in readable format. You should see your configured values here again, if not, perhaps it's not your radvd which sends the advertisement...look for another router on the link (and take the LLAddress, which is the MAC address for tracing).</p></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch22s03.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ch22.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch22s05.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">3. Webserver Apache2 (httpd2) </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 5. Dynamic Host Configuration v6 Server (dhcp6s)</td></tr></table></div></body></html>

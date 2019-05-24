@@ -1,0 +1,1619 @@
+<HTML
+><HEAD
+><TITLE
+>IP Firewall Chains (2.2 Kernels)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="TCP/IP Firewall"
+HREF="x-087-2-firewall.html"><LINK
+REL="PREVIOUS"
+TITLE="Original IP Firewall (2.0 Kernels)"
+HREF="x-087-2-firewall.original.html"><LINK
+REL="NEXT"
+TITLE="Netfilter and IP Tables (2.4 Kernels)"
+HREF="x-087-2-firewall.future.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.original.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. TCP/IP Firewall</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.future.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-FIREWALL.FWCHAINS"
+>9.7. IP Firewall Chains (2.2 Kernels)</A
+></H1
+><P
+>Most aspects of Linux are evolving to meet the increasing demands of
+its users; IP firewall is no exception. The traditional IP firewall
+implementation is fine for most applications, but can be clumsy and inefficient
+to configure for complex environments. To solve this problem, a new method of
+configuring IP firewall and related features was developed. This new method was
+called &#8220;IP Firewall Chains&#8221; and was first released for general use
+in the 2.2.0 Linux kernel.</P
+><P
+>&#13;
+The IP Firewall Chains support was developed by Paul
+Russell and Michael Neuling.<A
+NAME="X-087-2-FN05"
+HREF="#FTN.X-087-2-FN05"
+>[1]</A
+>
+
+
+Paul has documented the IP Firewall Chains software in the IPCHAINS-HOWTO.</P
+><P
+>IP Firewall Chains allows you to
+develop classes of firewall rules to which you may then add and remove hosts
+or networks. An artifact of firewall rule chaining is that it may
+improve firewall performance in configurations in which there are lots of rules.</P
+><P
+>IP Firewall Chains are supported by the 2.2 series kernels and are also
+available as a patch against the 2.0.* kernels. The HOWTO
+describes where to obtain the patch and provides lots of useful hints about
+how to effectively use the <B
+CLASS="COMMAND"
+>ipchains</B
+> configuration utility.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.USINGIPCHAINS"
+>9.7.1. Using ipchains</A
+></H2
+><P
+>&#13;
+There are two ways you can use the <B
+CLASS="COMMAND"
+>ipchains</B
+> utility. The
+first way is to make use of the <B
+CLASS="COMMAND"
+>ipfwadm-wrapper</B
+> shell
+script, which is mostly a drop-in replacement for <B
+CLASS="COMMAND"
+>ipfwadm</B
+>
+that drives the <B
+CLASS="COMMAND"
+>ipchains</B
+> program in the background. If you
+want to do this, then read no further. Instead, reread the previous sections
+describing <B
+CLASS="COMMAND"
+>ipfwadm</B
+>, and substitute
+<B
+CLASS="COMMAND"
+>ipfwadm-wrapper</B
+> in its place. This will work, but there is
+no guarantee that the script will be maintained, and you will not be taking
+advantage of any of the advanced features that the IP Firewall Chains have to
+offer.</P
+><P
+>The second way to use <B
+CLASS="COMMAND"
+>ipchains</B
+> is to learn its new syntax
+and modify any existing configurations you have to use the new syntax instead
+of the old. With some careful consideration, you may find you can optimize your
+configuration as you convert. The <B
+CLASS="COMMAND"
+>ipchains</B
+> syntax is easier
+to learn than the <B
+CLASS="COMMAND"
+>ipfwadm</B
+>, so this is a good option.</P
+><P
+>The <B
+CLASS="COMMAND"
+>ipfwadm</B
+> manipulated three rulesets for the purpose
+of configuring firewalling. With IP Firewall Chains you can create arbitrary
+numbers of rulesets, each linked to one another, but there are three rulesets
+related to firewalling that are always present. The standard rulesets
+are direct equivalents of those used with <B
+CLASS="COMMAND"
+>ipfwadm</B
+>, except
+they have names: <TT
+CLASS="LITERAL"
+>input</TT
+>, <TT
+CLASS="LITERAL"
+>forward</TT
+> and
+<TT
+CLASS="LITERAL"
+>output</TT
+>.</P
+><P
+>Let's first look at the general syntax of the <B
+CLASS="COMMAND"
+>ipchains</B
+>
+command, then we'll look at how we'd use <B
+CLASS="COMMAND"
+>ipchains</B
+> instead
+of <B
+CLASS="COMMAND"
+>ipfwadm</B
+> without worrying about any of the advanced
+chaining features. We'll do this by revisiting our previous examples.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS.SYNTAX"
+>9.7.2. ipchains Command Syntax</A
+></H2
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>ipchains</B
+> command syntax is straightforward. We'll now
+look at the most important of those. The general syntax of most
+<B
+CLASS="COMMAND"
+>ipchains</B
+> commands is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><B
+CLASS="COMMAND"
+>ipchains</B
+> <TT
+CLASS="REPLACEABLE"
+><I
+>command</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>rule-specification</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>options</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS.COMMANDS"
+>9.7.2.1. Commands</A
+></H3
+><P
+>There are a number of ways we can manipulate rules and rulesets with the
+<B
+CLASS="COMMAND"
+>ipchains</B
+> command. Those relevant to IP firewalling are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-A chain</DT
+><DD
+><P
+>Append one or more rules to the end of the nominated chain. If a hostname is
+supplied as either source or destination and it resolves to more than one IP
+address, a rule will be added for each address.</P
+></DD
+><DT
+>-I chain rulenum</DT
+><DD
+><P
+>Insert one or more rules to the start of the nominated chain. Again, if a
+hostname is supplied in the rule specification, a rule will be added for each
+of the addresses it resolves to.</P
+></DD
+><DT
+>-D chain</DT
+><DD
+><P
+>Delete one or more rules from the specified chain that matches the
+rule specification.</P
+></DD
+><DT
+>-D chain rulenum</DT
+><DD
+><P
+>Delete the rule residing at position <TT
+CLASS="REPLACEABLE"
+><I
+>rulenum</I
+></TT
+>
+in the specified chain. Rule positions start at one for the first rule in the
+chain.</P
+></DD
+><DT
+>-R chain rulenum</DT
+><DD
+><P
+>Replace the rule residing at position <TT
+CLASS="REPLACEABLE"
+><I
+>rulenum</I
+></TT
+>
+in the specific chain with the supplied rule specification.</P
+></DD
+><DT
+>-C chain</DT
+><DD
+><P
+>Check the datagram described by the rule specification against the specific
+chain. This command will return a message describing how the datagram was
+processed by the chain. This is very useful for testing your firewall
+configuration, and we look at it in detail a little later.</P
+></DD
+><DT
+>-L [chain]</DT
+><DD
+><P
+>List the rules of the specified chain, or for all chains if no chain
+is specified.</P
+></DD
+><DT
+>-F [chain]</DT
+><DD
+><P
+>Flush the rules of the specified chain, or for all chains if no chain is
+ specified.</P
+></DD
+><DT
+>-Z [chain]</DT
+><DD
+><P
+>Zero the datagram and byte counters for all rules of the specified chain, or
+for all chains if no chain is specified.</P
+></DD
+><DT
+>-N chain</DT
+><DD
+><P
+>Create a new chain with the specified name. A chain of the same name must not
+ already exist. This is how user-defined chains are created.</P
+></DD
+><DT
+>-X [chain]</DT
+><DD
+><P
+>Delete the specified user-defined chain, or all user-defined chains if
+no chain is specified. For this command to be successful, there must
+be no references to the specified chain from any other rules chain.</P
+></DD
+><DT
+>-P chain policy</DT
+><DD
+><P
+>Set the default policy of the specified chain to the specified policy.
+Valid firewalling policies are <TT
+CLASS="LITERAL"
+>ACCEPT</TT
+>,
+<TT
+CLASS="LITERAL"
+>DENY</TT
+>, <TT
+CLASS="LITERAL"
+>REJECT</TT
+>,
+<TT
+CLASS="LITERAL"
+>REDIR</TT
+>, or
+<TT
+CLASS="LITERAL"
+>RETURN</TT
+>. <TT
+CLASS="LITERAL"
+>ACCEPT</TT
+>,
+<TT
+CLASS="LITERAL"
+>DENY</TT
+>, and <TT
+CLASS="LITERAL"
+>REJECT</TT
+> have the same
+meanings as those for the tradition IP firewall
+implementation. <TT
+CLASS="LITERAL"
+>REDIR</TT
+> specifies that the datagram
+should be transparently redirected to a port on the firewall host. The
+<TT
+CLASS="LITERAL"
+>RETURN</TT
+> target causes the IP firewall code to return
+to the Firewall Chain that called the one containing this rule and
+continues starting at the rule after the calling rule.</P
+></DD
+></DL
+></DIV
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS.RULESPEC"
+>9.7.2.2. Rule specification parameters</A
+></H3
+><P
+>A number of <B
+CLASS="COMMAND"
+>ipchains</B
+> parameters create a rule specification
+by determining what types of packets match. If any of these parameters is
+omitted from a rule specification, its default is assumed:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-p [!]protocol</DT
+><DD
+><P
+>Specifies the protocol of the datagram that will match this rule. Valid
+protocol names are <TT
+CLASS="LITERAL"
+>tcp</TT
+>, <TT
+CLASS="LITERAL"
+>udp</TT
+>,
+<TT
+CLASS="LITERAL"
+>icmp</TT
+>, or <TT
+CLASS="LITERAL"
+>all</TT
+>. You may also specify a
+protocol number here to match other protocols. For example, you might use
+<TT
+CLASS="LITERAL"
+>4</TT
+> to match the <TT
+CLASS="LITERAL"
+>ipip</TT
+> encapsulation
+protocol. If the <TT
+CLASS="LITERAL"
+>!</TT
+> is supplied, the rule is negated and
+the datagram will match any protocol other than the protocol specified. If this
+parameter isn't supplied, it will default to <TT
+CLASS="LITERAL"
+>all</TT
+>.</P
+></DD
+><DT
+>-s [!]address[/mask] [!] [port]</DT
+><DD
+><P
+>Specifies the source address and port of the datagram that will match
+this rule. The address may be supplied as a hostname, a network name,
+or an IP address. The optional <TT
+CLASS="LITERAL"
+>mask</TT
+> is the netmask
+to use and may be supplied either in the traditional form (e.g.,
+/255.255.255.0) or the modern form (e.g., /24). The optional
+<TT
+CLASS="LITERAL"
+>port</TT
+> specifies the TCP or UDP port, or the ICMP
+datagram type that will match. You may supply a port specification
+only if you've supplied the <TT
+CLASS="OPTION"
+>-p</TT
+> parameter with one of
+the <TT
+CLASS="LITERAL"
+>tcp</TT
+>, <TT
+CLASS="LITERAL"
+>udp</TT
+>, or
+<TT
+CLASS="LITERAL"
+>icmp</TT
+> protocols. Ports may be specified as a range
+by specifying the upper and lower limits of the range with a colon as
+a delimiter. For example, <TT
+CLASS="LITERAL"
+>20:25</TT
+> described all of
+the ports numbered from 20 up to and including 25. Again, the
+<TT
+CLASS="LITERAL"
+>!</TT
+> character may be used to negate the values.</P
+></DD
+><DT
+>-d [!]address[/mask] [!] [port]</DT
+><DD
+><P
+>Specifies the destination address and port of the datagram that will
+match this rule. The coding of this parameter is the same as that of the
+<TT
+CLASS="OPTION"
+>-s</TT
+> parameter.</P
+></DD
+><DT
+>-j target</DT
+><DD
+><P
+>Specifies the action to take when this rule matches. You can think of
+this parameter as meaning &#8220;jump to.&#8221; Valid targets are
+<TT
+CLASS="LITERAL"
+>ACCEPT</TT
+>, <TT
+CLASS="LITERAL"
+>DENY</TT
+>, <TT
+CLASS="LITERAL"
+>REJECT</TT
+>,
+<TT
+CLASS="LITERAL"
+>REDIR</TT
+>, and <TT
+CLASS="LITERAL"
+>RETURN</TT
+>. We described the
+meanings of each of these targets earlier. However, you may also specify the name of a
+user-defined chain where processing will continue. If this parameter is
+omitted, no action is taken on matching rule datagrams at all other than to
+update the datagram and byte counters.</P
+></DD
+><DT
+>-i [!]interface-name</DT
+><DD
+><P
+>Specifies the interface on which the datagram was received or is to
+be transmitted. Again, the <TT
+CLASS="LITERAL"
+>!</TT
+> inverts the result of the
+match. If the interface name ends with <TT
+CLASS="LITERAL"
+>+</TT
+>,
+then any interface that begins with the supplied string will match. For
+example, <TT
+CLASS="LITERAL"
+>-i ppp+</TT
+> would match any PPP network device and
+<TT
+CLASS="LITERAL"
+>-i ! eth+</TT
+> would match all interfaces except Ethernet
+devices.</P
+></DD
+><DT
+>[!] -f</DT
+><DD
+><P
+>Specifies that this rule applies to everything but the first fragment
+of a fragmented datagram.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS.OPTIONS"
+>9.7.2.3. Options</A
+></H3
+><P
+>The following <B
+CLASS="COMMAND"
+>ipchains</B
+> options are more general in nature.
+Some of them control rather esoteric features of the IP chains software:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-b</DT
+><DD
+><P
+>Causes the command to generate two rules. One rule matches the
+parameters supplied, and the other rule added matches the corresponding
+parameters in the reverse direction.</P
+></DD
+><DT
+>-v</DT
+><DD
+><P
+>Causes <B
+CLASS="COMMAND"
+>ipchains</B
+> to be verbose in its output. It
+will supply more information.</P
+></DD
+><DT
+>-n</DT
+><DD
+><P
+>Causes <B
+CLASS="COMMAND"
+>ipchains</B
+> to display IP address and ports as
+numbers without attempting to resolve them to their corresponding names.</P
+></DD
+><DT
+>-l</DT
+><DD
+><P
+>Enables kernel logging of matching datagrams. Any datagram that matches
+the rule will be logged by the kernel using its <TT
+CLASS="FUNCTION"
+>printk(&#8201;)</TT
+>
+function, which is usually handled by the <B
+CLASS="COMMAND"
+>sysklogd</B
+> program
+and written to a log file. This is useful for making unusual datagrams visible.</P
+></DD
+><DT
+>-o[maxsize]</DT
+><DD
+><P
+>Causes the IP chains software to copy any datagrams matching the rule to
+the userspace &#8220;netlink&#8221; device. The
+maxsize argument limits the number of bytes from
+each datagram that are passed to the netlink device. This option is of most
+use to software developers, but may be exploited by software packages in the
+future.</P
+></DD
+><DT
+>-m markvalue</DT
+><DD
+><P
+>Causes matching datagrams to be <I
+CLASS="EMPHASIS"
+>marked</I
+> with a value. Mark
+values are unsigned 32-bit numbers. In existing implementations this does
+nothing, but at some point in the future, it may determine how the datagram is
+handled by other software such as the routing code. If a
+markvalue begins with a <TT
+CLASS="LITERAL"
+>+</TT
+> or
+<TT
+CLASS="LITERAL"
+>-</TT
+>, the value is added or subtracted from the existing
+markvalue.</P
+></DD
+><DT
+>-t andmask xormask</DT
+><DD
+><P
+>Enables you to manipulate the &#8220;type of service&#8221; bits in the
+IP header of any datagram that matches this rule. The type of service bits are
+used by intelligent routers to prioritize datagrams before forwarding them. The
+Linux routing software is capable of this sort prioritization. The
+<TT
+CLASS="REPLACEABLE"
+><I
+>andmask</I
+></TT
+> and <TT
+CLASS="REPLACEABLE"
+><I
+>xormask</I
+></TT
+>
+represent bit masks that will be logically ANDed and ORed with the type of
+service bits of the datagram respectively. This is an advanced feature that is
+discussed in more detail in the IPCHAINS-HOWTO.</P
+></DD
+><DT
+>-x</DT
+><DD
+><P
+>Causes any numbers in the <B
+CLASS="COMMAND"
+>ipchains</B
+> output to be
+expanded to their exact values with no rounding.</P
+></DD
+><DT
+>-y</DT
+><DD
+><P
+>Causes the rule to match any TCP datagram with the SYN bit set and the
+ACK and FIN bits clear. This is used to filter TCP connection requests.</P
+></DD
+></DL
+></DIV
+>&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.SIMPLEEXAMPLE.AGAIN"
+>9.7.3. Our Naïve Example Revisited</A
+></H2
+><P
+>Let's again suppose that we have a network in our organization and
+that we are using a Linux-based firewall machine to allow our users
+access to WWW servers on the Internet, but to allow no other traffic
+to be passed.</P
+><P
+>If our network has a 24-bit network mask (class C) and has an address of
+172.16.1.0, we'd use the following <B
+CLASS="COMMAND"
+>ipchains</B
+> rules:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -F forward</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -P forward DENY</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -s 0/0 80 -d 172.16.1.0/24 -p tcp -y -j DENY</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -s 172.16.1.0/24 -d 0/0 80 -p tcp -b -j ACCEPT</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The first of the commands flushes all of the rules from the
+<TT
+CLASS="LITERAL"
+>forward</TT
+> rulesets and the second set of
+commands sets the default policy of the <TT
+CLASS="LITERAL"
+>forward</TT
+>
+ruleset to <TT
+CLASS="LITERAL"
+>DENY</TT
+>. Finally, the third
+and fourth commands do the specific filtering we want. The fourth
+command allows datagrams to and from web servers on the outside of our
+network to pass, and the third prevents incoming TCP connections with
+a source port of 80.</P
+><P
+>If we now wanted to add rules that allowed passive mode only access to FTP
+servers in the outside network, we'd add these rules:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -s 0/0 20 -d 172.16.1.0/24 -p tcp -y -j DENY</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -s 172.16.1.0/24 -d 0/0 20 -p tcp -b -j ACCEPT</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -s 0/0 21 -d 172.16.1.0/24 -p tcp -y -j DENY</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -s 172.16.1.0/24 -d 0/0 21 -p tcp -b -j ACCEPT</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.LISTING.AGAIN"
+>9.7.4. Listing Our Rules with ipchains</A
+></H2
+><P
+>&#13;To list our rules with <B
+CLASS="COMMAND"
+>ipchains</B
+>, we use its
+<TT
+CLASS="OPTION"
+>-L</TT
+> argument. Just as with <B
+CLASS="COMMAND"
+>ipfwadm</B
+>, there
+are arguments that control the amount of detail in the output. In its simplest
+form, <B
+CLASS="COMMAND"
+>ipchains</B
+> produces output that looks like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipchains -L -n</B
+></TT
+>
+Chain input (policy ACCEPT):
+Chain forward (policy DENY):
+target     prot opt     source              destination         ports
+DENY       tcp  -y----  0.0.0.0/0           172.16.1.0/24       80 -&#62;   *
+ACCEPT     tcp  ------  172.16.1.0/24       0.0.0.0/0           * -&#62;   80
+ACCEPT     tcp  ------  0.0.0.0/0           172.16.1.0/24       80 -&#62;   *
+ACCEPT     tcp  ------  172.16.1.0/24       0.0.0.0/0           * -&#62;   20
+ACCEPT     tcp  ------  0.0.0.0/0           172.16.1.0/24       20 -&#62;   *
+ACCEPT     tcp  ------  172.16.1.0/24       0.0.0.0/0           * -&#62;   21
+ACCEPT     tcp  ------  0.0.0.0/0           172.16.1.0/24       21 -&#62;   *
+
+Chain output (policy ACCEPT):</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>If you don't supply the name of a chain to list,
+<B
+CLASS="COMMAND"
+>ipchains</B
+> will list all rules in all chains. The
+<TT
+CLASS="LITERAL"
+>-n</TT
+> argument in our example tells
+<B
+CLASS="COMMAND"
+>ipchains</B
+> not to attempt to convert any address or
+ports into names. The information presented should be
+self-explanatory.</P
+><P
+>A verbose form, invoked by the <TT
+CLASS="OPTION"
+>-u</TT
+> option, provides much more
+detail. Its output adds fields for the datagram and byte counters,
+Type of Service <I
+CLASS="EMPHASIS"
+>AND</I
+> and <I
+CLASS="EMPHASIS"
+>XOR</I
+> flags, the interface name, the mark, and
+the outsize.</P
+><P
+>All rules created with <B
+CLASS="COMMAND"
+>ipchains</B
+> have datagram and
+byte counters associated with them. This is how IP Accounting is
+implemented and will be discussed in detail in <A
+HREF="x-087-2-accounting.html"
+>Chapter 10</A
+>. By default these counters are presented
+in a rounded form using the suffixes <TT
+CLASS="LITERAL"
+>K</TT
+> and
+<TT
+CLASS="LITERAL"
+>M</TT
+> to represent units of one thousand and one
+million, respectively. If the <TT
+CLASS="LITERAL"
+>-x</TT
+> argument is
+supplied, the counters are expanded to their full unrounded form.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINSYAY"
+>9.7.5. Making Good Use of Chains</A
+></H2
+><P
+>You now know that the <B
+CLASS="COMMAND"
+>ipchains</B
+> command is a
+replacement for the <B
+CLASS="COMMAND"
+>ipfwadm</B
+> with a simpler
+command-line syntax and some interesting enhancements, but you're no
+doubt wanting to know where you'd use the user-defined chains and
+why. You'll also probably want to know how to use the support scripts
+that accompany the <B
+CLASS="COMMAND"
+>ipchains</B
+> command in its software
+package. We'll now explore these subjects and address the questions.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN8418"
+>9.7.5.1. User-defined chains</A
+></H3
+><P
+>&#13;
+The three rulesets of the traditional IP firewall code provided a
+mechanism for building firewall configurations that were fairly simple
+to understand and manage for small networks with simple firewalling
+requirements. When the configuration requirements are not simple, a
+number of problems become apparent.  Firstly, large networks often
+require much more than the small number of firewalling rules we've
+seen so far; inevitably needs arise that require firewalling rules
+added to cover special case scenarios. As the number of rules grows,
+the performance of the firewall deterioriates as more and more tests
+are conducted on each datagram and managability becomes an
+issue. Secondly, it is not possible to enable and disable sets of
+rules atomically; instead, you are forced to expose yourself to attack
+while you are in the middle of rebuilding your ruleset.</P
+><P
+>The design of IP Firewall Chains helps to alleviate these problems by
+allowing the network administrator to create arbitrary sets of
+firwewall rules that we can link to the three inbuilt rulesets. We can
+use the <TT
+CLASS="OPTION"
+>-N</TT
+> option of <B
+CLASS="COMMAND"
+>ipchains</B
+> to
+create a new chain with any name we please of eight characters or
+less. (Restricting the name to lowercase letters only is probably a
+good idea.) The <TT
+CLASS="OPTION"
+>-j</TT
+> option configures the action to
+take when a datagram matches the rule specification. The <TT
+CLASS="OPTION"
+>-j</TT
+> option
+specifies that if a datagram matches a rule, further testing should be
+performed against a user-defined chain. We'll illustrate this with a
+diagram.</P
+><P
+>Consider the following <B
+CLASS="COMMAND"
+>ipchains</B
+> commands:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ipchains -P input DENY
+ipchains -N tcpin
+ipchains -A tcpin -s ! 172.16.0.0/16
+ipchains -A tcpin -p tcp -d 172.16.0.0/16 ssh -j ACCEPT
+ipchains -A tcpin -p tcp -d 172.16.0.0/16 www -j ACCEPT
+ipchains -A input -p tcp -j tcpin
+ipchains -A input -p all</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>We set the default input chain policy to <TT
+CLASS="LITERAL"
+>deny</TT
+>. The
+second command creates a user-defined chain called
+&#8220;tcpin.&#8221; The third command adds a rule to the
+<TT
+CLASS="LITERAL"
+>tcpin</TT
+> chain that matches any datagram that was
+sourced from outside our local network; the rule takes no action. This
+rule is an accounting rule and will be discussed in more detail in
+<A
+HREF="x-087-2-accounting.html"
+>Chapter 10</A
+>. The next two rules match any
+datagram that is destined for our local network and either of the
+<TT
+CLASS="LITERAL"
+>ssh</TT
+> or <TT
+CLASS="LITERAL"
+>www</TT
+> ports; datagrams
+matching these rules are accepted. The next rule is when the real
+<I
+CLASS="EMPHASIS"
+>ipchains</I
+> magic begins. It causes the firewall
+software to check any datagram of protocol TCP against the
+tcpin user-defined chain.  Lastly, we add a rule to our
+<TT
+CLASS="LITERAL"
+>input</TT
+> chain that matches any datagram; this is
+another accounting rule. They will produce the following Firewall Chains shown in Figure 9-4.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS"
+></A
+><P
+><B
+>Figure 9-4. A simple IP chain ruleset</B
+></P
+><P
+><IMG
+SRC="lag2_0904.jpg"></P
+></DIV
+><P
+>Our <TT
+CLASS="LITERAL"
+>input</TT
+> and <TT
+CLASS="LITERAL"
+>tcpin</TT
+> chains are populated
+with our rules. Datagram processing always beings at one of the inbuilt chains.
+We'll see how our user-defined chain is called into play by following the
+processing path of different types of datagrams.</P
+><P
+>First, let's look at what happens when a UDP datagram for one of our hosts
+is received. <A
+HREF="x-087-2-firewall.fwchains.html#X-087-2-FIREWALL.IPCHAINS.UDP"
+>Figure 9-5</A
+> illustrates the 
+flow through the rules.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS.UDP"
+></A
+><P
+><B
+>Figure 9-5. The sequence of rules tested for a received UDP datagram</B
+></P
+><P
+><IMG
+SRC="lag2_0905.jpg"></P
+></DIV
+><P
+>The datagram is received by the <TT
+CLASS="LITERAL"
+>input</TT
+> chain and
+falls through the first two rules because they match ICMP and TCP
+protocols, respectively. It matches the third rule in the
+<TT
+CLASS="LITERAL"
+>input</TT
+> chain, but it doesn't specify a target, so
+its datagram and byte counters are updated, but no other action takes
+place. The datagram reaches the end of the <TT
+CLASS="LITERAL"
+>input</TT
+>
+chain, meets with the default <TT
+CLASS="LITERAL"
+>input</TT
+> chain policy,
+and is denied.</P
+><P
+>To see our user-defined chain in operation, let's now consider what
+happens when we receive a TCP datagram destined for the
+<TT
+CLASS="LITERAL"
+>ssh</TT
+> port of one of our hosts. The sequence is shown
+in <A
+HREF="x-087-2-firewall.fwchains.html#X-087-2-FIREWALL.IPCHAINS.TCP.SSH"
+>Figure 9-6</A
+>.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS.TCP.SSH"
+></A
+><P
+><B
+>Figure 9-6. The rules flow for a received TCP datagram for ssh</B
+></P
+><P
+><IMG
+SRC="lag2_0906.jpg"></P
+></DIV
+><P
+>This time the second rule in the <TT
+CLASS="LITERAL"
+>input</TT
+> chain does
+match and it specifies a target of <TT
+CLASS="LITERAL"
+>tcpin</TT
+>, our
+user-defined chain.  Specifying a user-defined chain as a target
+causes the datagram to be tested against the rules in that chain, so
+the next rule tested is the first rule in the <TT
+CLASS="LITERAL"
+>tcpin</TT
+>
+chain. The first rule matches any datagram that has a source address
+outside our local network and specifies no target, so it too is an
+accounting rule and testing falls through to the next rule. The second
+rule in our <TT
+CLASS="LITERAL"
+>tcpin</TT
+> chain does match and specifies a
+target of <TT
+CLASS="LITERAL"
+>ACCEPT</TT
+>. We have arrived at target, so no
+further firewall processing occurs. The datagram is accepted.</P
+><P
+>Finally, let's look at what happens when we reach the end of a
+user-defined chain. To see this, we'll map the flow for a TCP datagram
+destined for a port other than than the two we are handling
+specifically, as shown in <A
+HREF="x-087-2-firewall.fwchains.html#X-087-2-FIREWALL.IPCHAINS.TCP.OTHER"
+>Figure 9-7</A
+>.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-FIREWALL.IPCHAINS.TCP.OTHER"
+></A
+><P
+><B
+>Figure 9-7. The rules flow for a received TCP datagram for telnet</B
+></P
+><P
+><IMG
+SRC="lag2_0907.jpg"></P
+></DIV
+><P
+>The user-defined chains do not have default policies. When all rules
+in a user-defined chain have been tested, and none have matched, the
+firewall code acts as though a <TT
+CLASS="LITERAL"
+>RETURN</TT
+> rule were
+present, so if this isn't what you want, you should ensure you supply
+a rule at the end of the user-defined chain that takes whatever action
+you wish. In our example, our testing returns to the rule in the
+<TT
+CLASS="LITERAL"
+>input</TT
+> ruleset immediately following the one that
+moved us to our user-defined chain. Eventually we reach the end of the
+<TT
+CLASS="LITERAL"
+>input</TT
+> chain, which does have a default policy and
+our datagram is denied.</P
+><P
+>This example is very simple, but illustrates our point. A more practical use of
+IP chains would be much more complex. A slightly more sophisticated example is
+provided in the following list of commands:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>#
+# Set default forwarding policy to REJECT
+ipchains -P forward REJECT
+#
+# create our user-defined chains
+ipchains -N sshin
+ipchains -N sshout
+ipchains -N wwwin
+ipchains -N wwwout
+#
+# Ensure we reject connections coming the wrong way
+ipchains -A wwwin -p tcp -s 172.16.0.0/16 -y -j REJECT
+ipchains -A wwwout -p tcp -d 172.16.0.0/16 -y -j REJECT
+ipchains -A sshin -p tcp -s 172.16.0.0/16 -y -j REJECT
+ipchains -A sshout -p tcp -d 172.16.0.0/16 -y -j REJECT
+#
+# Ensure that anything reaching the end of a user-defined chain is rejected.
+ipchains -A sshin -j REJECT
+ipchains -A sshout -j REJECT
+ipchains -A wwwin -j REJECT
+ipchains -A wwwout -j REJECT
+#
+# divert www and ssh services to the relevant user-defined chain
+ipchains -A forward -p tcp -d 172.16.0.0/16 ssh -b -j sshin
+ipchains -A forward -p tcp -s 172.16.0.0/16 -d 0/0 ssh -b -j sshout
+ipchains -A forward -p tcp -d 172.16.0.0/16 www -b -j wwwin
+ipchains -A forward -p tcp -s 172.16.0.0/16 -d 0/0 www -b -j wwwout
+#
+# Insert our rules to match hosts at position two in our user-defined chains.
+ipchains -I wwwin 2 -d 172.16.1.2 -b -j ACCEPT
+ipchains -I wwwout 2 -s 172.16.1.0/24 -b -j ACCEPT
+ipchains -I sshin 2 -d 172.16.1.4 -b -j ACCEPT 
+ipchains -I sshout 2 -s 172.16.1.4 -b -j ACCEPT
+ipchains -I sshout 2 -s 172.16.1.6 -b -j ACCEPT
+#</PRE
+></TD
+></TR
+></TABLE
+><P
+>In this example, we've used a selection of user-defined chains both to
+simplify management of our firewall configuration and improve the
+efficiency of our firewall as compared to a solution involving only the
+built-in chains.</P
+><P
+>Our example creates user-defined chains for each of the
+<TT
+CLASS="LITERAL"
+>ssh</TT
+> and <TT
+CLASS="LITERAL"
+>www</TT
+> services in each
+connection direction. The chain called <TT
+CLASS="LITERAL"
+>wwwout</TT
+> is
+where we place rules for hosts that are allowed to make outgoing World
+Wide Web connections, and <TT
+CLASS="LITERAL"
+>sshin</TT
+> is where we define
+rules for hosts to which we want to allow incoming ssh
+connections. We've assumed that we have a requirement to allow and
+deny individual hosts on our network the ability to make or receive
+<TT
+CLASS="LITERAL"
+>ssh</TT
+> and <TT
+CLASS="LITERAL"
+>www</TT
+> connections. The
+simplication occurs because the user-defined chains allow us to neatly
+group the rules for the host incoming and outgoing permissions rather
+than muddling them all together. The improvement in efficiency occurs
+because for any particular datagram, we have reduced the average number
+of tests required before a target is found. The efficiency gain
+increases as we add more hosts. If we hadn't used user-defined chains,
+we'd potentially have to search the whole list of rules to determine
+what action to take with each and every datagram received.  Even if we
+assume that each of the rules in our list matches an equal proportion
+of the total number of datagrams processed, we'd still be searching
+half the list on average. User-defined chains allow us to avoid
+testing large numbers of rules if the datagram being tested doesn't
+match the simple rule in the built-in chain that jumps to them.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN8492"
+>9.7.5.2. The ipchains support scripts</A
+></H3
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>ipchains</B
+> software package is supplied with
+three support scripts. The first of these we've discussed briefly
+already, while the remaining two provide an easy and convenient means
+of saving and restoring your firewall configuration.</P
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>ipfwadm-wrapper</B
+> script emulates the
+command-line syntax of the <B
+CLASS="COMMAND"
+>ipfwadm</B
+> command, but
+drives the <B
+CLASS="COMMAND"
+>ipchains</B
+> command to build the firewall
+rules. This is a convenient way to migrate your existing firewall
+configuration to the kernel or an alternative to learning the
+<B
+CLASS="COMMAND"
+>ipchains</B
+> syntax. The
+<B
+CLASS="COMMAND"
+>ipfwadm-wrapper</B
+> script behaves differently from the
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> command in two ways: firstly, because the
+<B
+CLASS="COMMAND"
+>ipchains</B
+> command doesn't support specification of
+an interface by address, the <B
+CLASS="COMMAND"
+>ipfwadm-wrapper</B
+> script
+accepts an argument of <TT
+CLASS="OPTION"
+>-V</TT
+> but attempts to convert it
+into the <B
+CLASS="COMMAND"
+>ipchains</B
+> equivalent of a
+<TT
+CLASS="OPTION"
+>-W</TT
+> by searching for the interface name configured
+with the supplied address. The <B
+CLASS="COMMAND"
+>ipfwadm-wrapper</B
+>
+script will always provide a warning when you use the
+<TT
+CLASS="OPTION"
+>-V</TT
+> option to remind you of this. Secondly, fragment
+accounting rules are not translated correctly.</P
+><P
+>&#13;
+
+The <B
+CLASS="COMMAND"
+>ipchains-save</B
+> and <B
+CLASS="COMMAND"
+>ipchains-restore</B
+>
+scripts make building and modifying a firewall configuration much simpler.
+The <B
+CLASS="COMMAND"
+>ipchains-save</B
+> command reads the current firewall
+configuration and writes a simplified form to the standard output. The
+<B
+CLASS="COMMAND"
+>ipchains-restore</B
+> command reads data in the output format
+of the <B
+CLASS="COMMAND"
+>ipchains-save</B
+> command and configures the IP firewall
+with these rules. The advantage of using these scripts over directly modifying
+your firewall configuration script and testing the configuration is the ability
+to dynamically build your configuration once and then save it. You can then
+restore that configuration, modify it, and resave it as you please.</P
+><P
+>To use the scripts, you'd enter something like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+><B
+CLASS="COMMAND"
+>ipchains-save</B
+> &#62;/var/state/ipchains/firewall.state</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+to save your current firewall configuration. You'd restore it, perhaps at
+boot time, with:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+><B
+CLASS="COMMAND"
+>ipchains-restore</B
+> &#60;/var/state/ipchains/firewall.state</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <B
+CLASS="COMMAND"
+>ipchains-restore</B
+> script checks if any user-defined
+chain listed in its input already exists. If you've supplied the
+<TT
+CLASS="LITERAL"
+>-f</TT
+> argument, it will automatically flush the rules from
+the user-defined chain before configuring those in the input. The default
+behavior asks you whether to skip this chain or to flush it.</P
+></DIV
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FN05"
+HREF="x-087-2-firewall.fwchains.html#X-087-2-FN05"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Paul can be reached at
+<SPAN
+CLASS="SYSTEMITEM"
+>Paul.Russell@rustcorp.com.au</SPAN
+>.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.original.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.future.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Original IP Firewall (2.0 Kernels)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Netfilter and IP Tables (2.4 Kernels)</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

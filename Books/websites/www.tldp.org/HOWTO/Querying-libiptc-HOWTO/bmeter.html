@@ -1,0 +1,1213 @@
+<HTML
+><HEAD
+><TITLE
+>Bandwidth meter</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Querying libiptc HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Functions to modify firewalling rules and statistics"
+HREF="mfunction.html"><LINK
+REL="NEXT"
+TITLE="Controlling flows"
+HREF="cflows.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Querying libiptc HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="mfunction.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="cflows.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BMETER">13. Bandwidth meter</H1
+><P
+>In this chapter I am going to develop a simple bandwidth meter using 
+the following functions from <EM
+>libiptc</EM
+>:</P
+><P
+></P
+><UL
+><LI
+><P
+>To initialize the system: 
+<EM
+>iptc_handle_t iptc_init(const char *tablename)</EM
+>.</P
+></LI
+><LI
+><P
+> 
+To catch from errors: 
+<EM
+>const char *iptc_strerror(int err)</EM
+>.</P
+></LI
+><LI
+><P
+> 
+To iterate through the chains of the table: 
+<EM
+>const char *iptc_first_chain(iptc_handle_t *handle)</EM
+> and
+<EM
+>const char *iptc_next_chain(iptc_handle_t *handle)</EM
+>.</P
+></LI
+><LI
+><P
+> 
+To read packet and byte counters for a specific rule: 
+<EM
+>struct ipt_counters *iptc_read_counter(const ipt_chainlabel chain,
+unsigned int rulenum, iptc_handle_t *handle)</EM
+>.</P
+></LI
+></UL
+><P
+>Also the function <EM
+>gettimeofday</EM
+> will be used to 
+measure elapsed time and the function <EM
+>getopt</EM
+> to 
+get options from the command line.</P
+><P
+>I don't know really if the term <EM
+>bandwidth meter</EM
+> is 
+well used here. I interpret <EM
+>bandwidth</EM
+> as a reference to 
+a flow capacity; perhaps a better term could be <EM
+>flow meter</EM
+>.</P
+><P
+>Here is the <EM
+>bandwidth meter</EM
+> <TT
+CLASS="FILENAME"
+>bw.c</TT
+>. 
+It's well commented to be easy followed by everyone:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>/* 
+ * How to use libiptc- program #4
+ * /usr/local/src/bw.c
+ * By Leonardo Balliache - 04.09.2002
+ * e-mail: leonardo@opalsoft.net
+ * --WELL COMMENTED-- to be easy followed by everyone.
+ */
+
+/* include files required */
+#include &#60;getopt.h&#62;
+#include &#60;sys/errno.h&#62;
+#include &#60;sys/time.h&#62;
+#include &#60;stdio.h&#62;
+#include &#60;fcntl.h&#62;
+#include &#60;stdlib.h&#62;
+#include &#60;string.h&#62;
+#include &#60;dlfcn.h&#62;
+#include &#60;time.h&#62;
+#include &#60;unistd.h&#62;
+#include "libiptc/libiptc.h"
+#include "iptables.h"
+
+/* colors to differentiate chains measures */
+#define RED     "\033[41m\033[37m"
+#define GREEN   "\033[42m\033[30m"
+#define ORANGE  "\033[43m\033[30m"
+#define BLUE    "\033[44m\033[37m"
+#define MAGENTA "\033[45m\033[37m"
+#define CYAN    "\033[46m\033[30m"
+#define WHITE   "\033[47m\033[30m"
+#define BLACK   "\033[40m\033[37m"
+#define RESET   "\033[00m"
+
+/* maximum number of chains to be processed */
+#define MAXUSERCHAINS 7
+
+/* time between measures in seconds; adjust as you like */
+#define SLEEPTIME 1
+
+/* structure to count bytes per chain */
+struct bwcnt  {
+  int start;           /* the chain was initialized */
+  u_int64_t icnt;      /* bytes through; previous measure */
+  u_int64_t ocnt;      /* bytes through; current measure */
+  double bw;           /* bandwitdh (flow) on this chain */
+};
+
+/* function to calculate differences of time in seconds.
+ * micro-seconds precision.
+ */
+double delta(struct timeval a, struct timeval b)
+{
+  if (a.tv_usec &#38; b.tv_usec)  {
+    a.tv_sec--;
+    a.tv_usec += 1000000;
+  }
+  return a.tv_sec-b.tv_sec + (a.tv_usec-b.tv_usec)/1000000.0;
+}
+
+/* main function */
+int main(int argc, char *argv[])
+{
+  int i, j, ok;
+  double totbw;
+  iptc_handle_t h;
+  int c, act_bw = 0;
+  const char *chain = NULL;
+  const char *tablename = "filter";
+  struct timeval ti, to;
+  struct bwcnt bw[MAXUSERCHAINS];
+  struct ipt_counters *counters;
+  char *col[9] = { RED,GREEN,ORANGE,BLUE,MAGENTA,CYAN,WHITE,BLACK,RESET };
+
+  program_name = "bw";
+  program_version = NETFILTER_VERSION;
+
+ /* check options
+  * we have 2 options: 
+  *        -c = display current flow (each SLEEPTIME).
+  *        -a = display average flow (from start); default option.
+  */
+  while ((c = getopt (argc, argv, "ac")) != -1)
+  switch (c)  {
+  case 'a':
+    act_bw = 0;
+    break;
+  case 'c':
+    act_bw = 1;
+    break;
+  case '?':
+    if (isprint(optopt))
+      fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+    else
+      fprintf (stderr,"Unknown option character `\\x%x'.\n",optopt);
+    exit(1);
+  default:
+    abort();
+  }
+
+  /* initialize array of chains */
+  memset(&#38;bw, 0, MAXUSERCHAINS * sizeof(struct bwcnt));
+
+  /* get time to start meter on variable ti */
+  gettimeofday(&#38;ti, NULL);
+
+  /* fire meter loop */
+  if ( act_bw )  
+    printf("Displaying current flow values ...\n");
+  else
+    printf("Displaying average flow values ...\n");
+
+  /* forever loop; abort the program with ^C */
+  while ( 1 )  {
+    /* you have to initialize for each measure to be done */
+    if ( !(h = iptc_init(tablename)) )  {
+      printf("Error initializing: %s\n", iptc_strerror(errno));
+      exit(errno);
+    }
+    ok = 0;    /* we start a new loop */
+    gettimeofday(&#38;to, NULL);  /* have a time shoot */
+
+    /* iterate through each chain of the table */
+    for (chain = iptc_first_chain(&#38;h), i = 0; 
+         chain; 
+         chain = iptc_next_chain(&#38;h))  {
+      if ( iptc_builtin(chain, h) )
+        continue;    /* if it is a built-in chain, ignore it */
+
+      /* ok, read the counters of this chain */
+      if ( !(counters = iptc_read_counter(chain, 0, &#38;h)) )  {
+         printf("Error reading %s: %s\n", chain, iptc_strerror(errno));
+         exit(errno);
+      }
+
+      /* check that we do not have more chains than we can process */
+      if ( i &#62;= MAXUSERCHAINS )  {
+         printf("Maximum of %d user chains exceeded!!\n", MAXUSERCHAINS);
+         exit(1);
+      }
+
+      /* this chain counter has not been initialized; initialize it */
+      if ( bw[i].start == 0 )  {
+        bw[i].icnt = counters-&#62;bcnt;
+        bw[i].start = 1;
+      }
+
+      /* this chain has a previous measure; take the current one */
+      else  {
+        bw[i].ocnt = counters-&#62;bcnt;
+        if ( bw[i].ocnt == bw[i].icnt )    /* no new bytes flowing? */
+          bw[i].bw = 0;                    /* flow is zero */
+        else
+         /* flow in this chain is:
+          *   current bytes count (bw[i].octn)    *minus*
+          *   previous bytes count (bw[i].icnt)   *divided by*
+          *   128.0 to convert bytes to kbits     *and divided by*
+          *   difference in times in seconds      *to get*
+          *   flow in kbits/sec that is what we want.
+          */
+          bw[i].bw = (bw[i].ocnt - bw[i].icnt) / (128.0 * delta(to, ti));
+
+       /* do you want current flow of this chain? initialize previous 
+        * bytes count to current bytes count; we get the flow in last 
+        * SLEEPTIME elapsed time.
+        */
+        if ( act_bw )
+          bw[i].icnt = bw[i].ocnt;
+        ok = 1;    /* ok, we have some measure to show */
+      }
+      ++i;  /* next chain, please */
+    }
+
+    /* we iterate and i == 0; we do not have user chains at all */
+    if ( i == 0 )  {
+       printf("No user chains to meter!!\n");
+       exit(1);
+    }
+
+   /* do you want to measure current flow? initialize previous time 
+    * to actual time; we get the time elapsed in last SLEEPTIME.
+    */
+    if ( act_bw )
+      ti = to;
+
+    /* do we have something to show? ok, display it */
+    if ( ok )  {
+      totbw = 0;
+      for ( j = 0; j &#60; i; ++j )  { 
+        totbw = totbw + bw[j].bw;   /* calculate total flow */
+      }
+      printf("%s%6.1fk:%s ", col[7], totbw, col[8]);  /* display total */
+      for ( j = 0; j &#60; i; ++j )  {  /* display flow of each chain in color */
+        printf("%s%6.1fk%s ", col[j], bw[j].bw, col[8]);
+      }
+      printf("\n");
+    }
+    sleep(SLEEPTIME);  /* rest a little; you go too fast */
+  }             /* give us enough time in order to let some bytes flow */
+
+  exit(0);  /* bye, we have our measures!! */
+
+} /* main */</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Write your program and compile as before:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>./ipt-cc bw</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Before using the meter we need to set our environment.</P
+><P
+>First, we have to have at least 2 PCs connected in a network. This is our
+diagram configuration:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>+--------+ eth0       eth0 +--------+
+| PC #1  +-----------------+ PC #2  |
++--------+                 +--------+
+eth0=192.168.1.1           eth0=192.168.1.2</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Second, we need to install a very nice and useful package called 
+<EM
+>netcat</EM
+> written by Hobbit. This 
+<EM
+>excellent</EM
+> package will help us to inject and receive 
+a flow of bytes between 2 NICs. If you don't have the package in your 
+system, download it from <A
+HREF="http://rr.sans.org/audit/netcat.php"
+TARGET="_top"
+>http://rr.sans.org/audit/netcat.php</A
+>.</P
+><P
+>The version that I use is <EM
+>1.10-277</EM
+>. To install it follow 
+these instructions:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>cp netcat-1.10.tar.gz /usr/local/src</B
+>
+bash# <B
+CLASS="COMMAND"
+>tar xzvf netcat-1.10.tar.gz</B
+>
+bash# <B
+CLASS="COMMAND"
+>cd netcat-1.10</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>My version requires to make a patch first; check yours if you have a file
+with a <EM
+>.dif</EM
+> extension and apply it too:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>patch -p0 -i netcat-1.10.dif</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Next compile the package using <EM
+>make</EM
+>:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>make linux</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Copy the binary <EM
+>nc</EM
+> to your user bin directory:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>cp nc /usr/bin</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>And also to the second PC in your network:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>scp nc 192.168.1.2:/usr/bin</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>We are going to use <EM
+>netcat</EM
+> to 
+<SPAN
+CLASS="QUOTE"
+>"listen"</SPAN
+> to a flow of bytes from PC #2 and 
+to <SPAN
+CLASS="QUOTE"
+>"talk"</SPAN
+> from PC #1. Using tty1 to tty4 
+consoles on PC #2 let's start <EM
+>netcat</EM
+> to 
+listen from this PC. Go to PC #2 and in tty1 type:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>nc -n -v -l -s 192.168.1.2 -p 1001 &#62;/dev/null</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><EM
+>netcat</EM
+> must respond with:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>listening on [192.168.1.2] 1001 ...</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This command started <EM
+>netcat</EM
+> to listen from address 
+<EM
+>192.168.1.2</EM
+> using port number <EM
+>1001</EM
+>. 
+Arguments are: <EM
+>-n</EM
+> = use numeric address identification;
+<EM
+>-v</EM
+> = verbose; <EM
+>-l</EM
+> = listen. All the 
+flow that <EM
+>netcat</EM
+> receives in 
+<EM
+>192.168.1.2:1001</EM
+> will be redirected to the 
+<SPAN
+CLASS="QUOTE"
+>"black hole"</SPAN
+> in <TT
+CLASS="FILENAME"
+>/dev/null</TT
+>.</P
+><P
+>Repeat the command in tty2, tty3 and tty4; change to tty2 using 
+<B
+CLASS="KEYCAP"
+>ALT-F2</B
+> and after logging in write:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>nc -n -v -l -s 192.168.1.2 -p 1002 &#62;/dev/null</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now we are <SPAN
+CLASS="QUOTE"
+>"listening"</SPAN
+> to the same address but port 
+number <EM
+>1002</EM
+>.</P
+><P
+>Go on now with tty3:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>nc -n -v -l -s 192.168.1.2 -p 1003 &#62;/dev/null</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>And tty4:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>nc -n -v -l -s 192.168.1.2 -p 1004 &#62;/dev/null</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now we are listening in PC #2, address 
+<EM
+>192.168.1.2</EM
+> in ports <EM
+>1001</EM
+>, 
+<EM
+>1002</EM
+>, <EM
+>1003</EM
+> and 
+<EM
+>1004</EM
+>.</P
+><P
+>Come back to PC #1 and let's set the environment to allow 
+<EM
+>iptables</EM
+> to help us to complete our tests:</P
+><P
+>On PC #1, type the into tty1 as follows:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>iptables -F</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -X</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -N chn_1</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -N chn_2</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -N chn_3</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -N chn_4</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A chn_1 -j ACCEPT</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A chn_2 -j ACCEPT</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A chn_3 -j ACCEPT</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A chn_4 -j ACCEPT</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A OUTPUT -o eth0 -p tcp --dport 1001 -j chn_1</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A OUTPUT -o eth0 -p tcp --dport 1002 -j chn_2</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A OUTPUT -o eth0 -p tcp --dport 1003 -j chn_3</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -A OUTPUT -o eth0 -p tcp --dport 1004 -j chn_4</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>These commands will:</P
+><P
+></P
+><UL
+><LI
+><P
+>Flush all chains in table <EM
+>filter</EM
+>.</P
+></LI
+><LI
+><P
+> 
+Delete all user chains in table <EM
+>filter</EM
+>.</P
+></LI
+><LI
+><P
+> 
+Create user chains <EM
+>chn_1</EM
+>,
+<EM
+>chn_2</EM
+>, <EM
+>chn_3</EM
+> and
+<EM
+>chn_4</EM
+>.</P
+></LI
+><LI
+><P
+> 
+Establish a target <EM
+>ACCEPT</EM
+> in each user chain.</P
+></LI
+><LI
+><P
+> 
+Create 4 rules in chain <EM
+>OUTPUT</EM
+> that matches
+port numbers <EM
+>1001</EM
+> to
+<EM
+>1004</EM
+> and target it to user chains 
+<EM
+>chn_1</EM
+> to <EM
+>chn_4</EM
+>.</P
+></LI
+></UL
+><P
+>Now start the <EM
+>bw</EM
+> meter using current values:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>./bw -c</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>It must respond with:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>Displaying current flow values ...
+   0.0k:    0.0k    0.0k    0.0k    0.0k
+   0.0k:    0.0k    0.0k    0.0k    0.0k
+   0.0k:    0.0k    0.0k    0.0k    0.0k
+   0.0k:    0.0k    0.0k    0.0k    0.0k</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>It informs that measures are current flows. Every line is a measure
+taken each <EM
+>SLEEPTIME</EM
+> lapse (1 second in our 
+program). First column (in black) are total flow, next columns (in red,
+green, orange and blue) are flows in chains <EM
+>chn_1</EM
+>, 
+<EM
+>chn_2</EM
+>, <EM
+>chn_3</EM
+> and 
+<EM
+>chn_4</EM
+> respectively. Of course we do not have any 
+flow now. However let <EM
+>bw</EM
+> run and continue reading.</P
+><P
+>Let's start now one of our byte flows; go to tty2 in PC #1 with
+<B
+CLASS="KEYCAP"
+>ALT-F2</B
+> and after logging in, type:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>yes 000000000000000000 | nc -n -v -s 192.168.1.1 -p 2001 192.168.1.2 1001</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><EM
+>netcat</EM
+> responds with:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>(UNKNOWN) [192.168.1.2] 1000 (?) open</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now we have a flow of bytes from PC #1 to PC #2. <EM
+>yes</EM
+> 
+generates a constant flow of zeroes; this flow is piped to 
+<EM
+>netcat</EM
+> through address <EM
+>192.168.1.1</EM
+>, 
+port <EM
+>2001</EM
+> and sends it to PC #2, address 
+<EM
+>192.168.1.2</EM
+>, port <EM
+>1001</EM
+> 
+(where PC #2 is listening).</P
+><P
+>Check now the display of <EM
+>bw</EM
+> in tty1:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>7653.2k: 7653.2k    0.0k    0.0k    0.0k
+7829.5k: 7829.5k    0.0k    0.0k    0.0k
+7786.7k: 7786.7k    0.0k    0.0k    0.0k
+7892.1k: 7982.1k    0.0k    0.0k    0.0k</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Your mileage can vary depending of the physical characteristics of your
+system. In mine I have a flow of aproximately 7700 kbits/sec in the first
+chain <EM
+>chn_1</EM
+> which corresponds to port number
+<EM
+>1001</EM
+> in PC #2.</P
+><P
+>Let's start now the second bytes flow; go to tty3 in PC #1 with 
+<B
+CLASS="KEYCAP"
+>ALT-F3</B
+> and after logging in, type:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>yes 000000000000000000 | nc -n -v -s 192.168.1.1 -p 2002 192.168.1.2 1002</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><EM
+>netcat</EM
+> responds with:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>(UNKNOWN) [192.168.1.2] 1002 (?) open</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now we have 2 flows of bytes from PC #1 to PC #2; one from 
+<EM
+>192.168.1.1:2001</EM
+> to 
+<EM
+>192.168.1.2:1001</EM
+> and another from 
+<EM
+>192.168.1.1:2002</EM
+> to 
+<EM
+>192.168.1.2:1002</EM
+>.</P
+><P
+>Now check the display of <EM
+>bw</EM
+> in tty1:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>7819.6k: 4144.2k 3675.4k    0.0k    0.0k
+8090.5k: 3923.9k 4166.6k    0.0k    0.0k
+7794.7k: 3920.8k 3873.9k    0.0k    0.0k
+7988.3k: 3754.6k 4233.7k    0.0k    0.0k</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now we have 2 flows; each of them is more or less 50% of the total flow
+going out of the computer. The Linux kernel tries to balance the bandwidth
+available between the 2 channels of output.</P
+><P
+>To continue, start the 2 aditional flows through channels
+<EM
+>192.168.1.1:2003-192.168.1.2:1003</EM
+> and 
+<EM
+>192.168.1.1:2004-192.168.1.2:1004</EM
+>.</P
+><P
+>In tty4 type:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>yes 000000000000000000 | nc -n -v -s 192.168.1.1 -p 2003 192.168.1.2 1003</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>In tty5 type:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>yes 000000000000000000 | nc -n -v -s 192.168.1.1 -p 2004 192.168.1.2 1004</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>The display of <EM
+>bw</EM
+> in tty1 will be something like:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>8120.6k: 1705.3k 2354.9k 1898.6k 2161.8k
+7765.3k: 1634.2k 2560.2k 2011.4k 1559.5k
+7911.9k: 1699.8k 2090.3k 1768.0k 2353.8k
+8309.4k: 1734.5k 1999.7k 1999.9k 2575.3k</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Total bandwidth is distributed between the 4 channels of flow.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="mfunction.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="cflows.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Functions to modify firewalling rules and statistics</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Controlling flows</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

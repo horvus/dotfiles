@@ -1,0 +1,338 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Hard disks</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Using Disks and Other Storage Media"
+HREF="disk-usage.html"><LINK
+REL="PREVIOUS"
+TITLE="Two kinds of devices"
+HREF="block-char-dev.html"><LINK
+REL="NEXT"
+TITLE="Storage Area Networks - Draft"
+HREF="san.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="block-char-dev.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Using Disks and Other Storage Media</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="san.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="HARD-DISK"
+></A
+>5.2. Hard disks</H1
+><P
+>This subsection introduces terminology related to hard
+	disks.	If you already know the terms and concepts, you can skip
+	this subsection.</P
+><P
+>See <A
+HREF="hard-disk.html#HD-SCHEMATIC"
+>Figure 5-1</A
+> for a schematic picture
+	of the important parts in a hard disk.	A hard disk consists of one
+	or more circular aluminum <I
+CLASS="GLOSSTERM"
+>platters</I
+>\
+	,
+	of which either or both <I
+CLASS="GLOSSTERM"
+>surfaces</I
+> are coated
+	with a magnetic substance used for recording the data.	For each
+	surface, there is a <I
+CLASS="GLOSSTERM"
+>read-write head</I
+> that
+	examines or alters the recorded data.  The platters rotate on a
+	common axis; typical rotation speed is 5400 or 7200 rotations per
+	minute, although high-performance hard disks have higher speeds and
+	older disks may have lower speeds. The heads move along the radius
+	of the platters; this movement combined with the rotation of the
+	platters allows the head to access all parts of the surfaces.</P
+><P
+>The processor (CPU) and the actual disk communicate through a
+	<I
+CLASS="GLOSSTERM"
+>disk controller</I
+>
+	.  This relieves the rest of
+	the computer from knowing how to use the drive, since the
+	controllers for different types of disks can be made to use the same
+	interface towards the rest of the computer.  Therefore, the computer
+	can say just ``hey disk, give me what I want'', instead of a long
+	and complex series of electric signals to move the head to the
+	proper location and waiting for the correct position to come under
+	the head and doing all the other unpleasant stuff necessary. (In
+	reality, the interface to the controller is still complex, but much
+	less so than it would otherwise be.) The controller may also do
+	other things, such as caching, or automatic bad sector 
+	replacement.</P
+><P
+>The above is usually all one needs to understand about the
+	hardware.  There are also other things, such as the motor that
+	rotates the platters and moves the heads, and the electronics that
+	control the operation of the mechanical parts, but they are mostly
+	not relevant for understanding the working principles of a hard 
+	disk.</P
+><P
+>The surfaces are usually divided into concentric rings,
+	called <I
+CLASS="GLOSSTERM"
+>tracks</I
+>, and these in turn are divided
+	into <I
+CLASS="GLOSSTERM"
+>sectors</I
+>.  This division is used to
+	specify locations on the hard disk and to allocate disk space to
+	files.  To find a given place on the hard disk, one might say
+	``surface 3, track 5, sector 7''.  Usually the number of sectors is
+	the same for all tracks, but some hard disks put more sectors in
+	outer tracks (all sectors are of the same physical size, so more of
+	them fit in the longer outer tracks). Typically, a sector will hold
+	512 bytes of data.  The disk itself
+	can't handle smaller amounts of data than one sector.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="HD-SCHEMATIC"
+></A
+><P
+><B
+>Figure 5-1. A schematic picture of a hard disk.</B
+></P
+><P
+><IMG
+SRC="hd-schematic.png"></P
+></DIV
+><P
+>Each surface is divided into tracks (and sectors) in
+	the same way.  This means that when the head for one surface is on a
+	track, the heads for the other surfaces are also on the
+	corresponding tracks.  All the corresponding tracks taken together
+	are called a <I
+CLASS="GLOSSTERM"
+>cylinder</I
+>.	It takes time to
+	move the heads from one track (cylinder) to another, so by placing
+	the data that is often accessed together (say, a file) so that it is
+	within one cylinder, it is not necessary to move the heads to read
+	all of it.  This improves performance. It is not always possible to
+	place files like this; files that are stored in several places on
+	the disk are called
+	<I
+CLASS="GLOSSTERM"
+>fragmented</I
+>.</P
+><P
+>The number of surfaces (or heads, which is the same thing),
+	cylinders, and sectors vary a lot; the specification of the number
+	of each is called the <I
+CLASS="GLOSSTERM"
+>geometry</I
+> of a hard
+	disk.  The geometry is usually stored in a special, battery-powered
+	memory location called the <I
+CLASS="GLOSSTERM"
+>CMOS RAM</I
+>
+	, from
+	where the operating system can fetch it during bootup or driver 
+	initialization.</P
+><P
+>Unfortunately, the BIOS
+	has a design limitation, which makes it impossible to specify a
+	track number that is larger than 1024 in the CMOS RAM, which is too
+	little for a large hard disk.  To overcome this, the hard disk
+	controller lies about the geometry, and <I
+CLASS="GLOSSTERM"
+>translates the
+	addresses</I
+> given by the computer into something that fits
+	reality.  For example, a hard disk might have 8 heads, 2048 tracks,
+	and 35 sectors per track.
+	Its controller could lie to the computer and claim that it has 16
+	heads, 1024 tracks, and 35 sectors per track, thus not exceeding the
+	limit on tracks, and translates the address that the computer gives
+	it by halving the head number, and doubling the track number.  The
+	mathematics can be more complicated in reality, because the numbers
+	are not as nice as here (but again, the details are not relevant for
+	understanding the principle). This translation distorts the
+	operating system's view of how the disk is organized, thus making it
+	impractical to use the all-data-on-one-cylinder trick to boost 
+	performance.</P
+><P
+>The translation is only a problem for IDE disks.	SCSI disks
+	use a sequential sector number (i.e., the controller translates a
+	sequential sector number to a head, cylinder, and sector triplet),
+	and a completely different method for the CPU to talk with the
+	controller, so they are insulated from the problem. Note, however,
+	that the computer might not know the real geometry of an SCSI disk 
+	either.</P
+><P
+>Since Linux often will not know the real geometry of a disk,
+	its filesystems don't even try to keep files within a single
+	cylinder.  Instead, it tries to assign sequentially numbered sectors
+	to files, which almost always gives similar performance. The issue
+	is further complicated by on-controller caches, and automatic 
+	prefetches done by the controller.</P
+><P
+>Each hard disk is represented by a separate device
+	file.  There can (usually) be only two or four IDE hard disks. These
+	are known as <TT
+CLASS="FILENAME"
+>/dev/hda</TT
+>,
+	<TT
+CLASS="FILENAME"
+>/dev/hdb</TT
+>, 
+	<TT
+CLASS="FILENAME"
+>/dev/hdc</TT
+>, and
+	<TT
+CLASS="FILENAME"
+>/dev/hdd</TT
+>, 
+	respectively.  SCSI hard disks are
+	known as <TT
+CLASS="FILENAME"
+>/dev/sda</TT
+>,
+	<TT
+CLASS="FILENAME"
+>/dev/sdb</TT
+>, and so on.  Similar naming
+	conventions exist for other hard disk types; see <A
+HREF="device-list.html"
+>Chapter 4</A
+> for more information.  Note that the device
+	files for the hard disks give access to the entire disk, with no
+	regard to partitions (which will be discussed below), and it's easy
+	to mess up the partitions or the data in them if you aren't careful.
+	The disks' device files are usually used only to get access to the
+	master boot record (which will also be discussed below).</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="block-char-dev.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="san.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Two kinds of devices</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="disk-usage.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Storage Area Networks - Draft</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

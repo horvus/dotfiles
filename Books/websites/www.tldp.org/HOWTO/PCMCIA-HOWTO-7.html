@@ -1,0 +1,369 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux PCMCIA HOWTO: Debugging tips and programming information</TITLE>
+ <LINK HREF="PCMCIA-HOWTO-6.html" REL=previous>
+ <LINK HREF="PCMCIA-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+Next
+<A HREF="PCMCIA-HOWTO-6.html">Previous</A>
+<A HREF="PCMCIA-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Debugging tips and programming information</A></H2>
+
+<H2><A NAME="ss7.1">7.1 Submitting useful problem reports</A>
+</H2>
+
+<P>The best way to submit reports is to use the online pcmcia-cs forums
+or the bug tracker at SourceForge.  That way, other people can see
+current problems (and fixes or workarounds, if available).  Here are
+some things that should be included in all bug reports:
+<P>
+<UL>
+<LI>Your system brand and model.</LI>
+<LI>All PCMCIA card(s) you are using.</LI>
+<LI>Your Linux kernel version (i.e., ``<CODE>uname -rv</CODE>''), and PCMCIA
+driver version (i.e., ``<CODE>cardctl -V</CODE>'').</LI>
+<LI>Output of 'lspci -v'</LI>
+<LI>Any changes you have made to the startup files in
+<CODE>/etc/pcmcia</CODE>, or to the PCMCIA startup script.</LI>
+<LI>All PCMCIA-related messages in your system log file.  That
+includes startup messages, and messages generated when your
+cards are configured.</LI>
+</UL>
+<P>All the PCMCIA modules and the <CODE>cardmgr</CODE> daemon send status
+messages to the system log.  These will usually end up somewhere like
+<CODE>/var/log/messages</CODE> or <CODE>/var/log/daemon.log</CODE>.  These
+files should be the first place to look when tracking down a problem.
+When submitting a bug report, always include the relevant contents of
+these files.  If you are having trouble finding your system messages,
+check <CODE>/etc/syslog.conf</CODE> to see how different classes of
+messages are handled.
+<P>Before submitting a bug report, please check to make sure that you are
+using an up-to-date copy of the driver package.  While it is somewhat
+gratifying to read bug reports for things I've already fixed, it isn't
+a particularly constructive use of my time.
+<P>If you do not have web access, bug reports can be sent to me at
+<CODE>
+<A HREF="mailto:dahinds@users.sourceforge.net">dahinds@users.sourceforge.net</A></CODE>.  However, I prefer that
+bug reports be posted to the pcmcia-cs SourceForge site, so that they
+can be seen by others.
+<P>
+<H2><A NAME="ss7.2">7.2 Interpreting kernel trap reports</A>
+</H2>
+
+<P>If your problem involves a kernel fault, the register dump from the
+fault is only useful if you can translate the fault address, EIP, to
+something meaningful.  Recent versions of <CODE>klogd</CODE> attempt to
+translate fault addresses based on the current kernel symbol map, but
+this may not work if the fault is in a module, or if the problem is
+severe enough that <CODE>klogd</CODE> cannot finish writing the fault
+information to the system log.
+<P>If a fault is in the main kernel, the fault address can be looked up
+in the <CODE>System.map</CODE> file.  This may be installed in
+<CODE>/System.map</CODE> or <CODE>/boot/System.map</CODE>.  If a fault is in a
+module, the <CODE>nm</CODE> command gives the same information, however, the
+fault address has to be adjusted based on the module's load address.
+Let's say that you have the following kernel fault:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Unable to handle kernel NULL pointer dereference
+current->tss.cr3 = 014c9000, %cr3 = 014c9000
+*pde = 00000000
+Oops: 0002
+CPU:    0
+EIP:    0010:[&lt;c2026081>]
+EFLAGS: 00010282
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The fault address is 0xc2026081.  Looking at <CODE>System.map</CODE>, we
+see that this is past the end of the kernel, i.e., is in a kernel
+module.  To determine which module, check the output of
+``<CODE>ksyms -m | sort</CODE>'':
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Address   Symbol                            Defined by
+c200d000  (35k)                             [pcmcia_core]
+c200d10c  register_ss_entry                 [pcmcia_core]
+c200d230  unregister_ss_entry               [pcmcia_core]
+          ...
+c2026000  (9k)                              [3c574_cs]
+c202a000  (4k)                              [serial_cs]
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>So, 0xc2026081 is in the <CODE>3c574_cs</CODE> module, and is at an offset of
+0x0081 from the start of the module.  We cannot look up this offset in
+<CODE>3c574_cs.o</CODE> yet: when the kernel loads a module, it inserts a
+header at the module load address, so the real start of the module is
+offset from the address shown in <CODE>ksyms</CODE>.  The size of the header
+varies with kernel version: to find out the size for your kernel,
+check a module that exports symbols (like <CODE>pcmcia_core</CODE> above), and
+compare a symbol address with <CODE>nm</CODE> output for that symbol.  In this
+example, <CODE>register_ss_entry</CODE> is loaded at an offset of 0xc200d10c -
+0xc200d000 = 0x010c, while ``<CODE>nm pcmcia_core.o</CODE>'' shows the offset
+as 0x00c0, so the header size is 0x010c - 0x00c0 = 0x004c bytes.
+<P>Back to <CODE>3c574_cs</CODE>, our fault offset is 0x0081, and subtracting the
+0x004c header, the real module offset is 0x0035.  Now looking at
+``<CODE>nm 3c574_cs.o | sort</CODE>'', we see:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+0000002c d if_names
+0000002c t tc574_attach
+00000040 d mii_preamble_required
+00000041 d dev_info
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>So, the fault is located in <CODE>tc574_attach()</CODE>.
+<P>In this example, the fault did not cause a total system lockup, so
+<CODE>ksyms</CODE> could be executed after the fault happened.  In other
+cases, you may have to infer the module load addresses indirectly.
+The same sequence of events will normally load modules in the same
+order and at the same addresses.  If a fault happens when a certain
+card is inserted, get the <CODE>ksyms</CODE> output before inserting the card,
+or with a different card inserted.  You can also manually load the
+card's driver modules with <CODE>insmod</CODE> and run <CODE>ksyms</CODE> before
+inserting the card.
+<P>For more background, see ``<CODE>man insmod</CODE>'', ``<CODE>man ksyms</CODE>'', and
+``<CODE>man klogd</CODE>''.  In the kernel source tree,
+<CODE>Documentation/oops-tracing.txt</CODE> is also relevant.  Here are a
+few more kernel debugging hints: 
+<P>
+<UL>
+<LI>Depending on the fault, it may also be useful to translate
+addresses in the ``Call Trace'', using the same procedure as for the
+main fault address.</LI>
+<LI>To diagnose a silent lock-up, try to provoke the problem with X
+disabled, since kernel messages sent to the text console will not be
+visible under X.</LI>
+<LI>If you kill <CODE>klogd</CODE>, most kernel messages will be echoed
+directly on the text console, which may be helpful if the problem
+prevents <CODE>klogd</CODE> from writing to the system log.</LI>
+<LI>To cause all kernel messages to be sent to the console, for 2.2
+and later kernels, if <CODE>/proc/sys/kernel/printk</CODE> exists, do:
+<BLOCKQUOTE><CODE>
+<PRE>
+echo 8 > /proc/sys/kernel/printk
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>The key combination &lt;RightAlt&gt;&lt;ScrLk&gt; prints a
+register dump on the text console.  This may work even if the system
+is otherwise completely unresponsive, and the EIP address can be
+interpreted as for a kernel fault.</LI>
+<LI>For 2.2 and later kernels configured with
+<CODE>CONFIG_MAGIC_SYSRQ</CODE> enabled, various emergency functions are
+available via special &lt;Alt&gt;&lt;SysRq&gt; key combinations,
+documented in <CODE>Documentation/sysrq.txt</CODE> in the kernel source
+tree.</LI>
+</UL>
+<P>
+<H2><A NAME="pcdebug"></A> <A NAME="ss7.3">7.3 Low level PCMCIA debugging aids</A>
+</H2>
+
+<P>The PCMCIA modules contain a lot of conditionally-compiled debugging
+code.  Most of this code is under control of the <CODE>PCMCIA_DEBUG</CODE>
+preprocessor define.  If this is undefined, debugging code will
+not be compiled.  If set to 0, the code is compiled but inactive.
+Larger numbers specify increasing levels of verbosity.  Each module
+built with <CODE>PCMCIA_DEBUG</CODE> defined will have an integer parameter,
+<CODE>pc_debug</CODE>, that controls the verbosity of its output.  This
+can be adjusted when the module is loaded, so output can be controlled
+on a per-module basis without recompiling.
+<P>Your default configuration for <CODE>syslogd</CODE> may discard kernel
+debugging messages.  To ensure that they are recorded, edit
+<CODE>/etc/syslog.conf</CODE> to ensure that ``<CODE>kern.debug</CODE>'' messages
+are recorded somewhere.  See ``<CODE>man syslog.conf</CODE>'' for details.
+<P>There are a few register-level debugging tools in the
+<CODE>debug_tools/</CODE> subdirectory of the PCMCIA distribution.  The
+<CODE>dump_tcic</CODE> and <CODE>dump_i365</CODE> utilities generate register dumps
+for ISA-to-PCMCIA controllers.  In 3.1.15 and later releases,
+<CODE>dump_i365</CODE> is replaced by <CODE>dump_exca</CODE>, which is similar but
+also works for PCI-to-CardBus bridges.  Also new in 3.1.15 for CardBus
+bridges is the <CODE>dump_cardbus</CODE> tool, which interprets the
+CardBus-specific registers.  These are all most useful if you have
+access to a datasheet for the corresponding controller chip.  The
+<CODE>dump_cis</CODE> utility (<CODE>dump_tuples</CODE> in pre-3.0.2 distributions)
+lists the contents of a card's CIS (Card Information Structure), and
+decodes most of the important bits.  And the <CODE>dump_cisreg</CODE> utility
+displays a card's local configuration registers.
+<P>The <CODE>memory_cs</CODE> memory card driver is also sometimes useful for
+debugging problems with 16-bit PC Cards.  It can be bound to any card,
+and does not interfere with other drivers.  It can be used to directly
+access any card's attribute memory or common memory.  Similarly for
+CardBus cards, the <CODE>memory_cb</CODE> driver can be bound to any 32-bit
+card, to give direct access to that card's address spaces.  See the
+man pages for more information.
+<P>
+<H2><A NAME="ss7.4">7.4 /proc/bus/pccard</A>
+</H2>
+
+<P>On 2.2 and later kernels, the PCMCIA package will create a tree
+of status information under <CODE>/proc/bus/pccard</CODE>.
+Much of the information can only be interpreted using the data sheets
+for the PCMCIA host controller.  Its contents may depend on how the
+drivers were configured, but may include all or some of the following:
+<P>
+<DL>
+<DT><B><CODE>/proc/bus/pccard/{irq,ioport,memory}</CODE></B><DD><P>If present, these files contain resource allocation information to
+supplement the normal kernel resource tables.  Recent versions of
+the PCMCIA system may obtain additional resource information from
+the Plug and Play BIOS if configured to do so.
+<DT><B><CODE>/proc/bus/pccard/drivers</CODE></B><DD><P>In recent releases, this lists all currently loaded PCMCIA client
+drivers.  Unlike <CODE>/proc/modules</CODE>, it also lists drivers that
+may be statically linked into the kernel.
+<DT><B><CODE>/proc/bus/pccard/*/info</CODE></B><DD><P>For each socket, describes that socket's host controller and its
+capabilities.
+<DT><B><CODE>/proc/bus/pccard/*/exca</CODE></B><DD><P>This contains a dump of a controller's ``ExCA'' Intel
+i82365sl-compatible register set.
+<DT><B><CODE>/proc/bus/pccard/*/{pci,cardbus}</CODE></B><DD><P>For CardBus bridges, a dump of the bridge's PCI configuration space,
+and a dump of the bridge's CardBus configuration registers.
+</DL>
+<P>
+<H2><A NAME="ss7.5">7.5 Writing Card Services drivers for new cards</A>
+</H2>
+
+<P>The Linux PCMCIA Programmer's Guide is the best documentation for the
+client driver interface.  The latest version is always available from
+<CODE>projects.sourceforge.net</CODE> in <CODE>/pub/pcmcia-cs/doc</CODE>, or on
+the web at 
+<A HREF="http://pcmcia-cs.sourceforge.net">http://pcmcia-cs.sourceforge.net</A>.
+<P>For devices that are close relatives of normal ISA devices, you will
+probably be able to use parts of existing Linux drivers.  In some
+cases, the biggest stumbling block will be modifying an existing
+driver so that it can handle adding and removing devices after boot
+time.  Of the current drivers, the memory card driver is the only
+``self-contained'' driver that does not depend on other parts of the
+Linux kernel to do most of the dirty work.
+<P>In many cases, the largest barrier to supporting a new card type is
+obtaining technical information from the manufacturer.  It may be
+difficult to figure out who to ask, or to explain exactly what
+information is needed.  However, with a few exceptions, it is very
+difficult if not impossible to implement a driver for a card without
+technical information from the manufacturer.
+<P>I have written a dummy driver with lots of comments that explains a
+lot of how a driver communicates with Card Services; you will find
+this in the PCMCIA source distribution in <CODE>clients/dummy_cs.c</CODE>.
+<P>
+<H2><A NAME="ss7.6">7.6 Guidelines for PCMCIA client driver authors</A>
+</H2>
+
+<P>
+<P>I have decided that it is not really feasible for me to distribute all
+PCMCIA client drivers as part of the PCMCIA package.  Each new driver
+makes the main package incrementally harder to maintain, and including
+a driver inevitably transfers some of the maintenance work from the
+driver author to me.  Instead, I will decide on a case by case basis
+whether or not to include contributed drivers, based on user demand as
+well as maintainability.  For drivers not included in the core
+package, I suggest that driver authors adopt the following scheme for
+packaging their drivers for distribution.
+<P>Driver files should be arranged in the same directory scheme used in
+the PCMCIA source distribution, so that the driver can be unpacked on
+top of a complete PCMCIA source tree.  A driver should include source
+files (in <CODE>./modules/</CODE>), a man page (in <CODE>./man/</CODE>), and
+configuration files (in <CODE>./etc/</CODE>).  The top level directory
+should also include a README file.
+<P>The top-level directory should include a makefile, set up so
+that ``<CODE>make -f ...</CODE> all'' and ``<CODE>make -f ... install</CODE>'' compile the
+driver and install all appropriate files.  If this makefile is given
+an extension of <CODE>.mk</CODE>, then it will automatically be invoked by the
+top-level <CODE>Makefile</CODE> for the <CODE>all</CODE> and <CODE>install</CODE> targets.
+Here is an example of how such a makefile could be constructed:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# Sample Makefile for contributed client driver
+FILES = sample_cs.mk README.sample_cs \
+        modules/sample_cs.c modules/sample_cs.h \
+        etc/sample.conf etc/sample etc/sample.opts \
+        man/sample_cs.4
+all:
+        $(MAKE) -C modules MODULES=sample_cs.o
+install:
+        $(MAKE) -C modules install-modules MODULES=sample_cs.o
+        $(MAKE) -C etc install-clients CLIENTS=sample
+        $(MAKE) -C man install-man4 MAN4=sample_cs.4
+dist:
+        tar czvf sample_cs.tar.gz $(FILES)
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This makefile uses install targets defined in 2.9.10 and later
+versions of the PCMCIA package.  This makefile also includes a
+``dist'' target for the convenience of the driver author.  You would
+probably want to add a version number to the final package filename
+(for example, <CODE>sample_cs-1.5.tar.gz</CODE>).  A complete distribution
+could look like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+sample_cs.mk
+README.sample_cs
+modules/sample_cs.c
+modules/sample_cs.h
+etc/sample.conf
+etc/sample
+etc/sample.opts
+man/sample_cs.4
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>With this arrangement, when the contributed driver is unpacked, it
+becomes essentially part of the PCMCIA source tree.  It can make use
+of the PCMCIA header files, as well as the machinery for checking the
+user's system configuration, and automatic dependency checking, just
+like a ``normal'' client driver. 
+<P>In this example, <CODE>etc/sample</CODE> and <CODE>etc/sample.opts</CODE>
+would be the new driver's configuration scripts (if needed), and
+<CODE>etc/sample.conf</CODE> would contain any additions to the PCMCIA
+card configuration file.  Starting with the 3.1.6 release,
+<CODE>cardmgr</CODE> will automatically process any <CODE>*.conf</CODE> files
+installed in <CODE>/etc/pcmcia</CODE>, so installation of contributed
+drivers should no longer require hand editing configuration files.
+<P>I will accept client drivers prepared according to this specification
+and place them in the <CODE>/pub/pcmcia-cs/contrib</CODE> directory on
+<CODE>projects.sourceforge.net</CODE>.  The README in this directory will
+describe how to unpack a contributed driver.
+<P>The client driver interface has not changed much over time, and has
+almost always preserved backwards compatibility.  A client driver will
+not normally need to be updated for minor revisions in the main
+package.  I will try to notify authors of contributed drivers of
+changes that require updates to their drivers.
+<P>
+<H2><A NAME="ss7.7">7.7 Guidelines for Linux distribution maintainers</A>
+</H2>
+
+<P>
+<P>If your distribution has system configuration tools that you would
+like to be PCMCIA-aware, please use the <CODE>*.opts</CODE> files in
+<CODE>/etc/pcmcia</CODE> for your ``hooks.''  These files will not be
+modified if a user compiles and installs a new release of the PCMCIA
+package.  If you modify the main configuration scripts, then a fresh
+install will silently overwrite your custom scripts and break the
+connection with your configuration tools.  Contact me if you are not
+sure how to write an appropriate option script, or if you need
+additional capabilities.
+<P>It is helpful for users (and for me) if you can document how your
+distribution deviates from the PCMCIA package as described in this
+document.  In particular, please document changes to the startup
+script and configuration scripts.  If you send me the appropriate
+information, I will include it in the 
+<A HREF="PCMCIA-HOWTO-2.html#distributions">Notes about specific Linux distributions</A>.
+<P>When building PCMCIA for distribution, consider including contributed
+drivers that are not part of the main PCMCIA package.  For reasons of
+maintainability, I am trying to limit the core package size, by only
+adding new drivers if I think they are of particularly broad interest.
+Other drivers will be distributed separately, as described in the
+previous section.  The split between integral and separate drivers is
+somewhat arbitrary and partly historical, and should not imply a
+difference in quality.
+<P>
+<HR>
+Next
+<A HREF="PCMCIA-HOWTO-6.html">Previous</A>
+<A HREF="PCMCIA-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

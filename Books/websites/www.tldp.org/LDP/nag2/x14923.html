@@ -1,0 +1,1071 @@
+<HTML
+><HEAD
+><TITLE
+>Interpreting and Writing Rewrite Rules</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Sendmail"
+HREF="x-087-2-sendmail.html"><LINK
+REL="PREVIOUS"
+TITLE="Generating the sendmail.cf File"
+HREF="x14903.html"><LINK
+REL="NEXT"
+TITLE="Configuring sendmail Options"
+HREF="x15220.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x14903.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 18. Sendmail</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x15220.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN14923"
+>18.6. Interpreting and Writing Rewrite Rules</A
+></H1
+><P
+>&#13;
+Arguably the most powerful feature of <B
+CLASS="COMMAND"
+>sendmail</B
+> is the
+rewrite rule. Rewrite rules are used by <B
+CLASS="COMMAND"
+>sendmail</B
+> to
+determine how to process a received mail message. <B
+CLASS="COMMAND"
+>sendmail</B
+>
+passes the addresses from the <I
+CLASS="EMPHASIS"
+>headers</I
+> of a mail message
+through collections of rewrite rules called <I
+CLASS="EMPHASIS"
+>rulesets</I
+> The
+rewrite rules transform a mail address from one form to another and you can
+think of them as being similar to a command in your editor that replaces all
+text matching a specified pattern with another.</P
+><P
+>Each rule has a lefthand side and a righthand side, separated by at least
+one tab character. When <B
+CLASS="COMMAND"
+>sendmail</B
+> is processing mail it
+scans through the rewriting rules looking for a match on the lefthand side.
+If an address matches the lefthand side of a rewrite rule, the address is
+replaced by the righthand side and processed again.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN14938"
+>18.6.1. sendmail.cf R and S Commands</A
+></H2
+><P
+>&#13;In the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file, the rulesets are defined using
+commands coded as
+<TT
+CLASS="LITERAL"
+>S</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+>, where
+<TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+> specifies the ruleset that is
+considered the current one.</P
+><P
+>The rules themselves appear in commands coded as
+<B
+CLASS="COMMAND"
+>R</B
+>. As each <B
+CLASS="COMMAND"
+>R</B
+> command is read, it is 
+added to the current ruleset.</P
+><P
+>If you're dealing only with the <TT
+CLASS="FILENAME"
+>sendmail.mc</TT
+> file,
+you won't need to worry about <B
+CLASS="COMMAND"
+>S</B
+> commands at
+all, as the macros will build those for you. You will need to manually code
+your <B
+CLASS="COMMAND"
+>R</B
+> rules.</P
+><P
+>A <B
+CLASS="COMMAND"
+>sendmail</B
+> ruleset therefore looks like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="LITERAL"
+>S</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+>
+<TT
+CLASS="LITERAL"
+>R</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>lhs</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>rhs</I
+></TT
+>
+<TT
+CLASS="LITERAL"
+>R</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>lhs2</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>rhs2</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN14966"
+>18.6.2. Some Useful Macro Definitions</A
+></H2
+><P
+><B
+CLASS="COMMAND"
+>sendmail</B
+> uses a number of standard macro definitions
+internally. The most useful of these in writing rulesets are:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>$j</DT
+><DD
+><P
+>The fully qualified domain name of this host.</P
+></DD
+><DT
+>$w</DT
+><DD
+><P
+>The hostname component of the FQDN.</P
+></DD
+><DT
+>$m</DT
+><DD
+><P
+>The domain name component of the FQDN.</P
+></DD
+></DL
+></DIV
+><P
+>We can incorporate these macro definitions in our rewrite rules. Our
+Virtual Brewery configuration uses the <TT
+CLASS="LITERAL"
+>$m</TT
+> macro.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN14985"
+>18.6.3. The Lefthand Side</A
+></H2
+><P
+>            
+In the lefthand side of a rewriting rule, you specify a pattern that will
+match an address you wish to transform. Most characters are matched literally,
+but there are a number of characters that have special meaning; these are
+described in the following list. The rewrite rules 
+for the lefthand side are:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="LITERAL"
+>$@</TT
+></DT
+><DD
+><P
+>Match exactly zero tokens</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$*</TT
+></DT
+><DD
+><P
+>Match zero or more tokens</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$+</TT
+></DT
+><DD
+><P
+>Match one or more tokens</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$-</TT
+></DT
+><DD
+><P
+>Match exactly one token</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$=</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>x</I
+></TT
+></DT
+><DD
+><P
+>Match any phrase in class <TT
+CLASS="REPLACEABLE"
+><I
+>x</I
+></TT
+></P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$~</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>x</I
+></TT
+></DT
+><DD
+><P
+>Match any word not in class <TT
+CLASS="REPLACEABLE"
+><I
+>x</I
+></TT
+></P
+></DD
+></DL
+></DIV
+><P
+>A token is a string of characters delimited by spaces. There is no way
+to include spaces in a token, nor is it necessary, as the expression
+patterns are flexible enough to work around this need. When a rule
+matches an address, the text matched by each of the patterns in the
+expression will be assigned to special variables that we'll use in the
+righthand side. The only exception to this is the
+<TT
+CLASS="LITERAL"
+>$@</TT
+>, which matches no tokens and therefore will
+never generate text to be used on the righthand side.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN15025"
+>18.6.4. The Righthand Side</A
+></H2
+><P
+>When the lefthand side of a rewrite rule matches an address, the
+original text is deleted and replaced by the righthand side of the
+rule. All tokens in the righthand side are copied literally, unless
+they begin with a dollar sign.  Just as for the lefthand side, a
+number of metasymbols may be used on the righthand side. These are
+described in the following list. The rewrite rules for the righthand
+side are:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="LITERAL"
+>$</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+></DT
+><DD
+><P
+>This metasymbol is replaced with the <TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+>'th
+expression from the lefthand side.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$[</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>name</I
+></TT
+><TT
+CLASS="LITERAL"
+>$]</TT
+></DT
+><DD
+><P
+>This metasymbol resolves hostname to canonical name. It is replaced
+by the canonical form of the host name supplied.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$(</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>map key</I
+></TT
+><TT
+CLASS="LITERAL"
+> $@</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>arguments</I
+></TT
+><TT
+CLASS="LITERAL"
+> $:</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>default</I
+></TT
+><TT
+CLASS="LITERAL"
+> $)</TT
+></DT
+><DD
+><P
+>This is the more general form of lookup. The output is the result of
+looking up <TT
+CLASS="REPLACEABLE"
+><I
+>key</I
+></TT
+> in the map named
+<I
+CLASS="EMPHASIS"
+>map</I
+> passing
+<TT
+CLASS="REPLACEABLE"
+><I
+>arguments</I
+></TT
+> as arguments. The
+<I
+CLASS="EMPHASIS"
+>map</I
+> can be any of the maps that
+<B
+CLASS="COMMAND"
+>sendmail</B
+> supports such as the
+<TT
+CLASS="LITERAL"
+>virtusertable</TT
+> that we describe a little later. If
+the lookup is unsuccessful, <TT
+CLASS="REPLACEABLE"
+><I
+>default</I
+></TT
+> will be
+output. If a default is not supplied and lookup fails, the input is
+unchanged and <TT
+CLASS="REPLACEABLE"
+><I
+>key</I
+></TT
+> is output.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$&#62;</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+></DT
+><DD
+><P
+>This will cause the rest of this line to be parsed and then given to
+ruleset <TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+> to evaluate. The output of the called
+ruleset will be written as output to this rule. This is the mechanism
+that allows rules to call other rulesets.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$#</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>mailer</I
+></TT
+></DT
+><DD
+><P
+>This metasymbol causes ruleset evaluation to halt and specifies the
+mailer that should be used to transport this message in the next step
+of its delivery. This metasymbol should be called only from ruleset
+0 or one of its subroutines. This is the final stage of address parsing
+and should be accompanied by the next two metasymbols.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$@</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>host</I
+></TT
+></DT
+><DD
+><P
+>This metasymbol specifies the host that this message will be forwarded to. If
+the destination host is the local host, it may be omitted. The
+<TT
+CLASS="REPLACEABLE"
+><I
+>host</I
+></TT
+> may be a colon-separated list of destination
+hosts that will be tried in sequence to deliver the message.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$:</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>user</I
+></TT
+></DT
+><DD
+><P
+>This metasymbol specifies the target user for the mail message.</P
+></DD
+></DL
+></DIV
+><P
+>A rewrite rule that matches is normally tried repeatedly until it fails to
+match, then parsing moves on to the next rule. This behavior can be changed
+by preceding the righthand side with one of two special righthand side metaymbols described in the following list.
+The rewrite rules for a righthand side loop control metasymbols are:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="LITERAL"
+>$@</TT
+></DT
+><DD
+><P
+>This metasymbol causes the ruleset to return with the remainder of
+the righthand side as the value. No other rules in the ruleset are
+evaluated.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>$:</TT
+></DT
+><DD
+><P
+>This metasymbol causes this rule to terminate immediately, but the
+rest of the current ruleset is evaluated.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN15100"
+>18.6.5. A Simple Rule Pattern Example</A
+></H2
+><P
+>To better see how the macro substitution patterns operate, consider the
+following rule lefthand side:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$* &#60; $+ &#62;</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This rule matches &#8220;Zero or more tokens, followed by the &#60;
+character, followed by one or more tokens, followed by the &#62;
+character.&#8221;</P
+><P
+>If this rule were applied to <TT
+CLASS="LITERAL"
+>brewer@vbrew.com</TT
+> or
+<TT
+CLASS="LITERAL"
+>Head Brewer &#60; &#62;</TT
+>, the rule would not
+match. The first string would not match because it does not include a
+&#60; character, and the second would fail because
+<TT
+CLASS="LITERAL"
+>$+</TT
+> matches <I
+CLASS="EMPHASIS"
+>one or more</I
+> tokens
+and there are no tokens between the <TT
+CLASS="LITERAL"
+>&#60;&#62;</TT
+> characters. In any case
+in which a rule does not match, the righthand side of the rule is not
+used.</P
+><P
+>If the rule were applied to <TT
+CLASS="LITERAL"
+>Head Brewer &#60; brewer@vbrew.com
+&#62;</TT
+>, the rule would match, and on the righthand side
+<TT
+CLASS="LITERAL"
+>$1</TT
+> would be substituted with <TT
+CLASS="LITERAL"
+>Head
+Brewer</TT
+> and <TT
+CLASS="LITERAL"
+>$2</TT
+> would be substituted with
+<TT
+CLASS="LITERAL"
+>brewer@vbrew.com</TT
+>.</P
+><P
+>If the rule were applied to <TT
+CLASS="LITERAL"
+>&#60; brewer@vbrew.com
+&#62;</TT
+> the rule would match because <TT
+CLASS="LITERAL"
+>$*</TT
+>
+matches <I
+CLASS="EMPHASIS"
+>zero</I
+> or more tokens, and on the righthand
+side <TT
+CLASS="LITERAL"
+>$1</TT
+> would be substituted with the empty string.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN15122"
+>18.6.6. Ruleset Semantics</A
+></H2
+><P
+>&#13;
+Each of the <B
+CLASS="COMMAND"
+>sendmail</B
+> rulesets is called upon to
+perform a different task in mail processing. When you are writing
+rules, it is important to understand what each of the rulesets are
+expected to do.  We'll look at each of the rulesets that the
+<B
+CLASS="COMMAND"
+>m4</B
+> configuration scripts allow us to modify:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>LOCAL_RULE_3</DT
+><DD
+><P
+>&#13;Ruleset 3 is responsible for converting an address in an arbitrary
+format into a common format that <B
+CLASS="COMMAND"
+>sendmail</B
+> will then
+process.  The output format expected is the familiar looking
+<TT
+CLASS="REPLACEABLE"
+><I
+>local-part</I
+></TT
+><TT
+CLASS="LITERAL"
+>@</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>host-domain-spec</I
+></TT
+>.</P
+><P
+>Ruleset 3 should place the hostname part of the converted address inside the
+<TT
+CLASS="LITERAL"
+>&#60;</TT
+> and <TT
+CLASS="LITERAL"
+>&#62;</TT
+> characters to make parsing by later rulesets easier. Ruleset
+3 is applied before <B
+CLASS="COMMAND"
+>sendmail</B
+> does any other processing
+of an email address, so if you want <B
+CLASS="COMMAND"
+>sendmail</B
+> to gateway mail from some system
+that uses some unusual address format, you should add a rule using the
+<TT
+CLASS="LITERAL"
+>LOCAL_RULE_3</TT
+> macro to convert addresses into the common 
+format.</P
+></DD
+><DT
+>LOCAL_RULE_0 and LOCAL_NET_CONFIG</DT
+><DD
+><P
+>&#13;
+Ruleset 0 is applied to recipient addresses by <B
+CLASS="COMMAND"
+>sendmail</B
+>
+after Ruleset 3. The <TT
+CLASS="LITERAL"
+>LOCAL_NET_CONFIG</TT
+> macro causes rules to
+be inserted into the <I
+CLASS="EMPHASIS"
+>bottom half</I
+> of Ruleset 0.</P
+><P
+>Ruleset 0 is expected to perform the delivery of the message to the recipient,
+so it must resolve to a triple that specifies each of the mailer, host, and
+user. The rules will be placed before any smart host definition you may
+include, so if you add rules that resolve addresses appropriately, any address
+that matches a rule will not be handled by the smart host. This is how we
+handle the direct <B
+CLASS="COMMAND"
+>smtp</B
+> for the users on our local LAN in 
+our example.</P
+></DD
+><DT
+>LOCAL_RULE_1 and LOCAL_RULE_2</DT
+><DD
+><P
+>&#13;
+Ruleset 1 is applied to all sender addresses and Ruleset 2 is applied to all
+recipient addresses. They are both usually empty.</P
+></DD
+></DL
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN15170"
+>18.6.6.1. Interpreting the rule in our example</A
+></H3
+><P
+>Our sample in <A
+HREF="x14923.html#X-087-2-SENDMAIL.REWRITE.EXAMPLE"
+>Example 18-3</A
+> uses the
+<TT
+CLASS="LITERAL"
+>LOCAL_NET_CONFIG</TT
+> macro to declare a local rule that
+ensures that any mail within our domain is delivered directly using the
+<B
+CLASS="COMMAND"
+>smtp</B
+> mailer. Now that we've looked at how rewrite rules
+are constructed, we will be able to understand how this rule works. Let's take
+another look at it.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SENDMAIL.REWRITE.EXAMPLE"
+></A
+><P
+><B
+>Example 18-3. Rewrite Rule from vstout.uucpsmtp.m4</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>LOCAL_NET_CONFIG
+# This rule ensures that all local mail is delivered using the
+# smtp transport, everything else will go via the smart host.
+R$* &#60; @ $* .$m. &#62; $*  $#smtp $@ $2.$m. $: $1 &#60; @ $2.$m. &#62; $3</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>We know that the <TT
+CLASS="LITERAL"
+>LOCAL_NET_CONFIG</TT
+> macro will cause the
+rule to be inserted somewhere near the end of ruleset 0, but before any
+smart host definition. We also know that ruleset 0 is the last ruleset to
+be executed and that it should resolve to a three-tuple specifying the
+mailer, user, and host.</P
+><P
+>We can ignore the two comment lines; they don't do anything useful. The rule
+itself is the line beginning with <TT
+CLASS="LITERAL"
+>R</TT
+>. We know
+that the <TT
+CLASS="LITERAL"
+>R</TT
+> is a <B
+CLASS="COMMAND"
+>sendmail</B
+> command and that
+it adds this rule to the current ruleset, in this case ruleset
+<TT
+CLASS="LITERAL"
+>0</TT
+>. Let's look at the lefthand side and the righthand side
+in turn.</P
+><P
+>The lefthand side looks like: 
+<TT
+CLASS="LITERAL"
+>$* &#60; @ $* .$m. &#62; $*</TT
+>.</P
+><P
+>Ruleset 0 expects &#60; and &#62; characters because it is fed by ruleset 3.
+Ruleset 3 converts addresses into a common form and to make parsing easier,
+it also places the host part of the mail address inside &#60;&#62;s.</P
+><P
+>This rule matches any mail address that looks like:
+<TT
+CLASS="LITERAL"
+>'DestUser &#60; @ somehost.ourdomain. &#62; Some Text'</TT
+>. That is, it matches mail for any user at any host within our domain.</P
+><P
+>You will remember that the text matched by metasymbols on the lefthand
+side of a rewrite rule is assigned to macro definitions for use on the
+righthand side. In our example, the first <TT
+CLASS="LITERAL"
+>$*</TT
+> matches 
+all text from the start of the address until the &#60; character.
+All of this text is assigned to <TT
+CLASS="LITERAL"
+>$1</TT
+> for use on
+the righthand side. Similarly the second <TT
+CLASS="LITERAL"
+>$*</TT
+> in our
+rewrite rule is assigned to <TT
+CLASS="LITERAL"
+>$2</TT
+>, and the last is 
+assigned to <TT
+CLASS="LITERAL"
+>$3</TT
+>.</P
+><P
+>We now have enough to understand the lefthand side. This rule matches
+mail for any user at any host within our domain. It assigns the username to
+$1, the hostname to <TT
+CLASS="LITERAL"
+>$2</TT
+>, and any trailing text to 
+<TT
+CLASS="LITERAL"
+>$3</TT
+>. The righthand side is then invoked to process these.</P
+><P
+>Let's now look at what we're expecting to see outputed. The righthand side of
+our example rewrite rule looks like:
+
+<TT
+CLASS="LITERAL"
+>$#smtp $@ $2.$m. $: $1 &#60; @ $2.$m. &#62; $3</TT
+>.</P
+><P
+>When the righthand side of our ruleset is processed, each of the metasymbols
+are interpreted and relevant substitutions are made.</P
+><P
+>The <TT
+CLASS="LITERAL"
+>$#</TT
+> metasymbol causes this rule to resolve
+to a specific mailer, <I
+CLASS="EMPHASIS"
+>smtp</I
+> in our case.</P
+><P
+>The <TT
+CLASS="LITERAL"
+>$@</TT
+> resolves the target host. In our example,
+the target host is specified as <TT
+CLASS="LITERAL"
+>$2.$m.</TT
+>, which
+is the fully qualified domain name of the host on in our domain. The FQDN is
+constructed of the hostname component assigned to 
+<TT
+CLASS="LITERAL"
+>$2</TT
+> from our lefthand side with our domain
+name (<TT
+CLASS="LITERAL"
+>.$m.</TT
+>) appended.</P
+><P
+>The <TT
+CLASS="LITERAL"
+>$:</TT
+> metasymbol specifies the target user,
+which we again captured from the lefthand side and had stored in 
+<TT
+CLASS="LITERAL"
+>$1</TT
+>.</P
+><P
+>We preserve the contents of the &#60;&#62; section, and any
+trailing text, using the data we collected from the lefthand side of the
+rule.</P
+><P
+>Since this rule resolves to a mailer, the message is forwarded to the mailer
+for delivery. In our example, the message would be forwarded to the destination
+host using the SMTP protocol.</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x14903.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x15220.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Generating the sendmail.cf File</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-sendmail.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Configuring sendmail Options</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

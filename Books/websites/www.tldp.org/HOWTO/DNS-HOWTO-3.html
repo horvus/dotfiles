@@ -1,0 +1,410 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>DNS HOWTO : A resolving, caching name server.</TITLE>
+ <LINK HREF="DNS-HOWTO-4.html" REL=next>
+ <LINK HREF="DNS-HOWTO-2.html" REL=previous>
+ <LINK HREF="DNS-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="DNS-HOWTO-4.html">Next</A>
+<A HREF="DNS-HOWTO-2.html">Previous</A>
+<A HREF="DNS-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="caching"></A> <A NAME="s3">3. A resolving, caching name server.</A></H2>
+
+<P><B>A first stab at DNS config, very useful for dialup, cable-modem, 
+ADSL and similar users.</B>
+<P>
+<P>On Red Hat and Red Hat related distributions you can achieve the
+same practical result as this HOWTO's first section by installing the
+packages <CODE>bind</CODE>, <CODE>bind-utils</CODE> and <CODE>caching-nameserver</CODE>.  If
+you use Debian simply install <CODE>bind</CODE> (or <CODE>bind9</CODE>, as of this
+writing, BIND 9 is not supported by Debian Stable (potato)) and
+<CODE>bind-doc</CODE>.  Of course just installing those packages won't teach
+you as much as reading this HOWTO.  So install the packages, and then
+read along verifying the files they installed.
+<P>
+<P>A caching only name server will find the answer to name queries and
+remember the answer the next time you need it.  This will shorten the
+waiting time the next time significantly, especially if you're on a
+slow connection.
+<P>
+<P>First you need a file called <CODE>/etc/named.conf</CODE> (Debian:
+<CODE>/etc/bind/named.conf</CODE>).  This is read when named starts.  For
+now it should simply contain:
+<P>
+<HR>
+<PRE>
+// Config file for caching only name server
+//
+// The version of the HOWTO you read may contain leading spaces
+// (spaces in front of the characters on these lines ) in this and
+// other files.  You must remove them for things to work.
+//
+// Note that the filenames and directory names may differ, the
+// ultimate contents of should be quite similar though.
+
+options {
+        directory "/var/named";
+
+        // Uncommenting this might help if you have to go through a
+        // firewall and things are not working out.  But you probably
+        // need to talk to your firewall admin.
+
+        // query-source port 53;
+};
+
+controls {
+        inet 127.0.0.1 allow { localhost; } keys { rndc_key; };
+};
+
+key "rndc_key" {
+        algorithm hmac-md5;
+        secret "c3Ryb25nIGVub3VnaCBmb3IgYSBtYW4gYnV0IG1hZGUgZm9yIGEgd29tYW4K";
+};
+
+zone "." {
+        type hint;
+        file "root.hints";
+};
+
+zone "0.0.127.in-addr.arpa" {
+        type master;
+        file "pz/127.0.0";
+};
+</PRE>
+<HR>
+<P>
+<P>The Linux distribution packages may use different file names for
+each kind of file mentioned here; they will still contain about the
+same things.
+<P>
+<P>The `<CODE>directory</CODE>' line tells named where to look for files.  All
+files named subsequently will be relative to this.  Thus <CODE>pz</CODE>
+is a directory under <CODE>/var/named</CODE>, i.e.,
+<CODE>/var/named/pz</CODE>.  <CODE>/var/named</CODE> is the right directory
+according to the <EM>Linux File system Standard</EM>.
+<P>
+<P>The file named <CODE>/var/named/root.hints</CODE> is named in this.
+<CODE>/var/named/root.hints</CODE> should contain this:
+<HR>
+<PRE>
+;
+; There might be opening comments here if you already have this file.
+; If not don't worry.
+;
+; About any leading spaces in front of the lines here: remove them!
+; Lines should start in a ;, . or character, not blanks.
+;
+.                       6D  IN      NS      A.ROOT-SERVERS.NET.
+.                       6D  IN      NS      B.ROOT-SERVERS.NET.
+.                       6D  IN      NS      C.ROOT-SERVERS.NET.
+.                       6D  IN      NS      D.ROOT-SERVERS.NET.
+.                       6D  IN      NS      E.ROOT-SERVERS.NET.
+.                       6D  IN      NS      F.ROOT-SERVERS.NET.
+.                       6D  IN      NS      G.ROOT-SERVERS.NET.
+.                       6D  IN      NS      H.ROOT-SERVERS.NET.
+.                       6D  IN      NS      I.ROOT-SERVERS.NET.
+.                       6D  IN      NS      J.ROOT-SERVERS.NET.
+.                       6D  IN      NS      K.ROOT-SERVERS.NET.
+.                       6D  IN      NS      L.ROOT-SERVERS.NET.
+.                       6D  IN      NS      M.ROOT-SERVERS.NET.
+A.ROOT-SERVERS.NET.     6D  IN      A       198.41.0.4
+B.ROOT-SERVERS.NET.     6D  IN      A       128.9.0.107
+C.ROOT-SERVERS.NET.     6D  IN      A       192.33.4.12
+D.ROOT-SERVERS.NET.     6D  IN      A       128.8.10.90
+E.ROOT-SERVERS.NET.     6D  IN      A       192.203.230.10
+F.ROOT-SERVERS.NET.     6D  IN      A       192.5.5.241
+G.ROOT-SERVERS.NET.     6D  IN      A       192.112.36.4
+H.ROOT-SERVERS.NET.     6D  IN      A       128.63.2.53
+I.ROOT-SERVERS.NET.     6D  IN      A       192.36.148.17
+J.ROOT-SERVERS.NET.     6D  IN      A       198.41.0.10
+K.ROOT-SERVERS.NET.     6D  IN      A       193.0.14.129
+L.ROOT-SERVERS.NET.     6D  IN      A       198.32.64.12
+M.ROOT-SERVERS.NET.     6D  IN      A       202.12.27.33
+</PRE>
+<HR>
+<P>
+<P>The file describes the root name servers in the world.  The servers
+change over time and must be maintained now and then.  See the 
+<A HREF="DNS-HOWTO-8.html#maint">maintenance section</A> for how to keep it up to date.
+<P>
+<P>The next section in <CODE>named.conf</CODE> is the last <CODE>zone</CODE>.  I will
+explain its use in a later chapter; for now just make this a file
+named <CODE>127.0.0</CODE> in the subdirectory <CODE>pz</CODE>: (<EM>Again, please
+remove leading spaces if you cut and paste this</EM>)
+<P>
+<HR>
+<PRE>
+$TTL 3D
+@               IN      SOA     ns.linux.bogus. hostmaster.linux.bogus. (
+                                1       ; Serial
+                                8H      ; Refresh
+                                2H      ; Retry
+                                4W      ; Expire
+                                1D)     ; Minimum TTL
+                        NS      ns.linux.bogus.
+1                       PTR     localhost.
+</PRE>
+<HR>
+<P>
+<P>The sections called <CODE>key</CODE> and <CODE>controls</CODE> together specify
+that your named can be remotely controlled by a program called
+<CODE>rndc</CODE> if it connects from the local host, and identifis itself
+with the encoded secret key.  This key is like a password.  For rndc
+to work you need <CODE>/etc/rndc.conf</CODE> to match this:
+<P>
+<HR>
+<PRE>
+key rndc_key {
+    algorithm "hmac-md5";
+    secret "c3Ryb25nIGVub3VnaCBmb3IgYSBtYW4gYnV0IG1hZGUgZm9yIGEgd29tYW4K";
+};
+
+options {
+    default-server localhost;
+    default-key    rndc_key;
+};
+</PRE>
+<HR>
+<P>
+<P>As you see the secret is identical.  If you want to use <CODE>rndc</CODE>
+from other machines their times need to be within 5 minutes of
+eachother.  I recommend using the ntp (<CODE>xntpd</CODE> and <CODE>ntpdate</CODE>)
+software to do this.
+<P>
+<P>Next, you need a <CODE>/etc/resolv.conf</CODE> looking something like
+this: (<EM>Again: Remove spaces!</EM>)
+<P>
+<HR>
+<PRE>
+search subdomain.your-domain.edu your-domain.edu
+nameserver 127.0.0.1
+</PRE>
+<HR>
+<P>
+<P>The `<CODE>search</CODE>' line specifies what domains should be searched
+for any host names you want to connect to.  The `<CODE>nameserver</CODE>' line
+specifies the address of your nameserver, in this case your own
+machine since that is where your named runs (127.0.0.1 is right, no
+matter if your machine has another address too).  If you want to list
+several name servers put in one `<CODE>nameserver</CODE>' line for
+each. (Note: Named never reads this file, the resolver that uses named
+does. Note 2: In some resolv.conf files you find a line saying
+"domain".  That's fine, but don't use both "search" and "domain", only
+one of them will work).
+<P>
+<P>To illustrate what this file does: If a client tries to look up
+<CODE>foo</CODE>, then <CODE>foo.subdomain.your-domain.edu</CODE> is tried
+first, then <CODE>foo.your-domain.edu</CODE>, and finally <CODE>foo</CODE>.
+You may not want to put in too many domains in the search line, as it
+takes time to search them all.
+<P>
+<P>The example assumes you belong in the domain
+<CODE>subdomain.your-domain.edu</CODE>; your machine, then, is probably
+called <CODE>your-machine.subdomain.your-domain.edu</CODE>.  The search
+line should not contain your TLD (Top Level Domain, `<CODE>edu</CODE>' in this
+case).  If you frequently need to connect to hosts in another domain
+you can add that domain to the search line like this: (<EM>Remember to
+remove the leading spaces, if any</EM>)
+<P>
+<HR>
+<PRE>
+search subdomain.your-domain.edu your-domain.edu other-domain.com
+</PRE>
+<HR>
+<P>and so on. Obviously you need to put real domain names in instead.
+Please note the lack of periods at the end of the domain names.  This
+is important; please note the lack of periods at the end of the domain
+names.
+<P>
+<H2><A NAME="starting"></A> <A NAME="ss3.1">3.1 Starting named</A>
+</H2>
+
+<P>After all this it's time to start named.  If you're using a dialup
+connection connect first.  Now run named, either by running the boot
+script: <CODE>/etc/init.d/named start</CODE> or named directly:
+<CODE>/usr/sbin/named</CODE>.  If you have tried previous versions of BIND
+you're probably used to <CODE>ndc</CODE>.  I BIND 9 it has been replaced with
+<CODE>rndc</CODE>, which can controll your named remotely, but it can't start
+named anymore. If you view your syslog message file (usually called
+<CODE>/var/log/messages</CODE>, Debian calls it <CODE>/var/log/daemon</CODE>,
+another directory to look is the other files <CODE>/var/log</CODE>) while
+starting named (do <CODE>tail -f /var/log/messages</CODE>) you should see
+something like:
+<P>
+<P>(the lines ending in \ continues on the next line)
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Dec 23 02:21:12 lookfar named[11031]: starting BIND 9.1.3
+Dec 23 02:21:12 lookfar named[11031]: using 1 CPU
+Dec 23 02:21:12 lookfar named[11034]: loading configuration from \
+    '/etc/named.conf'
+Dec 23 02:21:12 lookfar named[11034]: the default for the \
+    'auth-nxdomain' option is now 'no'
+Dec 23 02:21:12 lookfar named[11034]: no IPv6 interfaces found
+Dec 23 02:21:12 lookfar named[11034]: listening on IPv4 interface lo, \
+    127.0.0.1#53
+Dec 23 02:21:12 lookfar named[11034]: listening on IPv4 interface eth0, \
+    10.0.0.129#53
+Dec 23 02:21:12 lookfar named[11034]: command channel listening on \
+    127.0.0.1#953
+Dec 23 02:21:13 lookfar named[11034]: running
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>If there are any messages about errors then there is a mistake.
+Named will name the file it is reading.  Go back and check the file.
+Start named over when it is fixed.
+<P>
+<P>Now you can test your setup.  Traditionally a program called
+<CODE>nslookup</CODE> is used for this.  These days <CODE>dig</CODE> is recommended:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+$ dig -x 127.0.0.1
+;; Got answer:
+;; ->>HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 26669
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;1.0.0.127.in-addr.arpa.                IN      PTR
+
+;; ANSWER SECTION:
+1.0.0.127.in-addr.arpa. 259200  IN      PTR     localhost.
+
+;; AUTHORITY SECTION:
+0.0.127.in-addr.arpa.   259200  IN      NS      ns.linux.bogus.
+
+;; Query time: 3 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Sun Dec 23 02:26:17 2001
+;; MSG SIZE  rcvd: 91
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>If that's what you get it's working.  We hope.  Anything very
+different, go back and check everything.  Each time you change a
+file you need to run <CODE>rndc reload</CODE>.
+<P>
+<P>Now you can enter a query.  Try looking up some machine close to
+you.  <CODE>pat.uio.no</CODE> is close to me, at the University of Oslo:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+$ dig pat.uio.no
+; &lt;&lt;>> DiG 9.1.3 &lt;&lt;>> pat.uio.no
+;; global options:  printcmd
+;; Got answer:
+;; ->>HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 15574
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 3, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;pat.uio.no.                    IN      A
+
+;; ANSWER SECTION:
+pat.uio.no.             86400   IN      A       129.240.130.16
+
+;; AUTHORITY SECTION:
+uio.no.                 86400   IN      NS      nissen.uio.no.
+uio.no.                 86400   IN      NS      nn.uninett.no.
+uio.no.                 86400   IN      NS      ifi.uio.no.
+
+;; Query time: 651 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Sun Dec 23 02:28:35 2001
+;; MSG SIZE  rcvd: 108
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>This time <CODE>dig</CODE> asked your named to look for the machine
+<CODE>pat.uio.no</CODE>.  It then contacted one of the name server machines
+named in your <CODE>root.hints</CODE> file, and asked its way from there.  It
+might take tiny while before you get the result as it may need to
+search all the domains you named in <CODE>/etc/resolv.conf</CODE>.  
+<P>
+<P>
+<P>If you ask the same again you get this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+$ dig pat.uio.no
+
+; &lt;&lt;>> DiG 8.2 &lt;&lt;>> pat.uio.no 
+;; res options: init recurs defnam dnsrch
+;; got answer:
+;; ->>HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 4
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 3, ADDITIONAL: 3
+;; QUERY SECTION:
+;;      pat.uio.no, type = A, class = IN
+
+;; ANSWER SECTION:
+pat.uio.no.             23h59m58s IN A  129.240.130.16
+
+;; AUTHORITY SECTION:
+UIO.NO.                 23h59m58s IN NS  nissen.UIO.NO.
+UIO.NO.                 23h59m58s IN NS  ifi.UIO.NO.
+UIO.NO.                 23h59m58s IN NS  nn.uninett.NO.
+
+;; ADDITIONAL SECTION:
+nissen.UIO.NO.          23h59m58s IN A  129.240.2.3
+ifi.UIO.NO.             1d23h59m58s IN A  129.240.64.2
+nn.uninett.NO.          1d23h59m58s IN A  158.38.0.181
+
+;; Total query time: 4 msec
+;; FROM: lookfar to SERVER: default -- 127.0.0.1
+;; WHEN: Sat Dec 16 00:23:09 2000
+;; MSG SIZE  sent: 28  rcvd: 162
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<P>As you can plainly see this time it was much faster, 4ms versus
+more than half a second earlier.  The answer was cached.  With cached
+answers there is the possibility that the answer is out of date, but
+the origin servers can control the time cached answers should be
+considered valid, so there is a high probability that the answer you
+get <EM>is</EM> valid.
+<P>
+<H2><A NAME="ss3.2">3.2 Resolvers</A>
+</H2>
+
+<P>All OSes implementing the standard C API has the calls
+gethostbyname and gethostbyaddr.  These can get information from
+several different sources.  Which sources it gets it from is
+configured in <CODE>/etc/nsswitch.conf</CODE> on Linux (and some other
+Unixes).  This is a long file specifying from which file or database
+to get different kinds of data types.  It usually contains helpful
+comments at the top, which you should consider reading.  After that
+find the line starting with `<CODE>hosts:</CODE>'; it should read:
+<P>
+<HR>
+<PRE>
+hosts:      files dns
+</PRE>
+<HR>
+<P>(<EM>You remembered about the leading spaces, right? I won't mention
+them again.</EM>)
+<P>
+<P>If there is no line starting with `<CODE>hosts:</CODE>' then put in the one
+above.  It says that programs should first look in the
+<CODE>/etc/hosts</CODE> file, then check DNS according to
+<CODE>resolv.conf</CODE>.
+<P>
+<P>
+<H2><A NAME="ss3.3">3.3 Congratulations</A>
+</H2>
+
+<P>Now you know how to set up a caching named.  Take a beer, milk, or
+whatever you prefer to celebrate it.
+<P>
+<P>
+<HR>
+<A HREF="DNS-HOWTO-4.html">Next</A>
+<A HREF="DNS-HOWTO-2.html">Previous</A>
+<A HREF="DNS-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

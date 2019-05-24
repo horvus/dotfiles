@@ -1,0 +1,670 @@
+<HTML
+><HEAD
+><TITLE
+>How does kerneld know what module
+     to load?</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.52"><LINK
+REL="HOME"
+TITLE="Linux kerneld mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="How do I set it up?"
+HREF="setup.html"><LINK
+REL="NEXT"
+TITLE="Devices requiring special
+     configuration"
+HREF="special-devs.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux kerneld mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="setup.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="special-devs.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="CONFIGURATION"
+>How does kerneld know what module
+     to load?</A
+></H1
+><P
+>Although kerneld comes with builtin knowledge about the
+      most common types of modules, there are situations where kerneld
+      will not know how to handle a request from the kernel. This is
+      the case with things like CD-ROM drivers or network drivers,
+      where there are more than one possible module that can be
+      loaded. </P
+><P
+>The requests that the kerneld daemon gets from the kernel
+      is for one of the following items: </P
+><P
+></P
+><UL
+><LI
+><P
+>a block-device driver </P
+></LI
+><LI
+><P
+>a character-device driver </P
+></LI
+><LI
+><P
+>a binary format </P
+></LI
+><LI
+><P
+>a tty line discipline </P
+></LI
+><LI
+><P
+>a filesystem </P
+></LI
+><LI
+><P
+>a network device </P
+></LI
+><LI
+><P
+>a network service (e.g. rarp) </P
+></LI
+><LI
+><P
+>a network protocol (e.g. IPX)
+        </P
+></LI
+></UL
+><P
+>The kerneld determines what module should be loaded by
+      scanning the configuration file
+      <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+><A
+NAME="AEN192"
+HREF="#FTN.AEN192"
+>[1]</A
+>. There are
+      two kinds of entries in this file: Paths where the module-files
+      are located, and aliases assigning the module to be loaded for a
+      given service. If you don't have this file already, you could
+      create it by running
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  /sbin/modprobe -c | grep -v '^path' /etc/conf.modules</PRE
+></TD
+></TR
+></TABLE
+><P
+>If you want to add yet another path directive to the
+      default paths, you <I
+CLASS="EMPHASIS"
+>must include all the default paths
+      as well</I
+>, since a path directive in
+      <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+> will
+      <I
+CLASS="EMPHASIS"
+>replace</I
+>all the ones that modprobe knows by
+      default!  </P
+><P
+>Normally you don't want to add any paths by your own,
+      since the built-in set should take care of all normal setups
+      (and then some...), I promise! </P
+><P
+>On the other hand, if you just want to add an alias or an
+      option directive, your new entries in
+      <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+> will be
+      <I
+CLASS="EMPHASIS"
+>added</I
+> to the ones that modprobe already
+      knows. If you should <I
+CLASS="EMPHASIS"
+>redefine</I
+> an alias or
+      an option, your new entries in
+      <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+> will override the
+      built-in ones.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="BLOCKDEV"
+>Block devices</A
+></H2
+><P
+>If you run <B
+CLASS="COMMAND"
+>/sbin/modprobe -c</B
+>, you
+      will get a listing of the modules that kerneld knows about, and
+      what requests they correspond to. For instance, the request that
+      ends up loading the floppy driver is for the block-device that
+      has major number 2: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  osiris:~ $ /sbin/modprobe -c | grep floppy
+  alias block-major-2 floppy</PRE
+></TD
+></TR
+></TABLE
+><P
+>Why <TT
+CLASS="FILENAME"
+>block-major-2</TT
+> ? Because the
+     floppy devices <TT
+CLASS="FILENAME"
+>/dev/fd*</TT
+> use major device 2
+     and are block devices:
+     </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  osiris:~ $ ls -l /dev/fd0 /dev/fd1
+  brw-rw-rw-   1 root     root       2,   0 Mar  3  1995 /dev/fd0
+  brw-r--r--   1 root     root       2,   1 Mar  3  1995 /dev/fd1</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CHARDEV"
+>Character devices</A
+></H2
+><P
+>Character devices are dealt with in a similar
+        way. E.g. the ftape floppy tape driver sits on major-device
+        27: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  osiris:~ $ ls -lL /dev/ftape 
+  crw-rw----   1 root     disk      27,   0 Jul 18  1994 /dev/ftape</PRE
+></TD
+></TR
+></TABLE
+><P
+>However, kerneld does not by default know about the
+        ftape driver - it is not listed in the output from
+        <B
+CLASS="COMMAND"
+>/sbin/modprobe -c</B
+>. So to setup kerneld to
+        load the ftape driver, I must add a line to the kerneld
+        configuration file, <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+>:
+        </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  alias char-major-27 ftape</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="ETH0"
+>Network devices</A
+></H2
+><P
+>You can also use the device name instead of the
+        <TT
+CLASS="LITERAL"
+>char-major-xxx</TT
+> or
+        <TT
+CLASS="LITERAL"
+>block-major-yyy</TT
+> setup. This is especially
+        useful for network drivers. For example, a driver for an
+        ne2000 netcard acting as <TT
+CLASS="FILENAME"
+>eth0</TT
+> would be
+        loaded with </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  alias eth0 ne</PRE
+></TD
+></TR
+></TABLE
+><P
+>If you need to pass some options to the driver, for
+        example to tell the module about what IRQ the netcard is
+        using, you must add an <SPAN
+CLASS="QUOTE"
+>"options"</SPAN
+> line: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  options ne irq=5</PRE
+></TD
+></TR
+></TABLE
+><P
+>This will cause kerneld to load the NE2000 driver with
+        the command </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  /sbin/modprobe ne irq=5</PRE
+></TD
+></TR
+></TABLE
+><P
+>Of course, the actual options available are specific to
+        the module you are loading. </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="BINFMT"
+>Binary formats</A
+></H2
+><P
+>Binary formats are handled in a similar way. Whenever
+        you try to run a program that the kernel does not know how to
+        load, kerneld gets a request for
+        <TT
+CLASS="LITERAL"
+>binfmt-</TT
+><TT
+CLASS="VARNAME"
+>xxx</TT
+>, where
+        <TT
+CLASS="VARNAME"
+>xxx</TT
+> is a number determined from the first
+        few bytes of the executable. So, the kerneld configuration to
+        support loading the binfmt_aout module for ZMAGIC (a.out)
+        executables is
+        </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  alias binfmt-267 binfmt_aout</PRE
+></TD
+></TR
+></TABLE
+><P
+>Since the magic number for ZMAGIC files is 267, if you
+        check <TT
+CLASS="FILENAME"
+>/etc/magic</TT
+>, you will see the number
+        0413; keep in mind that <TT
+CLASS="FILENAME"
+>/etc/magic</TT
+> uses
+        octal numbers where kerneld uses decimal, and octal 413 =
+        decimal 267.  There are actually three slightly different
+        variants of a.out executables (NMAGIC, QMAGIC and ZMAGIC), so
+        for full support of the binfmt_aout module we need
+        </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  alias binfmt-264 binfmt_aout  # pure executable (NMAGIC)
+  alias binfmt-267 binfmt_aout  # demand-paged executable (ZMAGIC)
+  alias binfmt-204 binfmt_aout  # demand-paged executable (QMAGIC)</PRE
+></TD
+></TR
+></TABLE
+><P
+>a.out, Java and iBCS binary formats are recognized
+        automatically by kerneld, without any configuration. </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="LDISC"
+>Line disciplines (slip, cslip and ppp)</A
+></H2
+><P
+>Line disciplines are requested with
+        <TT
+CLASS="LITERAL"
+>tty-ldisc-</TT
+><TT
+CLASS="VARNAME"
+>x</TT
+>, with
+        <TT
+CLASS="VARNAME"
+>x</TT
+> 
+        being usually 1 (for SLIP) or 3 (for PPP). Both of these are
+        known by kerneld automatically. </P
+><P
+>Speaking of ppp, if you want kerneld to load the
+        bsd_comp data compression module for ppp, then you must add
+        the following two lines to your
+        <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  alias tty-ldisc-3 bsd_comp
+  alias ppp0 bsd_comp</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="NET-PF"
+>Network protocol families (IPX,
+      AppleTalk, AX.25)</A
+></H2
+><P
+>Some network protocols can be loaded as modules as
+        well. The kernel asks kerneld for a protocol family (e.g. IPX)
+        with a request for
+        <TT
+CLASS="LITERAL"
+>net-pf-</TT
+><TT
+CLASS="VARNAME"
+>X</TT
+> where
+        <TT
+CLASS="VARNAME"
+>X</TT
+> is a number indicating what family is
+        wanted. E.g. <TT
+CLASS="LITERAL"
+>net-pf-3</TT
+> is AX.25,
+        <TT
+CLASS="LITERAL"
+>net-pf-4</TT
+> is IPX and
+        <TT
+CLASS="LITERAL"
+>net-pf-5</TT
+> is AppleTalk; These numbers are
+        determined by the AF_AX25, AF_IPX etc. definitions in the
+        linux source file <TT
+CLASS="FILENAME"
+>include/linux/socket.h</TT
+>.
+        So to autoload the IPX module, you would need an entry like
+        this in <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  alias net-pf-4 ipx</PRE
+></TD
+></TR
+></TABLE
+><P
+>See <A
+HREF="commonproblems.html"
+>Common Problems</A
+> for information
+        about how you can avoid some annoying boot-time messages
+        related to undefined protocol families. </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="FS"
+>File systems</A
+></H2
+><P
+>kerneld requests for filesystems are simply the name of
+        the filesystem type. A common use of this would be to load the
+        isofs module for CD-ROM filesystems, i.e. filesystems of type
+        iso9660: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  alias iso9660 isofs</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN192"
+HREF="configuration.html#AEN192"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Some
+      distributions call this file
+      <TT
+CLASS="FILENAME"
+>modules.conf</TT
+></P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="setup.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="special-devs.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>How do I set it up?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Devices requiring special
+     configuration</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

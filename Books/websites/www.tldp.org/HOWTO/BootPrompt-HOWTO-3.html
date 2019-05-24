@@ -1,0 +1,771 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The Linux BootPrompt-HowTo: General Non-Device Specific Boot Args</TITLE>
+ <LINK HREF="BootPrompt-HOWTO-4.html" REL=next>
+ <LINK HREF="BootPrompt-HOWTO-2.html" REL=previous>
+ <LINK HREF="BootPrompt-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="BootPrompt-HOWTO-4.html">Next</A>
+<A HREF="BootPrompt-HOWTO-2.html">Previous</A>
+<A HREF="BootPrompt-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="general"></A> <A NAME="s3">3. General Non-Device Specific Boot Args</A></H2>
+
+<P>These are the boot arguments that are not related to any
+specific device or peripheral. They are instead related to
+certain internal kernel parameters, such as memory handling,
+ramdisk handling, root file system handling and others.
+<P>
+<H2><A NAME="ss3.1">3.1 Root Filesystem options</A>
+</H2>
+
+<P>The following options all pertain to how the kernel selects
+and handles the root filesystem.
+<P>
+<H3>The `root=' Argument</H3>
+
+<P>This argument tells the kernel what device is to be used as
+the root filesystem while booting. The default of this setting
+is the value of the root device of the system that
+the kernel was built on.
+For example, if the kernel in question was built on a system
+that used `/dev/hda1' as the root partition, then the default
+root device would be `/dev/hda1'.  To override this default
+value, and select the second floppy drive as the root device,
+one would use `root=/dev/fd1'.
+<P>Valid root devices are any of the following devices:
+<P>(1) /dev/hdaN to /dev/hddN, which is partition N on ST-506
+compatible disk `a to d'.
+<P>(2) /dev/sdaN to /dev/sdeN, which is partition N on SCSI
+compatible disk `a to e'.
+<P>(3) /dev/xdaN to /dev/xdbN, which is partition N on XT
+compatible disk `a to b'.
+<P>(4) /dev/fdN, which is floppy disk drive number N. Having
+N=0 would be the DOS `A:' drive, and N=1 would be `B:'.
+<P>(5) /dev/nfs, which is not really a device, but rather a
+flag to tell the kernel to get the root fs via the network.
+<P>(6) /dev/ram, which is the RAM disk.
+<P>The more awkward and less portable numeric specification
+of the above possible disk devices in major/minor format is
+also accepted. (e.g. /dev/sda3 is major 8, minor 3, so you
+could use <CODE>root=0x803</CODE> as an alternative.)
+<P>This is one of the few kernel boot arguments that has its
+default stored in the kernel image, and which can thus
+be altered with the <CODE>rdev</CODE> utility.
+<P>
+<P>
+<H3>The `rootflags=' Argument</H3>
+
+<P>This option allows you to give options pertaining to the
+mounting of the root filesystem just as you would to the
+<CODE>mount</CODE> program.  An example could be giving the
+<CODE>noatime</CODE>  option to an ext2 fs.
+<P>
+<H3>The `rootfstype=' Argument</H3>
+
+<P>This option allows you to give a comma separated list of
+fs types that will be tried for a match when trying to 
+mount the root filesystem.  This list will be used instead
+of the internal default which usually starts with ext2,
+minix and the like.
+<P>
+<H3>The `ro' Argument</H3>
+
+<P>When the kernel boots, it needs a root filesystem to read
+basic things off of. This is the root filesystem that is
+mounted at boot. However, if the root filesystem is mounted
+with write access, you can not reliably check the filesystem
+integrity with half-written files in progress. The `ro'
+option tells the kernel to mount the root filesystem as
+`readonly' so that any filesystem consistency check programs
+(fsck) can safely assume that there are no half-written
+files in progress while performing the check. No programs
+or processes can write to files on the filesystem in
+question until it is `remounted' as read/write capable.
+<P>This is one of the few kernel boot arguments that has its
+default stored in the kernel image, and which can thus
+be altered with the <CODE>rdev</CODE> utility.
+<P>
+<H3>The `rw' Argument</H3>
+
+<P>This is the exact opposite of the above, in that it tells the
+kernel to mount the root filesystem as read/write. The default
+is to mount the root filesystem as read only. Do not
+run any `fsck' type programs on a filesystem that is mounted
+read/write.
+<P>The same value stored in the image file mentioned above is
+also used for this parameter, accessible via <CODE>rdev</CODE>.
+<P>
+<H3>The `nfsroot=' Argument</H3>
+
+<P>This argument tells the kernel which machine, what directory
+and what NFS options to use for the root filesystem.
+Also note that
+the argument <CODE>root=/dev/nfs</CODE> is required. Detailed
+information on using an NFS root fs is in the file
+<CODE>linux/Documentation/nfsroot.txt</CODE>. 
+<P>
+<P>
+<H3>The `ip=' or `nfsaddrs=' Argument</H3>
+
+<P>If you are using NFS as a root filesystem, then there is no
+programs like <CODE>ifconfig</CODE> and <CODE>route</CODE> present until
+the root fs is mounted, and so the
+kernel has to configure the network interfaces directly.
+This boot argument sets up the various network interface addresses
+that are required to communicate over the network. If this argument
+is not given, then the kernel tries to use RARP and/or BOOTP to
+figure out these parameters. 
+<P>
+<H2><A NAME="ss3.2">3.2 Options Relating to RAM Disk Management</A>
+</H2>
+
+<P>The following options all relate to how the kernel handles
+the RAM disk device, which is usually used for bootstrapping
+machines during the install phase, or for machines with
+modular drivers that need to be installed to access the
+root filesystem.
+<P>
+<P>
+<H3>The `ramdisk_start=' Argument</H3>
+
+<P>To allow a kernel image to reside on a floppy disk along with a
+compressed ramdisk image, the `ramdisk_start=&lt;offset&gt;' command
+was added. The kernel can't be included into the compressed ramdisk
+filesystem image, because it needs to be stored starting at block
+zero so that the BIOS can load the bootsector and then the kernel
+can bootstrap itself to get going.
+<P>Note: If you are using an uncompressed ramdisk image, then the kernel
+can be a part of the filesystem image that is being loaded into the
+ramdisk, and the floppy can be booted with LILO, or the two can be
+separate as is done for the compressed images.
+<P>If you are using a two-disk boot/root setup (kernel on disk 1,
+ramdisk image on disk 2) then the ramdisk would start at block zero,
+and an offset of zero would be used. Since this is the default value,
+you would not need to actually use the command at all.
+<P>
+<H3>The `load_ramdisk=' Argument</H3>
+
+<P>This parameter tells the kernel whether it is to try to load a
+ramdisk image or not. Specifying `load_ramdisk=1' will tell the
+kernel to load a floppy into the ramdisk. The default value is
+zero, meaning that the kernel should not try to load a ramdisk.
+<P>Please see the file <CODE>linux/Documentation/ramdisk.txt</CODE>
+for a complete description of the new boot time arguments, and
+how to use them. A description of how this parameter can be set
+and stored in the kernel image via `rdev' is also described.
+<P>
+<H3>The `prompt_ramdisk=' Argument</H3>
+
+<P>This parameter tells the kernel whether or not to give you a prompt
+asking you to insert the floppy containing the ramdisk image. In
+a single floppy configuration the ramdisk image is on the same floppy
+as the kernel that just finished loading/booting and so a prompt
+is not needed. In this case one can use `prompt_ramdisk=0'. In a
+two floppy configuration, you will need the chance to switch disks,
+and thus `prompt_ramdisk=1' can be used. Since this is the default
+value, it doesn't really need to be specified. (
+(Historical note: Sneaky people used to use the `vga=ask' LILO
+option to temporarily pause the boot process and allow a chance to 
+switch from boot to root floppy.)
+<P>Please see the file <CODE>linux/Documentation/ramdisk.txt</CODE>
+for a complete description of the new boot time arguments, and
+how to use them. A description of how this parameter can be set
+and stored in the kernel image via `rdev' is also described.
+<P>
+<H3>The `ramdisk_size=' Argument</H3>
+
+<P>While it is true that the ramdisk grows dynamically as required,
+there is an upper bound on its size so that it doesn't consume
+all available RAM and leave you in a mess. The default is 4096
+(i.e. 4MB) which should be large enough for most needs. You
+can override the default to a bigger or smaller size with this
+boot argument.
+<P>Please see the file <CODE>linux/Documentation/ramdisk.txt</CODE>
+for a complete description of the new boot time arguments, and
+how to use them. A description of how this parameter can be set
+and stored in the kernel image via `rdev' is also described.
+<P>
+<H3>The `ramdisk_blocksize=' Argument</H3>
+
+<P>This can be tuned for better memory management behaviour.
+Quoting from the ramdisk driver <CODE>rd.c</CODE>:
+<P>It would be very desirable to have a soft-blocksize (that in 
+the case of the ramdisk driver is also the hardblocksize ;) of 
+PAGE_SIZE because doing that we'll achieve a far better MM 
+footprint. Using a rd_blocksize of BLOCK_SIZE in the worst case 
+we'll make PAGE_SIZE/BLOCK_SIZE buffer-pages unfreeable. With a 
+rd_blocksize of PAGE_SIZE instead we are sure that only 1 page 
+will be protected. Depending on the size of the ramdisk you may 
+want to change the ramdisk blocksize to achieve a better or worse 
+MM behaviour. The default is still BLOCK_SIZE (needed by 
+rd_load_image that supposes the filesystem in the image uses 
+a BLOCK_SIZE blocksize)
+<P>
+<H3>The `ramdisk=' Argument (obsolete)</H3>
+
+<P>(NOTE: This argument is obsolete, and should not be used except
+on kernels v1.3.47 and older. The commands that should be used
+for the ramdisk device are documented above.  Newer kernels
+may accept this as an alias for <CODE>ramdisk_size</CODE>.)
+<P>This specifies the size in kB of the RAM disk device.
+For example, if one wished to have a root filesystem on a 1.44MB
+floppy loaded into the RAM disk device, they would use:
+<P>
+<HR>
+<PRE>
+        ramdisk=1440
+</PRE>
+<HR>
+<P>This is one of the few kernel boot arguments that has its
+default stored in the kernel image, and which can thus
+be altered with the <CODE>rdev</CODE> utility.
+<P>
+<P>
+<H3>The `noinitrd' (initial RAM disk) Argument</H3>
+
+<P>The v2.x and newer kernels have a feature where the root filesystem
+can be initially a RAM disk, and the kernel executes <CODE>/linuxrc</CODE>
+on that RAM image. This feature is typically used to allow loading
+of modules needed to mount the real root filesystem (e.g. load
+the SCSI driver modules stored in the RAM disk image, and then
+mount the real root filesystem on a SCSI disk.)
+<P>The actual `noinitrd' argument determines what happens to the
+initrd data after the kernel has booted.  When
+specified, instead of converting it to a RAM disk, it
+is accessible via <CODE>/dev/initrd</CODE>, which can be read once
+before the RAM is released back to the system. For full details
+on using the initial RAM disk, please consult
+<CODE>linux/Documentation/initrd.txt</CODE>. In addition, the most
+recent versions of <CODE>LILO</CODE> and <CODE>LOADLIN</CODE> should have additional
+useful information.
+<P>
+<P>
+<H2><A NAME="ss3.3">3.3 Boot Arguments Related to Memory Handling</A>
+</H2>
+
+<P>The following arguments alter how Linux detects or handles
+the physical and virtual memory of your system.
+<P>
+<H3>The `cachesize=' Argument</H3>
+
+<P>Override level 2 CPU cache size detection (in kB).  Sometimes 
+CPU hardware bugs make them report the cache size incorrectly. 
+The kernel will attempt work arounds to fix known problems, but 
+for some CPUs it is not possible to determine what the correct 
+size should be.  This option provides an override for these 
+situations.
+<P>
+<H3>The `mem=' Argument</H3>
+
+<P>This argument has several purposes: The original purpose was to
+specify the amount of installed memory (or a value less than
+that if you wanted to limit the amount of memory available to
+linux).
+<P>The next (and hardly used) purpose is to specify
+<CODE>mem=nopentium</CODE> which tells the Linux kernel to not use
+the 4MB page table performance feature.  If you want to use
+it for both purposes, use a separate <CODE>mem=</CODE> for each one.
+<P>The original BIOS call defined in the PC specification  that
+returns the amount of installed memory was only designed to
+be able to report up to 64MB. (Yes, another lack of foresight,
+just like the 1024 cylinder disks... sigh.) Linux uses this
+BIOS call at boot to determine how much memory is installed.
+A newer specification (e820) allows the BIOS to get this right
+on most machines nowadays.  If you have more than 64MB of RAM 
+installed on an older machine, you can use this
+boot argument to tell Linux how much memory you have.
+Here is a quote from Linus on the usage of the <CODE>mem=</CODE> parameter.
+<P>``The kernel will accept any `mem=xx' parameter you give it, and if
+it turns out that you lied to it, it will crash horribly sooner or
+later.  The parameter indicates the highest addressable RAM address,
+so `mem=0x1000000' means you have 16MB of memory, for example.  For
+a 96MB machine this would be `mem=0x6000000'.
+If you tell Linux that it has more memory
+than it actually does have, bad things will happen: maybe not at
+once, but surely eventually.''
+<P>Note that the argument does not have to be in hex, and the
+suffixes `k' and `M' (case insensitive) can be used to specify
+kilobytes and Megabytes, respectively. (A `k' will cause a 10 bit
+shift on your value, and a `M' will cause a 20 bit shift.)
+A typical example for a 128MB machine would be "<CODE>mem=128m</CODE>".
+<P>In some cases, the memory reported via e820 can also be wrong,
+and so the <CODE>mem=exactmap</CODE> was added.  You use this in
+conjunction with specifying an exact memory map, such as:
+<P>
+<HR>
+<PRE>
+        mem=exactmap mem=640K@0 mem=1023M@1M
+</PRE>
+<HR>
+<P>for a 1GB machine with the usual 384k of ISA memory mapped
+I/O space excluded from use.
+<P>
+<P>
+<H3>The `memfrac=' Argument</H3>
+
+<P>Memory is broken down into zones; on i386 these zones
+correspond to `DMA' (for legacy ISA devices that can only address
+up to 16MB via DMA); `Normal' for memory from 16MB up to 1GB,
+and `HighMem' for memory beyond 1GB (assuming your kernel
+was built with high mem support enabled). The two (or three)
+integers supplied here determine how much memory in each zone
+should be kept free - with the size of the zone divided by the
+number supplied being used as the minimum (so smaller numbers
+mean keep more free in the zone).  The defaults are currently
+<CODE>memfrac=32,128,128</CODE>.
+<P>
+<H3>The `swap=' Argument</H3>
+
+<P>This allows the user to tune some of the virtual memory (VM)
+parameters that are related to swapping to disk. It accepts
+the following eight parameters:
+<P>
+<HR>
+<PRE>
+        MAX_PAGE_AGE
+        PAGE_ADVANCE
+        PAGE_DECLINE
+        PAGE_INITIAL_AGE
+        AGE_CLUSTER_FRACT
+        AGE_CLUSTER_MIN
+        PAGEOUT_WEIGHT
+        BUFFEROUT_WEIGHT
+</PRE>
+<HR>
+<P>Interested hackers are advised to have a read of 
+<CODE>linux/mm/swap.c</CODE> and also make note of the goodies in 
+<CODE>/proc/sys/vm</CODE>. Kernels come with some
+useful documentation on this in the
+<CODE>linux/Documentation/vm/</CODE> directory.
+<P>
+<H3>The `buff=' Argument</H3>
+
+<P>Similar to the `swap=' argument, this allows the user to
+tune some of the parameters related to buffer memory management.
+It accepts the following six parameters:
+<P>
+<HR>
+<PRE>
+        MAX_BUFF_AGE
+        BUFF_ADVANCE
+        BUFF_DECLINE
+        BUFF_INITIAL_AGE
+        BUFFEROUT_WEIGHT
+        BUFFERMEM_GRACE
+</PRE>
+<HR>
+<P>Interested hackers are advised to have a read of 
+<CODE>linux/mm/swap.c</CODE> and also make note of the goodies
+in <CODE>/proc/sys/vm</CODE>.  Kernels come with some
+useful documentation on this in the
+<CODE>linux/Documentation/vm/</CODE> directory.
+<P>
+<H2><A NAME="ss3.4">3.4 Other Misc. Kernel Boot Arguments</A>
+</H2>
+
+<P>These various boot arguments let the user tune certain
+internal kernel parameters.
+<P>
+<H3>The `acpi=' Argument</H3>
+
+<P>Currently this only accepts `off' to disable the ACPI subsystem.
+<P>
+<H3>The `console=' Argument</H3>
+
+<P>Usually the console is the 1st virtual terminal, and so boot
+messages appear on your VGA screen.  Sometimes it is nice to
+be able to use another device like a serial port (or even a
+printer!) to be the console when no video device is present.
+It is also useful to capture boot time messages if a problem
+stops progress before they can be logged to disk.
+An example would be to use
+<CODE>console=ttyS1,9600</CODE> for selecting the 2nd serial port
+at 9600 baud to be the console.
+More information can be found in 
+<CODE>linux/Documentation/serial-console.txt</CODE>.
+<P>
+<H3>The `debug' Argument</H3>
+
+<P>The kernel communicates important (and not-so important)
+messages to the operator via the <CODE>printk()</CODE> function.
+If the message is considered important, the <CODE>printk()</CODE>
+function will put a copy on the present console as well
+as handing it off to the <CODE>klogd()</CODE> facility so that it
+gets logged to disk. The reason for printing important
+messages to the console as well as logging them to disk is
+because under unfortunate circumstances (e.g. a disk failure)
+the message won't make it to disk and will be lost.
+<P>The threshold for what is and what isn't considered important
+is set by the <CODE>console_loglevel</CODE> variable. The default is
+to log anything more important than <CODE>DEBUG</CODE> (level 7) to
+the console. (These levels are defined in the include file
+<CODE>kernel.h</CODE>) Specifying <CODE>debug</CODE> as a boot argument will
+set the console loglevel to 10, so that <EM>all</EM> kernel
+messages appear on the console.
+<P>The console loglevel can usually also be set at run time via
+an option to the <CODE>klogd()</CODE> program. Check the man page
+for the version installed on your system to see how to do this.
+<P>
+<H3>The `decnet=' Argument</H3>
+
+<P>If you are using DECnet, you can supply two comma separated
+integers here to give your area and node respectively.
+<P>
+<H3>The `devfs=' Argument</H3>
+
+<P>If you are using devfs, instead of the standard static
+devices in <CODE>/dev/</CODE> then you can supply the words
+<CODE>only</CODE> or <CODE>mount</CODE> with this argument.
+There are also additional debug arguments that are listed
+in the source.
+<P>
+<H3>The `gpt' Argument</H3>
+
+<P>If you are using EFI GUID Partition Table handling, you can
+use this to override problems associated with an invalid PMBR.
+<P>
+<H3>The `idle=' Argument</H3>
+
+<P>Setting this to `poll' causes the idle loop in the kernel
+to poll on the need reschedule flag instead of waiting
+for an interrupt to happen. This can result in an improvement
+in performance on SMP systems (albeit at the cost of an
+increase in power consumption).
+<P>
+<H3>The `init=' Argument</H3>
+
+<P>The kernel defaults to starting the `init' program at boot,
+which then takes care of setting up the computer for users
+via launching getty programs, running `rc' scripts and the like.
+The kernel first looks for <CODE>/sbin/init</CODE>, then
+<CODE>/etc/init</CODE> (depreciated), and as a last resort, it
+will try to use <CODE>/bin/sh</CODE> (possibly on <CODE>/etc/rc</CODE>).
+If for example, your init program got corrupted and thus stopped
+you from being able to boot, you could simply use the boot prompt
+<CODE>init=/bin/sh</CODE> which would drop you directly into a
+shell at boot, allowing you to replace the corrupted program.
+<P>
+<H3>The `isapnp=' Argument</H3>
+
+<P>This takes the form of:
+<CODE>isapnp=read_port,reset,skip_pci_scan,verbose</CODE>
+<P>
+<H3>The `isapnp_reserve_dma=' Argument</H3>
+
+<P>This takes the form of:
+<CODE>isapnp_reserve_dma=n1,n2,n3,...nN</CODE>
+where n1 ... nN are the DMA channel numbers to not use for PnP.
+<P>
+<H3>The `isapnp_reserve_io=' Argument</H3>
+
+<P>This takes the form of:
+<CODE>isapnp_reserve_irq=io1,size1,io2,size2,...ioN,sizeN</CODE>
+where ioX,sizeX are I/O start and length pairs of regions
+in I/O space that are not to be used by PnP.
+<P>
+<H3>The `isapnp_reserve_irq=' Argument</H3>
+
+<P>This takes the form of:
+<CODE>isapnp_reserve_irq=n1,n2,n3,...nN</CODE>
+where n1 ... nN are the interrupt numbers to not use for PnP.
+<P>
+<H3>The `isapnp_reserve_mem=' Argument</H3>
+
+<P>This takes the form of:
+<CODE>isapnp_reserve_mem=mem1,size1,mem2,size2,...memN,sizeN</CODE>
+where ioX,sizeX are I/O start and length pairs of regions
+in memory space that are not to be used by PnP.
+<P>
+<H3>The `kbd-reset' Argument</H3>
+
+<P>Normally on i386 based machines, the Linux kernel does not 
+reset the keyboard controller at boot, since the BIOS is
+supposed to do this.  But as usual, not all machines do what
+they should. Supplying this option may help if you are having 
+problems with your keyboard behaviour.  It simply forces a
+reset at initialization time. (Some have argued that this should
+be the default behaviour anyways).
+<P>
+<H3>The `lockd.udpport=' and `lockd.tcpport' Argument</H3>
+
+<P>These tell the kernel to use the given port numbers for
+NFS lockd operation (for either UDP or TCP operation).
+<P>
+<H3>The `maxcpus=' Argument</H3>
+
+<P>The number given with this argument limits the maximum
+number of CPUs activated in SMP mode.  Using a value of
+0 is equivalent to the <CODE>nosmp</CODE> option.
+<P>
+<H3>The `mca-pentium' Argument</H3>
+
+<P>The IBM model 95 Microchannel machines seem to lock up on the 
+test that Linux usually does to detect the type of math chip
+coupling.  Since all Pentium chips have a built in math processor,
+this test (and the lock up problem) can be avoided by using
+this boot option.
+<P>
+<H3>The `md=' Argument</H3>
+
+<P>If your root filesystem is on a Multiple Device then you can
+use this (assuming you compiled in boot support) to tell the
+kernel the  multiple device layout. The format (from the 
+file <CODE>linux/Documentation/md.txt</CODE>) is:
+<P><CODE>md=md_device_num,raid_level,chunk_size_factor,fault_level,dev0,dev1,...,devN</CODE>
+<P>Where <CODE>md_device_num</CODE> is the number of the md device,
+i.e. 0 means md0, 1 means md1, etc.
+For <CODE>raid_level</CODE>, use -1 for linear mode and 0 for striped mode.
+Other modes are currently unsupported.
+The <CODE>chunk_size_factor</CODE> is for  raid-0 and raid-1 only and
+sets the chunk size as PAGE_SIZE shifted left the specified 
+amount.  The <CODE>fault_level</CODE> is only for raid-1
+and sets the maximum fault number to the specified number.
+(Currently unsupported due to lack of boot support for raid1.)
+The <CODE>dev0-devN</CODE> are a comma separated list of the devices that
+make up the individual md device: 
+e.g. <CODE>/dev/hda1,/dev/hdc1,/dev/sda1</CODE>
+<P>See also <CODE>raid=</CODE>.
+<P>
+<H3>The `nmi_watchdog=' Argument</H3>
+
+<P>Supplying a non-zero integer will enable the non maskable
+interrupt watchdog (assuming IO APIC support is compiled in).
+This checks to see if the interrupt count is increasing
+(indicating normal system activity) and if it is not then
+it assumes that a processor is stuck and forces an error
+dump of diagnostic information.
+<P>
+<H3>The `no387' Argument</H3>
+
+<P>Some i387 coprocessor chips have bugs that show up when
+used in 32 bit protected mode. For example, some of the
+early ULSI-387 chips would cause solid lockups while
+performing floating point calculations, apparently due to
+a bug in the FRSAV/FRRESTOR instructions.  Using the `no387'
+boot argument causes Linux to ignore the math coprocessor
+even if you have one. Of course you must then have your
+kernel compiled with math emulation support! This may also
+be useful if you have one of those <EM>really</EM> old 386 machines
+that could use an 80287 FPU, as Linux can't use an 80287.
+<P>
+<H3>The `no-hlt' Argument</H3>
+
+<P>The i386 (and successors thereof) family of CPUs have a
+`hlt' instruction which tells the CPU that nothing is
+going to happen until an external device (keyboard, modem,
+disk, etc.) calls upon the CPU to do a task. This allows the
+CPU to enter a `low-power' mode where it sits like a zombie
+until an external device wakes it up (usually via an interrupt).
+Some of the early i486DX-100 chips had a problem  with the
+`hlt' instruction, in that they couldn't reliably return to
+operating mode after this instruction was used. Using the
+`no-hlt' instruction tells Linux to just run an infinite loop
+when there is nothing else to do, and to <EM>not</EM> halt your
+CPU when there is no activity. This allows people with these
+broken chips to use Linux, although they would be well advised
+to seek a replacement through a warranty where possible.
+<P>
+<H3>The `no-scroll' Argument</H3>
+
+<P>Using this argument at boot disables scrolling features that
+make it difficult to use Braille terminals.
+<P>
+<H3>The `noapic' Argument</H3>
+
+<P>Using this option tells a SMP kernel to not use some of the
+advanced features of the interrupt controller on multi processor
+machines.  Use of this option may be required when a device
+(such as those using ne2k-pci or 3c59xi drivers) stops generating
+interrupts (i.e. <CODE>cat /proc/interrupts</CODE> shows the same
+interrupt count.)
+See <CODE>linux/Documentation/IO-APIC.txt</CODE> for more information.
+<P>
+<H3>The `noht' Argument</H3>
+
+<P>This will disable hyper-threading on intel processors that 
+have this feature.
+<P>
+<H3>The `noisapnp' Argument</H3>
+
+<P>If ISA PnP is built into the kernel, this will disable it.
+<P>
+<H3>The `nomce' Argument</H3>
+
+<P>Some newer processors have the ability to self-monitor and
+detect inconsistencies that should not regularly happen.
+If an inconsistency is detected, a Machine Check Exception
+will take place and the system will be halted (rather than
+plundering forward and corrupting your data).  You can use
+this argument to disable this feature, but be sure to check
+that your CPU is not overheating or otherwise faulty first.
+<P>
+<H3>The `nosmp' Argument</H3>
+
+<P>Use of this option will tell a SMP kernel on a SMP machine to
+operate single processor.  Typically only used for debugging
+and determining if a particular problem is SMP related.
+<P>
+<H3>The `noresume' Argument</H3>
+
+<P>If software suspend is enabled, and a suspend to disk file
+has been specified, using this argument will give a normal
+boot and the suspend data will be ignored.
+<P>
+<H3>The `notsc' Argument</H3>
+
+<P>Use of this option will tell the kernel to not use the
+Time Stamp Counter for anything, even if the CPU has one.
+<P>
+<H3>The `nofxsr" Argument</H3>
+
+<P>Use of this option will tell the kernel to not use 
+any speed-up tricks involving the floating point unit,
+even if the processor supports them.
+<P>
+<H3>The `panic=' Argument</H3>
+
+<P>In the unlikely event of a kernel panic (i.e. an internal error
+that has been detected by the kernel, and which the kernel decides
+is serious enough to moan loudly and then halt everything), the
+default behaviour is to just sit there until someone comes along
+and notices the panic message on the screen and reboots the machine.
+However if a machine is running unattended in an isolated location
+it may be desirable for it to automatically reset itself so that
+the machine comes back on line. For example, using <CODE>panic=30</CODE> at
+boot would cause the kernel to try and reboot itself 30 seconds
+after the kernel panic happened. A value of zero gives the default
+behaviour, which is to wait forever.
+<P>Note that this timeout value can also be read and set via the
+<CODE>/proc/sys/kernel/panic</CODE> sysctl interface.
+<P>
+<H3>The `pirq=' Argument</H3>
+
+<P>Using this option tells a SMP kernel information on the PCI
+slot versus IRQ settings for SMP motherboards which are
+unknown (or known to be blacklisted).
+See <CODE>linux/Documentation/IO-APIC.txt</CODE> for more
+information.
+<P>
+<H3>The `profile=' Argument</H3>
+
+<P>Kernel developers can 
+profile how and where the kernel is spending its CPU cycles
+in an effort to maximize efficiency and performance. This
+option lets you set the profile shift count at boot. Typically
+it is set to two.   You need a tool such as 
+<CODE>readprofile.c</CODE> that can make use of the <CODE>/proc/profile</CODE>
+output.
+<P>
+<H3>The `quiet' Argument</H3>
+
+<P>This is pretty much the opposite of the `debug' argument.
+When this is given, only important and system critical
+kernel messages are printed to the console.  Normal messages
+about hardware detection at boot are suppressed.
+<P>
+<H3>The `raid=' Argument</H3>
+
+<P>Accepts <CODE>noautodetect</CODE> at the moment.  See also <CODE>md=</CODE>.
+<P>
+<H3>The `reboot=' Argument</H3>
+
+<P>This option controls the type of reboot that Linux will do
+when it resets the computer (typically via <CODE>/sbin/init</CODE>
+handling a Control-Alt-Delete). The default as of v2.0
+kernels is to do a `cold' reboot (i.e. full reset, BIOS does
+memory check, etc.) instead of a `warm' reboot (i.e. no full
+reset, no memory check). It was changed to be cold by default 
+since that tends to work on cheap/broken hardware that fails
+to reboot when a warm reboot is requested. To get the old 
+behaviour (i.e. warm reboots) use <CODE>reboot=w</CODE> or in fact
+any word that starts with <CODE>w</CODE> will work.
+<P>Other accepted options are `c', `b', `h', and `s', for cold,
+bios, hard, and SMP respectively. The `s' takes an optional
+digit to specify which CPU should handle the reboot. Options
+can be combined where it makes sense, i.e. <CODE>reboot=b,s2</CODE> 
+<P>
+<H3>The `reserve=' Argument</H3>
+
+<P>This is used to <EM>protect</EM> I/O port regions from probes.
+The form of the command is:
+<P>
+<BLOCKQUOTE><CODE>
+reserve=iobase,extent[,iobase,extent]...
+</CODE></BLOCKQUOTE>
+<P>In some machines it may be necessary to prevent device drivers from
+checking for devices (auto-probing) in a specific region. This may be
+because of poorly designed hardware that causes the boot to <EM>freeze</EM>
+(such as some ethercards), hardware that is mistakenly identified,
+hardware whose state is changed by an earlier probe, or merely
+hardware you don't want the kernel to initialize.
+<P>The <CODE>reserve</CODE> boot-time argument addresses this problem by specifying
+an I/O port region that shouldn't be probed. That region is reserved
+in the kernel's port registration table as if a device has already
+been found in that region (with the name <CODE>reserved</CODE>). 
+Note that this mechanism shouldn't be necessary on most machines. 
+Only when there is a problem or special case would it be necessary 
+to use this.
+<P>The I/O ports in the specified region are protected against
+device probes that do a <CODE>check_region()</CODE> prior to probing
+blindly into a region of I/O space. This was put in to be used 
+when some driver was hanging on a NE2000, or misidentifying 
+some other device as its own.  A correct device driver shouldn't 
+probe a reserved region, unless another boot argument explicitly 
+specifies that it do so.  This implies that <CODE>reserve</CODE> will 
+most often be used with some other boot argument. Hence if you 
+specify a <CODE>reserve</CODE> region to protect a specific device, you 
+must generally specify an explicit probe for that device. Most 
+drivers ignore the port registration table if they are given an 
+explicit address.
+<P>For example, the boot line
+<P>
+<HR>
+<PRE>
+        reserve=0x300,32  blah=0x300
+</PRE>
+<HR>
+<P>keeps all device drivers except the driver for `blah' from
+probing <CODE>0x300-0x31f</CODE>.
+<P>As usual with boot-time specifiers there is an 11 parameter limit,
+thus you can only specify 5 reserved regions per <CODE>reserve</CODE> keyword.
+Multiple <CODE>reserve</CODE> specifiers will work if you have an unusually
+complicated request.
+<P>
+<H3>The `resume=' Argument</H3>
+
+<P>If you are using software suspend, then this will allow you to
+specify the file name of the suspend to disk data that you 
+want the machine to resume from.
+<P>
+<H3>The `vga=' Argument</H3>
+
+<P>Note that this is not really a boot argument. It is an option
+that is interpreted by LILO and not by the kernel like all the
+other boot arguments are. However its use has become so common
+that it deserves a mention here. It can also be set via using
+<CODE>rdev -v</CODE> or equivalently <CODE>vidmode</CODE> on the vmlinuz file.
+This allows the setup code to use the video BIOS to change
+the default display mode before actually booting the Linux
+kernel. Typical modes are 80x50, 132x44 and so on. The best
+way to use this option is to start with <CODE>vga=ask</CODE> which
+will prompt you with a list of various modes that you can use
+with your video adapter before booting the kernel. Once you
+have the number from the above list that you want to use, you
+can later put it in place of the `ask'. For more information,
+please see the file <CODE>linux/Documentation/svga.txt</CODE>
+that comes with all recent kernel versions.
+<P>Note that newer kernels (v2.1 and up) have the setup code that 
+changes the video mode as an option, listed as
+<CODE>Video mode selection support</CODE> so you need to enable this
+option if you want to use this feature.
+<P>
+<HR>
+<A HREF="BootPrompt-HOWTO-4.html">Next</A>
+<A HREF="BootPrompt-HOWTO-2.html">Previous</A>
+<A HREF="BootPrompt-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

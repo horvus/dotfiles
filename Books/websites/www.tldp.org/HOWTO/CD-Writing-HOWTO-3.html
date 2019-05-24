@@ -1,0 +1,343 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>CD-Writing HOWTO: Burning CD-Rs</TITLE>
+ <LINK HREF="CD-Writing-HOWTO-4.html" REL=next>
+ <LINK HREF="CD-Writing-HOWTO-2.html" REL=previous>
+ <LINK HREF="CD-Writing-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="CD-Writing-HOWTO-4.html">Next</A>
+<A HREF="CD-Writing-HOWTO-2.html">Previous</A>
+<A HREF="CD-Writing-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Burning CD-Rs</A></H2>
+
+<P>
+<BLOCKQUOTE>
+<I>"If to smoke you turn I shall not cease to fiddle while you burn."</I>
+(Roman emperor Nero about burning his own classic-CDs, AD64. He
+misunderstood it completely and burned Rome down.)
+</BLOCKQUOTE>
+<P>
+<P>Writing CD-ROMs consists of two steps under Linux:
+<P>
+<UL>
+<LI> packaging the desired data (files, music or both) into files
+with special formats</LI>
+<LI> writing the data from the files to the CD-R with the utility <CODE>cdrecord</CODE></LI>
+</UL>
+<P>This chapter describes the steps for data and audio CDs in greater detail.
+<P>
+<P>
+<H2><A NAME="ss3.1">3.1 Writing CD-ROMs (pure data)</A>
+</H2>
+
+<P>Note that collecting the data to put onto a CD usually takes longer than one
+expects. Consider that missing files cannot be added once the CD is
+written and fixated. This is also true for CD-RW, which can currently
+only be rewritten as a whole. Using the multi-session feature is no 
+option for single files, as it consumes much space for a new complete
+table of contents (TOC). UDF is not ready yet for Linux.
+<P>Also keep in mind that a certain amount of the free space of a CD is used
+for storing the information of the ISO-9660-filesystem (usually a few MB).
+620 MB data will always fit on a 650 MB CD-R.
+<P>
+<H3>Creating an image of the later CD-ROM</H3>
+
+<P>Before any storage medium (e.g. floppy disk, hard disk or CD) can be used,
+it must get a filesystem (DOS speak: get formatted).  The filesystem is
+responsible for organizing and incorporating the files that should be
+stored on the medium.
+<P>The usual utilities for creating filesystems on hard disk partitions write an
+empty filesystem onto them, which is then mounted and filled with files by
+the users as they need it. A writable CD is only writable once so if we
+wrote an empty filesystem to it, it would get formatted and remain
+completely empty forever. This is also true for rewritable media as you
+cannot change arbitrary sectors yet; you must erase their whole content.
+<P>So what we need is a tool that creates the filesystem while copying the
+files to the CD. This tool is called <CODE>mkisofs</CODE>.  A sample usage
+looks as follows:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+mkisofs  -r   -o cd_image   private_collection/
+              `---------'   `-----------------'
+                   |               |
+          write output to   take directory as input
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The option '-r' sets the permissions of all files to be public readable on
+the CD and enables RockRidge-extensions. You probably want to use this option
+unless you really know what you're doing
+(hint: without '-r' the mount point gets the permissions of
+<CODE>private_collection</CODE>!).
+<P><CODE>mkisofs</CODE> will try to map all filenames to the 8.3 format used by
+DOS to ensure the highest possible compatibility. In case of naming conflicts
+(different files have the same 8.3 name), numbers are used in the filenames
+and information about the chosen filename is printed via STDERR (usually
+the screen). Don't panic: Under Linux you will never see these odd 8.3
+filenames because Linux makes use of the Rock Ridge extensions which
+contain the original file information (permissions, filename, etc.).
+<P>Remeber do use the Option -J (MS Joliet extensions) or use mkhybrid if you
+want to generate a more Windows-friendly CD-ROM. For HFS CD-ROMS used on
+the Macintosh, you better read the man-page of mkisofs' bigger sister
+mkhybrid for details on various options.
+<P>Now you may wonder why the output of <CODE>mkisofs</CODE> is not directly sent
+to the writer device. There are three reasons:
+<P>
+<UL>
+<LI><CODE>mkisofs</CODE> knows nothing about driving CD-writers.</LI>
+<LI>You may want to test the image before burning it.</LI>
+<LI>On slow machines it would not be reliable (see section 4.).</LI>
+</UL>
+<P>There is a method to write a CD-R in one go, which will be described below.
+<P>One also could think of creating an extra partition and writing the image
+to that partition instead to a file. I vote against such a strategy because
+if you write to the wrong partition due to a typo, you can lose your
+complete Linux system. Read: that happened to me... Furthermore, it is a
+waste of disk space because the CD-image is temporary data that can be
+deleted after writing the CD. However, using raw partitions saves you the
+time for deleting files of 650 MB size.
+<P>
+<P>
+<H3>Test the CD-image</H3>
+
+<P>Linux has the ability to mount files as if they were disk partitions. This
+feature is useful to check that the directory layout and file access
+permissions of the CD image matches your wishes. Although media is very
+cheap today, the writing process is still time consuming, and you may at
+least want to save your time by doing a quick test.
+<P>To mount the file <CODE>cd_image</CODE> created above on the directory
+<CODE>/cdrom</CODE>, give the command
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+mount -t iso9660 -o ro,loop=/dev/loop0 cd_image /cdrom
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Now you can inspect the files under <CODE>/cdrom</CODE> -- they appear exactly
+as they were on a real CD. To umount the CD-image, just say <CODE>umount
+/cdrom</CODE>. (Warning: On Linux kernels prior to 2.0.31 the last file on
+<CODE>/cdrom</CODE> may not be fully readable. Please use a more recent kernel
+like 2.0.36. The option -pad for cdrecord applies to audio CDs only and the
+option -pad for mkisofs requires a patch, which is as much work
+to apply than to upgrade to a bug-free Linux kernel.)
+<P>Note:
+<BLOCKQUOTE>
+Some ancient versions of <CODE>mount</CODE> are not able to deal with
+loopback devices. If you have such an old version of <CODE>mount</CODE>, then upgrade your Linux-system.
+Several people have already suggested putting information about how to get the
+newest mount utilities into this HOWTO. I always refuse this.  If your
+Linux distribution ships with an ancient <CODE>mount</CODE>, report it as a
+bug.  If your Linux distribution is not easily upgradable, report it as a
+bug.<P>If I include all the information that is necessary to work around bugs
+in badly designed Linux distributions, this HOWTO would be a lot bigger and
+harder to read.
+</BLOCKQUOTE>
+<P>
+<P>
+<H3>Write the CD-image to a CD</H3>
+
+<P>This section only covers writing data CDs in TAO mode, because it is the
+most frequently used mode for data. For more information about the
+differences of TAO and DAO, please see the chapter about audio CD-Rs. If
+you use DAO mode with the tool cdrdao, then remember to add a dummy audio
+track at the end of the TOC file (see the README).
+<P>Not much more left to do. If you haven't already tried, it's a good time for
+the command
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cdrecord -scanbus
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This will tell you to which SCSI device your CD-writer is attached to. All
+other methods of guessing the information printed so nicely by cdrecord
+have been removed from the HOWTO.
+<P>Before showing you the last command, let me warn you that CD-writers want
+to be fed with a constant stream of data. So the process of writing the CD image to the CD must not be
+interrupted or a corrupt CD will result. It's easy to interrupt the
+data stream by deleting a very large file. Example: if you delete an old
+CD-image of 650 Mbytes size, the kernel must update information about
+650,000 blocks on the hard disk (assuming you have a block size of 1 Kbyte for
+your filesystem). That takes some time and is very likely to slow down
+disk activity long enough for the data stream to pause for a few seconds.
+However, reading mail, browsing the web, or even compiling a kernel
+generally will not affect the writing process on modern machines.
+<P>Please note that no writer can re-position its laser and continue at
+the original spot on the CD when it gets disturbed.  Therefore any strong
+vibrations or other mechanical shocks will probably destroy the CD you are
+writing.
+<P>When you are mentally prepared, dress up in a black robe, multiply the
+SCSI-id of the CD-writer with its SCSI-revision and light as many candles,
+speak two verses of the ASR-FAQ (newsgroup alt.sysadmin.recovery) and
+finally type:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+shell&gt; SCSI_BUS=0   # taken from listing 1 "scsibus0:"
+shell&gt; SCSI_ID=6    # taken from listing 1 "TOSHIBA XM-3401"
+shell&gt; SCSI_LUN=0
+shell&gt; cdrecord -v speed=2 dev=$SCSI_BUS,$SCSI_ID,$SCSI_LUN \
+                   -data  cd_image
+
+# same as above, but shorter:
+shell&gt; cdrecord -v speed=2 dev=0,6,0  -data  cd_image
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>For better readability, the coordinates of the writer are stored in three
+environment variables with natural names: SCSI_BUS, SCSI_ID, SCSI_LUN.
+<P>If you use cdrecord to overwrite a CD-RW, you must add the option
+"blank=..." to erase the old content.  Please read the man page to learn
+more about the various methods to blank the CD-RW.
+<P>In times where everybody except me owns a 400 Mhz machine, people feed the
+output of mkisofs directly into cdrecord:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+shell&gt; IMG_SIZE=`mkisofs -R -q -print-size private_collection/  2>&amp;1 \
+| sed -e "s/.* = //"`
+shell&gt; echo $IMG_SIZE
+shell&gt; [ "0$IMG_SIZE" -ne 0 ] &amp;&amp; mkisofs -r  private_collection/  \
+|cdrecord  speed=2  dev=0,6,0
+            tsize=${IMG_SIZE}s  -data  -
+#       don't forget the s --^         ^-- read data from STDIN
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The first command is an empty run to determine the size of the image (you
+need the mkisofs from the cdrecord distribution for this to work). You need
+to specify all parameters you will use on the final run (e.g. -J or -hfs).
+Maybe your writer does not need to know the size of the image to be
+written, so you can leave this dry run out. The printed size must be passed
+as a tsize-parameter to cdrecord (it is stored in the environment variable
+IMG_SIZE). The second command is a sequence of mkisofs and cdrecord,
+coupled via a pipe.
+<P>The 
+<P>
+<H2><A NAME="ss3.2">3.2 Writing audio CDs</A>
+</H2>
+
+<P>Writing audio CDs is very similar to the steps described above for data
+CDs. You can choose between two techniques: DAO or TAO.  TAO (track at
+once) is less suitable for music, because you will hear clicks between the
+individual tracks. It is described first anyways, because it is a little bit
+easier to deal with and DAO is not available for all drives yet.
+<P>The main difference compared to writing data CD-Rs is the format of the
+images. ISO-9660 (or whatever filesystem you prefer) would not be suitable,
+because no audio CD player is able to deal with filesystems. Instead the
+audio data must be writen as "16 bit stereo samples in PCM coding at 44100
+samples/second (44.1 kHz)".
+<P>One utility to convert your sound files into the required format is sox.
+Its usage is straightforward:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+shell&gt; sox  killing-my-software.wav  killing-my-software.cdr
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This command would convert the song killing-my-software from the WAV-format
+into the CDR audio-format. See the man page for sox for more details about
+formats and filename-extensions sox recognizes. Because the output of the
+manual conversion takes up much disk space, it was made a built-in feature
+of cdrecord for the sound formats WAV and AU. So as long as your sound
+files have the extensions .wav or .au (and the sample rate "stereo, 16 bit,
+44.1 kHz"), you can use them as audio tracks without manual conversion into
+the CDR format. However, cdrecord requires
+the size of the sound data to be a integer multiple of 2352 and to be
+greater than 705,600 bytes, which is not fullfilled for some WAV files. For
+such files the usage of sox is needed to pad the audio data up to 2352
+bytes.
+<P>
+<H3>Writing audio CDs (TAO)</H3>
+
+<P>
+<P>An audio CD consists of audio tracks, which are organized as separate
+images when using TAO mode. So if you want to have ten tracks on your CD,
+you have to make ten images.
+<P>Cdrecord writes CD images as audio tracks if the option -audio is
+specified. The other options are identical to those used for writing
+data-CDs (unless you have very special requirements). These three examples
+all do the same thing, but read the tracks from different sound file formats:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+shell&gt; cdrecord -v speed=2 dev=0,6,0  -audio  track1.cdr track2.cdr...
+shell&gt; cdrecord -v speed=2 dev=0,6,0  -audio  track1.wav track2.wav...
+shell&gt; cdrecord -v speed=2 dev=0,6,0  -audio  track1.au  track2.au...
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>By doing this, you will produce an audio CD which has a 2
+seconds of pause between audio tracks.
+One notable format not directly readable by cdrecord is MPEG Layer 3. To
+convert files in this format to the CDR-format, you can use the command
+"mpg123 --cdr - track1.mp3 > track1.cdr".  The option --cdr ensures the
+track is encoded in the required format (see above). Older versions of
+mpg123 require -s instead of the plain - to write to stdout.  The other
+direction (converting from WAV to MPEG) can be done with LAME for WAV-files
+(extract the track with cdda2wav from the audio CD and encode it into MP3
+with the help of LAME).
+<P>To create a CD-R from a whole bunch of MP3-files, you can use the following
+command sequence:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+for I in *.mp3
+do
+    mpg123 --cdr - "$I" | cdrecord -audio -pad -nofix -
+done
+cdrecord -fix
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Depending on the speed of your machine, you may want to slow down writing
+to "speed=1" (cdrecord option). If you use "speed=4", your machine must be
+able to play the MP3-file at quadruple speed. mpg123 consumes much
+CPU-time! If you are in doubt, try an empty run with -dummy (keeps the
+laser switched off). 
+<P>
+<H3>DAO</H3>
+
+<P>If you want to get rid of the pauses between the audio tracks, you have to
+use disk-at-once (DAO) recording versus the (individual)
+track-at-once (TAO) recording described above. Support for DAO is currently
+most advanced in cdrdao. Please see its homepage for details.
+<P>If you master the CD in DAO mode, then you use a monolithic image (sound
+file) and control track information with a configuration file.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+CD_DA
+TRACK AUDIO
+FILE "live.wav" 0 5:0:0
+INDEX 3:0:0
+TRACK AUDIO
+FILE "live.wav" 5:0:0 5:0:0
+TRACK AUDIO
+FILE "live.wav" 10:0:0 5:0:0
+INDEX 2:0:0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss3.3">3.3 Mixed mode CD-ROMs</A>
+</H2>
+
+<P>
+<P>There is not much to say about this topic. Just indicate the type of the
+(subse quent) images with the options -data and -audio. Example:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cdrecord  -v dev=0,6,0  -data  cd_image  -audio  track*.cdr
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<P>
+<HR>
+<A HREF="CD-Writing-HOWTO-4.html">Next</A>
+<A HREF="CD-Writing-HOWTO-2.html">Previous</A>
+<A HREF="CD-Writing-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

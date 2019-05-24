@@ -1,0 +1,481 @@
+<HTML
+><HEAD
+><TITLE
+>Devices requiring special
+     configuration</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.52"><LINK
+REL="HOME"
+TITLE="Linux kerneld mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="How does kerneld know what module
+     to load?"
+HREF="configuration.html"><LINK
+REL="NEXT"
+TITLE="Spying on kerneld"
+HREF="spying.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux kerneld mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="configuration.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="spying.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SPECIAL-DEVS"
+>Devices requiring special
+     configuration</A
+></H1
+><P
+>Some devices require a bit of extra configuration beyond the
+     normal aliasing of a device to a module. </P
+><P
+></P
+><UL
+><LI
+><P
+>Character devices on major number 10: <A
+HREF="special-devs.html#MISCDEVS"
+>The miscellaneous
+        devices</A
+></P
+></LI
+><LI
+><P
+><A
+HREF="special-devs.html#SCSIDEVS"
+>SCSI devices</A
+>
+        </P
+></LI
+><LI
+><P
+><A
+HREF="special-devs.html#PRE-POST"
+>Devices that require
+        special initialization</A
+></P
+></LI
+></UL
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MISCDEVS"
+>char-major-10 : Mice, watchdogs and randomness</A
+></H2
+><P
+>Hardware devices are usually identified through their
+        major device numbers, e.g. ftape is
+        <TT
+CLASS="LITERAL"
+>char-major-27</TT
+>. However, if you look through
+        the entries in <TT
+CLASS="FILENAME"
+>/dev</TT
+> for char major 10,
+        you will see that this is a bunch of very different devices,
+        including </P
+><P
+></P
+><UL
+><LI
+><P
+>Mice of various sorts (bus mice, PS/2
+          mice)</P
+></LI
+><LI
+><P
+>Watchdog devices </P
+></LI
+><LI
+><P
+>The kernel <TT
+CLASS="FILENAME"
+>random</TT
+>
+          device </P
+></LI
+><LI
+><P
+>APM (Advanced Power Management) interface
+          </P
+></LI
+></UL
+><P
+>These devices are controlled by several different
+        modules, not a single one, and therefore the kerneld
+        configuration for these <I
+CLASS="EMPHASIS"
+>misc. devices</I
+>
+        use the major number <I
+CLASS="EMPHASIS"
+>and</I
+> the minor
+        number: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>        alias char-major-10-1 psaux     # For PS/2 mouse
+        alias char-major-10-130 wdt     # For WDT watchdog</PRE
+></TD
+></TR
+></TABLE
+><P
+>You need a kernel version 1.3.82 or later to use this;
+        earlier versions do not pass the minor number to kerneld,
+        making it impossible for kerneld to figure out which of the
+        misc. device modules to load. </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SCSIDEVS"
+>Loading SCSI drivers: The
+      <TT
+CLASS="LITERAL"
+>scsi_hostadapter</TT
+> entry</A
+></H2
+><P
+>Drivers for SCSI devices consist of a driver for the
+        SCSI host adapter (e.g. an Adaptec 1542), and a driver for the
+        type of SCSI device you use, e.g. a hard disk, a CD-ROM or a
+        tape-drive. All of these can be loaded as modules. However,
+        when you want to access e.g. the CD-ROM drive that is
+        connected to the Adaptec card, the kernel and kerneld only
+        knows that it needs to load the <TT
+CLASS="FILENAME"
+>sr_mod</TT
+>
+        module in order to support SCSI CD-ROM's; it does not know
+        what SCSI controller the CD-ROM is connected to, and hence
+        does not know what module to load to support the SCSI
+        controller. </P
+><P
+>To resolve this, you can add an entry for the SCSI
+        driver module to your <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+>
+        that tells kerneld which of the many possible SCSI controller
+        modules it should load: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>        alias scd0 sr_mod               # sr_mod for SCSI CD-ROM's ...
+        alias scsi_hostadapter aha1542  # ... need the Adaptec driver</PRE
+></TD
+></TR
+></TABLE
+><P
+>This only works with kernel version 1.3.82 or later. </P
+><P
+>This works if you have only one SCSI controller. If you
+        have more than one, things become a little more
+        difficult.</P
+><P
+>In general, you cannot have kerneld load a driver for a
+        SCSI host adapter, if a driver for another host adapter is
+        already installed. You must either build both drivers into
+        your kernel (not as modules), or load the modules
+        manually.</P
+><DIV
+CLASS="TIP"
+><BLOCKQUOTE
+CLASS="TIP"
+><P
+><B
+>Tip: </B
+>There <I
+CLASS="EMPHASIS"
+>is</I
+> a way that you can
+        have kerneld load multiple SCSI drivers. James Tsiao came up
+        with this idea:</P
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+> You can easily have kerneld load the second scsi
+            driver by setting up the dependency in your modules.dep by
+            hand.  You just need an entry like:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>      /lib/modules/2.0.30/scsi/st.o: /lib/modules/2.0.30/scsi/aha1542.o</PRE
+></TD
+></TR
+></TABLE
+><P
+>To have kerneld load the
+            <TT
+CLASS="FILENAME"
+>aha1542.o</TT
+> before it loads
+            <TT
+CLASS="FILENAME"
+>st.o</TT
+>.  My machine at home is set up
+            almost exactly like the setup above, and it works fine for
+            all my secondary scsi devices, including tape, cd-rom, and
+            generic scsi devices.  The drawback is that
+            <B
+CLASS="COMMAND"
+>depmod -a</B
+> can't autodetect these
+            dependencies, so the user needs to add them by hand, and
+            not run <B
+CLASS="COMMAND"
+>depmod -a</B
+> on boot up.  But once
+            it is set up, kerneld will autoload the
+            <TT
+CLASS="FILENAME"
+>aha1542.o</TT
+> just
+            fine.</P
+></BLOCKQUOTE
+></BLOCKQUOTE
+></DIV
+><P
+>You should be aware, that this technique only works if
+        you have different kinds of SCSI devices on the two
+        controllers, for example, hard disks on one controller, and
+        cd-rom drives, tapes or generic SCSI devices on another.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PRE-POST"
+>When loading a module isn't enough: The
+        <TT
+CLASS="LITERAL"
+>post-install</TT
+> entry</A
+></H2
+><P
+>Sometimes, just loading the module is not enough to get
+        things working.  For instance, if you have your sound card
+        compiled as a module, it is often convenient to set a certain
+        volume level. Only problem is, the setting vanishes the next
+        time the module is loaded. Here is a neat trick from Ben
+        Galliart (<TT
+CLASS="EMAIL"
+>&#60;<A
+HREF="mailto:bgallia@luc.edu"
+>bgallia@luc.edu</A
+>&#62;</TT
+>): </P
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>The final solution required installing the <A
+HREF="ftp://sunsite.unc.edu/pub/Linux/apps/sound/mixers/"
+TARGET="_top"
+>          <SPAN
+CLASS="PRODUCTNAME"
+>setmix</SPAN
+> package</A
+> and then
+          adding the following line to my
+          <TT
+CLASS="FILENAME"
+>/etc/conf.modules</TT
+>: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>post-install sound /usr/local/bin/setmix -f /etc/volume.conf</PRE
+></TD
+></TR
+></TABLE
+></BLOCKQUOTE
+><P
+>What this does is that after the sound module is loaded,
+        kerneld runs the command indicated by the
+        <TT
+CLASS="LITERAL"
+>post-install sound</TT
+> entry. So the sound
+        module gets configured with the command
+        <B
+CLASS="COMMAND"
+>/usr/local/bin/setmix -f
+        /etc/volume.conf</B
+>.</P
+><P
+>This may be useful for other modules as well, for
+        example the <TT
+CLASS="FILENAME"
+>lp</TT
+> module can be configured
+        with the <TT
+CLASS="FILENAME"
+>tunelp</TT
+> program by adding
+        </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>        post-install lp tunelp options</PRE
+></TD
+></TR
+></TABLE
+><P
+>For kerneld to recognize these options, you will need a
+        version of kerneld that is 1.3.69f or later.</P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>An earlier version of this mini-HOWTO mentioned a
+          pre-remove option, that might be used to run a command just
+          before kerneld removed a module. However, this has never
+          worked and its use is therefore discouraged - most likely,
+          this option will disappear in a future kerneld release.  The
+          whole issue of module settings is undergoing some change at
+          the moment, and may look different on your system by the
+          time you read this. </P
+></BLOCKQUOTE
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="configuration.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="spying.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>How does kerneld know what module
+     to load?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Spying on kerneld</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

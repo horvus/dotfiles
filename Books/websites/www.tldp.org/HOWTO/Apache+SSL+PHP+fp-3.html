@@ -1,0 +1,221 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Apache SSL PHP/FI frontpage mini-HOWTO: Putting it all together</TITLE>
+ <LINK HREF="Apache+SSL+PHP+fp-2.html" REL=previous>
+ <LINK HREF="Apache+SSL+PHP+fp.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+Next
+<A HREF="Apache+SSL+PHP+fp-2.html">Previous</A>
+<A HREF="Apache+SSL+PHP+fp.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Putting it all together</A></H2>
+
+<H2><A NAME="ss3.1">3.1 Apache modules to try</A>
+</H2>
+
+<P>The modules I use besides SSL, PHP and frontpage are:
+<PRE>
+Module env_module          mod_env.o
+Module config_log_module   mod_log_config.o
+Module mime_module         mod_mime.o
+Module negotiation_module  mod_negotiation.o
+Module dir_module          mod_dir.o
+Module cgi_module          mod_cgi.o
+Module asis_module         mod_asis.o
+Module imap_module         mod_imap.o
+Module action_module       mod_actions.o
+Module alias_module        mod_alias.o
+Module rewrite_module      mod_rewrite.o
+Module access_module       mod_access.o
+Module auth_module         mod_auth.o
+Module anon_auth_module    mod_auth_anon.o
+Module digest_module       mod_digest.o
+Module expires_module      mod_expires.o
+Module headers_module      mod_headers.o
+Module browser_module      mod_browser.o
+</PRE>
+<P>
+<H2><A NAME="ss3.2">3.2 Giving CGI's more security</A>
+</H2>
+
+<P>If you are an ISP (you probably are when you read this) you will 
+want to improve security. The suexec utility allows you to do so; it will
+execute cgi's under the UID of the webowner instead of executing it 
+under the webservers UID. 
+Go to <CODE>/usr/src/apache_1.2.6/support</CODE> and <CODE>make suexec</CODE>.
+<CODE>chmod 4711 suxec</CODE> and copy it to the location specified in
+<CODE>../src/httpd.h</CODE> which is <CODE>/usr/local/etc/httpd/sbin/suexec</CODE>
+by default. If the path seems a little cryptic to you - it did to me - edit
+<CODE>httpd.h</CODE> and set the path to a more comfortable value. 
+<P>
+<H2><A NAME="ss3.3">3.3 Compiling and installing the server daemon</A>
+</H2>
+
+<P>Enter <CODE>/usr/src/apache_1.2.6/src</CODE> and edit
+<CODE>Configuration</CODE> to set all the Modules you want to include in your
+Apache daemon. When done, run <CODE>./Configure</CODE> and <CODE>make</CODE>. This is
+the last (and most complicated) compilation step, so cross your fingers. If it
+succeeds, <CODE>cp httpsd</CODE> to <CODE>/usr/sbin</CODE>. The daemon is somewhat
+big, consider this when assembling your webserver. Create the directory
+<CODE>/var/httpd</CODE> with subdirectories <CODE>cgi-bin</CODE>, <CODE>conf</CODE>,
+<CODE>htdocs</CODE>, <CODE>icons</CODE>, <CODE>virt1</CODE>, <CODE>virt2</CODE> and
+<CODE>logs</CODE>. In <CODE>/usr/src/apache_1.2.6/conf</CODE> edit
+<CODE>access.conf-dist</CODE>, <CODE>mime.types</CODE> and <CODE>srm.conf-dist</CODE>
+to suit your needs and copy them to <CODE>var/httpd/conf/access.conf</CODE>,
+<CODE>srm.conf</CODE> and <CODE>mime.types</CODE>. Copy the <CODE>httpsd.pem</CODE> you
+created with <CODE>make certificate</CODE> to <CODE>/var/httpd/conf</CODE>. Use the
+following <CODE>httpd.conf</CODE>:
+<PRE>
+ServerType standalone
+Port 80
+Listen 80
+Listen 443
+User wwwrun
+Group wwwrun
+ServerAdmin webmaster@yourhost.com
+ServerRoot /var/httpd
+ErrorLog logs/error_log
+TransferLog logs/access_log
+PidFile logs/httpd.pid
+ServerName www.yourhost.com
+MinSpareServers 3
+MaxSpareServers 20
+StartServers 3
+
+SSLCACertificatePath /var/httpd/conf
+SSLCACertificateFile /var/httpd/conf/httpsd.pem
+SSLCertificateFile /var/httpd/conf/httpsd.pem
+SSLLogFile /var/httpd/logs/ssl.log
+ 
+&lt;VirtualHost www.virt1.com&gt;
+SSLDisable
+ServerAdmin webmaster@virt1.com
+DocumentRoot /var/httpd/virt1
+ScriptAlias /cgi-bin/ /var/httpd/virt1/cgi-bin/
+ServerName www.virt1.com
+ErrorLog logs/virt1-error.log
+TransferLog logs/virt1-access.log
+User virt1admin
+Group users
+&lt;/VirtualHost&gt;
+
+&lt;VirtualHost www.virt1.com:443&gt;
+ServerAdmin webmaster@virt1.com
+DocumentRoot /var/httpd/virt1
+ScriptAlias /cgi-bin/ /var/httpd/virt1/cgi-bin/
+ServerName www.virt1.com
+ErrorLog logs/virt1-ssl-error.log
+TransferLog logs/virt1-ssl-access.log
+User virt1admin
+Group users
+SSLCACertificatePath /var/httpd/conf
+SSLCACertificateFile /var/httpd/conf/httpsd.pem
+SSLCertificateFile /var/httpd/conf/httpsd.pem
+SSLLogFile /var/httpd/logs/virt1-ssl.log
+SSLVerifyClient 0
+SSLFakeBasicAuth
+&lt;/VirtualHost&gt;
+
+&lt;VirtualHost www.virt2.com&gt;
+SSLDisable
+ServerAdmin webmaster@virt2.com
+DocumentRoot /var/httpd/virt2
+ScriptAlias /cgi-bin/ /var/httpd/virt2/cgi-bin/
+ServerName www.virt2.com
+ErrorLog logs/virt2-error.log
+TransferLog logs/virt2-access.log
+&lt;/VirtualHost&gt;
+</PRE>
+<P>Depending on the modules compiled in, not all directives may be available.
+You can retrieve a list of available directives with <CODE>httpsd -h</CODE>.
+<P>
+<H2><A NAME="ss3.4">3.4 Adding frontpage support to a web</A>
+</H2>
+
+<P>Enter <CODE>/usr/local/frontpage/version3.0/bin</CODE> and load
+<CODE>./fpsrvadm</CODE>. Choose <CODE>install</CODE> and <CODE>apache-fp</CODE>. The next
+questions should be answered the following way:
+<PRE>
+Enter server config filename: /var/httpd/conf/httpd.conf
+Enter host name for multi-hosting []: www.virt2.com
+Starting install, port: www.virt2.com:80, web: ""
+Enter user's name []: virt2admin
+Enter user's password:
+Confirm password:
+Creating root web
+Recalculate links for root web
+Install completed.
+</PRE>
+<P>The user name must be the unix login of the webowner. The password does not
+necessarily have to match the system password. 
+You have to manually add <CODE>sendmailcommand:/usr/sbin/sendmail %r</CODE>
+to <CODE>/usr/local/frontpage/www.virt2.com:80.conf</CODE>, otherwise your users
+will not be able to send web-generated eMails.
+<CODE>kill -HUP</CODE> your <CODE>httpsd</CODE> to make fp reread its config. You can
+now access <CODE>www.virt2.com</CODE> with your frontpage client.
+<P>Under some circumstances <CODE>fpsrvadm</CODE> complaints that a root web has
+to be installed first. This is pretty useless, but you should do so to silence
+<CODE>fpsrvadm</CODE>.
+<P>
+<H2><A NAME="ss3.5">3.5 Starting the daemon</A>
+</H2>
+
+<P>Start Apache with <CODE>httpsd -f /var/httpd/conf/httpd.conf</CODE>. You can
+now access <CODE>www.virt1.com</CODE> both through http and https which is pretty
+cool. Of course you have to pay for a real certificate if you want to offer
+webwide SSL or users might laugh at you. 
+<P>Copy one of the demo files from the php examples directory to <CODE>virt1</CODE>
+to test phtml.
+<P>
+<H2><A NAME="ss3.6">3.6 Some considerations left</A>
+</H2>
+
+<P>Do not use frontpage 97 extensions. They do not work, at least under
+Linux. When installing specific versions of the c++ libraries, they 
+appear to work but your logs will soon fill with <CODE>premature end of script
+headers</CODE> and your mailbox will fill with complaints. 
+Do not use frontpage 98 extensions before version 3.0.2.1330. Do not be
+confused, version numbers are somewhat inheterogenous. When telnetting
+to port 80, typing "get / http/1.0" and hitting return twice, you get a
+version number 3.0.4 for frontpage.
+<P>
+<A NAME="fpverswarning"></A> You can find out the more specific version 
+number by executing
+<CODE>/usr/local/frontpage/currentversion/exes/_vti_bin/shtml.exe -version</CODE>.
+Older versions have a nasty bug that requires httpd.conf to be writable
+by the gid of the webserver. This should make you scream if you are at all
+concerned about security.
+Versions since 3.0.2.1330 are more usable.
+<P>
+<H2><A NAME="ss3.7">3.7 Known bugs</A>
+</H2>
+
+<P>When touching <CODE>Recalculate Links</CODE> in the frontpage client, the server 
+starts a process that consumes 99% cpu cycles and some 10 mb of memory. But 
+even for medium-sized webs and fast machines, the client sometimes recieves 
+a timeout message, though the calculation will be finished correctly. Inform 
+frontpage users to be patient and not to hit <CODE>Recalculate Links</CODE> 
+several times. Inform yourself to equip the server with at least 64MB.
+<P>Please note that at the time of writing both SSL and frontpage work, but
+not at the same time, that means you can neither publish your web using ssl
+nor make use of the webbots through https. You can publish your web on
+port 80 and access it encrypted on port 443, but your counters etc. will be
+broken. I consider this a bug. This problem shall be fixed in SSL 0.9.0.
+<P>
+<H2><A NAME="ss3.8">3.8 The final word</A>
+</H2>
+
+<P>For those who think the title of this howto is nearly as long as the
+document: Did you ever listened to Meat Loaf?
+<P>O.K. readers, you're done for today. Feel free to send me your feedback, 
+eternal gratitude, flowers, ecash, cars, oil sources etc.
+<P>
+<HR>
+Next
+<A HREF="Apache+SSL+PHP+fp-2.html">Previous</A>
+<A HREF="Apache+SSL+PHP+fp.html#toc3">Contents</A>
+</BODY>
+</HTML>

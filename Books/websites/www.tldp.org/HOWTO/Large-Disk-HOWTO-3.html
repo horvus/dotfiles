@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Large Disk HOWTO: Disk Access</TITLE>
+ <LINK HREF="Large-Disk-HOWTO-4.html" REL=next>
+ <LINK HREF="Large-Disk-HOWTO-2.html" REL=previous>
+ <LINK HREF="Large-Disk-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Large-Disk-HOWTO-4.html">Next</A>
+<A HREF="Large-Disk-HOWTO-2.html">Previous</A>
+<A HREF="Large-Disk-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Disk Access</A></H2>
+
+<P>Disk access is done in units called <I>sectors</I>.
+In order to read or write something from or to the disk, we have
+to specify the position on the disk, for example by giving the
+sector number.
+If the disk is a SCSI disk, then this sector number goes directly
+into the SCSI command and is understood by the disk.
+If the disk is an IDE disk using LBA, then precisely the same holds.
+But if the disk is old, RLL or MFM or IDE from before the LBA times,
+then the disk hardware expects a triple (cylinder,head,sector) to
+designate the desired spot on the disk.
+<P>
+<H2><A NAME="ss3.1">3.1 Cylinders, heads and sectors</A>
+</H2>
+
+<P>A disk has sectors numbered 0, 1, 2, ...
+This is called <I>LBA addressing</I>.
+<P>In ancient times, before the advent of IDE disks,
+disks had a <I>geometry</I> described by three constants
+C, H, S: the number of cylinders, the number of heads,
+the number of sectors per track.
+The address of a sector was given by three numbers:
+<I>c</I>, <I>h</I>, <I>s</I>: the cylinder number
+(between 0 and C-1), the head number (between 0 and H-1),
+and the sector number within the track (between 1 and S), where
+for some mysterious reason <I>c</I> and <I>h</I> count from 0,
+but <I>s</I> counts from 1. This is called <I>CHS addressing</I>.
+<P>No disk manufactured less than ten years ago has a geometry, but
+this ancient 3D sector addressing is still used by the INT13
+BIOS interface (with fantasy numbers C, H, S
+unrelated to any physical reality).
+<P>The correspondence between the linear numbering and this 3D notation
+is as follows: for a disk with C cylinders, H heads and S sectors/track
+position (<I>c</I>,<I>h</I>,<I>s</I>) in 3D or CHS notation
+is the same as position
+<I>c</I><CODE>*</CODE>H<CODE>*</CODE>S + <I>h</I><CODE>*</CODE>S + (<I>s</I>-1)
+in linear or LBA notation.
+<P>Consequently, in order to access a very old non-SCSI disk, we need to know
+its <EM>geometry</EM>, that is, the values of C, H and S.
+(And if you don't know, there is a lot of good information on
+<A HREF="http://www.thetechpage.com/cgi-bin/default.cgi">www.thetechpage.com</A>.)
+<P>
+<H2><A NAME="ss3.2">3.2 Sectorsize</A>
+</H2>
+
+<P>
+<!--
+disk!sectorsize
+-->
+
+In the present text a sector has 512 bytes. This is almost always
+true, but for example certain MO disks use a sectorsize of 2048 bytes,
+and all capacities given below must be multiplied by four.
+(When using <CODE>fdisk</CODE> on such disks, make sure you have version
+2.9i or later, and give the `-b 2048' option.)
+<P>
+<H2><A NAME="ss3.3">3.3 Disksize</A>
+</H2>
+
+<P>
+<!--
+disk!disksize
+-->
+
+A disk with C cylinders, H heads and S sectors per track
+has C<CODE>*</CODE>H<CODE>*</CODE>S sectors in all, and can store
+C<CODE>*</CODE>H<CODE>*</CODE>S<CODE>*</CODE>512 bytes.
+For example, if the disk label says C/H/S=4092/16/63
+then the disk has 4092<CODE>*</CODE>16<CODE>*</CODE>63=4124736 sectors, and can hold
+4124736<CODE>*</CODE>512=2111864832 bytes (2.11 GB).
+There is an industry convention to give C/H/S=16383/16/63
+for disks larger than 8.4 GB, and the disk size can no longer
+be read off from the C/H/S values reported by the disk.
+<P>
+<H2><A NAME="ss3.4">3.4 The 1024 cylinder and 8.5 GB limits</A>
+</H2>
+
+<P>The old INT13 BIOS interface to disk I/O uses 24 bits to address
+a sector: 10 bits for the cylinder, 8 bits for the head, and 6 bits
+for the sector number within the track (counting from 1).
+This means that this interface cannot address more than
+1024*256*63 sectors, which is 8.5 GB (with 512-byte sectors).
+And if the (fantasy) geometry specified for the disk has fewer
+than 1024 cylinders, or 256 heads, or 63 sectors per track,
+then this limit will be less.
+<P>(More precisely: with INT 13, AH selects the function to perform,
+CH is the low 8 bits of the cylinder number, CL
+has in bits 7-6 the high two bits of the cylinder number
+and in bits 5-0 the sector number, <CODE>DH</CODE> is the head number,
+and DL is the drive number (80h or 81h).
+This explains part of the layout of the partition table.)
+<P>This state of affairs was rectified when the so-called Extended INT13
+functions were introduced. A modern BIOS has no problems accessing
+large disks.
+<P>(More precisely: DS:SI points at a 16-byte Disk Address Packet
+that contains an 8-byte starting absolute block number.)
+<P>Linux does not use the BIOS, so does (and did) not have this problem.
+<P>However, this geometry stuff plays a role in the interpretation
+of partition tables, so if Linux shares a disk with for example DOS,
+then it needs to know what geometry DOS will think the disk has.
+It also plays a role at boot time, where the BIOS has to load
+a boot loader, and the boot loader has to load the operating system.
+<P>
+<H2><A NAME="ss3.5">3.5 The 137 GB limit</A>
+</H2>
+
+<P>The old ATA standard describes how to address a sector on an IDE disk
+using 28 bits (8 bits for the sector, 4 for the head, 16 for the cylinder).
+This means that an IDE disk can have at most 2^28 addressable sectors
+With 512-byte sectors this is 2^37 bytes, that is, 137.4 GB.
+<P>The ATA-6 standard includes a specification how to address
+past this 2^28 sector boundary. The new standard allows addressing
+of 2^48 sectors. There is support in recent Linux kernels that
+have incorporated Andre Hedrick's IDE patch, for example
+2.4.18-pre7-ac3 and 2.5.3.
+<P>Maxtor sells 160 GB IDE disks since Fall 2001.
+An old kernel will treat such disks as 137.4 GB disks.
+<P>
+<HR>
+<A HREF="Large-Disk-HOWTO-4.html">Next</A>
+<A HREF="Large-Disk-HOWTO-2.html">Previous</A>
+<A HREF="Large-Disk-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

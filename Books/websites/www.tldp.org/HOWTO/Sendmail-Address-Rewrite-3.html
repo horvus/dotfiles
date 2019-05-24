@@ -1,0 +1,204 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>sendmail address rewriting mini-HOWTO: Configuring sendmail</TITLE>
+ <LINK HREF="Sendmail-Address-Rewrite-4.html" REL=next>
+ <LINK HREF="Sendmail-Address-Rewrite-2.html" REL=previous>
+ <LINK HREF="Sendmail-Address-Rewrite.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Sendmail-Address-Rewrite-4.html">Next</A>
+<A HREF="Sendmail-Address-Rewrite-2.html">Previous</A>
+<A HREF="Sendmail-Address-Rewrite.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Configuring sendmail</A></H2>
+
+<H2><A NAME="ss3.1">3.1 The main configuration file</A>
+</H2>
+
+<P>Sendmail uses a highly complex rule system for it's
+configuration.  While you can do lots of neat tricks with
+this stuff, writing a <CODE>sendmail.cf</CODE> file from scratch
+is rather unusual and time-consuming.  If you are
+interested in doing so, you should stop reading this
+document right now and instead read the "Bat Book" from
+O'Reilly.
+<P>
+<P>Instead of hand-crafting these rules, we will rely on
+the <CODE>m4</CODE> macro processor to put together our
+configuration file from ready-made pieces which are
+distributed together with sendmail.
+<P>
+<P>Let's look at the first lines of the <CODE>sendmail.mc</CODE> file:
+<P>
+<HR>
+<PRE>
+include(/usr/lib/sendmail.cf/m4/cf.m4)
+VERSIONID(`sendmail.mc - roessler@guug.de')
+OSTYPE(debian)
+define(`ALIAS_FILE',`/etc/mail/aliases')
+</PRE>
+<HR>
+<P>In the beginning, <CODE>cf.m4</CODE> is included.  This m4 macro
+file contains lots of macro definitions for the rest of the
+file.  Be sure that the path you give here is correct -
+the one we are representing in our example is typical for
+Debian GNU/Linux.  The <CODE>OSTYPE</CODE> macro is used to give
+some useful defaults for certain configuration values.  If
+you aren't using a Debian system, you should replace the
+word "debian" by "linux" here.  <CODE>ALIAS_FILE</CODE> tells
+sendmail where to look for the list of aliases.
+<P>
+<P>The following lines tell sendmail to use the
+<CODE>genericstable</CODE> feature, and where to find the
+configuration files needed to use it: 
+<HR>
+<PRE>
+FEATURE(masquerade_envelope) FEATURE(genericstable, `hash
+-o /etc/mail/genericstable')
+GENERICS_DOMAIN_FILE(`/etc/mail/genericsdomain') 
+</PRE>
+<HR>
+
+The <CODE>masquerade_envelope</CODE> feature tells sendmail to
+apply header rewriting to the <EM>envelope</EM> sender of a
+message.  This is the mail address to which external mail
+delivery subsystems will direct their delivery failure
+reports and warning messages.  The <CODE>generics*</CODE> files
+will be explained below.
+<P>
+<P>Now, we have to define a so-called smart host, that is, a
+machine which will handle outgoing mail for your system.
+Note that this machine may be different from your ISP's
+POP and IMAP servers.  If in doubt, contact the hotline.
+The code in the master configuration file:
+<HR>
+<PRE>
+define(`SMART_HOST',`mail-out.your.provider')
+</PRE>
+<HR>
+
+Please replace <EM>mail-out.your.provider</EM> by the fully
+qualified hostname of your internet service provider.
+<P>
+<P>The final two lines include the "mailer" definitions
+which are needed by sendmail to find out how to handle
+various types of mail:
+<HR>
+<PRE>
+MAILER(local)
+MAILER(smtp)
+</PRE>
+<HR>
+<P>
+<P>To generate the <CODE>sendmail.cf</CODE> file from this
+<CODE>sendmail.mc</CODE>, type the following commands (as root):
+<HR>
+<PRE>
+# m4 sendmail.mc > _sendmail.cf
+# mv -f _sendmail.cf sendmail.cf
+</PRE>
+<HR>
+
+Note the technique of writing <CODE>m4</CODE>'s output to a
+temporary file which is thereafter moved to the proper
+place.  This helps us to prevent sendmail from reading
+partially written configuration files.
+<P>
+<H2><A NAME="ss3.2">3.2 Address rewriting</A>
+</H2>
+
+<P>First, we have to tell sendmail what addresses are to
+be considered local (and thus should be subjected to the
+rewriting).  This is quite simple: Just put the fully
+qualified host name of your machine into the file
+<CODE>&sol;etc&sol;mail&sol;genericsdomain</CODE>.  To get your
+host's fully qualified name, type the following command:
+<HR>
+<PRE>
+ $ hostname -f 
+</PRE>
+<HR>
+<P>
+<P>Now, let's come to the rewriting table proper:
+<CODE>&sol;etc&sol;mail&sol;genericstable</CODE>.  This file
+consists of two white-space separated columns.  The first
+column contains the local address, the second column
+contains the e-mail address which should be used instead.
+The file may look like this:
+<P>
+<HR>
+<PRE>
+harry   harryx@your.isp
+maude   maudey@her.isp
+root    fredx@your.isp
+news    fredx@your.isp
+</PRE>
+<HR>
+<P>Note that there should be one entry for <EM>each</EM> account
+on the local machine, so that automatically generated mail
+which leaks out of the local system carries correct header
+information.
+<P>
+<P>For performance reasons, sendmail won't use this text
+file directly, but rely on a "hashed" version instead.  To
+generate it, type the following command:
+<P>
+<HR>
+<PRE>
+# makemap -r hash genericstable.db &lt; genericstable
+</PRE>
+<HR>
+<P>
+<P>Note that the rewriting rules from the
+<CODE>genericstable</CODE> will <EM>not</EM> apply to local mail or to
+messages you receive from outside - the mapping is only
+used if a message leaves your local system for your ISP's
+smart host.
+<P>
+<H2><A NAME="ss3.3">3.3 Aliases</A>
+</H2>
+
+<P>The aliases file contains additional local names which
+are only valid for local messages.  This is useful for
+administrative accounts like <CODE>root</CODE> which receive
+automatically generated messages from your system.
+<P>
+<P>A reasonable start for
+<CODE>&sol;etc&sol;mail&sol;aliases</CODE> could look like the
+following file:
+<P>
+<HR>
+<PRE>
+root: fred
+news: root
+postmaster: root
+mail: root
+www: root
+
+nobody: &sol;dev&sol;null
+MAILER-DAEMON: nobody
+</PRE>
+<HR>
+<P>This example will forward local mail for the <CODE>root</CODE>,
+<CODE>news</CODE>, <CODE>postmaster</CODE>, <CODE>mail</CODE>, and <CODE>www</CODE> users
+to <CODE>fred</CODE>, while messages for <CODE>nobody</CODE> and
+<CODE>MAILER-DAEMON</CODE> will be redirected to
+<CODE>&sol;dev&sol;null</CODE>.
+<P>
+<P>Just like the <CODE>genericstable</CODE>, <CODE>aliases</CODE> may
+contain <EM>lots</EM> of entries.  Thus, it would once again
+be inefficient for sendmail to use the text file we just
+described.  The same mechanism as with <CODE>genericstable</CODE>
+is used for <CODE>aliases</CODE>: A hashed database is generated.
+Instead of using <CODE>makemap</CODE> directly, you can type in
+the command <CODE>newaliases</CODE> this time.  It will
+automatically take care of all what's needed.
+<P>
+<HR>
+<A HREF="Sendmail-Address-Rewrite-4.html">Next</A>
+<A HREF="Sendmail-Address-Rewrite-2.html">Previous</A>
+<A HREF="Sendmail-Address-Rewrite.html#toc3">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>Secure Boot CDs for VPN HOWTO: Implementation</TITLE>
+ <LINK HREF="Secure-BootCD-VPN-HOWTO-5.html" REL=next>
+ <LINK HREF="Secure-BootCD-VPN-HOWTO-3.html" REL=previous>
+ <LINK HREF="Secure-BootCD-VPN-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Secure-BootCD-VPN-HOWTO-5.html">Next</A>
+<A HREF="Secure-BootCD-VPN-HOWTO-3.html">Previous</A>
+<A HREF="Secure-BootCD-VPN-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4.</A> <A HREF="Secure-BootCD-VPN-HOWTO.html#toc4">Implementation</A></H2>
+
+<P>Many decisions had to be made as to which direction to go. The following subsections detail some of the paths I took to get to a working prototype.  Please modify to suit your environment.  Where appropriate I will make clarifying comments.</P>
+<P>I looked at several live CD distributions and concluded that DSL would work best for the purposes at hand.  I considered the following:</P>
+<P>
+<OL>
+<LI>Ubuntu.  This live CD expects a relatively high-end machine and has way more applications than would be useful to this project.  Instead of trying to remove tons of applications and whittle it down I opted not to use this one.  It could be a good choice though if you are trying to give people a full desktop PLUS access to an internal network.</LI>
+<LI>PuppyLinux.  This live CD looked really good, however I had trouble figuring out the SFS file system it uses for its root, and was able to get to instructions and tools on how to deal with the Knoppix compressed file system much more easily.</LI>
+<LI>Knoppix.  This live CD, like Ubuntu, was too top heavy for the specific purposes of this project.</LI>
+<LI>Damn Small Linux.  This live CD has a 50 MB footprint, will work on almost anything hardware-wise, and is what I chose to implement.</LI>
+</OL>
+</P>
+
+<H2><A NAME="ss4.1">4.1</A> <A HREF="Secure-BootCD-VPN-HOWTO.html#toc4.1">Getting and modifying a DSL-based .ISO file.</A>
+</H2>
+
+<P>The choice of DSL means that we are relying on DSL's built in ability to automatically find, configure and attach to a network via DHCP.  DSL's wireless support is very minimal and thus we do not support wireless at this time.  The end user will need a machine that normally attachs to the Internet through DHCP from their provider and uses a normal wired network card to do so.
+<OL>
+<LI>Fresh install of Ubuntu (http://www.ubuntu.com), EdUbuntu (http://www.edubuntu.org), xUbuntu (http://www.xubuntu.org), or kUbuntu (http://www.kubuntu.org)</LI>
+<LI>Use Synaptic to add repositories (all available)</LI>
+<LI>Install qemu, open-vpn and cloop-utils</LI>
+<LI>Get an ISO (I recommend the dsl-3.0 ISO); hopefully I'll soon have one of my prototype CD images (sans VPN keys) available on the Internet for your downloading pleasure.  Refer the Examples section - this ISO might be a good place for you to start.</LI>
+<LI>Mount the ISO somewhere.
+<OL>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+mkdir /tmp/workingiso
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+mount -t iso9660 -o loop dsl-3.0.iso /tmp/working.iso
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+</LI>
+<LI>Unpack the compressed file system of the ISO
+<OL>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+extract_compressed_fs /tmp/workingiso/KNOPPIX/KNOPPIX > /var/tmp/KNOPPIX-cloop
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>Mount it somewhere
+<OL>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+mkdir /tmp/workingiso.cloop
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+mount -o loop /var/tmp/KNOPPIX-cloop /tmp/workingiso.cloop
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+</LI>
+</OL>
+</LI>
+<LI>Now that you have access to the inner workings of the CD, copy that to a place where you can work with it.
+<OL>
+<LI>Make a directory to work in (i.e. /home/jeff/Desktop/vpn-tree)</LI>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+tar -C /tmp/workingiso.cloop -cf - . | tar -C /home/jeff/Desktop/vpn-tree -xvpf -
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+</LI>
+<LI>Also copy the outer part of the CD, where you can work with it.
+<OL>
+<LI>Make a directory to work in (e.g. /home/jeff/Desktop/vpn-cd-tree)</LI>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+tar -C /tmp/workingiso -cf - . | tar -C /home/jeff/Desktop/vpn-cd-tree -xvpf -
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+</LI>
+<LI>Make a CD image with what you have now to confirm you've made it this far without error.
+<OL>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+mkisofs -pad -l -r -J -V "YOURVPN v0.1" -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -hide-rr-moved  -o yourvpn.iso /home/jeff/Desktop/vpn-cd-tree/
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+</LI>
+<LI>Assuming the above worked you can now test it with 
+<OL>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+qemu -boot d -cdrom yourvpn.iso
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+</LI>
+<LI>Now you can start making changes.
+<OL>
+<LI>Mount your proc using  
+<BLOCKQUOTE><CODE>
+<PRE>
+mount -t proc none /home/jeff/Desktop/vpn-tree/proc
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>
+<BLOCKQUOTE><CODE>
+<PRE>
+chroot /home/jeff/Desktop/vpn-tree
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>Make any changes you would like to the file system.</LI>
+</OL>
+</LI>
+<LI>After messing around, it's time to write out your new compressed file image and make a CD.
+<OL>
+<LI>Exit from chroot</LI>
+<LI>Unmount the image's proc (don't forget this step or you will not have a working image when you build it later)</LI>
+<LI>Make the compressed file image 
+<BLOCKQUOTE><CODE>
+<PRE>
+mkisofs -L -R -l -V "YOURVPN ISO9660" -v -allow-multidot /home/jeff/Desktop/vpn-tree/ | create_compressed_fs - 65536 > /home/jeff/Desktop/vpn-cd-tree/KNOPPIX/KNOPPIX 
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>Make the cd image
+<BLOCKQUOTE><CODE>
+<PRE>
+mkisofs -pad -l -r -J -V "YOURVPN v0.2" -no-emul-boot -boot-load-size 4 -boot-info-table -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -hide-rr-moved -o yourvpn.iso /home/jeff/Desktop/vpn-cd-tree/
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>Test it in an emulator (I tend to enjoy qemu...use whatever you like: vmware, xen, ?)
+<BLOCKQUOTE><CODE>
+<PRE>
+qemu -boot d -cdrom yourvpn.iso
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+</LI>
+<LI>Repeat as necessary to get the desired ISO image.</LI>
+<LI>Burn image and enjoy.</LI>
+</OL>
+</P>
+
+<H2><A NAME="ss4.2">4.2</A> <A HREF="Secure-BootCD-VPN-HOWTO.html#toc4.2">Comments on modifying the software on the CD.</A>
+</H2>
+
+
+<P>
+<OL>
+<LI>Unpack openvpn*.deb to the root file system after chroot.</LI>
+<LI>Make sure all the proper libraries were copied to the proper place.
+<OL>
+<LI>chroot</LI>
+<LI>ldd /usr/sbin/openvpn</LI>
+<LI>Go to the other root terminal on the main system and copy any libraries from the main system to the vpn-tree</LI>
+<LI>Make the tun node: 
+mknod /dev/net/tun c 10 200</LI>
+</OL>
+</LI>
+<LI>Remove the loading of the DSL business card graphic by editing the vpn-cd-tree/boot/isolinux/boot.msg file and removing "^Xlogo.16" </LI>
+<LI>Cause it not to wait for boot options by editing vpn-cd-tree/boot/isolinux/isolinux.cfg and changing the line that says "PROMPT 1" to "PROMPT 0"</LI>
+<LI>Edit the file vpn-tree/etc/skel/.xinitrc to reflect what we wish to happen on the desktop. Remove code to load icons onto desktop; remove code to make the windows see through; add code to establish VPN connection; add code to load rdesktop and make connection to correct machine.
+</LI>
+<LI>Edit the display screen for boot.
+<OL>
+<LI>copy vpn-cd-tree/boot/isolinux/minirt24.gz to /tmp</LI>
+<LI>gunzip minirt24.gz</LI>
+<LI>mount -o loop minirt24 /mnt</LI>
+<LI>edit /etc/linuxrc to display text indicating Institution's name (you would put whatever is appropriate for your institution here) instead of "DSL"</LI>
+<LI>umount /mnt</LI>
+<LI>gzip minirt24</LI>
+<LI>copy minirt24.gz over to vpn-cd-tree/boot/isolinux/minirt24.gz</LI>
+</OL>
+</LI>
+</OL>
+</P>
+
+<H2><A NAME="ss4.3">4.3</A> <A HREF="Secure-BootCD-VPN-HOWTO.html#toc4.3">Setting up multi user OpenVPN server.</A>
+</H2>
+
+
+<P>
+<OL>
+<LI>Follow instructions on making cert and keys for the server.</LI>
+<LI>You will need to enter several pieces of information that are covered in the openVPN HOWTO.</LI>
+<LI>Remember to create a password-protected key for the client.</LI>
+<LI>Set all the configuration as desired.</LI>
+<LI>For each client you will need to
+<OL>
+<LI>make a password-protected key using the certificate</LI>
+<LI>place the certificate, and client key (only) in the vpn-tree/etc/openvpn/keys directory</LI>
+<LI>adjust the vpn-tree/etc/openvpn/openvpn.cfg file to have the proper key files indicated (see the server configuration file in the Samples section)</LI>
+<LI>adjust the added routes in the vpn-tree/opt/bootlocal.sh</LI>
+<LI>adjust the vpn-tree/etc/skel/.xinitrc to point to the correct rdesktop IP.</LI>
+</OL>
+</LI>
+<LI>Rebuild the CD.</LI>
+<LI>Test in the emulator.</LI>
+<LI>Once it works correctly, either burn the ISO or make a qemu Windows emulator version by placing the .ISO in the win-qemu-yourvpn-cd directory and building that .ISO (don't forget to burn it afterwards).</LI>
+</OL>
+</P>
+
+<H2><A NAME="ss4.4">4.4</A> <A HREF="Secure-BootCD-VPN-HOWTO.html#toc4.4">References:</A>
+</H2>
+
+
+<P>
+<OL>
+<LI>http://www.linuxjournal.com/article/7246</LI>
+<LI>http://openvpn.net/howto.html</LI>
+<LI>http://www.damnsmalllinux.org</LI>
+<LI>http://www.ubuntu.com</LI>
+</OL>
+</P>
+
+
+<HR>
+<A HREF="Secure-BootCD-VPN-HOWTO-5.html">Next</A>
+<A HREF="Secure-BootCD-VPN-HOWTO-3.html">Previous</A>
+<A HREF="Secure-BootCD-VPN-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

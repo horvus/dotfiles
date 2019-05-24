@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>The Software-RAID HOWTO: Partitioning RAID / LVM on RAID</TITLE>
+ <LINK HREF="Software-RAID-HOWTO-12.html" REL=next>
+ <LINK HREF="Software-RAID-HOWTO-10.html" REL=previous>
+ <LINK HREF="Software-RAID-HOWTO.html#toc11" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Software-RAID-HOWTO-12.html">Next</A>
+<A HREF="Software-RAID-HOWTO-10.html">Previous</A>
+<A HREF="Software-RAID-HOWTO.html#toc11">Contents</A>
+<HR>
+<H2><A NAME="s11">11.</A> <A HREF="Software-RAID-HOWTO.html#toc11">Partitioning RAID / LVM on RAID</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>RAID devices cannot be partitioned, like ordinary disks can. This can
+be a real annoyance on systems where one wants to run, for example,
+two disks in a RAID-1, but divide the system onto multiple different
+filesystems. A horror example could look like:
+<PRE>
+# df -h
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/md2              3.8G  640M  3.0G  18% /
+/dev/md1               97M   11M   81M  12% /boot
+/dev/md5              3.8G  1.1G  2.5G  30% /usr
+/dev/md6              9.6G  8.5G  722M  93% /var/www
+/dev/md7              3.8G  951M  2.7G  26% /var/lib
+/dev/md8              3.8G   38M  3.6G   1% /var/spool
+/dev/md9              1.9G  231M  1.5G  13% /tmp
+/dev/md10             8.7G  329M  7.9G   4% /var/www/html
+</PRE>
+</P>
+
+<H2><A NAME="ss11.1">11.1</A> <A HREF="Software-RAID-HOWTO.html#toc11.1">Partitioning RAID devices</A>
+</H2>
+
+<P>If a RAID device could be partitioned, the administrator could simply
+have created one single <CODE>/dev/md0 device</CODE> device, partitioned
+it as he usually would, and put the filesystems there. Instead, with
+today's Software RAID, he must create a RAID-1 device for every single
+filesystem, even though there are only two disks in the system.</P>
+<P>There have been various patches to the kernel which would allow
+partitioning of RAID devices, but none of them have (as of this
+writing) made it into the kernel. In short; it is not currently
+possible to partition a RAID device - but luckily there <EM>is</EM>
+another solution to this problem.</P>
+
+<H2><A NAME="ss11.2">11.2</A> <A HREF="Software-RAID-HOWTO.html#toc11.2">LVM on RAID</A>
+</H2>
+
+<P>The solution to the partitioning problem is LVM, Logical Volume
+Management. LVM has been in the stable Linux kernel series for a long
+time now - LVM2 in the 2.6 kernel series is a further improvement over
+the older LVM support from the 2.4 kernel series. While LVM has
+traditionally scared some people away because of its complexity, it
+really is something that an administrator could and should consider if
+he wishes to use more than a few filesystems on a server.</P>
+<P>We will not attempt to describe LVM setup in this HOWTO, as there
+already is a fine HOWTO for exactly this purpose. A small example of a
+RAID + LVM setup will be presented though. Consider the <CODE>df</CODE>
+output below, of such a system:
+<PRE>
+# df -h
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/md0              942M  419M  475M  47% /
+/dev/vg0/backup        40G  1.3M   39G   1% /backup
+/dev/vg0/amdata       496M  237M  233M  51% /var/lib/amanda
+/dev/vg0/mirror        62G   56G  2.9G  96% /mnt/mirror
+/dev/vg0/webroot       97M  6.5M   85M   8% /var/www
+/dev/vg0/local        2.0G  458M  1.4G  24% /usr/local
+/dev/vg0/netswap      3.0G  2.1G 1019M  67% /mnt/netswap
+</PRE>
+
+<EM>"What's the difference"</EM> you might ask... Well, this system
+has only two RAID-1 devices - one for the root filesystem, and one
+that cannot be seen on the <CODE>df</CODE> output - this is because
+<CODE>/dev/md1</CODE> is used as a "physical volume" for LVM. What this
+means is, that <CODE>/dev/md1</CODE> acts as "backing store" for all
+"volumes" in the "volume group" named <CODE>vg0</CODE>.</P>
+<P>All this "volume" terminology is explained in the LVM HOWTO - if you
+do not completely understand the above, there is no need to worry -
+the details are not particularly important right now (you will need to
+read the LVM HOWTO anyway if you want to set up LVM). What matters is
+the benefits that this setup has over the many-md-devices setup:
+<UL>
+<LI>No need to reboot just to add a new filesystem (this would
+otherwise be required, as the kernel cannot re-read the partition
+table from the disk that holds the root filesystem, and
+re-partitioning would be required in order to create the new RAID
+device to hold the new filesystem)</LI>
+<LI>Resizing of filesystems: LVM supports hot-resizing of volumes
+(with RAID devices resizing is difficult and time consuming - but if
+you run LVM on top of RAID, all you need in order to resize a
+filesystem is to resize the volume, not the underlying RAID
+device). With a filesystem such as XFS, you can even resize the
+filesystem without un-mounting it first (!) Ext3 does not (as of
+this writing) support hot-resizing, you can, however, resize the
+filesystem without rebooting, you just need to un-mount it
+first.</LI>
+<LI>Adding new disks: Need more storage?  Easy! Simply insert two
+new disks in your system, create a RAID-1 on top of them, make your
+new <CODE>/dev/md2</CODE> device a physical volume and add it to your
+volume group. That's it! You now have more free space in your volume
+group for either growing your existing logical volumes, or for adding
+new ones.</LI>
+</UL>
+</P>
+<P>All in all - for servers with many filesystems, LVM (and LVM2) is
+definitely a <EM>fairly simple</EM> solution which should be
+considered for use on top of Software RAID. Read on in the LVM HOWTO
+if you want to learn more about LVM.</P>
+
+<HR>
+<A HREF="Software-RAID-HOWTO-12.html">Next</A>
+<A HREF="Software-RAID-HOWTO-10.html">Previous</A>
+<A HREF="Software-RAID-HOWTO.html#toc11">Contents</A>
+</BODY>
+</HTML>

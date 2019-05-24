@@ -1,0 +1,975 @@
+<HTML
+><HEAD
+><TITLE
+>IP Routing</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Issues of TCP/IP Networking"
+HREF="x-087-2-issues.html"><LINK
+REL="PREVIOUS"
+TITLE="Address Resolution"
+HREF="x-087-2-issues.arp.html"><LINK
+REL="NEXT"
+TITLE="The Internet Control Message Protocol"
+HREF="x-087-2-issues.icmp.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-issues.arp.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Issues of TCP/IP Networking</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-issues.icmp.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-ISSUES.ROUTING"
+>2.4. IP Routing</A
+></H1
+><P
+>We now take up the question of finding the host that datagrams go to
+based on the IP address. Different parts of the address are handled in
+different ways; it is your job to set up the files that indicate how to treat
+each part.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ISSUES.ROUTING.NETWORKS"
+>2.4.1. IP Networks</A
+></H2
+><P
+>When you write a letter to someone, you usually put a complete address
+on the envelope specifying the country, state, and Zip Code. After you
+put it in the mailbox, the post office will deliver it to its
+destination: it will be sent to the country indicated, where the
+national service will dispatch it to the proper state and region. The
+advantage of this hierarchical scheme is obvious: wherever you
+post the letter, the local postmaster knows roughly which direction to
+forward the letter, but the postmaster doesn't care which way the
+letter will travel once it reaches its country of destination.</P
+><P
+>IP networks are structured similarly. The whole Internet consists of a
+number of proper networks, called <I
+CLASS="EMPHASIS"
+>autonomous
+systems</I
+>. Each system performs routing between its member
+hosts internally so that the task of delivering a datagram is reduced
+to finding a path to the destination host's network. As soon as the
+datagram is handed to <I
+CLASS="EMPHASIS"
+>any</I
+> host on that particular
+network, further processing is done exclusively by the network itself.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ISSUES.ROUTING.SUBNETS"
+>2.4.2. Subnetworks</A
+></H2
+><P
+>This structure is reflected by splitting IP addresses into a host and
+network part, as explained previously. By default, the destination network is
+derived from the network part of the IP address. Thus, hosts with identical
+IP <I
+CLASS="EMPHASIS"
+>network</I
+> numbers should be found within the same
+network.<A
+NAME="X-087-2-FNIS03"
+HREF="#FTN.X-087-2-FNIS03"
+>[1]</A
+>&#13;</P
+><P
+>It makes sense to offer a similar scheme <I
+CLASS="EMPHASIS"
+>inside</I
+> the
+network, too, since it may consist of a collection of hundreds of smaller
+networks, with the smallest units being physical networks like Ethernets.
+Therefore, IP allows you to subdivide an IP network into several
+<I
+CLASS="EMPHASIS"
+>subnets</I
+>.</P
+><P
+>&#13;
+A subnet takes responsibility for delivering datagrams to a certain range
+of IP addresses. It is an extension of the concept of splitting bit fields,
+as in the A, B, and C classes. However, the network part is now extended 
+to include some bits from the host part. The number of bits that are 
+interpreted as the subnet number is given by the so-called 
+<I
+CLASS="EMPHASIS"
+>subnet mask</I
+>, or <I
+CLASS="EMPHASIS"
+>netmask</I
+>. This is a
+32-bit number too, which specifies the bit mask for the network part of the
+IP address.</P
+><P
+>&#13;The campus network of Groucho Marx University is an example of such a
+network. It has a class B network number of
+<SPAN
+CLASS="SYSTEMITEM"
+>149.76.0.0</SPAN
+>, and its
+netmask is therefore <SPAN
+CLASS="SYSTEMITEM"
+>255.255.0.0</SPAN
+>.</P
+><P
+>Internally, GMU's campus network consists of several smaller networks,
+such various departments' LANs. So the range of IP addresses is broken
+up into 254 subnets, <SPAN
+CLASS="SYSTEMITEM"
+>149.76.1.0</SPAN
+> through <SPAN
+CLASS="SYSTEMITEM"
+>149.76.254.0</SPAN
+>. For example, the department
+of Theoretical Physics has been assigned <SPAN
+CLASS="SYSTEMITEM"
+>149.76.12.0</SPAN
+>. The campus backbone is a
+network in its own right, and is given <SPAN
+CLASS="SYSTEMITEM"
+>149.76.1.0</SPAN
+>.  These subnets share the same
+IP network number, while the third octet is used to distinguish
+between them. They will thus use a subnet mask of <SPAN
+CLASS="SYSTEMITEM"
+>255.255.255.0</SPAN
+>.</P
+><P
+><A
+HREF="x-087-2-issues.routing.html#X-087-2-ISSUES.FIG.SUBNET"
+>Figure 2-1</A
+> shows how <SPAN
+CLASS="SYSTEMITEM"
+>149.76.12.4</SPAN
+>, the address of <SPAN
+CLASS="SYSTEMITEM"
+>quark</SPAN
+>, is interpreted differently when
+the address is taken as an ordinary class B network and when used with 
+subnetting.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-ISSUES.FIG.SUBNET"
+></A
+><P
+><B
+>Figure 2-1. Subnetting a class B network</B
+></P
+><P
+><IMG
+SRC="lag2_0201.jpg"></P
+></DIV
+><P
+>&#13;
+It is worth noting that <I
+CLASS="EMPHASIS"
+>subnetting</I
+> (the technique
+of generating subnets) is only an <I
+CLASS="EMPHASIS"
+>internal
+division</I
+> of the network. Subnets are generated by the
+network owner (or the administrators). Frequently, subnets are created
+to reflect existing boundaries, be they physical (between two
+Ethernets), administrative (between two departments), or geographical
+(between two locations), and authority over each subnet is delegated
+to some contact person. However, this structure affects only the
+network's internal behavior, and is completely invisible to the
+outside world.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ISSUES.ROUTING.GATEWAY"
+>2.4.3. Gateways</A
+></H2
+><P
+>Subnetting is not only a benefit to the organization; it is frequently
+a natural consequence of hardware boundaries. The viewpoint of a host
+on a given physical network, such as an Ethernet, is a very limited
+one: it can only talk to the host of the network it is on.  All other
+hosts can be accessed only through special-purpose machines called
+<I
+CLASS="EMPHASIS"
+>gateways</I
+>. A gateway is a host that is connected
+to two or more physical networks simultaneously and is configured to
+switch packets between them.</P
+><P
+><A
+HREF="x-087-2-issues.routing.html#X-087-2-ISSUES.FIG.IP"
+>Figure 2-2</A
+> shows part of the network topology at
+Groucho Marx University (GMU).  Hosts that are on two subnets at the same
+time are shown with both addresses.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-ISSUES.FIG.IP"
+></A
+><P
+><B
+>Figure 2-2. A part of the net topology at Groucho Marx University</B
+></P
+><P
+><IMG
+SRC="lag2_0202.jpg"></P
+></DIV
+><P
+>Different physical networks have to belong to different IP networks for IP to 
+be able to recognize if a host is on a local network. For example, the 
+network number
+<SPAN
+CLASS="SYSTEMITEM"
+>149.76.4.0</SPAN
+> is reserved for hosts on
+the mathematics LAN. When sending a datagram to
+<SPAN
+CLASS="SYSTEMITEM"
+>quark</SPAN
+>, the network software on
+<SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+> immediately sees from the IP
+address <SPAN
+CLASS="SYSTEMITEM"
+>149.76.12.4</SPAN
+> that the
+destination host is on a different physical network, and therefore can be
+reached only through a gateway (<SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+>
+by default).</P
+><P
+><SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+> itself is connected to two
+distinct subnets: the Mathematics department and the campus backbone. It
+accesses each through a different interface, <TT
+CLASS="FILENAME"
+>eth0</TT
+> and
+<TT
+CLASS="FILENAME"
+>fddi0</TT
+>, respectively.  Now, what IP address do we assign
+it? Should we give it one on subnet
+<SPAN
+CLASS="SYSTEMITEM"
+>149.76.1.0</SPAN
+>, or on
+<SPAN
+CLASS="SYSTEMITEM"
+>149.76.4.0</SPAN
+>?</P
+><P
+>The answer is: &#8220;both.&#8221;
+<SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+> has been assigned the address
+<SPAN
+CLASS="SYSTEMITEM"
+>149.76.1.1</SPAN
+> for use on the
+<SPAN
+CLASS="SYSTEMITEM"
+>149.76.1.0</SPAN
+> network and address
+<SPAN
+CLASS="SYSTEMITEM"
+>149.76.4.1</SPAN
+> for use on the
+<SPAN
+CLASS="SYSTEMITEM"
+>149.76.4.0</SPAN
+> network. A gateway must be
+assigned one IP address for each network it belongs to. These addresses&#8212;along with the corresponding netmask&#8212;are tied to
+the interface through which the subnet is accessed. Thus, the interface and 
+address mapping for <SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+>
+would look like this:</P
+><DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN1758"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Interface</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Address</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Netmask</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>eth0</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.4.1</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>fddi0</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.1.1</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>lo</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>127.0.0.1</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.0.0.0</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+><P
+>The last entry describes the loopback interface <TT
+CLASS="FILENAME"
+>lo</TT
+>, which
+we talked about earlier.</P
+><P
+>&#13;Generally, you can ignore the subtle difference between attaching an
+address to a host or its interface. For hosts that are on one network
+only, like <SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+>, you would generally
+refer to the host as having this-and-that IP address, although strictly
+speaking, it's the Ethernet interface that has this IP address. The
+distinction is really important only when you refer to a gateway.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ISSUES.ROUTING.TABLE"
+>2.4.4. The Routing Table</A
+></H2
+><P
+>We now focus our attention on how IP chooses a gateway to use to deliver 
+a datagram to a remote network.</P
+><P
+>We have seen that <SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+>, when
+given a datagram for <SPAN
+CLASS="SYSTEMITEM"
+>quark</SPAN
+>,
+checks the destination address and finds that it is not on the local
+network.  <SPAN
+CLASS="SYSTEMITEM"
+>erdos</SPAN
+> therefore
+sends the datagram to the default gateway <SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+>, which is now faced with the same
+task.  <SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+> recognizes that
+<SPAN
+CLASS="SYSTEMITEM"
+>quark</SPAN
+> is not on any of the
+networks it is connected to directly, so it has to find yet another
+gateway to forward it through. The correct choice would be <SPAN
+CLASS="SYSTEMITEM"
+>niels</SPAN
+>, the gateway to the Physics
+department. <SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+> thus 
+needs information to associate a destination network with a
+suitable gateway.</P
+><P
+>IP uses a table for this task that associates networks with the
+gateways by which they may be reached. A catch-all entry (the
+<I
+CLASS="EMPHASIS"
+>default route</I
+>) must generally be supplied too;
+this is the gateway associated with network <SPAN
+CLASS="SYSTEMITEM"
+>0.0.0.0</SPAN
+>. All destination addresses match
+this route, since none of the 32 bits are required to match, and
+therefore packets to an unknown network are sent through the default
+route.  On <SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+>, the table
+might look like this:</P
+><DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN1809"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Network</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Netmask</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Gateway</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Interface</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.1.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>-</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>fddi0</TT
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.2.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.1.2</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>fddi0</TT
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.3.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.1.3</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>fddi0</TT
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.4.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>-</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>eth0</TT
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.5.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.1.5</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>fddi0</TT
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8230;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8230;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8230;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8230;</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0.0.0.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0.0.0.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>149.76.1.2</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>fddi0</TT
+></TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+><P
+>If you need to use a route to a network that <SPAN
+CLASS="SYSTEMITEM"
+>sophus</SPAN
+> is directly connected to, you
+don't need a gateway; the gateway column here contains a hyphen.</P
+><P
+>&#13;The process for identifying whether a particular destination address
+matches a route is a mathematical operation. The process is quite
+simple, but it requires an understanding of binary arithmetic and
+logic: A route matches a destination if the network
+address logically ANDed with the netmask precisely equals the
+destination address logically ANDed with the
+netmask. </P
+><P
+>Translation: a route matches if the
+number of bits of the network address specified by the netmask
+(starting from the left-most bit, the high order bit of byte one of
+the address) match that same number of bits in the destination
+address.</P
+><P
+>When the IP implementation is searching for the best route to a
+destination, it may find a number of routing entries that match the
+target address. For example, we know that the default route matches
+every destination, but datagrams destined for locally attached
+networks will match their local route, too. How does IP know which
+route to use? It is here that the netmask plays an important
+role. While both routes match the destination, one of the routes has a
+larger netmask than the other. We previously mentioned that the
+netmask was used to break up our address space into smaller
+networks. The larger a netmask is, the more specifically a target
+address is matched; when routing datagrams, we should always choose
+the route that has the largest netmask. The default route has a
+netmask of zero bits, and in the configuration presented above, the
+locally attached networks have a 24-bit netmask. If a datagram matches
+a locally attached network, it will be routed to the appropriate device
+in preference to following the default route because the local network
+route matches with a greater number of bits. The only datagrams that
+will be routed via the default route are those that don't match any
+other route.</P
+><P
+>&#13;
+
+
+You can build routing tables by a variety of means. For small LANs, it
+is usually most efficient to construct them by hand and feed them to
+IP using the <B
+CLASS="COMMAND"
+>route</B
+> command at boot time (see <A
+HREF="x-087-2-iface.html"
+>Chapter 5</A
+>). For larger networks, they are built and
+adjusted at runtime by <I
+CLASS="EMPHASIS"
+>routing daemons</I
+>; these
+daemons run on central hosts of the network and exchange routing
+information to compute &#8220;optimal&#8221; routes between the member
+networks.</P
+><P
+>&#13;
+
+
+
+
+Depending on the size of the network, you'll need to use different
+routing protocols. For routing inside autonomous systems (such as the
+Groucho Marx campus), the <I
+CLASS="EMPHASIS"
+>internal routing
+protocols</I
+> are used. The most prominent one of these is the
+<I
+CLASS="EMPHASIS"
+>Routing Information Protocol</I
+> (RIP), which is
+implemented by the BSD <B
+CLASS="COMMAND"
+>routed</B
+> daemon. For routing
+between autonomous systems, <I
+CLASS="EMPHASIS"
+>external routing
+protocols</I
+> like <I
+CLASS="EMPHASIS"
+>External Gateway
+Protocol</I
+> (EGP) or <I
+CLASS="EMPHASIS"
+>Border Gateway
+Protocol</I
+> (BGP) have to be used; these protocols, including
+RIP, have been implemented in the University of Cornell's
+<B
+CLASS="COMMAND"
+>gated</B
+> daemon.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ISSUES.ROUTING.METRIC"
+>2.4.5. Metric Values</A
+></H2
+><P
+>We depend on dynamic routing to choose the best route to a destination
+host or network based on the number of <I
+CLASS="EMPHASIS"
+>hops</I
+>. Hops
+are the gateways a datagram has to pass before reaching a host or
+network. The shorter a route is, the better RIP rates it. Very long
+routes with 16 or more hops are regarded as unusable and are
+discarded.</P
+><P
+>RIP manages routing information internal to your local network, but
+you have to run <B
+CLASS="COMMAND"
+>gated</B
+> on all hosts. At boot time,
+<B
+CLASS="COMMAND"
+>gated</B
+> checks for all active network interfaces.  If
+there is more than one active interface (not counting the loopback
+interface), it assumes the host is switching packets between several
+networks and will actively exchange and broadcast routing
+information. Otherwise, it will only passively receive RIP updates and
+update the local routing table.</P
+><P
+>When broadcasting information from the local routing table,
+<B
+CLASS="COMMAND"
+>gated</B
+> computes the length of the route from the
+so-called <I
+CLASS="EMPHASIS"
+>metric value</I
+> associated with the
+routing table entry. This metric value is set by the system
+administrator when configuring the route, and should reflect the
+actual route cost.<A
+NAME="X-087-2-FNIS05"
+HREF="#FTN.X-087-2-FNIS05"
+>[2]</A
+> Therefore, the metric of a route to a subnet that the host
+is directly connected to should always be zero, while a route going
+through two gateways should have a metric of two. You don't have to bother
+with metrics if you don't use <B
+CLASS="COMMAND"
+>RIP</B
+> or
+<B
+CLASS="COMMAND"
+>gated</B
+>.&#13;</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNIS03"
+HREF="x-087-2-issues.routing.html#X-087-2-FNIS03"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Autonomous systems are slightly more general. They may comprise more than
+one IP network.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNIS05"
+HREF="x-087-2-issues.routing.html#X-087-2-FNIS05"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> The cost of a
+route can be thought of, in a simple case, as the number of hops
+required to reach the destination. Proper calculation of route costs
+can be a fine art in complex network designs.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-issues.arp.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-issues.icmp.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Address Resolution</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-issues.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Internet Control Message Protocol</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

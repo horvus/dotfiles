@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Transparent Proxy with Linux and Squid mini-HOWTO: Transparent Proxy to a Remote Box </TITLE>
+ <LINK HREF="TransparentProxy-7.html" REL=next>
+ <LINK HREF="TransparentProxy-5.html" REL=previous>
+ <LINK HREF="TransparentProxy.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="TransparentProxy-7.html">Next</A>
+<A HREF="TransparentProxy-5.html">Previous</A>
+<A HREF="TransparentProxy.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="twoboxes"></A> <A NAME="s6">6. Transparent Proxy to a Remote Box </A></H2>
+
+<P>Now, the question naturally arises, if we can do all this nifty stuff 
+redirecting HTTP connections to local ports, could we do the same thing 
+but to a  remote box (e.g., the machine with squid running is not the same 
+machine as iptables is running on).  The answer is yes, but it takes a little different magic words. If you only want to redirect to the local box 
+(the normal case), skip this section.
+<P>For the purposes of example commands, let's assume we have two boxes called squid-box and iptables-box, and that they are on the network local-network.  In the commands below, replace these strings with the actual IP addresses or 
+name of your machines and network. 
+<P>I will present two different approaches here.
+<H2><A NAME="ss6.1">6.1 First method (simpler, but does not work for some esoteric cases)</A>
+</H2>
+
+<P>
+<P>First, we need to machine that squid will be running on, squid-box.
+You do not need iptables 
+or any special kernel options on this machine, just squid.  You *will*, 
+however, need the 'http_accel' options as described above.  (Previous version 
+of this HOWTO suggested that you did not need those options.  That was a 
+mistake. Sorry to have confused people...) 
+<P>Now, the machine that iptables will be running on, iptables-box You will need to configure the kernel as described in section 3 above, except that you don't need the REDIRECT target support).  Now, for the iptables commands. You need three:
+<P>
+<UL>
+<LI>iptables -t nat -A PREROUTING -i eth0 -s ! <B>squid-box</B> -p tcp --dport 80 -j DNAT --to <B>squid-box</B>:3128</LI>
+<LI>iptables -t nat -A POSTROUTING -o eth0 -s <B>local-network</B> -d <B>squid-box</B> -j SNAT --to <B>iptables-box</B></LI>
+<LI>iptables -A FORWARD -s <B>local-network</B> -d <B>squid-box</B> -i eth0 -o eth0 -p tcp --dport 3128 -j ACCEPT</LI>
+</UL>
+<P> The first one sends the packets to squid-box from iptables-box.  The second 
+makes sure that the reply gets sent back through iptables-box, instead of
+directly to the client (this is very important!).  The last one makes sure
+the iptables-box will forward the appropriate packets to squid-box. It may
+not be needed. YMMV.  Note that we specified '-i eth0' and then '-o eth0',
+which stands for input interface eth0 and output interface eth0.  If your 
+packets are
+entering and leaving on different interfaces, you will need to adjust the
+commands accordingly.
+<P>Add these commands to your appropriate startup scripts under /etc/rc.d/
+<P>(Thanks to Giles Coochey for help writing this section).
+<H2><A NAME="ss6.2">6.2 Second method (more complicated, but more general)</A>
+</H2>
+
+<P>Our first shot at this works good, but there is a minor drawback in that
+HTTP/1.0 connections without the Host header do not get handled properly.
+Connections that are fully or partially HTTP/1.1 compliant work fine.  As
+most modern web browsers send the Host header, this is not a problem for
+most people.  However, some small programs or embedded devices may send
+only very simple HTTP/1.0 requests.  If you want to support these, we'll
+need to do a little more work.
+Namely, on iptables-box we'll need the following options enabled in the kernel
+in addition to what was specified above:
+<P>
+<UL>
+<LI>IP: advanced router                        </LI>
+<LI>IP: policy routing                              </LI>
+<LI>IP: use netfilter MARK value as routing key   </LI>
+<LI>IP: Netfilter Configuration ->  Packet mangling</LI>
+<LI>IP: Netfilter Configuration ->  MARK target support </LI>
+</UL>
+<P>You'll also need the iproute2 tools.  Your distribution probably already
+has them installed, but if not, look at ftp://ftp.inr.ac.ru/ip-routing/
+<P>You'll want to use the following set of commands on iptables-box:
+<UL>
+<LI>iptables -t mangle -A PREROUTING -j ACCEPT -p tcp --dport 80 -s <B>squid-box</B></LI>
+<LI>iptables -t mangle -A PREROUTING -j MARK --set-mark 3 -p tcp --dport 80</LI>
+<LI>ip rule add fwmark 3 table 2</LI>
+<LI>ip route add default via <B>squid-box</B> dev eth1 table 2</LI>
+</UL>
+
+Note that the choice of firewall mark (3) and routing table (2) was fairly
+arbitrary.  If you are already using policy routing or firewall marking for
+some other purpose, make sure you choose unique numbers here. Otherwise,
+don't worry about it. 
+<P>
+<P>Next, squid-box.  Use this command, which should look remarkably similar to a
+command we've seen previously.
+<UL>
+<LI>iptables -A PREROUTING -t nat -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 3128</LI>
+</UL>
+
+As before, add all of these commands to the appropriate startup scripts.
+<P>Here is a brief explanation of how this works: in method one, we used Network
+Address Translation to get the packets to the other box.  The result of this
+is that the packet gets altered.  This alteration is what causes some kinds
+of clients mentioned above to fail. In method two,
+we use a magic thing called policy routing.  The first thing we do is to
+select the packets we want.  Thus, all packets on port 80, except those
+coming from squid-box itself, are MARKed.  Then, when the kernel goes to
+make a routing decision, the MARKed packets aren't routing using the normal
+routing table that you access with the ``route'' command but with a special
+table.  This special table has only one entry, a default gateway to squid-box.
+Thus, the packet is sent merrily on it's way without every having been altered.
+So, even HTTP/1.0 connections can be handled perfectly. 
+(Thanks to Michal Svoboda for suggesting and helping to write this section)
+<P>
+<P>
+<H2><A NAME="ss6.3">6.3 Method One: What if iptables-box is on a dynamic IP?</A>
+</H2>
+
+<P>If the iptables-box is on a dynamic IP address (e.g. a dialup PPP connection, or a DHCP assigned IP address from a cable modem, etc.), then you will want to
+make a slight change to the above commands.  Replace the second command with this one:
+<P>
+<UL>
+<LI>iptables -t nat -A POSTROUTING -o eth0 -s <B>local-network</B> -d <B>squid-box</B> -j MASQUERADE</LI>
+</UL>
+<P>This change avoids having to specify the IP address of iptables-box in the command.  Since it will change often, you'd have to change your commands to 
+reflect it.  This will save you a lot of hassle.  
+<HR>
+<A HREF="TransparentProxy-7.html">Next</A>
+<A HREF="TransparentProxy-5.html">Previous</A>
+<A HREF="TransparentProxy.html#toc6">Contents</A>
+</BODY>
+</HTML>

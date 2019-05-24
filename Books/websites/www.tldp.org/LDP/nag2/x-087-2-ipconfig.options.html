@@ -1,0 +1,883 @@
+<HTML
+><HEAD
+><TITLE
+>IP Configuration Options</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Point-to-Point Protocol"
+HREF="x-087-2-ppp.html"><LINK
+REL="PREVIOUS"
+TITLE="Using chat to Automate Dialing"
+HREF="x6675.html"><LINK
+REL="NEXT"
+TITLE="Link Control Options"
+HREF="x6968.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x6675.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. The Point-to-Point Protocol</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x6968.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-IPCONFIG.OPTIONS"
+>8.5. IP Configuration Options</A
+></H1
+><P
+>&#13;IPCP is used to negotiate a number of IP parameters at link configuration time.
+Usually, each peer sends an IPCP Configuration Request packet, indicating which
+values it wants to change from the defaults and the new value. Upon receipt,
+the remote end inspects each option in turn and either acknowledges or rejects
+it.</P
+><P
+><B
+CLASS="COMMAND"
+>pppd</B
+> gives you a lot of control over which IPCP options
+it will try to negotiate. You can tune it through various command-line
+options that we will discuss in this section.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN6784"
+>8.5.1. Choosing IP Addresses</A
+></H2
+><P
+>&#13;
+
+All IP interfaces require IP addresses assigned to them; a PPP device always
+has an IP address. The PPP suite of protocols provides a mechanism that allows
+the automatic assignment of IP addresses to PPP interfaces. It is possible for
+the PPP program at one end of a point-to-point link to assign an IP address for
+the remote end to use, or each may use its own.</P
+><P
+>Some PPP servers that handle a lot of client sites assign addresses
+dynamically; addresses are assigned to systems only when calling in
+and are reclaimed after they have logged off again. This allows the
+number of IP addresses required to be limited to the number of dialup
+lines. While limitation is convenient for managers of the PPP dialup
+server, it is often less convenient for users who are dialing
+in. We discussed the way that
+hostnames are mapped to IP addresses by use of a database in <A
+HREF="x-087-2-resolv.html"
+>Chapter 6</A
+>. In order
+for people to connect to your host, they must know your IP address or
+the hostname associated with it. If you are a user of a PPP service
+that assigns you an IP address dynamically, this knowledge is difficult without
+providing some means of allowing the DNS database to be updated after
+you are assigned an IP address. Such systems do exist, but we won't
+cover them in detail here; instead, we will look at the more
+preferable approach, which involves you being able to use the same IP
+address each time you establish your network connection.<A
+NAME="X-087-2-FNPP07"
+HREF="#FTN.X-087-2-FNPP07"
+>[1]</A
+></P
+><P
+>In the previous example, we had <B
+CLASS="COMMAND"
+>pppd</B
+> dial up
+<SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+> and establish an IP
+link. No provisions were taken to choose a particular IP address on
+either end of the link.  Instead, we let <B
+CLASS="COMMAND"
+>pppd</B
+> take
+its default action. It attempts to resolve the local hostname,
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> in our example, to an
+IP address, which it uses for the local end, while letting the remote
+machine, <SPAN
+CLASS="SYSTEMITEM"
+>c3po</SPAN
+>, provide its
+own. PPP supports several alternatives to this arrangement.</P
+><P
+>To ask for particular addresses, you generally provide <B
+CLASS="COMMAND"
+>pppd</B
+>
+with the following option:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="REPLACEABLE"
+><I
+>local_addr</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>remote_addr</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+><TT
+CLASS="REPLACEABLE"
+><I
+>local_addr</I
+></TT
+> and
+<TT
+CLASS="REPLACEABLE"
+><I
+>remote_addr</I
+></TT
+> may be specified either in
+dotted quad notation or as hostnames.<A
+NAME="X-087-2-FNPP08"
+HREF="#FTN.X-087-2-FNPP08"
+>[2]</A
+>
+This option makes <B
+CLASS="COMMAND"
+>pppd</B
+> attempt to use the first address
+supplied as its own IP address, and the second as the peer's. If the peer
+rejects either of the addresses during IPCP negotiation, no IP link will be
+established.<A
+NAME="X-087-2-FNPP09"
+HREF="#FTN.X-087-2-FNPP09"
+>[3]</A
+></P
+><P
+>&#13;If you are dialing in to a server and expect it to assign you
+an IP address, you should ensure that <B
+CLASS="COMMAND"
+>pppd</B
+> does not
+attempt to negotiate one for itself. To do this, use the
+<TT
+CLASS="OPTION"
+>noipdefault</TT
+> option and leave the
+<TT
+CLASS="REPLACEABLE"
+><I
+>local_addr</I
+></TT
+> blank. The
+<TT
+CLASS="OPTION"
+>noipdefault</TT
+> option will stop <B
+CLASS="COMMAND"
+>pppd</B
+>
+from trying to use the IP address associated with the hostname as the
+local address.</P
+><P
+>If you want to set only the local address but accept any address the
+peer uses, simply leave out the <TT
+CLASS="REPLACEABLE"
+><I
+>remote_addr</I
+></TT
+>
+part. To make <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> use
+the IP address <SPAN
+CLASS="SYSTEMITEM"
+>130.83.4.27</SPAN
+> instead of
+its own, give it <TT
+CLASS="OPTION"
+>130.83.4.27:</TT
+> on the command line.
+Similarly, to set the remote address only, leave the
+<TT
+CLASS="REPLACEABLE"
+><I
+>local_addr</I
+></TT
+> field blank. By default,
+<B
+CLASS="COMMAND"
+>pppd</B
+> will then use the address associated with your
+hostname.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN6843"
+>8.5.2. Routing Through a PPP Link</A
+></H2
+><P
+>&#13;
+After setting up the network interface, <B
+CLASS="COMMAND"
+>pppd</B
+> will usually
+set up a host route to its peer only. If the remote host is on a LAN, you
+certainly want to be able to connect to hosts &#8220;behind&#8221; your peer as
+well; in that case, a network route must be set up.</P
+><P
+>We have already seen that <B
+CLASS="COMMAND"
+>pppd</B
+> can be
+asked to set the default route using the <TT
+CLASS="OPTION"
+>defaultroute</TT
+>
+option.  This option is very useful if the PPP server you dialed up acts as your Internet gateway.</P
+><P
+>&#13;
+
+The reverse case, in which your system acts as a gateway for a single
+host, is also relatively easy to accomplish. For example, take some
+employee at the Virtual Brewery whose home machine is called
+<SPAN
+CLASS="SYSTEMITEM"
+>oneshot</SPAN
+>. Let's also assume
+that we've configured <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+>
+as a dialin PPP server. If we've configured <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> to dynamically assign an IP
+address that belongs to the Brewery's subnet, then we can use the
+<TT
+CLASS="OPTION"
+>proxyarp</TT
+> option with <B
+CLASS="COMMAND"
+>pppd</B
+>, which
+will install a proxy ARP entry for <SPAN
+CLASS="SYSTEMITEM"
+>oneshot</SPAN
+>. This automatically makes
+<SPAN
+CLASS="SYSTEMITEM"
+>oneshot</SPAN
+> accessible from all
+hosts at the Brewery and the Winery.</P
+><P
+>&#13;However, things aren't always that simple. Linking two
+local area networks usually requires adding a specific network route
+because these networks may have their own default routes. Besides,
+having both peers use the PPP link as the default route would generate
+a loop, through which packets to unknown destinations would ping-pong between
+the peers until their time to live expired.</P
+><P
+>Suppose the Virtual Brewery opens a branch in another city.
+The subsidiary runs an Ethernet of its own using the IP network number
+<SPAN
+CLASS="SYSTEMITEM"
+>172.16.3.0</SPAN
+>, which is subnet 3 of the
+Brewery's class B network. The subsidiary wants to connect to the Brewery's
+network via PPP to update customer databases. Again,
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> acts as the gateway for the
+brewery network and will support the PPP link; its peer at the new branch is
+called <SPAN
+CLASS="SYSTEMITEM"
+>vbourbon</SPAN
+> and has an IP address
+of <SPAN
+CLASS="SYSTEMITEM"
+>172.16.3.1</SPAN
+>. This network is
+illustrated in <A
+HREF="x-087-2-appendix.brewery.html#X-087-2-APPENDIX.BREWERY.SUBSIDIARY"
+>Figure A-2</A
+> in
+<A
+HREF="x-087-2-appendix.brewery.html"
+>Appendix A</A
+>.</P
+><P
+>When <SPAN
+CLASS="SYSTEMITEM"
+>vbourbon</SPAN
+> connects to
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+>, it makes the default
+route point to <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> as
+usual. On <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+>, however, we
+will have only the point-to-point route to <SPAN
+CLASS="SYSTEMITEM"
+>vbourbon</SPAN
+> and will have to specially
+configure a network route for subnet 3 that uses <SPAN
+CLASS="SYSTEMITEM"
+>vbourbon</SPAN
+> as its gateway. We could do this
+manually using the <B
+CLASS="COMMAND"
+>route</B
+> command by hand after the
+PPP link is established, but this is not a very practical
+solution. Fortunately, we can configure the route automatically by using a feature
+of <B
+CLASS="COMMAND"
+>pppd</B
+> that we haven't discussed yet&#8212;the
+<B
+CLASS="COMMAND"
+>ip-up</B
+> command. This command is a shell script or program
+located in <TT
+CLASS="FILENAME"
+>/etc/ppp</TT
+> that is executed by
+<B
+CLASS="COMMAND"
+>pppd</B
+> after the PPP interface has been
+configured. When present, it is invoked with the following parameters:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ip-up <TT
+CLASS="REPLACEABLE"
+><I
+>iface</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>device</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>speed</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>local_addr</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>remote_addr</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The following table summarizes the meaning of each of the
+arguments (in the first column, we show the number used by the shell
+script to refer to each argument):
+<DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN6902"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Argument</TH
+><TH
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Name</TH
+><TH
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Purpose</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>$1</TD
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="REPLACEABLE"
+><I
+>iface</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	The network interface used, e.g., <TT
+CLASS="LITERAL"
+>ppp0</TT
+>	
+	</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>$2</TD
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="REPLACEABLE"
+><I
+>device</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	The pathname of the serial device file used (&#8202;<TT
+CLASS="FILENAME"
+>/dev/tty</TT
+>,
+	if stdin/stdout are used)
+	</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>$3</TD
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="REPLACEABLE"
+><I
+>speed</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	
+	The speed of the serial device in bits per second
+	</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>$4</TD
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="REPLACEABLE"
+><I
+>local_addr</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	The IP address of the link's remote end in dotted quad notation
+	</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>$5</TD
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="REPLACEABLE"
+><I
+>remote_addr</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	The IP address of the remote end of the link in dotted quad notation
+	</P
+></TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>In our case, the <B
+CLASS="COMMAND"
+>ip-up</B
+> script may contain the
+following code fragment:<A
+NAME="X-087-2-FNPP10"
+HREF="#FTN.X-087-2-FNPP10"
+>[4]</A
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#!/bin/sh
+case $5 in
+172.16.3.1)            # this is vbourbon
+        route add -net 172.16.3.0 gw 172.16.3.1;;
+...
+esac
+exit 0</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Similarly, <B
+CLASS="COMMAND"
+>/etc/ppp/ip-down</B
+> can be used to undo
+any actions of <B
+CLASS="COMMAND"
+>ip-up</B
+> after the PPP link has been taken down
+again. So in our <B
+CLASS="COMMAND"
+>/etc/ppp/ip-down</B
+> script we would have a
+<B
+CLASS="COMMAND"
+>route</B
+> command that removed the route we created in the
+<B
+CLASS="COMMAND"
+>/etc/ppp/ip-up</B
+> script.</P
+><P
+>&#13;
+However, the routing scheme is not yet complete. We have set up routing table
+entries on both PPP hosts, but so far none of the hosts on either network knows
+anything about the PPP link. This is not a big problem if all hosts at the
+subsidiary have their default route pointing at
+<SPAN
+CLASS="SYSTEMITEM"
+>vbourbon</SPAN
+>, and all Brewery hosts route
+to <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> by default. If this is not
+the case, your only option is usually to use a routing daemon like
+<B
+CLASS="COMMAND"
+>gated</B
+>. After creating the network route on
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+>, the routing daemon
+broadcasts the new route to all hosts on the attached subnets.&#13;</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP07"
+HREF="x-087-2-ipconfig.options.html#X-087-2-FNPP07"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> More information on two dynamic host
+assignment mechanisms can be found at
+<SPAN
+CLASS="SYSTEMITEM"
+>http://www.dynip.com/</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>http://www.justlinux.com/dynamic_dns.html</SPAN
+>.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP08"
+HREF="x-087-2-ipconfig.options.html#X-087-2-FNPP08"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> Using hostnames in this option has
+consequences for CHAP authentication. Please refer to the <A
+HREF="x-087-2-ppp.authentication.html"
+>Section 8.8</A
+>&#8221; section later in this
+chapter.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP09"
+HREF="x-087-2-ipconfig.options.html#X-087-2-FNPP09"
+>[3]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The <TT
+CLASS="OPTION"
+>ipcp-accept-local</TT
+> and <TT
+CLASS="OPTION"
+>ipcp-accept-remote</TT
+>
+options instruct your <B
+CLASS="COMMAND"
+>pppd</B
+> to accept the local and remote
+IP addresses being offered by the remote PPP, even if you've supplied some in
+your configuration. If these options are not configured, your
+<B
+CLASS="COMMAND"
+>pppd</B
+> will reject any attempt to negotiate the IP addresses
+used.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP10"
+HREF="x-087-2-ipconfig.options.html#X-087-2-FNPP10"
+>[4]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> If we
+wanted to have routes for other sites created when they dial in, we'd
+add appropriate case statements to cover those in which the
+<TT
+CLASS="LITERAL"
+>...</TT
+> appears in the example.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x6675.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x6968.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Using chat to Automate Dialing</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ppp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Link Control Options</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

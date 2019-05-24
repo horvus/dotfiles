@@ -1,0 +1,575 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Construction</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Pocket Linux Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Some Basic Utilities"
+HREF="phase3.html"><LINK
+REL="PREVIOUS"
+TITLE="Design"
+HREF="x510.html"><LINK
+REL="NEXT"
+TITLE="Implementation"
+HREF="x677.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Pocket Linux Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x510.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Some Basic Utilities</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x677.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN581"
+></A
+>4.3. Construction</H1
+><P
+>Rather than copying files directly to the ramdisk, we can make
+    things easier by setting up a staging area. The staging area will give us
+    room to work without worrying about the space constraints of the ramdisk.
+    It will also provide a way to save our work and make it easier to enhance
+    the rootdisk in later phases of the project.</P
+><P
+>The staging procedure will work like this:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Create a directory structure as defined in the FHS.</P
+></LI
+><LI
+><P
+>Copy in the files from phase 2's root disk.</P
+></LI
+><LI
+><P
+>Build the new package from source code.</P
+></LI
+><LI
+><P
+>Install files into the correct FHS directories.</P
+></LI
+><LI
+><P
+>Strip the binaries to save space.</P
+></LI
+><LI
+><P
+>Check library dependencies.</P
+></LI
+><LI
+><P
+>Copy to the whole directory structure to the ramdisk.</P
+></LI
+><LI
+><P
+>Compress the ramdisk and write it out to floppy.</P
+></LI
+></OL
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN602"
+></A
+>4.3.1. Create a staging area</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> mkdir ~/staging
+<TT
+CLASS="prompt"
+>bash#</TT
+> cd ~/staging
+<TT
+CLASS="prompt"
+>bash#</TT
+> mkdir bin boot dev etc home lib mnt opt proc root sbin tmp usr var
+<TT
+CLASS="prompt"
+>bash#</TT
+> mkdir var/log var/run</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN610"
+></A
+>4.3.2. Copy contents of phase 2 rootdisk</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> dd if=~/phase2-image.gz | gunzip -c &#62; /dev/ram7
+<TT
+CLASS="prompt"
+>bash#</TT
+> mount /dev/ram7 /mnt
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp -dpR /mnt/* ~/staging
+<TT
+CLASS="prompt"
+>bash#</TT
+> umount /dev/ram7
+<TT
+CLASS="prompt"
+>bash#</TT
+> rmdir ~/staging/lost+found</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN619"
+></A
+>4.3.3. Install binaries from GNU coreutils</H2
+><P
+>Download a recent version of coreutils from <A
+HREF="ftp://ftp.gnu.org/gnu/coreutils/"
+TARGET="_top"
+>ftp://ftp.gnu.org/gnu/coreutils/</A
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd /usr/src/coreutils-5.2.1
+<TT
+CLASS="prompt"
+>bash#</TT
+> export CC="gcc -mcpu=i386"
+<TT
+CLASS="prompt"
+>bash#</TT
+> ./configure --host=i386-pc-linux-gnu
+<TT
+CLASS="prompt"
+>bash#</TT
+> make
+<TT
+CLASS="prompt"
+>bash#</TT
+> cd src
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp cat chgrp chmod chown cp date dd df ~/staging/bin
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp hostname ln ls mkdir mkfifo mknod ~/staging/bin
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp mv rm rmdir stty su sync uname ~/staging/bin</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN633"
+></A
+>4.3.4. Copy additional libraries</H2
+><P
+>Check library requirements by using <B
+CLASS="command"
+>ldd</B
+> on some
+      of the new binaries.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> ldd ~/staging/bin/cat
+<TT
+CLASS="prompt"
+>bash#</TT
+> ldd ~/staging/bin/ls
+<TT
+CLASS="prompt"
+>bash#</TT
+> ldd ~/staging/bin/su
+<TT
+CLASS="prompt"
+>bash#</TT
+> ls ~/staging/lib
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Note the differences in the required libraries, as shown by the
+      <B
+CLASS="command"
+>ldd</B
+> command, and the libraries present in the staging
+      area, as shown by the <B
+CLASS="command"
+>ls</B
+> command, then copy any
+      missing libraries to the staging area.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cp /lib/librt.so.1 ~/staging/lib
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp /lib/libpthread.so.0 ~/staging/lib
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp /lib/libcrypt.so.1 ~/staging/lib</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN651"
+></A
+>4.3.5. Strip binaries and libraries</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> strip ~/staging/bin/*
+<TT
+CLASS="prompt"
+>bash#</TT
+> strip --strip-unneeded ~/staging/lib/*</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN657"
+></A
+>4.3.6. Create a compressed root disk image</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd /
+<TT
+CLASS="prompt"
+>bash#</TT
+> dd if=/dev/zero of=/dev/ram7 bs=1k count=4096
+<TT
+CLASS="prompt"
+>bash#</TT
+> mke2fs -m0 /dev/ram7 4096
+<TT
+CLASS="prompt"
+>bash#</TT
+> mount /dev/ram7 /mnt
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp -dpR ~/staging/* /mnt
+<TT
+CLASS="prompt"
+>bash#</TT
+> umount /dev/ram7
+<TT
+CLASS="prompt"
+>bash#</TT
+> dd if=/dev/ram7 of=~/phase3-image bs=1k count=4096
+<TT
+CLASS="prompt"
+>bash#</TT
+> gzip -9 ~/phase3-image</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The process for creating the compressed root disk image will
+          change very little throughout the remaining chapters. Writing a
+          small script to handle this function can be a great time
+          saver.</P
+></TD
+></TR
+></TABLE
+></DIV
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN671"
+></A
+>4.3.7. Write the root disk image to floppy</H2
+><P
+>Insert the diskette labeled "root disk" into drive fd0.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> dd if=~/phase3-image.gz of=/dev/fd0 bs=1k</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x510.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x677.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Design</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="phase3.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Implementation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

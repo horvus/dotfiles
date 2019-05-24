@@ -1,0 +1,1386 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring IP Accounting</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="IP Accounting"
+HREF="x-087-2-accounting.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring the Kernel for IP Accounting"
+HREF="x-087-2-accounting.kernel.config.html"><LINK
+REL="NEXT"
+TITLE="Using IP Accounting Results"
+HREF="x-087-2-accounting.viewing.results.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-accounting.kernel.config.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 10. IP Accounting</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-accounting.viewing.results.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-ACCOUNTING.IPFWADM"
+>10.2. Configuring IP Accounting</A
+></H1
+><P
+>&#13;
+
+
+
+Because IP accounting is closely related to IP firewall, the same tool 
+was designated to configure it, so <B
+CLASS="COMMAND"
+>ipfwadm</B
+>,
+<B
+CLASS="COMMAND"
+>ipchains</B
+> or <B
+CLASS="COMMAND"
+>iptables</B
+> are used to configure IP accounting. The command syntax is very similar to
+that of the firewall rules, so we won't focus on it, but we will discuss
+what you can discover about the nature of your network traffic using this 
+feature.</P
+><P
+>The general syntax for IP accounting with <B
+CLASS="COMMAND"
+>ipfwadm</B
+> is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A [<TT
+CLASS="REPLACEABLE"
+><I
+>direction</I
+></TT
+>] [<TT
+CLASS="REPLACEABLE"
+><I
+>command</I
+></TT
+>] [<TT
+CLASS="REPLACEABLE"
+><I
+>parameters</I
+></TT
+>]</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The direction argument is new. This is simply coded as
+<TT
+CLASS="LITERAL"
+>in</TT
+>,
+<TT
+CLASS="LITERAL"
+>out</TT
+>, or
+<TT
+CLASS="LITERAL"
+>both</TT
+>.
+These directions are from the perspective of the linux machine itself, so
+<TT
+CLASS="LITERAL"
+>in</TT
+> means data coming into the machine from a network 
+connection and <TT
+CLASS="LITERAL"
+>out</TT
+> means data that is being transmitted by 
+this host on a network connection. The <TT
+CLASS="LITERAL"
+>both</TT
+> direction is the 
+sum of both the incoming and outgoing directions.</P
+><P
+>The general command syntax for <B
+CLASS="COMMAND"
+>ipchains</B
+> 
+and <B
+CLASS="COMMAND"
+>iptables</B
+> is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A <TT
+CLASS="REPLACEABLE"
+><I
+>chain</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>rule-specification</I
+></TT
+></B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A <TT
+CLASS="REPLACEABLE"
+><I
+>chain</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>rule-specification</I
+></TT
+></B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <B
+CLASS="COMMAND"
+>ipchains</B
+> and <B
+CLASS="COMMAND"
+>iptables</B
+>
+commands allow you to specify direction in a manner more consistent
+with the firewall rules.  IP Firewall Chains doesn't allow you to
+configure a rule that aggregates both directions, but it does allow you
+to configure rules in the <TT
+CLASS="LITERAL"
+>forward</TT
+> chain that the
+older implementation did not. We'll see the difference that makes in
+some examples a little later.</P
+><P
+>The commands are much the same as firewall rules, except that the
+policy rules do not apply here. We can add, insert, delete, and list
+accounting rules. In the case of <B
+CLASS="COMMAND"
+>ipchains</B
+> and
+<B
+CLASS="COMMAND"
+>iptables</B
+>, all valid rules are accounting rules, and
+any command that doesn't specify the <I
+CLASS="EMPHASIS"
+>-j</I
+> option
+performs accounting only.</P
+><P
+>The rule specification parameters for IP accounting are the same as
+those used for IP firewall. These are what we use to define precisely
+what network traffic we wish to count and total.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ACCOUNTING.BY.ADDRESS"
+>10.2.1. Accounting by Address</A
+></H2
+><P
+>&#13;Let's work with an example to illustrate how we'd use IP accounting.</P
+><P
+>Imagine we have a Linux-based router that serves two departments
+at the Virtual Brewery. The router has two Ethernet devices,
+<TT
+CLASS="FILENAME"
+>eth0</TT
+> and <TT
+CLASS="FILENAME"
+>eth1</TT
+>, each of which
+services a department; and a PPP device, <TT
+CLASS="FILENAME"
+>ppp0</TT
+>, that
+connects us via a high-speed serial link to the main campus of the
+Groucho Marx University.</P
+><P
+>Let's also imagine that for billing purposes we want to know the total
+traffic generated by each of the departments across the serial link, and
+for management purposes we want to know the total traffic generated
+between the two departments.</P
+><P
+>The following table shows the interface addresses we will use in our
+example:</P
+><P
+><DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN9257"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>iface</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>address</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>netmask</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>eth0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>172.16.3.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>eth1</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>172.16.4.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>To answer the question, &#8220;How much data does each department
+generate on the PPP link?&#8221;, we could use a rule that looks like
+this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -W ppp0 -S 172.16.3.0/24 -b</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -W ppp0 -S 172.16.4.0/24 -b</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A input -i ppp0 -d 172.16.3.0/24</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A output -i ppp0 -s 172.16.3.0/24</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A input -i ppp0 -d 172.16.4.0/24</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A output -i ppp0 -s 172.16.4.0/24</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+and with <B
+CLASS="COMMAND"
+>iptables</B
+>:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -d 172.16.3.0/24</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -o ppp0 -s 172.16.3.0/24</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -d 172.16.4.0/24</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -o ppp0 -s 172.16.4.0/24</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>The first half of each of these set of rules say, &#8220;Count all data
+traveling in either direction across the interface named ppp0 with a source
+or destination (remember the function of the <I
+CLASS="EMPHASIS"
+>-b</I
+> flag in
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> and <B
+CLASS="COMMAND"
+>iptables</B
+>) address of
+<TT
+CLASS="LITERAL"
+>172.16.3.0/24.</TT
+>&#8221; The second half of each ruleset is
+the same, but for the second Ethernet network at our site.</P
+><P
+>To answer the second question, &#8220;How much data travels between the
+two departments?&#8221;, we need a rule that looks like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -S 172.16.3.0/24 -D 172.16.4.0/24 -b</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -s 172.16.3.0/24 -d 172.16.4.0/24 -b</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -s 172.16.3.0/24 -d 172.16.4.0/24</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -s 172.16.4.0/24 -d 172.16.3.0/24</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+These rules will count all datagrams with a source address belonging
+to one of the department networks and a destination address belonging
+to the other.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ACCOUNTING.BY.SERVICE"
+>10.2.2. Accounting by Service Port</A
+></H2
+><P
+>&#13;Okay, let's suppose we also want a better idea of exactly what sort of traffic
+is being carried across our PPP link. We might, for example, want to know
+how much of the link the FTP, smtp, and World Wide Web services are consuming.</P
+><P
+>A script of rules to enable us to collect this information might look like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#!/bin/sh
+# Collect FTP, smtp and www volume statistics for data carried on our
+# PPP link using ipfwadm
+#
+ipfwadm -A both -a -W ppp0 -P tcp -S 0/0 ftp ftp-data
+ipfwadm -A both -a -W ppp0 -P tcp -S 0/0 smtp
+ipfwadm -A both -a -W ppp0 -P tcp -S 0/0 www</PRE
+></TD
+></TR
+></TABLE
+>
+
+or:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#!/bin/sh
+# Collect ftp, smtp and www volume statistics for data carried on our
+# PPP link using ipchains
+#
+ipchains -A input -i ppp0 -p tcp -s 0/0 ftp-data:ftp
+ipchains -A output -i ppp0 -p tcp -d 0/0 ftp-data:ftp
+ipchains -A input -i ppp0 -p tcp -s 0/0 smtp
+ipchains -A output -i ppp0 -p tcp -d 0/0 smtp
+ipchains -A input -i ppp0 -p tcp -s 0/0 www
+ipchains -A output -i ppp0 -p tcp -d 0/0 www</PRE
+></TD
+></TR
+></TABLE
+>
+
+or:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#!/bin/sh
+# Collect ftp, smtp and www volume statistics for data carried on our
+# PPP link using iptables.
+#
+iptables -A FORWARD -i ppp0 -m tcp -p tcp --sport ftp-data:ftp
+iptables -A FORWARD -o ppp0 -m tcp -p tcp --dport ftp-data:ftp
+iptables -A FORWARD -i ppp0 -m tcp -p tcp --sport smtp
+iptables -A FORWARD -o ppp0 -m tcp -p tcp --dport smtp
+iptables -A FORWARD -i ppp0 -m tcp -p tcp --sport www
+iptables -A FORWARD -o ppp0 -m tcp -p tcp --dport www</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>There are a couple of interesting features to this
+configuration. Firstly, we've specified the protocol. When we specify
+ports in our rules, we must also specify a protocol because TCP and UDP
+provide separate sets of ports. Since all of these services are
+TCB-based, we've specified it as the protocol.  Secondly, we've
+specified the two services <TT
+CLASS="LITERAL"
+>ftp</TT
+> and
+<TT
+CLASS="LITERAL"
+>ftp-data</TT
+> in one command. <B
+CLASS="COMMAND"
+>ipfwadm</B
+>
+allows you to specify single ports, ranges of ports, or arbitrary lists
+of ports. The <B
+CLASS="COMMAND"
+>ipchains</B
+> command allows either single
+ports or ranges of ports, which is what we've used here. The syntax
+"<TT
+CLASS="LITERAL"
+>ftp-data:ftp</TT
+>" means "ports ftp-data (20) through
+ftp (21)," and is how we encode ranges of ports in both
+<B
+CLASS="COMMAND"
+>ipchains</B
+> and <B
+CLASS="COMMAND"
+>iptables</B
+>. When you
+have a list of ports in an accounting rule, it means that any data
+received for any of the ports in the list will cause the data to be
+added to that entry's totals. Remembering that the FTP service uses
+two ports, the command port and the data transfer port, we've added
+them together to total the FTP traffic. Lastly, we've specified the
+source address as &#8220;<TT
+CLASS="LITERAL"
+>0/0,</TT
+>&#8221; which is
+special notation that matches all addresses and is required by both
+the <B
+CLASS="COMMAND"
+>ipfwadm</B
+> and <B
+CLASS="COMMAND"
+>ipchains</B
+>
+commands in order to specify ports.</P
+><P
+>We can expand on the second point a little to give us a different view
+of the data on our link. Let's now imagine that we class FTP, SMTP,
+and World Wide Web traffic as essential traffic, and all other traffic
+as nonessential. If we were interested in seeing the ratio of
+essential traffic to nonessential traffic, we could do something like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -W ppp0 -P tcp -S 0/0 ftp ftp-data smtp www</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -W ppp0 -P tcp -S 0/0 1:19 22:24 26:79 81:32767</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>If you have already examined your <TT
+CLASS="FILENAME"
+>/etc/services</TT
+> file, you
+will see that the second rule covers all ports except (<TT
+CLASS="LITERAL"
+>ftp</TT
+>, <TT
+CLASS="LITERAL"
+>ftp-data</TT
+>, <TT
+CLASS="LITERAL"
+>smtp</TT
+>,
+and <TT
+CLASS="LITERAL"
+>www</TT
+>).</P
+><P
+>How do we do this with the <B
+CLASS="COMMAND"
+>ipchains</B
+> or
+<B
+CLASS="COMMAND"
+>iptables</B
+> commands, since they allow only one argument in
+their port specification? We can exploit user-defined chains in accounting
+just as easily as in firewall rules. Consider the following approach:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -N a-essent</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -N a-noness</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A a-essent -j ACCEPT</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A a-noness -j ACCEPT</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -i ppp0 -p tcp -s 0/0 ftp-data:ftp -j a-essent</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -i ppp0 -p tcp -s 0/0 smtp -j a-essent</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -i ppp0 -p tcp -s 0/0 www -j a-essent</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -j a-noness</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+Here we create two user-defined chains, one called 
+<TT
+CLASS="LITERAL"
+>a-essent</TT
+>, where we capture accounting data for 
+essential services and another called <TT
+CLASS="LITERAL"
+>a-noness</TT
+>, where we 
+capture accounting data for nonessential services. We then add rules to 
+our forward chain that match our essential services and jump to the 
+<TT
+CLASS="LITERAL"
+>a-essent</TT
+> chain, where we have just one rule that accepts 
+all datagrams and counts them. The last rule in our forward chain is a rule 
+that jumps to our <TT
+CLASS="LITERAL"
+>a-noness</TT
+> chain, where again we have just 
+one rule that accepts all datagrams and counts them. The rule that jumps to the
+<TT
+CLASS="LITERAL"
+>a-noness</TT
+> chain will not be reached by any of our essential 
+services, as they will have been accepted in their own chain. Our tallies for 
+essential and nonessential services will therefore be available in the 
+rules within those chains. This is just one approach you could take; there 
+are others. Our <B
+CLASS="COMMAND"
+>iptables</B
+> implementation of the same 
+approach would look like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>iptables -N a-essent</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -N a-noness</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A a-essent -j ACCEPT</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A a-noness -j ACCEPT</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -m tcp -p tcp --sport ftp-data:ftp -j a-essent</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -m tcp -p tcp --sport smtp -j a-essent</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -m tcp -p tcp --sport www -j a-essent</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -j a-noness</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;
+This looks simple enough. Unfortunately, there is a small but unavoidable
+problem when trying to do accounting by service type. You will remember that
+we discussed the role the MTU plays in TCP/IP networking in an earlier
+chapter. The MTU defines the largest datagram that will be transmitted on
+a network device. When a datagram is received by a router that is larger than
+the MTU of the interface that needs to retransmit it, the router performs a
+trick called <I
+CLASS="EMPHASIS"
+>fragmentation</I
+>. The router breaks the large 
+datagram into small pieces no longer than the MTU of the interface and then 
+transmits these pieces. The router builds new headers to put in front of each 
+of these pieces, and these are what the remote machine uses to reconstruct the
+original data. Unfortunately, during the fragmentation process the port
+is lost for all but the first fragment. This means that the IP accounting
+can't properly count fragmented datagrams. It can reliably count only
+the first fragment, or unfragmented datagrams. There is a small trick permitted
+by <B
+CLASS="COMMAND"
+>ipfwadm</B
+> that ensures that while we won't be able to know
+exactly what port the second and later fragments were from, we can still
+count them.  An early version of Linux accounting software assigned
+the fragments a fake port number, 0xFFFF, that we could count. To ensure that
+we capture the second and later fragments, we could use a rule like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -W ppp0 -P tcp -S 0/0 0xFFFF</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The IP chains implementation has a slightly more sophisticated solution, but
+the result is much the same. If using the <B
+CLASS="COMMAND"
+>ipchains</B
+> command
+we'd instead use:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -i ppp0 -p tcp -f</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+and with <B
+CLASS="COMMAND"
+>iptables</B
+> we'd use:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -m tcp -p tcp -f</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>These won't tell us what the original port for this data was, but at least we are able to see how much of our data is fragments, and be able to account
+for the volume of traffic they consume.</P
+><P
+>In 2.2 kernels you can select a kernel compile-time option that
+negates this whole issue if your Linux machine is acting as the single
+access point for a network. If you enable the <TT
+CLASS="OPTION"
+>IP:
+always defragment</TT
+> option when you compile your
+kernel, all received datagrams will be reassembled by the Linux router
+before routing and retransmission. This operation is performed before
+the firewall and accounting software sees the datagram, and thus you
+will have no fragments to deal with. In 2.4 kernels you compile and
+load the <I
+CLASS="EMPHASIS"
+>netfilter</I
+>
+<TT
+CLASS="FILENAME"
+>forward-fragment</TT
+> module.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ACCOUNTING.OF.ICMP"
+>10.2.3. Accounting of ICMP Datagrams</A
+></H2
+><P
+>&#13;
+
+The ICMP protocol does not use service port numbers and is therefore a little
+bit more difficult to collect details on. ICMP uses a number of different
+types of datagrams. Many of these are harmless and normal, while others
+should only be seen under special circumstances. Sometimes people with too
+much time on their hands attempt to maliciously disrupt the network
+access of a user by generating large numbers of ICMP messages. This is
+commonly called <I
+CLASS="EMPHASIS"
+>ping flooding</I
+>. While IP accounting 
+cannot do anything to prevent this problem (IP firewalling can help, though!) 
+we can at least put accounting rules in place that will show us if anybody 
+has been trying.</P
+><P
+>ICMP doesn't use ports as TCP and UDP do. Instead ICMP has ICMP message
+types. We can build rules to account for each ICMP message type. To do this,
+we place the ICMP message and type number in place of the port field in the
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> accounting commands. We listed the ICMP message
+types in <A
+HREF="x-087-2-firewall.original.html#X-087-2-FIREWALL.IPFWADM.ICMP-TYPES"
+>Section 9.6.3.5</A
+>,&#8221; so refer to it
+if you need to remember what they are.</P
+><P
+>An IP accounting rule to collect information about the volume of ping data
+that is being sent to you or that you are generating might look like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -P icmp -S 0/0 8</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -P icmp -S 0/0 0</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -P icmp -S 0/0 0xff</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or, with <B
+CLASS="COMMAND"
+>ipchains</B
+>:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -p icmp -s 0/0 8</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -p icmp -s 0/0 0</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -p icmp -s 0/0 -f</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or, with <B
+CLASS="COMMAND"
+>iptables</B
+>:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -m icmp -p icmp --sports echo-request</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -m icmp -p icmp --sports echo-reply</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -m icmp -p icmp -f</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+The first rule collects information about the
+&#8220;ICMP Echo Request&#8221; datagrams (ping requests), and the
+second rule collects information about the &#8220;ICMP Echo Reply&#8221;
+datagrams (ping replies). The third rule collects information about ICMP
+datagram fragments. This is a trick similar to that described for fragmented
+TCP and UDP datagrams.</P
+><P
+>If you specify source and/or destination addresses in your rules, you can
+keep track of where the pings are coming from, such as whether they originate
+inside or outside your network. Once you've determined where the rogue
+datagrams are coming from, you can decide whether you want to put firewall
+rules in place to prevent them or take some other action, such as
+contacting the owner of the offending network to advise them of the problem,
+or perhaps even legal action if the problem is a malicious act.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-ACCOUNTING.BY.PROTOCOL"
+>10.2.4. Accounting by Protocol</A
+></H2
+><P
+>&#13;Let's now imagine that we are interested in knowing how much of the
+traffic on our link is TCP, UDP, and ICMP. We would use rules like
+the following:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -W ppp0 -P tcp -D 0/0</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -W ppp0 -P udp -D 0/0</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -A both -a -W ppp0 -P icmp -D 0/0</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -i ppp0 -p tcp -d 0/0</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -i ppp0 -p udp -d 0/0</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -i ppp0 -p icmp -d 0/0</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -m tcp -p tcp</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -o ppp0 -m tcp -p tcp</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -m udp -p udp</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -o ppp0 -m udp -p udp</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -i ppp0 -m icmp -p icmp</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -A FORWARD -o ppp0 -m icmp -p icmp</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+With these rules in place, all of the traffic flowing across the
+<TT
+CLASS="LITERAL"
+>ppp0</TT
+> interface will be analyzed to determine
+whether it is TCP, UDP, or IMCP traffic, and the appropriate counters will
+be updated for each. The <B
+CLASS="COMMAND"
+>iptables</B
+> example splits incoming
+flow from outgoing flow as its syntax demands it.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-accounting.kernel.config.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-accounting.viewing.results.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring the Kernel for IP Accounting</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-accounting.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Using IP Accounting Results</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

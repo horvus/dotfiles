@@ -1,0 +1,422 @@
+<HTML
+><HEAD
+><TITLE
+>What do you need to set up NIS+ ?</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux NIS(YP)/NYS/NIS+ HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Setting Up the NIS Client"
+HREF="settingup_client.html"><LINK
+REL="NEXT"
+TITLE="Setting up a NIS Server
+"
+HREF="ypserv.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux NIS(YP)/NYS/NIS+ HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="settingup_client.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="ypserv.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="NISPLUS"
+></A
+>8. What do you need to set up NIS+ ?</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN347"
+></A
+>8.1. The Software&#13;</H2
+><P
+>The Linux NIS+ client code was developed for the GNU C library 2.
+There is also a port for Linux libc5, since most commercial Applications
+where linked against this library in the past, and you cannot recompile
+them for using glibc. There are problems with libc5 and NIS+:
+static programs cannot be linked with it, and programs compiled
+with this library will not work with other libc5 versions.</P
+><P
+>As base System you need a glibc based Distribution like Debian,
+Red Hat Linux or SuSE Linux. If you have a Linux Distribution, which
+does not have glibc 2.1.1 or later, you need to update to a newer
+version.</P
+><P
+>The NIS+ client software can be obtained from:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>  Site             Directory                     File Name
+
+  ftp.gnu.org     /pub/gnu/glibc                 glibc-2.3.2.tar.gz,
+                                                 glibc-linuxthreads-2.3.2.tar.gz
+  ftp.kernel.org   /pub/linux/utils/net/NIS+     nis-utils-1.4.1.tar.gz</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>You should also have a look at
+<A
+HREF="http://www.linux-nis.org/nisplus/"
+TARGET="_top"
+>http://www.linux-nis.org/nisplus/</A
+>
+for more information and the latest sources.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN357"
+></A
+>8.2. Setting up a NIS+ client&#13;</H2
+><P
+>IMPORTANT: For setting up a NIS+ client read your Solaris NIS+ docs
+what to do on the server side! This document only describes what to do
+on the client side!</P
+><P
+>After installing the new libc and nis-tools, create the credentials for
+the new client on the NIS+ server. Make sure portmap is running. Then
+check if your Linux PC has the same time as the NIS+ Server. For secure RPC,
+you have only a small window from about 3 minutes, in which the credentials
+are valid. A good idea is to run xntpd on every host. After this, run</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>domainname nisplus.domain.
+nisinit -c -H &#60;NIS+ server&#62;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>to initialize the cold start file. Read the nisinit man page for more
+options. Make sure that the domainname will always be set after a reboot.
+If you don't know what the NIS+ domain name is on your network, ask
+your system/network administrator.</P
+><P
+>Now you should change your <TT
+CLASS="FILENAME"
+>/etc/nsswitch.conf</TT
+>
+file. Make sure that the
+only service after publickey is nisplus ("publickey: nisplus"), and nothing
+else!</P
+><P
+>Then start keyserv and make sure, that it will always be started
+as first daemon after portmap at boot time. Run
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>keylogin -r</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+to store the root secretkey on your system. (I hope you have added the
+publickey for the new host on the NIS+ Server?).</P
+><P
+><B
+CLASS="COMMAND"
+>niscat passwd.org_dir</B
+>
+should now show you all entries in the passwd database.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN372"
+></A
+>8.3. NIS+, keylogin, login and PAM&#13;</H2
+><P
+>When the user logs in, he need to set his secretkey to keyserv. This is done
+by calling "keylogin". The login from the shadow package will do this for the
+user, if it was compiled against glibc 2.1. For a PAM aware login, you have
+to change the /etc/pam.d/login file to
+use pam_unix2, not pwdb, which doesn't support NIS+. An example:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#%PAM-1.0
+auth       required	/lib/security/pam_securetty.so
+auth       required	/lib/security/pam_unix2.so       set_secrpc
+auth       required	/lib/security/pam_nologin.so
+account    required	/lib/security/pam_unix2.so
+password   required	/lib/security/pam_unix2.so
+session    required	/lib/security/pam_unix2.so</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN379"
+></A
+>8.4. The nsswitch.conf File
+
+&#13;</H2
+><P
+>The Network Services switch file <TT
+CLASS="FILENAME"
+>/etc/nsswitch.conf</TT
+>
+determines the order of lookups performed when a certain piece of
+information is requested, just like the
+<TT
+CLASS="FILENAME"
+>/etc/host.conf</TT
+> file which determines the way
+host lookups are performed. For example, the line</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    hosts: files nisplus dns</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>specifies that host lookup functions should first look in the local
+<TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+> file, followed by a NIS+ lookup and
+finally through the domain
+name service (<TT
+CLASS="FILENAME"
+>/etc/resolv.conf</TT
+> and named), at
+which point if no match is found an error is returned.</P
+><P
+>A good <TT
+CLASS="FILENAME"
+>/etc/nsswitch.conf</TT
+> file for NIS+ is:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#
+# /etc/nsswitch.conf
+#
+# An example Name Service Switch config file. This file should be
+# sorted with the most-used services at the beginning.
+#
+# The entry '[NOTFOUND=return]' means that the search for an
+# entry should stop if the search in the previous entry turned
+# up nothing. Note that if the search failed due to some other reason
+# (like no NIS server responding) then the search continues with the
+# next entry.
+#
+# Legal entries are:
+#
+#	nisplus			Use NIS+ (NIS version 3)
+#	nis			Use NIS (NIS version 2), also called YP
+#	dns			Use DNS (Domain Name Service)
+#	files			Use the local files
+#	db			Use the /var/db databases
+#	[NOTFOUND=return]	Stop searching if not found so far
+#
+
+passwd:     compat
+group:      compat
+shadow:     compat
+
+passwd_compat: nisplus
+group_compat:  nisplus
+shadow_compat: nisplus
+
+hosts:      nisplus files dns
+
+services:   nisplus [NOTFOUND=return] files
+networks:   nisplus [NOTFOUND=return] files
+protocols:  nisplus [NOTFOUND=return] files
+rpc:        nisplus [NOTFOUND=return] files
+ethers:     nisplus [NOTFOUND=return] files
+netmasks:   nisplus [NOTFOUND=return] files
+netgroup:   nisplus
+bootparams: nisplus [NOTFOUND=return] files
+publickey:  nisplus
+automount:  files
+aliases:    nisplus [NOTFOUND=return] files</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="settingup_client.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="ypserv.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Setting Up the NIS Client</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Setting up a NIS Server&#13;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

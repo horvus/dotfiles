@@ -1,0 +1,428 @@
+<HTML
+><HEAD
+><TITLE
+>Some INN Internals</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Internet News"
+HREF="x-087-2-inn.html"><LINK
+REL="PREVIOUS"
+TITLE="Internet News"
+HREF="x-087-2-inn.html"><LINK
+REL="NEXT"
+TITLE="Newsreaders and INN"
+HREF="x18278.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-inn.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 23. Internet News</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x18278.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN18201"
+>23.1. Some INN Internals</A
+></H1
+><P
+>&#13;INN's core program is the <B
+CLASS="COMMAND"
+>innd</B
+> daemon.
+<B
+CLASS="COMMAND"
+>innd&#8201;</B
+>'s task is to handle all incoming articles,
+storing them locally, and to pass them on to any outgoing newsfeeds if
+required.  It is started at boot time and runs continually as a background
+process. Running as a daemon improves performance because it has to read 
+its status files only once when starting. Depending
+on the volume of your news feed, certain files such as
+<TT
+CLASS="FILENAME"
+>history</TT
+> (which contain a list of all recently
+processed articles) may range from a few megabytes to tens of megabytes.</P
+><P
+>Another important feature of INN is that there is always only one
+instance of <B
+CLASS="COMMAND"
+>innd</B
+> running at any time. This is also very 
+beneficial to performance, because the daemon can process all articles
+without having to worry about synchronizing its internal states with
+other copies of <B
+CLASS="COMMAND"
+>innd</B
+> rummaging around the news spool at
+the same time. However, this choice affects the overall design
+of the news system. Because it is so important that incoming news is
+processed as quickly as possible, it is unacceptable that the server be
+tied up with such mundane tasks as serving newsreaders accessing the news
+spool via NNTP, or decompressing newsbatches arriving via UUCP. Therefore,
+these tasks have been broken out of the main server and implemented in separate support programs.
+<A
+HREF="x18201.html#X-087-2-INN.INN.ARCHITECTURE"
+>Figure 23-1</A
+> attempts to illustrate the
+relationships between <B
+CLASS="COMMAND"
+>innd</B
+>, the other local tasks, and
+remote news servers and newsreaders.</P
+><P
+>&#13;
+
+
+Today, NNTP is the most common means of transporting news articles around,
+and <B
+CLASS="COMMAND"
+>innd</B
+> doesn't directly support anything else.
+This means that <B
+CLASS="COMMAND"
+>innd</B
+> listens on a TCP socket (port 119)
+for connections and accepts news articles using the &#8220;ihave&#8221;
+protocol.</P
+><P
+>Articles arriving by transports other than NNTP are supported indirectly
+by having another process accept the articles and forward them to
+<B
+CLASS="COMMAND"
+>innd</B
+> via NNTP. Newsbatches coming in over a UUCP link,
+for instance, are traditionally handled by the <B
+CLASS="COMMAND"
+>rnews</B
+>
+program. INN's <B
+CLASS="COMMAND"
+>rnews</B
+> decompresses the batch if necessary,
+and breaks it up into individual articles; it then offers them to
+<B
+CLASS="COMMAND"
+>innd</B
+> one by one.</P
+><P
+>Newsreaders can deliver news when a user
+posts an article. Since the handling of newsreaders deserves special 
+attention, we will come back to this a little later.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-INN.INN.ARCHITECTURE"
+></A
+><P
+><B
+>Figure 23-1. INN architecture (simplified for clarity)</B
+></P
+><P
+><IMG
+SRC="lag2_2301.jpg"></P
+></DIV
+><P
+>When receiving an article, <B
+CLASS="COMMAND"
+>innd</B
+> first looks up its
+message ID in the <TT
+CLASS="FILENAME"
+>history</TT
+> file. Duplicate
+articles are dropped and the occurrences are optionally logged. The
+same goes for articles that are too old or lack some required header
+field, such as <TT
+CLASS="LITERAL"
+>Subject:</TT
+>.<A
+NAME="AEN18242"
+HREF="#FTN.AEN18242"
+>[1]</A
+> If <B
+CLASS="COMMAND"
+>innd</B
+> finds
+that the article is acceptable, it looks at the
+<TT
+CLASS="LITERAL"
+>Newsgroups:</TT
+> header line to find out what groups it
+has been posted to. If one or more of these groups are found in the
+<TT
+CLASS="FILENAME"
+>active</TT
+> file, the article is filed to
+disk. Otherwise, it is filed to the special group <SPAN
+CLASS="SYSTEMITEM"
+>junk</SPAN
+>.</P
+><P
+>Individual articles are kept below <TT
+CLASS="FILENAME"
+>/var/spool/news</TT
+>, also
+called the <I
+CLASS="EMPHASIS"
+>news spool</I
+>. Each newsgroup has a
+separate directory, in which each article is stored in a separate file. The
+file names are consecutive numbers, so that an article in
+<SPAN
+CLASS="SYSTEMITEM"
+>comp.risks</SPAN
+> may be filed
+as <TT
+CLASS="FILENAME"
+>comp/risks/217</TT
+>, for instance. When
+<B
+CLASS="COMMAND"
+>innd</B
+> finds that the directory it wants to store the
+article in does not exist, it creates it automatically.</P
+><P
+>&#13;Apart from storing articles locally, you may also want to pass them on to
+outgoing feeds. This is governed by the <TT
+CLASS="FILENAME"
+>newsfeeds</TT
+> file
+that lists all downstream sites along with the newsgroups that should be fed
+to them.</P
+><P
+>Just like <B
+CLASS="COMMAND"
+>innd&#8201;</B
+>'s receiving end, the
+processing of outgoing news is handled by a single interface, too.
+Instead of doing all the transport-specific handling itself,
+<B
+CLASS="COMMAND"
+>innd</B
+> relies on various backends to manage the
+transmission of articles to other news servers.  Outgoing facilities
+are collectively dubbed <I
+CLASS="EMPHASIS"
+>channels</I
+>.  Depending on
+its purpose, a channel can have different attributes that determine
+exactly what information <B
+CLASS="COMMAND"
+>innd</B
+> passes on to it.</P
+><P
+>&#13;For an outgoing NNTP feed, for instance, <B
+CLASS="COMMAND"
+>innd</B
+> might
+fork the <B
+CLASS="COMMAND"
+>innxmit</B
+> program at startup, and, for each
+article that should be sent across that feed, pass its message ID,
+size, and filename to <B
+CLASS="COMMAND"
+>innxmit</B
+>&#8201;'s standard input. For
+an outgoing UUCP feed, on the other hand, it might write the article's
+size and file name to a special logfile, which is head by a different
+process at regular intervals in order to create batches and queue them
+to the UUCP subsystem.</P
+><P
+>Besides these two examples, there are other types of channels that are
+not strictly outgoing feeds. These are used, for instance, when
+archiving certain newsgroups, or when generating overview
+information. Overview information is intended to help newsreaders
+thread articles more efficiently.  Old-style newsreaders had to scan
+all articles separately in order to obtain the header information
+required for threading. This would put an immense strain on the server
+machine, especially when using NNTP; furthermore, it was very
+slow.<A
+NAME="AEN18271"
+HREF="#FTN.AEN18271"
+>[2]</A
+> The
+overview mechanism alleviates this problem by prerecording all
+relevant headers in a separate file (called
+<TT
+CLASS="FILENAME"
+>.overview</TT
+>) for each newsgroup. This information
+can then be picked up by newsreaders either by reading it directly
+from the spool directory, or by using the <B
+CLASS="COMMAND"
+>XOVER</B
+>
+command when connected via NNTP. INN has the <B
+CLASS="COMMAND"
+>innd</B
+>
+daemon feed all articles to the <B
+CLASS="COMMAND"
+>overchan</B
+> command,
+which is attached to the daemon through a channel. We'll see how this
+is done when we discuss configuring news feeds later.&#13;</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN18242"
+HREF="x18201.html#AEN18242"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> This is
+indicated by the <TT
+CLASS="REPLACEABLE"
+><I
+>Date:</I
+></TT
+> header field; the limit is
+usually two weeks.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN18271"
+HREF="x18201.html#AEN18271"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Threading 1,000 articles when talking to a loaded
+server could easily take around five minutes, which only the most
+dedicated Usenet addict would find acceptable.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-inn.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x18278.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Internet News</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-inn.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Newsreaders and INN</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

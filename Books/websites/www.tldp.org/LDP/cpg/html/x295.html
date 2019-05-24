@@ -1,0 +1,227 @@
+<HTML
+><HEAD
+><TITLE
+>The 64 bit barrier</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Custom Linux: A Porting Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Linux Is Booting ... What Now ?"
+HREF="c293.html"><LINK
+REL="PREVIOUS"
+TITLE="Linux Is Booting ... What Now ?"
+HREF="c293.html"><LINK
+REL="NEXT"
+TITLE="Booting from flash"
+HREF="x305.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Custom Linux: A Porting Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="c293.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Linux Is Booting ... What Now ?</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x305.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN295"
+></A
+>5.1. The 64 bit barrier</H1
+><P
+>The CPC700 has a <SPAN
+CLASS="QUOTE"
+>"feature"</SPAN
+> which is supposed to make some memory access use 64 bit wide. This is a problem since some test-and-set registers on our board might get set unintentionally, because we were trying to read something 16 bits lower. In order to solve this situation, we set the memory controller to 64 bit wide intervals.  If you try to access those areas in another manner (8 or 16 bit access), the CPC700 simply throws them away.  We had to be able to read/write those areas, since important <SPAN
+CLASS="QUOTE"
+>"discretes"</SPAN
+> (controlled by an Altera device) were mapped there.</P
+><P
+>In order to access those areas, we needed a function that does a 64 bit write.  As far as I know, doing a 64 bit write on a PowerPC is possible in two ways:  using cache lines and using a floating point register.  The floating point register is a 64 bit sized register, so when we write it, the whole 64 bit get written. The problem is that you can't do floating point in the kernel. Since the kernel doesn't save the floating point registers during context switch, it doesn't allow FP, and will throw an exception if done in the kernel.</P
+><P
+>After messing with cache lines, we decided to go the FP way, and added the following function:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;void out64(__u32 addr, long long *pVal) {
+	__u32 flags, tmp_msr;
+
+	save_flags(flags);
+	cli();
+	tmp_msr = __get_MSR();
+	tmp_msr |= MSR_FP;
+	tmp_msr &#38;= ~(MSR_FE0 | MSR_FE1);
+	__put_MSR(tmp_msr);
+
+	sysOut64(addr, pVal);
+	__put_MSR(flags &#38; ~(MSR_EE));
+	restore_flags(flags);
+}
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+The function adds a floating point to the PowerPC MSR register, and makes sure that no exceptions will be generated as a result of doing FP. Once done, it uses an assembly code, described below in the <TT
+CLASS="function"
+>sysOut64()</TT
+> to do the actual floating-point operation. Note that the function turns off interrupts, but this is acceptable here, since we use the function on rare occasion.
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;_GLOBAL(sysOut64)
+stwu    r1, -DEPTH(r1)
+mflr    r0
+stw     r31, FP_LOC(r1)
+stw     r0,  LR_LOC(r1)
+mr              r31, r1
+stfd    fr0, FPR_SAVE(r31)      /* save floating point reg contents */
+
+lfd     fr0,0(r4)
+stfd  fr0,0(r3)
+eieio
+
+lfd     fr0, FPR_SAVE(r31)      /* restore floating point value */
+lwz     r4, 0(r1)               /* now restore the stack frame  */
+lwz     r0, 4(r4)
+mtlr    r0
+lwz     r31, -4(r4)
+mr      r1, r4
+blr
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="c293.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x305.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Linux Is Booting ... What Now ?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c293.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Booting from flash</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

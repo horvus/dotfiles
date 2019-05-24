@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux 2.4.x Initialization for IA-32 HOWTO: Linux init ("ASCII art")</TITLE>
+ <LINK HREF="Linux-Init-HOWTO-3.html" REL=next>
+ <LINK HREF="Linux-Init-HOWTO-1.html" REL=previous>
+ <LINK HREF="Linux-Init-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Linux-Init-HOWTO-3.html">Next</A>
+<A HREF="Linux-Init-HOWTO-1.html">Previous</A>
+<A HREF="Linux-Init-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. Linux init ("ASCII art")</A></H2>
+
+<P>
+<P>Pictorially (loosely speaking :), Linux initialization looks like
+this, where "[...]" means optional (depends on the kernel's
+configuration) and "{...}" is a comment.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+
+  +-------------------------------+
+  | arch/i386/boot/setup.S:: +    |
+  | arch/i386/boot/video.S::      |
+  |-------------------------------|
+  | start_of_setup:               |
+  |   check that loaded OK        |
+  |   get system memory size      |
+  |   get video mode(s)           |
+  |   get hard disk parameters    |
+  |   get MC bus information      |
+  |   get mouse information       |
+  |   get APM BIOS information    |
+  |   enable address line A20     |
+  |   reset coprocessor           |
+  |   mask all interrupts         |
+  |   move to protected mode      |
+  |   jmp to startup_32           |
+  +-------------------------------+
+                  |
+                  v
+  +-------------------------------+
+  | arch/i386/kernel/head.S::     |
+  |-------------------------------|
+  | startup_32:                   |
+  |   set segment registers to    |
+  |     known values              |
+  |   init basic page tables      |
+  |   setup the stack pointer     |
+  |   clear kernel BSS            |
+  |   setup the IDT               |
+  |   checkCPUtype                |
+  |   load GDT, IDT, and LDT      |
+  |     pointer registers         |
+  |   start_kernel                |
+  |     {it does not return}      |
+  +-------------------------------+
+                  |
+                  v
+  +-------------------------------+     +-------------------------------+
+  | init/main.c::                 |  +->| arch/i386/kernel/setup.c::    |
+  |-------------------------------|  |  |-------------------------------|
+  | start_kernel():               |  |  | setup_arch():                 |
+  |   lock_kernel                 |  |  |   copy boot parameters        |
+  |   setup_arch                  |--+  |   init ramdisk                |
+  |   parse_options               |&lt;-+  |   setup_memory_region         |
+  |   trap_init                   |  |  |   parse_cmd_line              |
+  |     cpu_init                  |  |  |   use the BIOS memory map to  |
+  |   init_IRQ                    |  |  |     setup page frame info.    |
+  |   sched_init                  |  |  |   reserve physical page 0     |
+  |     init_timervecs            |  |  |  [find_smp_config]            |
+  |   time_init                   |  |  |   paging_init                 |
+  |   softirq_init                |  |  |  [get_smp_config]             |
+  |   console_init                |  |  |  [init_apic_mappings]         |
+  |  [init_modules]               |  |  |  [reserve INITRD memory]      |
+  |  [profiling setup]            |  |  |   probe_roms to search        |
+  |   kmem_cache_init             |  |  |     for option ROMs           |
+  |   sti                         |  |  |   request_resource to         |
+  |   calibrate_delay             |  |  |     reserve video RAM memory  |
+  |  [INITRD setup]               |  |  |   request_resource to         |
+  |   mem_init                    |  |  |     reserve all standard PC   |
+  |     free_all_bootmem          |  +--|     I/O system board resources|
+  |   kmem_cache_sizes_init       |     +-------------------------------+
+  |  [proc_root_init]             |
+  |   fork_init                   |
+  |   proc_caches_init            |
+  |   vfs_caches_init             |
+  |   buffer_init                 |
+  |   page_cache_init             |
+  |   kiobuf_setup                |
+  |   signals_init                |     +-------------------------------+
+  |   bdev_init                   |     | init/main.c::                 |
+  |   inode_init                  |     | init(): {...init thread...}   |
+  |  [ipc_init]                   |     |   do_basic_setup              |
+  |  [dquot_init_hash]            |     |     {bus/dev init &amp; initcalls}|
+  |   check_bugs                  |     |   free_initmem                |
+  |  [smp_init] {*below}          |     |   open /dev/console           |
+  |   start init thread {---->}   |.....| exec init script or shell     |
+  |   unlock_kernel               |     |   or panic                    |
+  |   cpu_idle                    |     +-------------------------------+
+  +-------------------------------+
+
+
+  +-------------------------------+
+  | smpboot.c::smp_init           |
+  |-------------------------------|
+  | arch/i386/kernel/smpboot.c::  |
+  | smp_boot_cpus():              |
+  |  [mtrr_init_boot_cpu]         |
+  |   smp_store_cpu_info          |
+  |   print_cpu_info              |
+  |   save CPU ID/APIC ID mappings|
+  |   verify_local_APIC           |
+  |   connect_bsp_APIC            |
+  |   setup_local_APIC            |
+  |   foreach valid APIC ID       |
+  |     do_boot_cpu(apicid)       |
+  |   setup_IO_APIC               |
+  |   setup_APIC_clocks           |
+  |   synchronize_tsc_bp          |
+  +-------------------------------+
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<HR>
+<A HREF="Linux-Init-HOWTO-3.html">Next</A>
+<A HREF="Linux-Init-HOWTO-1.html">Previous</A>
+<A HREF="Linux-Init-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

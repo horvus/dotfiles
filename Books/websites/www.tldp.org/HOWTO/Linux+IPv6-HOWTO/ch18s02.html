@@ -1,0 +1,56 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>2. Preparation</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="ch18.html" title="Chapter 18. Firewalling"><link rel="prev" href="ch18s01.html" title="1. Firewalling using netfilter6"><link rel="next" href="ch18s03.html" title="3. Usage of ip6tables"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">2. Preparation</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch18s01.html">Prev</a> </td><th width="60%" align="center">Chapter 18. Firewalling</th><td width="20%" align="right"> <a accesskey="n" href="ch18s03.html">Next</a></td></tr></table><hr></div><div class="sect1"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="idp51185392"></a>2. Preparation</h2></div></div></div><p>This step is only needed if distributed kernel and netfilter doesn't fit your requirements and new features are available but still not built-in.</p><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51186448"></a>2.1. Get sources</h3></div></div></div><p>Get the latest kernel source: <a class="ulink" href="http://www.kernel.org/" target="_top">http://www.kernel.org/</a></p><p>Get the latest iptables package: </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Source tarball (for kernel patches): <a class="ulink" href="http://www.netfilter.org/" target="_top">http://www.netfilter.org/</a></p></li></ul></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51189360"></a>2.2. Extract sources</h3></div></div></div><p>Change to source directory: </p><pre class="screen">
+# cd /path/to/src 
+</pre><p>Unpack and rename kernel sources </p><pre class="screen">
+# tar z|jxf kernel-version.tar.gz|bz2 
+# mv linux linux-version-iptables-version+IPv6 
+</pre><p>Unpack iptables sources </p><pre class="screen">
+# tar z|jxf iptables-version.tar.gz|bz2 
+</pre></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51192656"></a>2.3. Apply latest iptables/IPv6-related patches to kernel source</h3></div></div></div><p>Change to iptables directory </p><pre class="screen">
+# cd iptables-version 
+</pre><p>Apply pending patches </p><pre class="screen">
+# make pending-patches KERNEL_DIR=/path/to/src/linux-version-iptables-version/ 
+</pre><p>Apply additional IPv6 related patches (still not in the vanilla kernel included) </p><pre class="screen">
+# make patch-o-matic KERNEL_DIR=/path/to/src/linux-version-iptables-version/ 
+</pre><p>Say yes at following options (iptables-1.2.2) </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>ah-esp.patch </p></li><li class="listitem"><p>masq-dynaddr.patch (only needed for systems with dynamic IP assigned WAN connections like PPP or PPPoE) </p></li><li class="listitem"><p>ipv6-agr.patch.ipv6 </p></li><li class="listitem"><p>ipv6-ports.patch.ipv6 </p></li><li class="listitem"><p>LOG.patch.ipv6 </p></li><li class="listitem"><p>REJECT.patch.ipv6 </p></li></ul></div><p>Check IPv6 extensions </p><pre class="screen">
+# make print-extensions 
+Extensions found: IPv6:owner IPv6:limit IPv6:mac IPv6:multiport
+</pre></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51199968"></a>2.4. Configure, build and install new kernel</h3></div></div></div><p>Change to kernel sources </p><pre class="screen">
+# cd /path/to/src/linux-version-iptables-version/ 
+</pre><p>Edit Makefile </p><pre class="screen">
+- EXTRAVERSION = 
++ EXTRAVERSION = -iptables-version+IPv6-try 
+</pre><p>Run configure, enable IPv6 related </p><pre class="screen">
+            Code maturity level options 
+                  Prompt for development and/or incomplete code/drivers : yes 
+            Networking options 
+                  Network packet filtering: yes 
+                  The IPv6 protocol: module 
+                       IPv6: Netfilter Configuration 
+                             IP6 tables support: module 
+                             All new options like following: 
+                                   limit match support: module 
+                                   MAC address match support: module 
+                                   Multiple port match support: module 
+                                   Owner match support: module 
+                                   netfilter MARK match support: module 
+                                   Aggregated address check: module 
+                                   Packet filtering: module 
+                                        REJECT target support: module 
+                                        LOG target support: module 
+                                   Packet mangling: module 
+                                   MARK target support: module 
+</pre><p>Configure other related to your system, too </p><p>Compilation and installing: see the kernel section here and other HOWTOs </p></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51203760"></a>2.5. Rebuild and install binaries of iptables</h3></div></div></div><p>Make sure, that upper kernel source tree is also available at /usr/src/linux/ </p><p>Rename older directory </p><pre class="screen">
+# mv /usr/src/linux /usr/src/linux.old 
+</pre><p>Create a new softlink </p><pre class="screen">
+# ln -s /path/to/src/linux-version-iptables-version /usr/src/linux 
+</pre><p>Rebuild SRPMS </p><pre class="screen">
+# rpm --rebuild /path/to/SRPMS/iptables-version-release.src.rpm 
+</pre><p>Install new iptables packages (iptables + iptables-ipv6) </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>On RH 7.1 systems, normally, already an older version is installed, therefore use "freshen" </p></li></ul></div><pre class="screen">
+# rpm -Fhv /path/to/RPMS/cpu/iptables*-version-release.cpu.rpm 
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>If not already installed, use "install" </p></li></ul></div><pre class="screen">
+# rpm -ihv /path/to/RPMS/cpu/iptables*-version-release.cpu.rpm 
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>On RH 6.2 systems, normally, no kernel 2.4.x is installed, therefore the requirements don't fit. Use "--nodeps" to install it </p></li></ul></div><pre class="screen">
+# rpm -ihv --nodeps /path/to/RPMS/cpu/iptables*-version-release.cpu.rpm 
+</pre><p>Perhaps it's necessary to create a softlink for iptables libraries where iptables looks for them </p><pre class="screen">
+# ln -s /lib/iptables/ /usr/lib/iptables 
+</pre></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch18s01.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ch18.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch18s03.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">1. Firewalling using netfilter6  </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 3. Usage of ip6tables</td></tr></table></div></body></html>

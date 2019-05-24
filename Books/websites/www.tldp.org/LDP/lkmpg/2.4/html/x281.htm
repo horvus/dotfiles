@@ -1,0 +1,276 @@
+<HTML
+><HEAD
+><TITLE
+>Hello World (part 3): The __init and __exit Macros</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux Kernel Module Programming Guide"
+HREF="book1.htm"><LINK
+REL="UP"
+TITLE="Hello World"
+HREF="c147.htm"><LINK
+REL="PREVIOUS"
+TITLE="Hello World (part 2)"
+HREF="x257.htm"><LINK
+REL="NEXT"
+TITLE="Hello World (part 4): Licensing and Module Documentation"
+HREF="x321.htm"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux Kernel Module Programming Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x257.htm"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Hello World</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x321.htm"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN281"
+></A
+>Hello World (part 3): The <TT
+CLASS="LITERAL"
+>__init</TT
+> and <TT
+CLASS="LITERAL"
+>__exit</TT
+> Macros</H1
+><A
+NAME="AEN285"
+></A
+><A
+NAME="AEN288"
+></A
+><A
+NAME="AEN291"
+></A
+><A
+NAME="AEN294"
+></A
+><P
+>This demonstrates a feature of kernel 2.2 and later.  Notice the change in the definitions of the init and cleanup
+	functions.  The <TT
+CLASS="FUNCTION"
+>__init</TT
+> macro causes the init function to be discarded and its memory freed once the init
+	function finishes for built-in drivers, but not loadable modules.  If you think about when the init function is invoked, this
+	makes perfect sense.</P
+><P
+>There is also an <TT
+CLASS="FUNCTION"
+>__initdata</TT
+> which works similarly to <TT
+CLASS="FUNCTION"
+>__init</TT
+> but for init
+	variables rather than functions.</P
+><P
+>The <TT
+CLASS="FUNCTION"
+>__exit</TT
+> macro causes the omission of the function when the module is built into the kernel, and
+	like <TT
+CLASS="FUNCTION"
+>__exit</TT
+>, has no effect for loadable modules.  Again, if you consider when the cleanup function runs,
+	this makes complete sense; built-in drivers don't need a cleanup function, while loadable modules do.</P
+><P
+>These macros are defined in <TT
+CLASS="FILENAME"
+>linux/init.h</TT
+> and serve to free up kernel memory.
+	When you boot your kernel and see something like <TT
+CLASS="LITERAL"
+>Freeing unused kernel memory: 236k freed</TT
+>, this is
+	precisely what the kernel is freeing.</P
+><A
+NAME="AEN308"
+></A
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="AEN311"
+></A
+><P
+><B
+>Example 2-5. hello-3.c</B
+></P
+><PRE
+CLASS="PROGRAMLISTING"
+>/*  hello-3.c - Illustrating the __init, __initdata and __exit macros.
+ *
+ *  Copyright (C) 2001 by Peter Jay Salzman
+ *
+ *  08/02/2006 - Updated by Rodrigo Rubira Branco &#60;rodrigo@kernelhacking.com&#62;
+ */
+
+/* Kernel Programming */
+#define MODULE
+#define LINUX
+#define __KERNEL__
+
+#include &#60;linux/module.h&#62;      /* Needed by all modules */
+#include &#60;linux/kernel.h&#62;      /* Needed for KERN_ALERT */
+#include &#60;linux/init.h&#62;        /* Needed for the macros */
+
+static int hello3_data __initdata = 3;
+
+
+static int __init hello_3_init(void)
+{
+   printk(KERN_ALERT "Hello, world %d\n", hello3_data);
+   return 0;
+}
+
+
+static void __exit hello_3_exit(void)
+{
+   printk(KERN_ALERT "Goodbye, world 3\n");
+}
+
+
+module_init(hello_3_init);
+module_exit(hello_3_exit);
+
+MODULE_LICENSE("GPL");&#13;</PRE
+></DIV
+><P
+>By the way, you may see the directive "<TT
+CLASS="FUNCTION"
+>__initfunction()</TT
+>" in drivers written for Linux 2.2
+	kernels:</P
+><PRE
+CLASS="SCREEN"
+> __initfunction(int init_module(void))
+{
+   printk(KERN_ALERT "Hi there.\n");
+   return 0;
+}</PRE
+><P
+>This macro served the same purpose as <TT
+CLASS="FUNCTION"
+>__init</TT
+>, but is now very deprecated in favor of
+	<TT
+CLASS="FUNCTION"
+>__init</TT
+>.  I only mention it because you might see it modern kernels.  As of 2.4.18, there are 38
+	references to <TT
+CLASS="FUNCTION"
+>__initfunction()</TT
+>, and of 2.4.20, there are 37 references.  However, don't use it in your
+	own code.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x257.htm"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="book1.htm"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x321.htm"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Hello World (part 2)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c147.htm"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Hello World (part 4): Licensing and Module Documentation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

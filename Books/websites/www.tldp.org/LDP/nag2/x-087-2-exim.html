@@ -1,0 +1,461 @@
+<HTML
+><HEAD
+><TITLE
+>Getting EximUp and Running</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Tips and Tricks"
+HREF="x15691.html"><LINK
+REL="NEXT"
+TITLE="Running Exim"
+HREF="x15909.html"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x15691.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x15909.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="X-087-2-EXIM"
+>Chapter 19. Getting EximUp and Running</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>19.1. <A
+HREF="x15909.html"
+>Running Exim</A
+></DT
+><DT
+>19.2. <A
+HREF="x15964.html"
+>If Your Mail Doesn't Get Through</A
+></DT
+><DT
+>19.3. <A
+HREF="x15999.html"
+>Compiling Exim</A
+></DT
+><DT
+>19.4. <A
+HREF="x-087-2-exim.queue.html"
+>Mail Delivery Modes</A
+></DT
+><DT
+>19.5. <A
+HREF="x-087-2-exim.options.html"
+>Miscellaneous config Options</A
+></DT
+><DT
+>19.6. <A
+HREF="x-087-2-exim.delivery.html"
+>Message Routing and Delivery</A
+></DT
+><DD
+><DL
+><DT
+>19.6.1. <A
+HREF="x-087-2-exim.delivery.html#X-087-2-EXIM.ROUTING"
+>Routing Messages</A
+></DT
+><DT
+>19.6.2. <A
+HREF="x-087-2-exim.delivery.html#X-087-2-EXIM.DIRECTORS"
+>Delivering Messages to Local Addresses</A
+></DT
+><DT
+>19.6.3. <A
+HREF="x-087-2-exim.delivery.html#AEN16228"
+>Alias Files</A
+></DT
+><DT
+>19.6.4. <A
+HREF="x-087-2-exim.delivery.html#X-087-2-EXIM.DIRECTOR.MAILING-LISTS"
+>Mailing Lists</A
+></DT
+></DL
+></DD
+><DT
+>19.7. <A
+HREF="x16298.html"
+>Protecting Against Mail Spam</A
+></DT
+><DT
+>19.8. <A
+HREF="x-087-2-exim.simple.html"
+>UUCP Setup</A
+></DT
+></DL
+></DIV
+><P
+>This chapter gives you a quick introduction to setting up Exim and an overview
+of its functionality. Although Exim is largely compatible with
+<B
+CLASS="COMMAND"
+>sendmail</B
+> in its behavior, its configuration files are
+completely different.</P
+><P
+> 
+The main configuration file is usually called
+<TT
+CLASS="FILENAME"
+>/etc/exim.conf</TT
+> or <TT
+CLASS="FILENAME"
+>/etc/exim/config</TT
+>
+in most Linux distributions, or <TT
+CLASS="FILENAME"
+>/usr/lib/exim/config</TT
+> in
+older configurations. You can find out where the configuration file is by
+running the command:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>exim -bP configure_file</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>You may have to edit the configuration file to reflect values specific to your
+site. In most common configurations there isn't a great deal to change, and a
+working configuration should rarely have to be modified.</P
+><P
+>&#13;By default, Exim processes and delivers all incoming mail immediately. If you
+have relatively high traffic, you may instead have Exim collect all messages
+in the so-called <I
+CLASS="EMPHASIS"
+>queue</I
+>, and process them at regular
+intervals only.</P
+><P
+>&#13;When handling mail within a TCP/IP network, Exim is frequently run in daemon
+mode: at system boot time, it is invoked from
+<TT
+CLASS="FILENAME"
+>/etc/init.d/exim</TT
+><A
+NAME="X-087-2-FNEX01"
+HREF="#FTN.X-087-2-FNEX01"
+>[1]</A
+>
+and puts itself in the background, where it waits for incoming TCP connections
+on the SMTP port (usually port 25). This is beneficial whenever you expect to
+have a significant amount of traffic because Exim doesn't have to start up
+for every incoming connection. Alternatively, <B
+CLASS="COMMAND"
+>inetd</B
+> could 
+manage the SMTP port and have it spawn Exim whenever there is a connection 
+on this port. This configuration might be useful when you have limited 
+memory and low mail traffic volumes.</P
+><P
+>&#13;
+Exim has a complicated set of command-line options, including many
+that match those of sendmail. Instead of trying to put together
+exactly the right options for your needs, you can implement the most
+common types of operation by invoking traditional commands like
+<B
+CLASS="COMMAND"
+>rmail</B
+> or <B
+CLASS="COMMAND"
+>rsmtp</B
+>. These are
+symbolic links to Exim (or if they're not, you can easily link
+them to it). When you run one of the commands, Exim checks the
+name you used to invoke it and sets the proper options itself.</P
+><P
+>There are two links to Exim that you should have under all circumstances:
+<B
+CLASS="COMMAND"
+>/usr/bin/rmail</B
+> and <B
+CLASS="COMMAND"
+>/usr/sbin/sendmail</B
+>.<A
+NAME="X-087-2-FNEX02"
+HREF="#FTN.X-087-2-FNEX02"
+>[2]</A
+>
+When you compose and send a mail message with a user agent like
+<B
+CLASS="COMMAND"
+>elm</B
+>, the message is piped to <B
+CLASS="COMMAND"
+>sendmail</B
+>
+or <B
+CLASS="COMMAND"
+>rmail</B
+> for delivery, which is why both
+<B
+CLASS="COMMAND"
+>/usr/sbin/sendmail</B
+> and <B
+CLASS="COMMAND"
+>/usr/bin/rmail</B
+>
+should point to Exim. The list of recipients for the message is passed to Exim
+on the command line.<A
+NAME="X-087-2-FNEX03"
+HREF="#FTN.X-087-2-FNEX03"
+>[3]</A
+>
+The same happens with mail coming in via UUCP. You can set up the required
+pathnames to point to Exim by typing the following at a shell prompt:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>ln -s /usr/sbin/exim /usr/bin/rmail</B
+></TT
+>
+$ <TT
+CLASS="USERINPUT"
+><B
+>ln -s /usr/sbin/exim /usr/sbin/sendmail</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>If you want to dig further into the details of configuring Exim, you should
+consult the full Exim specification. If this isn't included in your favorite
+Linux distribution, you can get it from the source to Exim, or read it online
+from Exim's web site at
+<SPAN
+CLASS="SYSTEMITEM"
+>http://www.exim.org</SPAN
+>.</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNEX01"
+HREF="x-087-2-exim.html#X-087-2-FNEX01"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Other possible locations are
+<TT
+CLASS="FILENAME"
+>/etc/rc.d/init.d</TT
+> and
+<TT
+CLASS="FILENAME"
+>rc.inet2</TT
+>. The latter is common on systems
+using a BSD-style structure for system administration files in the
+<TT
+CLASS="FILENAME"
+>/etc</TT
+> directory.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNEX02"
+HREF="x-087-2-exim.html#X-087-2-FNEX02"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>This is the new standard location of <B
+CLASS="COMMAND"
+>sendmail</B
+> according to
+the Linux File System Standard. Another common location is
+<TT
+CLASS="FILENAME"
+>/usr/lib/sendmail</TT
+>, which is likely to be used by mail
+programs that are not specially configured for Linux.
+You can define both filenames as symbolic links to
+Exim so that programs and scripts invoking <I
+CLASS="EMPHASIS"
+>sendmail</I
+> will instead
+invoke Exim to do the same things.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNEX03"
+HREF="x-087-2-exim.html#X-087-2-FNEX03"
+>[3]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Some user agents, however, use the SMTP protocol to pass messages to the 
+transport agent, calling it with the <TT
+CLASS="OPTION"
+>&#8211;bs</TT
+> option.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x15691.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x15909.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Tips and Tricks</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Running Exim</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,1053 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Test bed</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux Mobile IPv6 HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Mobile IPv6 for Linux"
+HREF="mipv6.html"><LINK
+REL="NEXT"
+TITLE="Doing some tests"
+HREF="dotest.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Mobile IPv6 HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="mipv6.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="dotest.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="testbed"
+></A
+>4. Test bed</H1
+><P
+>Now you should have a working MIPL patched kernel, installed
+  userlevel tools and enabled automatic startup at boot. If anything
+  went wrong, go through the above sections carefully.</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="testcase"
+></A
+>4.1. Testcase</H2
+><P
+>The addresses we are using in our test-bed are
+    site-local. You may as well use global addresses, but do
+    <EM
+>note that link local addresses won't work!</EM
+>
+    Our test-bed consist of four nodes; see figure 
+    <A
+HREF="testbed.html#mipv6testbed"
+>"Mobile IPv6 testbed"</A
+>.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+><EM
+>HA - Home Agent:</EM
+> The HA is located at the home
+        network with address <TT
+CLASS="userinput"
+><B
+>fec0:106:2700::2</B
+></TT
+>,
+        with one wireless interface.</P
+></LI
+><LI
+><P
+><EM
+>MN - Mobile Node:</EM
+> When MN is on the
+	<SPAN
+CLASS="QUOTE"
+>"home network"</SPAN
+>, it has address
+	<TT
+CLASS="userinput"
+><B
+>fec0:106:2700::4</B
+></TT
+>. When MN travels to 
+	another network, it generates a new <SPAN
+CLASS="QUOTE"
+>"care-of"</SPAN
+> address.</P
+></LI
+><LI
+><P
+><EM
+>R - Router:</EM
+> This is the router from
+	the home network to the internet. It has one wireless interface with
+	address <TT
+CLASS="userinput"
+><B
+>fec0:106:2700::1</B
+></TT
+> and a wired
+	interface with address <TT
+CLASS="userinput"
+><B
+>fec0:106:2300::2</B
+></TT
+>.
+	</P
+></LI
+><LI
+><P
+><EM
+>AR - Access Router:</EM
+> The link
+	between AR and R is our <SPAN
+CLASS="QUOTE"
+>"internet"</SPAN
+> - but in this
+	testcase only a	cross-cable (can be any network). The AR has
+	two interfaces; the wired interface to R has address
+	<TT
+CLASS="userinput"
+><B
+>fec0:106:2300::1</B
+></TT
+>, the wireless has
+	address <TT
+CLASS="userinput"
+><B
+>fec0:106:1100::1</B
+></TT
+>.</P
+></LI
+></OL
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="images/mipv6-testbed.png"
+ALIGN="center"
+WIDTH="550px"><DIV
+CLASS="caption"
+><P
+>Mobile IPv6 testbed</P
+></DIV
+></P
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="stepbystep"
+></A
+>4.2. Step-by-step configuration</H2
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="fullyipv6"
+></A
+>4.2.1. Setting up a fully functional IPv6 network</H3
+><P
+>Before we can start testing mobile IP, we need a fully
+      functional IPv6 network. All the nodes should be able to ping
+      each other. <EM
+>This is a crucial part.</EM
+> If, for
+      example, AR is not able to ping HA, then there will be no binding
+      update.</P
+><P
+>I will give a brief instruction to get our network up and
+      running  using IPv6. For more info on setting up an IPv6 network,
+      you can read Peter Bieringer's excellent <A
+HREF="http://ldp.linux.no/HOWTO/Linux+IPv6-HOWTO/"
+TARGET="_top"
+>Linux IPv6
+      HOWTO</A
+>.</P
+><P
+>I've turned off encryption for simplicity - <EM
+>NOTE that you
+      should ALWAYS use encryption when dealing with wireless
+      networks!</EM
+></P
+><P
+><EM
+>Also note that the different wireless networks
+      have different ESSIDs!</EM
+></P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+><EM
+>MN:</EM
+> The Mobile Node has one wireless
+          interface. Forwarding should be turned off, but should accept
+          autoconf and ra's:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;          # iwconfig eth0 mode ad-hoc essid homenet enc off
+          # ifconfig eth0 inet6 add fec0:106:2700::4/64
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/eth0/forwarding
+          # echo "1" &#62; /proc/sys/net/ipv6/conf/eth0/autoconf
+          # echo "1" &#62; /proc/sys/net/ipv6/conf/eth0/accept_ra
+          # echo "1" &#62; /proc/sys/net/ipv6/conf/eth0/accept_redirects
+          # /etc/init.d/mobile-ip6 start
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+><EM
+>HA:</EM
+> The Home Agent has one
+          wireless interface. It should have forwarding turned on
+          because it uses normal routing to deliver packets captured
+          from a physical interface to the virtual tunnel
+          interface. <EM
+>Note: You must add a default route or else
+          HA will have problem contacting the MN on visited LAN's. One
+          possible solution is to use HA as the default router of the
+          home network.</EM
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;          # iwconfig eth0 mode ad-hoc essid homenet enc off
+          # ifconfig eth0 inet6 add fec0:106:2700::2/64
+          # echo "1" &#62; /proc/sys/net/ipv6/conf/eth0/forwarding
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/eth0/autoconf
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/eth0/accept_ra
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/eth0/accept_redirects
+          # ip route add ::/0 via fec0:106:2700::1
+          # /etc/init.d/mobile-ip6 start
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+><EM
+>R:</EM
+> The (home) Router has two
+          interfaces; one wireless and one line. The Router must have
+          forwarding turned on. </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;          # ifconfig eth0 inet6 add fec0:106:2300::2/64
+          # iwconfig eth1 mode ad-hoc essid homenet enc off
+          # ifconfig eth1 inet6 add fec0:106:2700::1/64
+          # echo "1" &#62; /proc/sys/net/ipv6/conf/all/forwarding
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/all/autoconf
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/all/accept_ra
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/all/accept_redirects
+          # ip route add fec0:106:1100::/64 via fec0:106:2300::1
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+><EM
+>AR:</EM
+> The Access Router (on a foreign
+          network) also has two interfaces; one wireless and one
+          line. Forwarding must be turned on.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;          # ifconfig eth0 inet6 add fec0:106:2300::1/64
+          # iwconfig eth1 mode ad-hoc essid visitnet enc off
+          # ifconfig eth1 inet6 add fec0:106:1100::1/64
+          # echo "1" &#62; /proc/sys/net/ipv6/conf/all/forwarding
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/all/autoconf
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/all/accept_ra
+          # echo "0" &#62; /proc/sys/net/ipv6/conf/all/accept_redirects
+          # ip route add fec0:106:2700::/64 via fec0:106:2300::2
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+></OL
+><P
+>Instead of modifying proc variables, you can use
+     <EM
+>sysctl</EM
+>.</P
+><P
+>Note: We are setting static routes on our test-bed. You
+     should now be able to ping all the hosts from every host.</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="confmipv6"
+></A
+>4.2.2. Configuring Mobile IPv6</H3
+><P
+>The last configuration is MIPv6 settings in
+     <TT
+CLASS="filename"
+>network-mip6.conf</TT
+>. In Debian/Slackware the 
+     file is found under <TT
+CLASS="filename"
+>/etc/</TT
+>. (RedHat the file
+     is found under <TT
+CLASS="filename"
+>/etc/sysconfig/</TT
+>.) The file  
+     should be pretty self-explanatory. </P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+><EM
+>HA:</EM
+> The HA config file should
+	  contain these settings:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    # cat /etc/network-mip6.conf
+    
+    # Home Agent configuration file
+    FUNCTIONALITY=ha
+    DEBUGLEVEL=1
+    MIN_TUNNEL_NR=1
+    MAX_TUNNEL_NR=5
+    TUNNEL_SITELOCAL=yes
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+><EM
+>MN:</EM
+> The MN config file should
+          look like this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;     # cat /etc/network-mip6.conf
+
+     # Mobile Node configuration file
+     FUNCTIONALITY=mn
+     DEBUGLEVEL=1
+     TUNNEL_SITELOCAL=yes
+     MIN_TUNNEL_NR=1
+     MAX_TUNNEL_NR=3
+     HOMEDEV=mip6mnha1     
+     HOMEADDRESS=fec0:106:2700::4/64  # MN's home adress
+     HOMEAGENT=fec0:106:2700::2/64    # HA's address
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Next, start mobile-IP:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    # /etc/init.d/mobile-ip6 start
+    Starting Mobile IPv6: OK
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+></OL
+><P
+>You can verify that it started by doing a
+    <TT
+CLASS="userinput"
+><B
+>ifconfig</B
+></TT
+> on HA. If the tunnel(s) comes up,
+    <TT
+CLASS="varname"
+>ip6tnl1</TT
+>, mobile-ip6 is started:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13; # ifconfig
+ eth1     Link encap:Ethernet  HWaddr 00:02:2D:2D:DE:79  
+          inet6 addr: fec0:106:2700::2/64 Scope:Site
+          inet6 addr: fe80::202:2dff:fe2d:de79/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:618 errors:6 dropped:6 overruns:0 frame:6
+          TX packets:1485 errors:22 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:100 
+          RX bytes:87914 (85.8 KiB)  TX bytes:252596 (246.6 KiB)
+          Interrupt:3 Base address:0x100 
+
+ ip6tnl1  Link encap:UNSPEC  HWaddr 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00 <A
+NAME="tunnel1"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>
+          UP POINTOPOINT RUNNING NOARP  MTU:1460  Metric:1
+          RX packets:6 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:6 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:576 (576.0 b)  TX bytes:624 (624.0 b)
+
+ ip6tnl2  Link encap:UNSPEC  HWaddr 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00 <A
+NAME="tunnel2"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+>
+          UP RUNNING NOARP  MTU:1460  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:0 (0.0 b)  TX bytes:0 (0.0 b)
+
+ lo       Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:16436  Metric:1
+          RX packets:8 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:8 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:560 (560.0 b)  TX bytes:560 (560.0 b)
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="calloutlist"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="testbed.html#tunnel1"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>The tunnel is up and ready for connections.</DD
+><DT
+><A
+HREF="testbed.html#tunnel2"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+></DT
+><DD
+>Another tunnel ready.</DD
+></DL
+></DIV
+><P
+>You will also see the mipv6 kernel modules are loaded (MN):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    # lsmod
+    Module                  Size  Used by    Not tainted
+    mip6_mn                59888   0  (unused)
+    ipv6_tunnel            11448   1  [mip6_mn]
+    mip6_base              40728   0  [mip6_mn]
+    ipv6                  179764  -1  [mip6_mn ipv6_tunnel mip6_base]
+    ...
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="ARradvd"
+></A
+>4.2.3. Configuring radvd on AR</H3
+><P
+>When MN comes to a new network, it does a link-local address
+     configuration, going to the next phase if that succeeds. I'll let
+     <A
+HREF="http://www.ietf.org/rfc/rfc2462.txt"
+TARGET="_top"
+>[RFC2462]</A
+>
+     (IPv6 Stateless Address Autoconfiguration) describe the next
+     phase:</P
+><P
+>&#13;     <SPAN
+CLASS="QUOTE"
+>"The next phase of autoconfiguration involves obtaining a Router
+     Advertisement or determining that no routers are present. If routers 
+     are present, they will send Router Advertisements that specify what
+     sort of autoconfiguration a host should do.  If no routers are
+     present, stateful autoconfiguration should be invoked."</SPAN
+></P
+><P
+>&#13;    <SPAN
+CLASS="QUOTE"
+>"Routers send Router Advertisements periodically, but the delay
+    between successive advertisements will generally be longer than a
+    host performing autoconfiguration will want to wait. To
+    obtain an advertisement quickly, a host sends one or more Router 
+    Solicitations to the all-routers multicast group."</SPAN
+>  --- page 8</P
+><P
+>This is where we use
+    <A
+HREF="http://v6web.litech.org/radvd/"
+TARGET="_top"
+>RADVD</A
+>.</P
+><P
+>Read <A
+HREF="http://www.ietf.org/rfc/rfc2462.txt"
+TARGET="_top"
+>[RFC2462]</A
+>
+    more more details concerning IPv6 Stateless Address
+    Autoconfiguration.</P
+><P
+>We'll configure RADVD on AR's wireless interface. The
+    <TT
+CLASS="filename"
+>radvd.conf</TT
+> file should contain this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    # cat /etc/radvd.conf
+    interface eth1
+    {
+          AdvSendAdvert on;
+          AdvIntervalOpt on;
+
+          MinRtrAdvInterval 3;
+          MaxRtrAdvInterval 10;
+          AdvHomeAgentFlag off;
+
+          prefix fec0:106:1100::/64
+          {
+              AdvOnLink on;
+              AdvAutonomous on;
+              AdvRouterAddr on;
+          };
+    };
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>We then start it:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    # /etc/init.d/radvd start
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You should now be able to use <TT
+CLASS="userinput"
+><B
+>radvdump</B
+></TT
+> to
+    see that the radvd messages really are being sent periodically:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    # radvdump
+    Router advertisement from fe80::202:2dff:fe54:d1b2 (hoplimit 255)
+    Received by interface eth1
+          # Note: {Min,Max}RtrAdvInterval cannot be obtained with radvdump
+          AdvCurHopLimit: 64
+          AdvManagedFlag: off
+          AdvOtherConfigFlag: off
+          AdvHomeAgentFlag: off
+          AdvReachableTime: 0
+          AdvRetransTimer: 0
+          Prefix fec0:106:1100::/64
+                  AdvValidLifetime: 2592000
+                  AdvPreferredLifetime: 604800
+                  AdvOnLink: on
+                  AdvAutonomous: on
+                  AdvRouterAddr: off
+          AdvSourceLLAddress: 00 02 2D 54 D1 B2
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><EM
+>Note! When using radvd on HA and enabling
+    <SPAN
+CLASS="QUOTE"
+>"autoconf"</SPAN
+> (in proc), you will also get an
+    autogenerated IPv6 address on MN (which is superfluous) in
+    addition to your static address:</EM
+></P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="radvdar"
+></A
+>4.2.4. Configuring radvd on HA</H3
+><P
+>&#13;       To enable the MN to know when it's home, HA should also be sending
+       out RAs. We should therefore enable RADVD on the HA as well. The
+       <TT
+CLASS="filename"
+>/etc/radvd.conf</TT
+> file should contain: 
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;     # cat /etc/radvd.conf
+     interface eth0
+     {
+        AdvSendAdvert on;
+        MaxRtrAdvInterval 3;
+        MinRtrAdvInterval 1;
+        AdvIntervalOpt off;
+        AdvHomeAgentFlag on;
+        HomeAgentLifetime 10000;
+        HomeAgentPreference 20;
+        AdvHomeAgentInfo on;
+        prefix fec0:106:2700::2/64
+        {
+          AdvRouterAddr on;
+          AdvOnLink on;
+          AdvAutonomous on;
+          AdvPreferredLifetime 10000;
+          AdvValidLifetime 12000;
+        };
+      };
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Also do a <TT
+CLASS="userinput"
+><B
+>radvdump</B
+></TT
+> on HA to check
+    whether radvd messages are beeing sent:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    # radvdump 
+    Router advertisement from fe80::202:2dff:fe54:d11e (hoplimit 255)
+    Received by interface eth0
+        # Note: {Min,Max}RtrAdvInterval cannot be obtained with radvdump
+        AdvCurHopLimit: 64
+        AdvManagedFlag: off
+        AdvOtherConfigFlag: off
+        AdvHomeAgentFlag: on
+        AdvReachableTime: 0
+        AdvRetransTimer: 0
+        Prefix fec0:106:2700::2/64
+                AdvValidLifetime: 12000
+                AdvPreferredLifetime: 10000
+                AdvOnLink: on
+                AdvAutonomous: on
+                AdvRouterAddr: on
+        AdvSourceLLAddress: 00 02 2D 54 D1 1E 
+        AdvHomeAgentInfo:
+                HomeAgentPreference: 20
+                HomeAgentLifetime: 1000
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;    # ifconfig eth0
+    eth0  Link encap:Ethernet  HWaddr 00:90:7D:F3:03:1A  
+          inet6 addr: fec0:106:2700:0:290:7dff:fef3:31a/64 Scope:Site <A
+NAME="newaddress"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>
+          inet6 addr: fec0:106:2700::4/64 Scope:Site                  <A
+NAME="staticadr"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+>
+          inet6 addr: fe80::290:7dff:fef3:31a/64 Scope:Link           <A
+NAME="linkaddrs"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+>
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:513 errors:89 dropped:89 overruns:0 frame:85
+          TX packets:140 errors:41 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:100 
+          RX bytes:56084 (54.7 Kb)  TX bytes:19212 (18.7 Kb)
+          Interrupt:3 Base address:0x100
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="calloutlist"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="testbed.html#newaddress"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>A new (superfluous) autogenerated address. Since we are
+        setting <TT
+CLASS="userinput"
+><B
+>autoconf</B
+></TT
+> in
+        <TT
+CLASS="userinput"
+><B
+>/proc/sys/net/ipv6/conf/eth0/autoconf</B
+></TT
+>
+        to <TT
+CLASS="userinput"
+><B
+>1</B
+></TT
+>, MN will generate a new adress
+        combined with HA's prefix and it's own MAC address. I do not
+        think is it possible to avoid having this address generated.</DD
+><DT
+><A
+HREF="testbed.html#staticadr"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+></DT
+><DD
+>Our original static IPv6 address</DD
+><DT
+><A
+HREF="testbed.html#linkaddrs"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+></DT
+><DD
+>The link-local address generated at boot.</DD
+></DL
+></DIV
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="mipv6.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="dotest.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Mobile IPv6 for Linux</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Doing some tests</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,261 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Keyboard numbering(order of detection)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="XFree Local Multi-User HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Installing the kernel"
+HREF="kernel.html"><LINK
+REL="PREVIOUS"
+TITLE="Notes on using multiple VT's &#38; VGA console"
+HREF="notes_multi_vt.html"><LINK
+REL="NEXT"
+TITLE="Setting up the X servers"
+HREF="x_servers.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>XFree Local Multi-User HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="notes_multi_vt.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. Installing the kernel</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x_servers.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="inst_kern_kbd"
+></A
+>3.5. Keyboard numbering(order of detection)</H1
+><P
+>In the following chapters you will read about 1st keyboard, 2nd keyboard and so on, so here I will explain what is meant by n-th keyboard.  </P
+><P
+>When a keyboard device is found, it is bound to a free VT (given that there are free VT's). The first keyboard found will be bound to VT0 (tty1-tty16), the second to VT1 (tty17), the third to VT2 (tty18).</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Older versions of the bruby patch (released before Oct 7 2003) use :</P
+><P
+>first keyboard found =&#62; VT0 (tty0-tty7)</P
+><P
+>second =&#62; VT1 (tty8-tty15)</P
+><P
+>third =&#62; VT2 (tty16-tty23)</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The order of detecting the keyboards depends on the configuration of your kernel :</P
+><P
+></P
+><UL
+><LI
+><P
+>If you are using kernel with integrated USB input the USB keyboard devices will be registered first, then the AT/PS2 keyboards will follow when the modules are loaded</P
+></LI
+><LI
+><P
+>If you are using kernel with integrated PS2 input the AT/PS2 keyboard devices will be registered first, then the USB keyboards will follow when the modules are loaded</P
+></LI
+><LI
+><P
+>If you are using kernel with integrated PS2 &#38; USB input the AT/PS2 keyboard devices will be registered first, then the USB keyboards will follow</P
+></LI
+></UL
+><P
+>But there are some caveats:</P
+><P
+>Most USB keyboards represent themselves as more than one keyboard; it is common that the multimedia keys or the number-pad identify themselves as a different keyboard device. So if you are running a kernel with integrated USB input and have one USB keyboard with multimedia keys and one PS2 keyboard, the USB keyboard will be bound to VT0(real keyboard) and VT1(multimedia keys), the PS2 keyboard will be bound to VT2 (in case you have enough DUMB consoles).</P
+><P
+>There are several ways to work around these issues. Here I'll explain the easiest way to follow.  It's definitely not the best one, but the shortest explanation, and I just want to make it clear to you that the problem is not that big. The better solutions will follow later in their own section. </P
+><P
+>All you need to do is to start the Backstreet Ruby/ Ruby kernel with dumbcon=n , where n is the sum of your AT/PS2 keyboards plus the sum of your USB keyboards multiplied by 2 (I suppose this is the maximum number of interfaces a USB keyboard registers), so all keyboards will be bound to a VT. Now you should find out which VT's the real keyboards are bound to (the keyboards excluding the multimedia keys) and start X using the appropriate tty ranges. Thanks to the proc interface integrated in Backstreet Ruby, you can easily find the assignment of keyboards to VT's. Each VT creates a file  <TT
+CLASS="filename"
+>/proc/bus/console/[n]/keyboard</TT
+>  (n is the number of the VT, for VT0 n will be 00, for VT1 - 01, ... , for VT11 - 11); reading this file will give you the assigned keyboard.
+ </P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>[root@svetljo root]# cat /proc/bus/console/*/*
+usb-00:10.1-1.1/input0
+usb-00:10.1-1.1/input1
+isa0060/serio0/input0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>tells us that: 
+  </P
+><P
+></P
+><UL
+><LI
+><P
+>USB keyboard (real) is bound to VT0</P
+></LI
+><LI
+><P
+>USB keyboard (multimedia keys) is bound to VT1</P
+></LI
+><LI
+><P
+>PS2 keyboard is bound to VT2</P
+></LI
+></UL
+><P
+>Now we can start X on the VT's with real keyboards, in this case VT0 and VT2.</P
+><P
+>Of course in this simple example with only 2 keyboards (one USB and one PS2) the problem could be easily avoided by using a kernel with primary PS2 input support. The PS2 keyboard would be found first and bound to VT0, the USB keyboard would follow and it's real keyboard interface would be bound to VT1, so there is no need for additional dumb consoles (for the multimedia interfaces of USB keyboards).</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="notes_multi_vt.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x_servers.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Notes on using multiple VT's &#38; VGA console</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="kernel.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Setting up the X servers</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

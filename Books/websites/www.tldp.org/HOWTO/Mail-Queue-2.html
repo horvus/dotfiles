@@ -1,0 +1,187 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Mail-Queue mini-HOWTO: NON dial-on-demand solutions PART</TITLE>
+ <LINK HREF="Mail-Queue-3.html" REL=next>
+ <LINK HREF="Mail-Queue-1.html" REL=previous>
+ <LINK HREF="Mail-Queue.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Mail-Queue-3.html">Next</A>
+<A HREF="Mail-Queue-1.html">Previous</A>
+<A HREF="Mail-Queue.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. NON dial-on-demand solutions PART</A></H2>
+
+<P>Written by Leif Erlingsson &lt;leif@lege.com&gt;.
+<P>The original version of this part contained a lot of unnecessary
+stuff.  This is all it takes, really...
+<P>
+<H2><A NAME="ss2.1">2.1 Starting sendmail</A>
+</H2>
+
+<P>Slackware et al:     /etc/rc.d/rc.M:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+echo &quot;Starting sendmail daemon (/usr/sbin/sendmail -bd -os) [queue only mode]...&quot;
+/usr/sbin/sendmail -bd -os      # NOT &quot;-bd -q 15m&quot;, the &quot;standard&quot; flags!
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>RedHat et al:                /etc/rc.d/init.d/sendmail.init:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+echo -n &quot;Starting sendmail: [queue only mode]&quot;
+daemon sendmail -bd -os         # NOT daemon sendmail -bd -q1h
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The -os is not really essential, all it does is this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+SuperSafe [s] Be super-safe when running things, i.e.,
+        always instantiate the queue file,  even  if
+        you are going to attempt immediate delivery.
+        Sendmail always instantiates the queue  file
+        before  returning  control  the client under
+        any  circumstances.   This   should   really
+        always be set.
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>This should already be configured in the default sendmail.cf anyway.
+<P>
+<H2><A NAME="ss2.2">2.2 Configuring sendmail</A>
+</H2>
+
+<P>Serious sendmail users use the m4 source for this. I recommend
+this solution if you ever plan on upgrading sendmail and also
+make anything but trivial changes to sendmail.cf.
+<P>If you never intend to fix sendmail so envelope return headers
+et al works even though you might be on dynamic dial in IP or
+something, then you may not need to get the m4 source.
+<P>
+<H3>Configuring sendmail.cf directly, for trivial configurations</H3>
+
+<P>This way of doing things is extremeley version dependent vs.
+sendmail.cf versions. The following solution is *only* valid
+for sendmail-8.8.x.
+<P>Edit /etc/sendmail.cf:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# avoid connecting to &quot;expensive&quot; mailers on initial submission?
+O HoldExpensive=True
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>... later ...
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#####  @(#)smtp.m4      8.33 (Berkeley) 7/9/96  #####
+
+Msmtp,          P=[IPC], F=mDFMuXe, S=11/31, R=21, E=\r\n, L=990,
+                T=DNS/RFC822/SMTP,
+                A=IPC $h
+Mesmtp,         P=[IPC], F=mDFMuXae, S=11/31, R=21, E=\r\n, L=990,
+                T=DNS/RFC822/SMTP,
+                A=IPC $h
+Msmtp8,         P=[IPC], F=mDFMuX8e, S=11/31, R=21, E=\r\n, L=990,
+                T=DNS/RFC822/SMTP,
+                A=IPC $h
+Mrelay,         P=[IPC], F=mDFMuXa8e, S=11/31, R=61, E=\r\n, L=2040,
+                T=DNS/RFC822/SMTP,
+                A=IPC $h
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The important flag above is ``e''. Don't fuss if the other flags
+look different in your file. Keep your flags as-is, only add ``e''
+to your flags according to the above examples, unless it's there
+already. ``e'' marks the mailers as ``expensive''.
+<P>
+<H3>Configuring sendmail.cf using m4 source</H3>
+
+<P>In the following I will, for simplicity, assume that the sendmail
+version is 8.8.7. If you have a different version, replace 8.8.7
+with that version number below! Also, the instructions will not
+work for older versions of sendmail. Get the latest sendmail!
+<P>
+<P>Download the sendmail source.
+Try ``http://WWW.Sendmail.ORG'' or possibly ``ftp.sendmail.org''.
+<P>
+<P>I also recommend that you obtain my patch for allowing envelope
+sender reverse aliasing and other nice stuff to really make you
+take control over your mail environment.
+<P>Write to ``Sendmail Patch &lt;sendmail@lege.com&gt;'',
+Subject: ``sendmail-8.8.7'', if 8.8.7 is your sendmail version.
+<P>They are also available from ``http://www.lege.com'', as is
+the sgml source of this mini-HOWTO!
+<P>You don't have to get my patches in order to get ``Queue Remote
+Mail + Deliver Local Mail'' to work. My patches solve other
+things. But I just thought this would be a nice place to mention
+them, as many Linux users will find them extremely useful.
+(They will even give you properly working virtual domains, if you
+like. The virtual domains don't have to be ``local''. They will
+give you ``xaliases'', or in other words ``reverse aliasing''.)
+<P>Unpack the sendmail source. You may get /usr/src/sendmail-8.8.7/.
+cd /usr/src/sendmail-8.8.7/cf
+<P>Now overlay my patch, if you want it, otherwise skip this step:
+If you don't want to use procmail as Local Delivery Agent, save
+away your /usr/src/sendmail-8.8.7/cf/ostype/linux.m4 before
+doing this...
+Save my patch to ``/tmp/sendmail-8.8.7-cf-cpio-idcmu.gz'', then...
+<BLOCKQUOTE><CODE>
+<PRE>
+cd /usr/src/sendmail-8.8.7/cf
+gzip -dc &lt; /tmp/sendmail-8.8.7-cf-cpio-idcmu.gz | cpio -idcmu
+</PRE>
+</CODE></BLOCKQUOTE>
+
+If you didn't want to use procmail, write back the saved copy of
+/usr/src/sendmail-8.8.7/cf/ostype/linux.m4 again.
+<P>And regardless of if you applied my patch or not, you must make
+sure these lines or very similar ones are added to
+/usr/src/sendmail-8.8.7/cf/cf/yourhostname.smtp.mc
+(but if you applied my patch you may want to investigate filenames
+containing the word ``elijah'', under /usr/src/sendmail-8.8.7/cf):
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+dnl # Defer Delivery to &quot;expensive&quot; mailers until next time the
+dnl # queue is processed using &quot;O HoldExpensive=True&quot; and make
+dnl # sure smtp mailers are &quot;expensive&quot;.
+dnl # (See original &quot;sendmail&quot; book Chapter 30: Options,
+dnl # &quot;Oc - Don't connect to expensive mailers&quot;, or
+dnl # 2nd Edition &quot;sendmail&quot; book Chapter 34.8.29,
+dnl # &quot;HoldExpensive (c), Queue for expensive mailers&quot;.)
+dnl #                           / Leif Erlingsson &lt;leif@lege.com&gt;
+define(`confCON_EXPENSIVE', `True')
+define(SMTP_MAILER_FLAGS, e)
+MAILER(local)dnl
+MAILER(smtp)dnl
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.3">2.3 Menu support suggestions</A>
+</H2>
+
+<P>The 1.x versions of this document contained Menu support
+suggestions for /var/X11R6/lib/fvwm/system.fvwmrc. I have
+dropped those in the current version, but they are available on
+request:
+<P>
+<P>Write to ``Menu support suggestions &lt;fvwmrc@lege.com&gt;'',
+Subject: ``Menu support suggestions''
+<P>
+<P>
+<HR>
+<A HREF="Mail-Queue-3.html">Next</A>
+<A HREF="Mail-Queue-1.html">Previous</A>
+<A HREF="Mail-Queue.html#toc2">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,483 @@
+<HTML
+><HEAD
+><TITLE
+>Accessing Serial Devices</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Configuring the Serial Hardware"
+HREF="x-087-2-serial.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction to Serial Devices"
+HREF="x-087-2-serial.ttys.html"><LINK
+REL="NEXT"
+TITLE="Serial Hardware"
+HREF="x-087-2-serial.hardware.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-serial.ttys.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Configuring the Serial Hardware</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-serial.hardware.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-SERIAL.DEVICES"
+>4.3. Accessing Serial Devices</A
+></H1
+><P
+>Like all devices in a Unix system, serial ports are accessed through
+device special files, located in the <TT
+CLASS="FILENAME"
+>/dev</TT
+>
+directory.  There are two varieties of device files related to serial
+drivers, and there is one device file of each type for each port. The
+device will behave slightly differently, depending on which of its
+device files we open.  We'll cover the differences because it will help you
+understand some of the configurations and advice that you might see
+relating to serial devices, but in practice you need to use only
+one of these. At some point in the future, one of them may even
+disappear completely.</P
+><P
+>&#13;
+ 
+
+
+
+The most important of the two classes of serial device has a major
+number of 4, and its device special files are named
+<TT
+CLASS="FILENAME"
+>ttyS0</TT
+>, <TT
+CLASS="FILENAME"
+>ttyS1</TT
+>, etc. The
+second variety has a major number of 5, and was designed for use when
+dialing out (calling out) through a port; its device special files are
+called <TT
+CLASS="FILENAME"
+>cua0</TT
+>, <TT
+CLASS="FILENAME"
+>cua1</TT
+>, etc. In
+the Unix world, counting generally starts at zero, while laypeople
+tend to start at one. This creates a small amount of confusion for
+people because <TT
+CLASS="LITERAL"
+>COM1:</TT
+> is represented by
+<TT
+CLASS="FILENAME"
+>/dev/ttyS0</TT
+>, <TT
+CLASS="LITERAL"
+>COM2:</TT
+> by
+<TT
+CLASS="FILENAME"
+>/dev/ttyS1</TT
+>, etc. Anyone familiar with IBM PC-style
+hardware knows that <TT
+CLASS="LITERAL"
+>COM3:</TT
+> and greater were never
+really standardized anyway.</P
+><P
+>The <I
+CLASS="EMPHASIS"
+>cua</I
+>, or &#8220;callout,&#8221; devices were
+created to solve the problem of avoiding conflicts on serial devices
+for modems that have to support both incoming and outgoing
+connections.  Unfortunately, they've created their own problems and
+are now likely to be discontinued. Let's briefly look at the problem.</P
+><P
+>Linux, like Unix, allows a device, or any other file, to be opened by
+more than one process simultaneously. Unfortunately, this is rarely
+useful with tty devices, as the two processes will almost certainly
+interfere with each other. Luckily, a mechanism was devised to allow a
+process to check if a tty device had already been opened by another
+device before opening it. The mechanism uses what are called
+<I
+CLASS="EMPHASIS"
+>lock files</I
+>. The idea was that when a process
+wanted to open a tty device, it would check for the existence of a
+file in a special location, named similarly to the device it intends
+to open. If the file does not exist, the process creates it and opens
+the tty device. If the file does exist, the process assumes another
+process already has the tty device open and takes appropriate
+action. One last clever trick to make the lock file management system
+work was writing the process ID (pid) of the process that had created
+the lock file into the lock file itself; we'll talk more about that in
+a moment.</P
+><P
+>The lock file mechanism works perfectly well in circumstances in which
+you have a defined location for the lock files and all programs know
+where to find them. Alas, this wasn't always the case for Linux. It
+wasn't until the Linux Filesystem Standard defined a standard location
+for lock files when <TT
+CLASS="FILENAME"
+>tty</TT
+> lock files began to work
+correctly. At one time there were at least four, and possibly more
+locations chosen by software developers to store lock files:
+<TT
+CLASS="FILENAME"
+>/usr/spool/locks/</TT
+>,
+<TT
+CLASS="FILENAME"
+>/var/spool/locks/</TT
+>,
+<TT
+CLASS="FILENAME"
+>/var/lock/</TT
+>, and
+<TT
+CLASS="FILENAME"
+>/usr/lock/</TT
+>. Confusion caused chaos. Programs were
+opening lock files in different locations that were meant to control a
+single tty device; it was as if lock files weren't being used at all.</P
+><P
+>The <TT
+CLASS="FILENAME"
+>cua</TT
+> devices were created to provide a
+solution to this problem. Rather than relying on the use of lock files
+to prevent clashes between programs wanting to use the serial devices,
+it was decided that the kernel could provide a simple means of
+arbitrating who should be given access. If the
+<TT
+CLASS="FILENAME"
+>ttyS</TT
+> device were already opened, an attempt to
+open the <TT
+CLASS="FILENAME"
+>cua</TT
+> would result in an error that a
+program could interpret to mean the device was already being used. If
+the <TT
+CLASS="FILENAME"
+>cua</TT
+> device were already open and an attempt
+was made to open the <TT
+CLASS="FILENAME"
+>ttyS</TT
+>, the request would
+block; that is, it would be put on hold and wait until the
+<TT
+CLASS="FILENAME"
+>cua</TT
+> device was closed by the other process. This
+worked quite well if you had a single modem that you had configured
+for dial-in access and you occasionally wanted to dial out on the same
+device. But it did not work very well in environments where you had
+multiple programs wanting to call out on the same device. The only way
+to solve the contention problem was to use lock files! Back to square
+one.</P
+><P
+>Suffice it to say that the Linux Filesystem Standard came to the
+rescue and now mandates that lock files be stored in the
+<TT
+CLASS="FILENAME"
+>/var/lock</TT
+> directory, and that by convention, the
+lock file name for the <TT
+CLASS="FILENAME"
+>ttyS1</TT
+> device, for
+instance, is <TT
+CLASS="FILENAME"
+>LCK..ttyS1</TT
+>. The
+<TT
+CLASS="FILENAME"
+>cua</TT
+> lock files should also go in this directory,
+but use of <TT
+CLASS="FILENAME"
+>cua</TT
+> devices is now discouraged.</P
+><P
+>The <TT
+CLASS="FILENAME"
+>cua</TT
+> devices will probably still be around for
+some time to provide a period of backward compatibility, but in time
+they will be retired. If you are wondering what to use, stick to the
+<TT
+CLASS="FILENAME"
+>ttyS</TT
+> device and make sure that your system is
+Linux FSSTND compliant, or at the very least that all programs using
+the serial devices agree on where the lock files are located. Most
+software dealing with serial tty devices provides a compile-time
+option to specify the location of the lock files. More often than not,
+this will appear as a variable called something like
+<TT
+CLASS="LITERAL"
+>LOCKDIR</TT
+> in the <TT
+CLASS="FILENAME"
+>Makefile</TT
+> or in
+a configuration header file. If you're compiling the software
+yourself, it is best to change this to agree with the FSSTND-specified
+location. If you're using a precompiled binary and you're not sure
+where the program will write its lock files, you can use the following
+command to gain a hint:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><B
+CLASS="COMMAND"
+>strings</B
+> <TT
+CLASS="FILENAME"
+>binaryfile</TT
+> | <B
+CLASS="COMMAND"
+>grep</B
+> lock</PRE
+></TD
+></TR
+></TABLE
+>
+If the location found does not agree with the rest of your system, you
+can try creating a symbolic link from the lock directory that the
+foreign executable wants to use back to
+<TT
+CLASS="FILENAME"
+>/var/lock/</TT
+>. This is ugly, but it will work.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-SERIAL.DEVICEFILES"
+>4.3.1. The Serial Device Special Files</A
+></H2
+><P
+>&#13;
+Minor numbers are identical for both types of serial devices. If you
+have your modem on one of the ports COM1: through COM4:, its minor
+number will be the COM port number plus 63.  If you are using special
+serial hardware, such as a high-performance multiple port serial
+controller, you will probably need to create special device files for
+it; it probably won't use the standard device driver. The Serial-HOWTO
+should be able to assist you in finding the appropriate details.</P
+><P
+>Assume your modem is on COM2:. Its minor number will be 65, and its
+major number will be 4 for normal use. There should be a device called
+<TT
+CLASS="FILENAME"
+>ttyS1</TT
+> that has these numbers. List the serial
+ttys in the <TT
+CLASS="FILENAME"
+>/dev/</TT
+> directory. The fifth and sixth
+columns show the major and minor numbers, respectively:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>ls -l /dev/ttyS*</B
+></TT
+>
+0 crw-rw----   1 uucp     dialout    4,  64 Oct 13  1997 /dev/ttyS0
+0 crw-rw----   1 uucp     dialout    4,  65 Jan 26 21:55 /dev/ttyS1
+0 crw-rw----   1 uucp     dialout    4,  66 Oct 13  1997 /dev/ttyS2
+0 crw-rw----   1 uucp     dialout    4,  67 Oct 13  1997 /dev/ttyS3</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>If there is no device with major number 4 and minor number 65, you
+will have to create one. Become the superuser and type:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>mknod -m 666 /dev/ttyS1 c 4 65</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>chown uucp.dialout /dev/ttyS1</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+The various Linux distributions use slightly differing strategies for
+who should own the serial devices. Sometimes they will be owned by
+<I
+CLASS="EMPHASIS"
+>root</I
+>, and other times they will be owned by
+another user, such as <TT
+CLASS="USERINPUT"
+><B
+>uucp</B
+></TT
+> in our example.
+Modern distributions have a group specifically for dial-out devices,
+and any users who are allowed to use them are added to this group.</P
+><P
+>&#13;Some people suggest making <TT
+CLASS="FILENAME"
+>/dev/modem</TT
+> a symbolic
+link to your modem device so that casual users don't have to remember
+the somewhat unintuitive <TT
+CLASS="FILENAME"
+>ttyS1</TT
+>. However, you
+cannot use <TT
+CLASS="FILENAME"
+>modem</TT
+> in one program and the real
+device file name in another. Their lock files would have different
+names and the locking mechanism wouldn't work.</P
+><P
+>&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-serial.ttys.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-serial.hardware.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction to Serial Devices</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-serial.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Serial Hardware</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

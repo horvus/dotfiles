@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Chroot-BIND HOWTO: Installing Your Shiny New BIND</TITLE>
+ <LINK HREF="Chroot-BIND-HOWTO-5.html" REL=next>
+ <LINK HREF="Chroot-BIND-HOWTO-3.html" REL=previous>
+ <LINK HREF="Chroot-BIND-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Chroot-BIND-HOWTO-5.html">Next</A>
+<A HREF="Chroot-BIND-HOWTO-3.html">Previous</A>
+<A HREF="Chroot-BIND-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="installing"></A> <A NAME="s4">4. Installing Your Shiny New BIND</A></H2>
+
+<P>I should mention that if you have an existing installation of BIND, such as from
+an RPM, you should probably remove it before installing the new one.  On Red Hat
+systems, this probably means removing the packages <CODE>bind</CODE> and
+<CODE>bind-utils</CODE>, and possibly <CODE>bind-devel</CODE> and <CODE>caching-nameserver</CODE>,
+if you have them.
+<P>You may want to save a copy of the init script (e.g.,
+<CODE>/etc/rc.d/init.d/named</CODE>), if any, before doing so; it'll be useful later
+on.
+<P>If you are upgrading from an older version of BIND, such as BIND 8, you will
+want to read the migration documentation in the file <CODE>doc/misc/migration</CODE>
+in the BIND source package.  I don't deal with any migration issues in this
+document; I simply assume that you are replacing an existing, working
+installation of BIND 9.
+<P>
+<H2><A NAME="ss4.1">4.1 Installing the Binaries</A>
+</H2>
+
+<P>This is the easy part :-).  Just run <CODE>make install</CODE> and let it take care of
+it for you.  Really, that's it!
+<P>
+<H2><A NAME="ss4.2">4.2 Setting up the Init Script</A>
+</H2>
+
+<P>If you have an existing init script from your distribution, it would probably
+be best simply to modify it to run the new binary, with the appropriate
+switches.  The switches are... <I>(drumroll please...)</I>
+<UL>
+<LI><CODE>-u named</CODE>, which tells BIND to run as the user <CODE>named</CODE>, rather
+than <CODE>root</CODE>.</LI>
+<LI><CODE>-t /chroot/named</CODE>, which tells BIND to chroot itself to the jail
+that we've set up.</LI>
+<LI><CODE>-c /etc/named.conf</CODE>, which tells BIND where to find its
+configuration file within the jail.</LI>
+</UL>
+<P>The following is the init script I use with my Red Hat 6.0 system.  As you can
+see, it is almost exactly the same as the way it shipped from Red Hat.  I
+haven't tried the <CODE>rndc</CODE> commands yet, but I can't see any reason why
+they shouldn't work.
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+#
+# named           This shell script takes care of starting and stopping
+#                 named (BIND DNS server).
+#
+# chkconfig: 345 55 45
+# description: named (BIND) is a Domain Name Server (DNS) \
+# that is used to resolve host names to IP addresses.
+# probe: true
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] &amp;&amp; exit 0
+
+[ -f /usr/local/sbin/named ] || exit 0
+
+[ -f /chroot/named/etc/named.conf ] || exit 0
+
+# See how we were called.
+case "$1" in
+  start)
+        # Start daemons.
+        echo -n "Starting named: "
+        daemon /usr/local/sbin/named -u named -t /chroot/named -c /etc/named.conf
+        echo
+        touch /var/lock/subsys/named
+        ;;
+  stop)
+        # Stop daemons.
+        echo -n "Shutting down named: "
+        killproc named
+        rm -f /var/lock/subsys/named
+        echo
+        ;;
+  status)
+        status named
+        exit $?
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        exit $?
+        ;;
+  reload)
+        /usr/local/sbin/rndc reload
+        exit $?
+        ;; 
+  probe)
+        # named knows how to reload intelligently; we don't want linuxconf
+        # to offer to restart every time
+        /usr/local/sbin/rndc reload >/dev/null 2>&amp;1 || echo start
+        exit 0
+        ;;
+  
+  *)
+        echo "Usage: named {start|stop|status|restart|reload}"
+        exit 1
+esac
+
+exit 0
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>As with syslogd, as of Red Hat 7.2 this process is now even easier.  There is
+a file called <CODE>/etc/sysconfig/named</CODE> in which extra parameters for syslogd
+can be defined.  The default <CODE>/etc/rc.d/init.d/named</CODE> on Red Hat 7.2,
+however, will check for the existance of <CODE>/etc/named.conf</CODE> before
+starting.  You will need to correct this path.
+<P>On Caldera OpenLinux systems, you simply need to modify the variables defined
+at the top, and it will apparently take care of the rest for you:
+<BLOCKQUOTE><CODE>
+<PRE>
+NAME=named
+DAEMON=/usr/local/sbin/$NAME
+OPTIONS="-t /chroot/named -u named -c /etc/named.conf"
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>And for FreeBSD 4.3, you can edit the <CODE>rc.conf</CODE> file and put in the
+following:
+<BLOCKQUOTE><CODE>
+<PRE>
+named_enable="YES"
+named_program="chroot/named/bin/named"
+named_flags="-u named -t /chroot/named -c /etc/namedb/named.conf"
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss4.3">4.3 Configuration Changes</A>
+</H2>
+
+<P>You will also have to add or change a few options in your <CODE>named.conf</CODE> to
+keep the various directories straight.  In particular, you should add (or
+change, if you already have them) the following directives in the <CODE>options</CODE>
+section:
+<BLOCKQUOTE><CODE>
+<PRE>
+directory "/etc/namedb";
+pid-file "/var/run/named.pid";
+statistics-file "/var/run/named.stats";
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Since this file is being read by the <CODE>named</CODE> daemon, all the paths are of
+course relative to the chroot jail.  As of this writing, BIND 9 does not support
+many of the statistics and dump files that previous versions did.  Presumably
+later versions will; if you are running such a version, you may have to add
+additional entries to cause BIND to write them to the <CODE>/var/run</CODE> directory
+as well.
+<P>
+<HR>
+<A HREF="Chroot-BIND-HOWTO-5.html">Next</A>
+<A HREF="Chroot-BIND-HOWTO-3.html">Previous</A>
+<A HREF="Chroot-BIND-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,399 @@
+<HTML
+><HEAD
+><TITLE
+>The Network Information System</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring Remote Loginand Execution"
+HREF="x-087-2-appl.remote.html"><LINK
+REL="NEXT"
+TITLE="Getting Acquainted with NIS"
+HREF="x10579.html"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-appl.remote.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x10579.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="X-087-2-NIS"
+>Chapter 13. The Network Information System</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>13.1. <A
+HREF="x10579.html"
+>Getting Acquainted with NIS</A
+></DT
+><DT
+>13.2. <A
+HREF="x-087-2-nis.nisplus.html"
+>NIS Versus NIS+</A
+></DT
+><DT
+>13.3. <A
+HREF="x-087-2-nis.clients.html"
+>The Client Side of NIS</A
+></DT
+><DT
+>13.4. <A
+HREF="x-087-2-nis.server.html"
+>Running an NIS Server</A
+></DT
+><DT
+>13.5. <A
+HREF="x-087-2-nis.securenets.html"
+>NIS Server Security</A
+></DT
+><DT
+>13.6. <A
+HREF="x-087-2-nis.yp.html"
+>Setting Up an NIS Client with GNU libc</A
+></DT
+><DT
+>13.7. <A
+HREF="x-087-2-nis.nsswitch.html"
+>Choosing the Right Maps</A
+></DT
+><DT
+>13.8. <A
+HREF="x-087-2-nis.passwd.html"
+>Using the passwd and group Maps</A
+></DT
+><DT
+>13.9. <A
+HREF="x-087-2-nis.shadow.html"
+>Using NIS with Shadow Support</A
+></DT
+></DL
+></DIV
+><P
+>When you're running a local area network, your overall goal is usually to
+provide an environment for your users that makes the network transparent. An
+important stepping stone is keeping vital data such as user account
+information synchronized among all hosts. This provides users with the freedom
+to move from machine to machine without the inconvenience of having to remember
+different passwords and copy data from one machine to another. Data that is
+centrally stored doesn't need to be replicated, so long as there is some
+convenient means of accessing it from a network-connected host. By storing
+important administrative information centrally, you can make ensure 
+consistency of that data, increase flexibility for the users by
+allowing them to move from host to host in a transparent way, and make the
+system administrator's life much easier by maintaining a single copy of
+information to maintain when required.</P
+><P
+>We previously discussed an important example of this concept that is used on 
+the Internet&#8212;the Domain Name System (DNS). DNS serves a limited range of
+information, the most important being the mapping between hostname and
+IP address. For other types of information, there is no such specialized
+service. Moreover, if you manage only a small LAN with no Internet
+connectivity, setting up DNS may not seem to be worth the trouble.</P
+><P
+> 
+This is why Sun developed the <I
+CLASS="EMPHASIS"
+>Network Information
+System</I
+> (NIS). NIS provides generic database access facilities that
+can be used to distribute, for example,  information contained in the
+<TT
+CLASS="FILENAME"
+>passwd</TT
+> and <TT
+CLASS="FILENAME"
+>groups</TT
+> files to all
+hosts on your network. This makes the network appear as a single system,
+with the same accounts on all hosts. Similarly, you can use NIS
+to distribute the hostname information from <TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+>
+to all machines on the network.</P
+><P
+>NIS is based on RPC, and comprises a server, a client-side library, and
+several administrative tools.  Originally, NIS was called <I
+CLASS="EMPHASIS"
+>Yellow
+Pages</I
+>, or YP, which is still used to refer to it.
+Unfortunately, the name is a trademark of British Telecom, which required
+Sun to drop that name. As things go, some names stick with people, and so
+YP lives on as a prefix to the names of most NIS-related commands such as
+<B
+CLASS="COMMAND"
+>ypserv</B
+> and <B
+CLASS="COMMAND"
+>ypbind</B
+>.</P
+><P
+>&#13;
+Today, NIS is available for virtually all Unixes, and there are even
+free implementations. BSD Net-2 released one that has
+been derived from a public domain reference implementation donated by
+Sun. The library client code from this release had been in the Linux
+<TT
+CLASS="FILENAME"
+>libc</TT
+> for a long time, and the administrative programs
+were ported to Linux by
+Swen Thümmler.<A
+NAME="X-087-2-FNNI01"
+HREF="#FTN.X-087-2-FNNI01"
+>[1]</A
+>
+An NIS server is missing from the reference implementation, though.&#13;</P
+><P
+>&#13;
+
+Peter Eriksson developed a new
+implementation called NYS.<A
+NAME="X-087-2-FNNI02"
+HREF="#FTN.X-087-2-FNNI02"
+>[2]</A
+>
+It supports both plain NIS and Sun's much enhanced NIS+. NYS not only
+provides a set of NIS tools and a server, but also adds a whole new
+set of library functions that need to be compiled into your
+<TT
+CLASS="FILENAME"
+>libc</TT
+> if you wish to use it.  This includes a new
+configuration scheme for hostname resolution that replaces the current
+scheme using <TT
+CLASS="FILENAME"
+>host.conf</TT
+>.</P
+><P
+>&#13;
+
+
+The GNU libc, known as <TT
+CLASS="FILENAME"
+>libc6</TT
+> in the Linux community,
+includes an updated version of the traditional NIS support developed by
+Thorsten Kukuk.<A
+NAME="X-087-2-FNNI04"
+HREF="#FTN.X-087-2-FNNI04"
+>[3]</A
+> It supports all of the
+library functions that NYS provided and also uses the enhanced configuration
+scheme of NYS. You still need the tools and server, but using GNU <TT
+CLASS="FILENAME"
+>libc</TT
+> saves
+you the trouble of having to meddle with patching and recompiling the library.</P
+><P
+>This chapter focuses on the NIS support included in the GNU <TT
+CLASS="FILENAME"
+>libc</TT
+> rather than
+the other two packages. If you do want to run any of these packages, the
+instructions in this chapter may or may not be enough. For additional
+information, refer to the NIS-HOWTO or a book such as <I
+CLASS="EMPHASIS"
+>Managing 
+NFS and NIS</I
+> by Hal Stern (O'Reilly).</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNI01"
+HREF="x-087-2-nis.html#X-087-2-FNNI01"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Swen can be reached at
+<SPAN
+CLASS="SYSTEMITEM"
+>swen@uni-paderborn.de</SPAN
+>. The NIS clients
+are available as <TT
+CLASS="FILENAME"
+>yp-linux.tar.gz</TT
+> from
+<SPAN
+CLASS="SYSTEMITEM"
+>metalab.unc.edu</SPAN
+> in
+<TT
+CLASS="FILENAME"
+>system/Network</TT
+>.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNI02"
+HREF="x-087-2-nis.html#X-087-2-FNNI02"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Peter may be reached at
+<SPAN
+CLASS="SYSTEMITEM"
+>pen@lysator.liu.se</SPAN
+>.
+The current version of NYS is 1.2.8.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNI04"
+HREF="x-087-2-nis.html#X-087-2-FNNI04"
+>[3]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Thorsten may be reached at
+<SPAN
+CLASS="SYSTEMITEM"
+>kukuk@uni-paderborn.de</SPAN
+>.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.remote.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x10579.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring Remote Loginand Execution</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Getting Acquainted with NIS</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

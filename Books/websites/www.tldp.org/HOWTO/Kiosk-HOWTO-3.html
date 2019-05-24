@@ -1,0 +1,298 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Kiosk HOWTO : Building a Kiosk Environment</TITLE>
+ <LINK HREF="Kiosk-HOWTO-4.html" REL=next>
+ <LINK HREF="Kiosk-HOWTO-2.html" REL=previous>
+ <LINK HREF="Kiosk-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Kiosk-HOWTO-4.html">Next</A>
+<A HREF="Kiosk-HOWTO-2.html">Previous</A>
+<A HREF="Kiosk-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Building a Kiosk Environment</A></H2>
+
+<P>
+<P>
+<H2><A NAME="ss3.1">3.1 FVWM2</A>
+</H2>
+
+<P>FVWM2 (FVWM, version 2 -- www.fvwm.org) is a flexible, reliable, and
+lightweight X Window manager that provides excellent configurability
+for creating a kiosk environment. For kiosk use you must change some
+of its default settings. You need to modify the system.fvwm2rc file to
+remove things like virtual desktops, title bars, exit controls, etc,
+leaving a relatively minimalist FVWM environment. Because the kiosk is
+a standalone unit, modifying the system-wide settings does not present
+a problem.
+<P>You can also take advantage of FVWM's settable object properties to
+use X Window bitmaps (xpm files) to mask the parts of Netscape
+Navigator you don't want users to access.
+<P>The FVWM2 file you need to modify is
+/etc/X11/fvwm2/system.fvwm2rc. (If you use a different distribution
+than Red Hat, this file may be located elsewhere.) You may have to
+poke around in this file to find the sections listed below.
+<P>
+<H3>/etc/X11/fvwm2/system.fvwm2rc</H3>
+
+<P>In <CODE>/etc/X11/fvwm2/system.fvwm2rc</CODE> change
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+DeskTopSize 2X2
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>to
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+DeskTopSize 1X1
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This eliminates the virtual desktops.
+<P>Next, in the Default Styles section, change
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Style "*"           BorderWidth 7, HandleWidth 7
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>to
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Style "*"           BorderWidth 0, HandleWidth 0, notitle, nohandles
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This will disable most of the normal windowing controls.
+<P>Add the following two lines to the Default Styles section:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Style "xdaliclock"  StaysOnTop
+Style "sxpm"        StaysOnTop 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The Default Styles part of the file should look something like this
+when you finish:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# default Styles:
+#Style "*"           BorderWidth 7, HandleWidth 7
+Style "*"           BorderWidth 0, HandleWidth 0, notitle, nohandles
+Style "*"           Icon unknown1.xpm, Color lightgrey/dimgrey
+Style "*"           MWMFunctions, MWMDecor, HintOverride
+Style "*"           DecorateTransient, NoPPosition
+Style "*"           IconBox 0 -10 -280 -1
+Style "*"           FocusFollowsMouse
+Style "*"           RandomPlacement, SmartPlacement
+Style "xdaliclock"  StaysOnTop
+Style "sxpm"        StaysOnTop
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You can use the xdaliclock and sxpm programs to cover up parts of
+Netscape Navigator. The ``StaysOnTop'' attribute is the active
+ingredient.
+<P>Next, find the following four lines and comment them out as shown:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#AddToFunc InitFunction         "I" Module FvwmButtons
+#+                      "I" exec xsetroot -mod 2 2 -fg \#554055 -bg \#705070
+
+#AddToFunc RestartFunction "I" Module FvwmButtons
+#+                      "I" exec xsetroot -mod 2 2 -fg \#554055 -bg \#705070
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Commenting out these lines will eliminate the nice task launcher from
+FVWM2, which is okay because you're after as simple an environment as
+you can create.
+<P>
+<P>
+<H2><A NAME="ss3.2">3.2 Netscape Navigator</A>
+</H2>
+
+<P>Netscape Navigator is a better choice for setting up a kiosk than
+Netscape Communicator. Being simpler, there are fewer objects to hide.
+<P>Under Microsoft Windows, Netscape Navigator has a kiosk mode that
+eliminates most of the Navigator controls but there is, at the time of
+this writing, no built-in kiosk mode for the Unix version of
+Navigator.
+<P>The Unix version can, however, be invoked with a <CODE>-geometry</CODE>
+argument that allows us to always start Netscape full screen. This
+forms part of our strategy for a Netscape-based kiosk.
+<P>You need to decide on our kiosk screen resolution. Using a 19- or
+20-inch monitor, we found 640x480 too large, 1024x768 too small, and
+800x600 just about right for public viewing (you may decide
+differently). Once you decide on the resolution, you are ready to
+begin adjusting Navigator. For the rest of this HOWTO we assume
+800x600 resolution. You'll need to adjust accordingly if you select a
+different resolution.
+<P><I>Note:</I> Navigator is going to be invoked by root during bootup,
+so make all of the Netscape adjustments under the root account in the
+<CODE>/root/.netscape</CODE> directory.
+<P>Invoke Netscape and click into the <CODE>Edit, Preferences</CODE>
+dialog. Under <CODE>Appearance</CODE> check ``Show Toolbar as Text Only.''
+Under <CODE>Appearance, Fonts</CODE> adjust both fixed- and variable-width
+fonts to at least 14pt or the screen display will be too small for
+comfortable reading.
+<P>Under <CODE>Preferences, Navigator</CODE> insert the URL of your kiosk
+home page. If you're running a local version of Apache or another web
+server, make this <CODE>http://localhost/</CODE> for top level access, or
+deeper into the html doctree if desired.
+<P>Save these options, then click <CODE>View</CODE> on the Navigator menu
+bar. Deselect <CODE>Personal Toolbar</CODE> and <CODE>Location
+Bar</CODE>.
+<P>Notice how much more kiosk-like the interface has become? When you
+exit Navigator, these settings will be saved.
+<P>
+<H2><A NAME="ss3.3">3.3 Overlay Masks for Navigator</A>
+</H2>
+
+<P>If you look closely at your adjusted Navigator screen, you'll see four
+areas that need to be covered and protected from mouse or trackball
+clicks:
+<P>
+<OL>
+<LI>The Toolbar at the top</LI>
+<LI>The twister at the left-hand side of the navigation toolbar</LI>
+<LI>The rest of the navbar to the right of Home</LI>
+<LI>The security key in the lower left-hand corner of
+Navigator.</LI>
+</OL>
+<P>Here's a rough schematic of the areas you need to mask:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
++---------------------------------------+
+|            # 1 Toolbar                |
++--+------------+-----------------------+
+|#2|            |  #3 Navbar            |
++--+            +-----------------------+
+|                                       |
+|                                       |
+|                                       |
+|                                       |
+|                                       |
+|                                       |
+|                                       |
+|                                       |
+|                                       |
+|                                       |
++--------+                              |
+|#4 Key  |                              |
++---------------------------------------+
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>To mask over the top areas (#1-3), we'll need three graphic images. To
+mask the security key (#4) we'll use xdaliclock.
+<P>
+<H3>Creating the Graphical Masks</H3>
+
+<P>The easiest way to create graphical masks to cover areas #1-3 is to
+grab a screenshot of Navigator in full 800x600 mode and then crop out
+areas that correspond to #1-3. I used GIMP for this.
+<P>You can then re-design the basic graphics, changing the colors if you
+wish, or putting your own logo on them. Save them as:
+<P>
+<OL>
+<LI>topbar.xpm</LI>
+<LI>navleft.xpm</LI>
+<LI>navright.xpm</LI>
+</OL>
+<P>The xpm format is the native X Window bitmap format. You will use the
+X Window program <I>sxpm</I> to place them on the screen.
+<P>Creating the masks with just the right number of pixels and just the
+right placement on the monitor requires some experimentation. For your
+convenience, I have placed the xpm files we created plus our
+configuration files in at the following web site: 
+<A HREF="http://www.rom.on.ca/kiosk/HOWTO/">http://www.rom.on.ca/kiosk/HOWTO/</A>. You may find it simpler to
+download our masks and use them as a starting point for your own
+graphics.
+<P>
+<H2><A NAME="ss3.4">3.4 /root/kiosk.xinitrc</A>
+</H2>
+
+<P>Just as you would normally create a .xinitrc file for your personal
+use, you must create an X Window session initialization file for our
+kiosk application. The following script implements a number of
+features:
+<P>
+<UL>
+<LI>Screensaver initialization (optional)</LI>
+<LI>Placement of graphic bitmap over Navigator menu bar (topnav.xpm)</LI>
+<LI>Placement of graphic bitmap over navigation bar twiser (navleft.xpm)</LI>
+<LI>Placement of graphic bitmap over rest of navbar (navright.xpm)</LI>
+<LI>Xdaliclock placement over Navigator security key (adjusted for
+800x600 screen resolution)</LI>
+<LI>Netscape startup and loop checks to make sure Navigator is running,
+and to re-run it if it isn't.</LI>
+</UL>
+<P>This is the main file that runs the kiosk.
+<P>
+<HR>
+<PRE>
+#!/bin/sh
+# kiosk.xinitrc -- Initialization script for kiosk X Window session
+ 
+# Start screensaver
+/usr/X11R6/bin/xscreensaver-command -exit
+/usr/X11R6/bin/xscreensaver &amp;
+ 
+# Overlay over Navigator (mask #1)
+sxpm /root/navtop.xpm &amp;
+ 
+# Overlay small graphic over Toolbar twister - left-hand side (mask #2)
+sxpm -g +0+23 /root/navleft.xpm &amp;
+ 
+# Overlay larger graphic to cover everything to the right of
+# Home on the Toolbar (mask #3)
+sxpm -g +275+23 /root/navright.xpm &amp;
+ 
+# Place xdaliclock over top of Netscape security key, lower lhc (mask #4)
+/usr/X11R6/bin/xdaliclock -g 38x20+0+578 -font fixed -noseconds \
+-bg gray -fg black &amp;
+ 
+sleep 2
+
+# Start fvwm2 window manager
+fvwm2 &amp;
+ 
+# restart netscape if it ever exits
+while true ; do
+        if [ -f /.netscape/lock] ; then
+                rm /.netscape/lock
+        fi
+        /usr/bin/netscape -geometry 800x600
+done
+ 
+# This should never be reached
+</PRE>
+<HR>
+<P>
+<H2><A NAME="ss3.5">3.5 /root/xkiosk</A>
+</H2>
+
+<P>You can now start testing your kiosk setup. Since you will need to do
+this repeatedly, manually, as well as from an initialization script,
+create the following as a shell script named /root/xkiosk:
+<P>
+<HR>
+<PRE>
+/usr/X11R6/bin/xinit /root/kiosk.xinitrc -- /usr/X11R6/bin/X \
+-xf86config /root/kiosk.XF86Config bc
+</PRE>
+<HR>
+<P>Because you will be testing often, and reusing this later when you
+automate the startup, create this command as a shell script called
+<CODE>/root/xkiosk</CODE>. Be sure to <CODE>chmod ug+x</CODE> it.
+<P>
+<HR>
+<A HREF="Kiosk-HOWTO-4.html">Next</A>
+<A HREF="Kiosk-HOWTO-2.html">Previous</A>
+<A HREF="Kiosk-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

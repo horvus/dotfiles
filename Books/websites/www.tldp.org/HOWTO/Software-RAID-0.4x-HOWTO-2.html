@@ -1,0 +1,278 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Software-RAID HOWTO: Understanding RAID</TITLE>
+ <LINK HREF="Software-RAID-0.4x-HOWTO-3.html" REL=next>
+ <LINK HREF="Software-RAID-0.4x-HOWTO-1.html" REL=previous>
+ <LINK HREF="Software-RAID-0.4x-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Software-RAID-0.4x-HOWTO-3.html">Next</A>
+<A HREF="Software-RAID-0.4x-HOWTO-1.html">Previous</A>
+<A HREF="Software-RAID-0.4x-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. Understanding RAID</A></H2>
+
+<P>
+<OL>
+<LI><B>Q</B>:
+What is RAID?  Why would I ever use it?
+<BLOCKQUOTE>
+<B>A</B>:
+RAID is a way of combining multiple disk drives into a single
+entity to improve performance and/or reliability.  There are
+a variety of different types and implementations of RAID, each 
+with its own advantages and disadvantages.  For example, by
+putting a copy of the same data on two disks (called 
+<B>disk mirroring</B>, or RAID level 1), read performance can be
+improved by reading alternately from each disk in the mirror.
+On average, each disk is less busy, as it is handling only 
+1/2 the reads (for two disks), or 1/3 (for three disks), etc.
+In addition, a mirror can improve reliability: if one disk
+fails, the other disk(s) have a copy of the data.  Different
+ways of combining the disks into one, referred to as 
+<B>RAID levels</B>,  can provide greater storage efficiency
+than simple mirroring, or can alter latency (access-time) 
+performance, or throughput (transfer rate) performance, for
+reading or writing, while still retaining redundancy that
+is useful for guarding against failures.
+<P><B>Although RAID can protect against disk failure, it does 
+not protect against operator and administrator (human) 
+error, or against loss due to programming bugs (possibly 
+due to bugs in the RAID software itself).  The net abounds with
+tragic tales of system administrators who have bungled a RAID
+installation, and have lost all of their data.  RAID is not a
+substitute for frequent, regularly scheduled backup.</B>
+<P>RAID can be implemented 
+in hardware, in the form of special disk controllers, or in
+software, as a kernel module that is layered in between the 
+low-level disk driver, and the file system which sits above it.
+RAID hardware is always a "disk controller", that is, a device 
+to which one can cable up the disk drives. Usually it comes 
+in the form of an adapter card that will plug into a 
+ISA/EISA/PCI/S-Bus/MicroChannel slot.  However, some RAID
+controllers are in the form of a box that connects into
+the cable in between the usual system disk controller, and 
+the disk drives.  Small ones may fit into a drive bay; large
+ones may be built into a storage cabinet with its own drive 
+bays and power supply.  The latest RAID hardware used with
+the latest &amp; fastest CPU will usually provide the best overall
+performance, although at a significant price.  This is because 
+most RAID controllers come with on-board DSP's and memory
+cache that can off-load a considerable amount of processing 
+from the main CPU, as well as allow high transfer rates into 
+the large controller cache.  Old RAID hardware can act as 
+a "de-accelerator" when used with newer CPU's: yesterday's
+fancy DSP and cache can act as a bottleneck, and it's
+performance is often beaten by pure-software RAID and new
+but otherwise plain, run-of-the-mill disk controllers.  
+RAID hardware can offer an advantage over pure-software
+RAID, if it can makes use of disk-spindle synchronization
+and its knowledge of the disk-platter position with 
+regard to the disk head, and the desired disk-block.
+However, most modern (low-cost) disk drives do not offer 
+this information and level of control anyway, and thus,
+most RAID hardware does not take advantage of it.
+RAID hardware is usually
+not compatible across different brands, makes and models:
+if a RAID controller fails, it must be replaced by another
+controller of the same type.  As of this writing (June 1998),
+a broad variety of hardware controllers will operate under Linux;
+however, none of them currently come with configuration
+and management utilities that run under Linux.
+<P>Software-RAID is a set of kernel modules, together with 
+management utilities that implement RAID purely in software,
+and require no extraordinary hardware.  The Linux RAID subsystem
+is implemented as a layer in the kernel that sits above the
+low-level disk drivers (for IDE, SCSI and Paraport drives),
+and the block-device interface.  The filesystem, be it ext2fs,
+DOS-FAT, or other, sits above the block-device interface.
+Software-RAID, by its very software nature, tends to be more
+flexible than a hardware solution.  The downside is that it
+of course requires more CPU cycles and power to run well
+than a comparable hardware system.  Of course, the cost
+can't be beat.  Software RAID has one further important 
+distinguishing feature: it operates on a partition-by-partition
+basis, where a number of individual disk partitions are
+ganged together to create a RAID partition.  This is in 
+contrast to most hardware RAID solutions, which gang together
+entire disk drives into an array.  With hardware, the fact that
+there is a RAID array is transparent to the operating system,
+which tends to simplify management.  With software, there
+are far more configuration options and choices, tending to 
+complicate matters.
+<P><B>As of this writing (June 1998), the administration of RAID 
+under Linux is far from trivial, and is best attempted by
+experienced system administrators.  The theory of operation
+is complex.  The system tools require modification to startup
+scripts.  And recovery from disk failure is non-trivial, 
+and prone to human error.   RAID is not for the novice,
+and any benefits it may bring to reliability and performance
+can be easily outweighed by the extra complexity.  Indeed,
+modern disk drives are incredibly reliable and modern 
+CPU's and controllers are quite powerful.  You might more
+easily obtain the desired reliability and performance levels
+by purchasing higher-quality and/or faster hardware.</B>
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+What are RAID levels?  Why so many? What distinguishes them?
+<BLOCKQUOTE>
+<B>A</B>:
+The different RAID levels have different performance, 
+redundancy, storage capacity, reliability and cost 
+characteristics.   Most, but not all levels of RAID
+offer redundancy against disk failure.  Of those that
+offer redundancy, RAID-1 and RAID-5 are the most popular.
+RAID-1 offers better performance, while RAID-5 provides 
+for more efficient use of the available storage space.
+However, tuning for performance is an entirely different 
+matter, as performance depends strongly on a large variety
+of factors, from the type of application, to the sizes of
+stripes, blocks, and files.  The more difficult aspects of
+performance tuning are deferred to a later section of this HOWTO.
+<P>The following describes the different RAID levels in the 
+context of the Linux software RAID implementation.
+<P>
+<UL>
+<LI><B>RAID-linear</B>
+is a simple concatenation of partitions to create
+a larger virtual partition.  It is handy if you have a number 
+small drives, and wish to create a single, large partition.
+This concatenation offers no redundancy, and in fact
+decreases the overall reliability: if any one disk 
+fails, the combined partition will fail.
+<P>
+<P>
+</LI>
+<LI><B>RAID-1</B> is also referred to as "mirroring".
+Two (or more) partitions, all of the same size, each store 
+an exact copy of all data, disk-block by disk-block.
+Mirroring gives strong protection against disk failure:
+if one disk fails, there is another with the an exact copy
+of the same data. Mirroring can also help improve
+performance in I/O-laden systems, as read requests can
+be divided up between several disks.   Unfortunately,
+mirroring is also the least efficient in terms of storage: 
+two mirrored partitions can store no more data than a 
+single partition.
+<P>
+<P>
+</LI>
+<LI><B>Striping</B> is the underlying concept behind all of
+the other RAID levels.  A stripe is a contiguous sequence 
+of disk blocks.  A stripe may be as short as a single disk
+block, or may consist of thousands.  The RAID drivers 
+split up their component disk partitions into stripes;
+the different RAID levels differ in how they organize the
+stripes, and what data they put in them. The interplay
+between the size of the stripes, the typical size of files
+in the file system, and their location on the disk is what
+determines the overall performance of the RAID subsystem.
+<P>
+<P>
+</LI>
+<LI><B>RAID-0</B> is much like RAID-linear, except that
+the component partitions are divided into stripes and 
+then interleaved.  Like RAID-linear, the result is a single
+larger virtual partition.  Also like RAID-linear, it offers
+no redundancy, and therefore decreases overall reliability:
+a single disk failure will knock out the whole thing.
+RAID-0 is often claimed to improve performance over the
+simpler RAID-linear.  However, this may or may not be true,
+depending on the characteristics to the file system, the
+typical size of the file as compared to the size of the
+stripe, and the type of workload.  The <CODE>ext2fs</CODE> 
+file system already scatters files throughout a partition,
+in an effort to minimize fragmentation. Thus, at the
+simplest level, any given access may go to one of several
+disks, and thus, the interleaving of stripes across multiple
+disks offers no apparent additional advantage. However,
+there are performance differences, and they are data,
+workload, and stripe-size dependent.
+<P>
+<P>
+</LI>
+<LI><B>RAID-4</B> interleaves stripes like RAID-0, but
+it requires an additional partition to store parity
+information.  The parity is used to offer redundancy:
+if any one of the disks fail, the data on the remaining disks
+can be used to reconstruct the data that was on the failed 
+disk.  Given N data disks, and one parity disk, the 
+parity stripe is computed by taking one stripe from each
+of the data disks, and XOR'ing them together.  Thus,
+the storage capacity of a an (N+1)-disk RAID-4 array
+is N, which is a lot better than mirroring (N+1) drives,
+and is almost as good as a RAID-0 setup for large N.
+Note that for N=1, where there is one data drive, and one
+parity drive, RAID-4 is a lot like mirroring, in that
+each of the two disks is a copy of each other.  However,
+RAID-4 does <B>NOT</B> offer the read-performance
+of mirroring, and offers considerably degraded write
+performance. In brief, this is because updating the 
+parity requires a read of the old parity, before the new
+parity can be calculated and written out.  In an
+environment with lots of writes, the parity disk can become
+a bottleneck, as each write must access the parity disk.
+<P>
+<P>
+</LI>
+<LI><B>RAID-5</B> avoids the write-bottleneck of RAID-4
+by alternately storing the parity stripe on each of the
+drives.  However, write performance is still not as good
+as for mirroring, as the parity stripe must still be read
+and XOR'ed before it is written.  Read performance is 
+also not as good as it is for mirroring, as, after all,
+there is only one copy of the data, not two or more.
+RAID-5's principle advantage over mirroring is that it
+offers redundancy and protection against single-drive
+failure, while offering far more storage capacity  when
+used with three or more drives.
+<P>
+<P>
+</LI>
+<LI><B>RAID-2 and RAID-3</B> are seldom used anymore, and
+to some degree are have been made obsolete by modern disk
+technology.  RAID-2 is similar to RAID-4, but stores 
+ECC information instead of parity.  Since all modern disk
+drives incorporate ECC under the covers, this offers 
+little additional protection.  RAID-2 can offer greater
+data consistency if power is lost during a write; however,
+battery backup and a clean shutdown can offer the same
+benefits.  RAID-3 is similar to RAID-4, except that it
+uses the smallest possible stripe size. As a result, any 
+given read will involve all disks, making overlapping 
+I/O requests difficult/impossible. In order to avoid
+delay due to rotational latency, RAID-3 requires that 
+all disk drive spindles be synchronized. Most modern
+disk drives lack spindle-synchronization ability, or,
+if capable of it, lack the needed connectors, cables,
+and manufacturer documentation.  Neither RAID-2 nor RAID-3 
+are supported by the Linux Software-RAID drivers.
+<P>
+<P>
+</LI>
+<LI><B>Other RAID levels</B> have been defined by various
+researchers and vendors.  Many of these represent the
+layering of one type of raid on top of another.  Some
+require special hardware, and others are protected by 
+patent. There is no commonly accepted naming scheme
+for these other levels. Sometime the advantages of these 
+other systems are minor, or at least not apparent 
+until the system is highly stressed.  Except for the
+layering of RAID-1 over RAID-0/linear, Linux Software
+RAID does not support any of the other variations. 
+<P>
+</LI>
+</UL>
+</BLOCKQUOTE>
+</LI>
+</OL>
+<HR>
+<A HREF="Software-RAID-0.4x-HOWTO-3.html">Next</A>
+<A HREF="Software-RAID-0.4x-HOWTO-1.html">Previous</A>
+<A HREF="Software-RAID-0.4x-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

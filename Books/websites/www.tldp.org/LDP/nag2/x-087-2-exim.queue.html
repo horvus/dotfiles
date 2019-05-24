@@ -1,0 +1,392 @@
+<HTML
+><HEAD
+><TITLE
+>Mail Delivery Modes</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Getting EximUp and Running"
+HREF="x-087-2-exim.html"><LINK
+REL="PREVIOUS"
+TITLE="Compiling Exim"
+HREF="x15999.html"><LINK
+REL="NEXT"
+TITLE="Miscellaneous config Options"
+HREF="x-087-2-exim.options.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x15999.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 19. Getting EximUp and Running</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-exim.options.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-EXIM.QUEUE"
+>19.4. Mail Delivery Modes</A
+></H1
+><P
+>&#13;
+
+
+As noted previously, Exim is able to deliver messages immediately or
+queue them for later processing. All incoming mail is stored in the
+<TT
+CLASS="FILENAME"
+>input</TT
+> directory below
+<TT
+CLASS="FILENAME"
+>/var/spool/exim</TT
+>. When queueing is not in
+operation, a delivery process is started for each message as soon as
+it arrives. Otherwise, it is left on the queue until a
+<I
+CLASS="EMPHASIS"
+>queue-runner</I
+> process picks it up. Queueing can be
+made unconditional by setting <TT
+CLASS="OPTION"
+>queue_only</TT
+> in the
+configuration file, or it can be conditional on the 1-minute system
+load by a setting such as:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>queue_only_load = 4</PRE
+></TD
+></TR
+></TABLE
+>
+
+which causes messages to be queued if the system load exceeds
+4.<A
+NAME="AEN16030"
+HREF="#FTN.AEN16030"
+>[1]</A
+></P
+><P
+>If your host is not permanently connected to the Internet, you may
+want to turn on queueing for remote addresses, while allowing Exim to
+perform local deliveries immediately. You can do this by setting:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>queue_remote_domains = *</PRE
+></TD
+></TR
+></TABLE
+>
+
+in the configuration file.</P
+><P
+> 
+If you turn on any form of queuing, you have to make sure the queues
+are checked regularly, probably every 10 or 15 minutes. Even without
+any explicit queueing options, the queues need to be checked for
+messages that have been deferred because of temporary delivery
+failures. If you run Exim in daemon mode, you must add the
+<TT
+CLASS="OPTION"
+>&#8211;q15m</TT
+> option on the command line to process the
+queue every 15 minutes.  You can also invoke <B
+CLASS="COMMAND"
+>exim
+&#8211;q</B
+> from <B
+CLASS="COMMAND"
+>cron</B
+> at these intervals.</P
+><P
+>&#13;
+You can display the current mail queue by invoking Exim with the
+<TT
+CLASS="OPTION"
+>&#8211;bp</TT
+> option. Equivalently, you can make
+<B
+CLASS="COMMAND"
+>mailq</B
+> a link to Exim, and invoke
+<B
+CLASS="COMMAND"
+>mailq</B
+>&#8201;:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>mailq</B
+></TT
+>
+ 2h   52K 12EwGE-0005jD-00 &#60;sam@vbrew.com&#62;
+        D bob@vbrew.com
+          harry@example.net  </PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;This shows a single message from <SPAN
+CLASS="SYSTEMITEM"
+>sam@vbrew.com</SPAN
+> to two recipients sitting
+in the message queue. It has been successfully delivered to
+<SPAN
+CLASS="SYSTEMITEM"
+>bob@vbrew.com</SPAN
+>, but has not
+yet been delivered to <SPAN
+CLASS="SYSTEMITEM"
+>harry@example.net</SPAN
+>, though it has been on
+the queue for two hours. The size of the message is 52K, and the ID by
+which Exim identifies this message is
+<TT
+CLASS="LITERAL"
+>12EwGE-0005jD-00</TT
+>. You can find out why the delivery
+is not yet complete by looking at the message's individual log file,
+which is kept in the <TT
+CLASS="FILENAME"
+>msglog</TT
+> directory in Exim's
+spool directory. The <TT
+CLASS="OPTION"
+>&#8211;Mvl</TT
+> option is an easy way
+of doing this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>exim &#8211;Mvl 12EwGE-0005jD-00</B
+></TT
+>
+2000-01-30 17:28:13 example.net [192.168.8.2]: Connection timed out
+2000-01-30 17:28:13 harry@example.net: remote_smtp transport deferred: 
+  Connection timed out</PRE
+></TD
+></TR
+></TABLE
+>
+
+Individual log files keep a copy of log entries for each message so you can
+easily inspect them. The same information could have been extracted from the
+main log file using the <B
+CLASS="COMMAND"
+>exigrep</B
+> utility:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>exigrep 12EwGE-0005jD-00 /var/log/exim/exim_mainlog</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+That would take longer, especially on a busy system where the log files
+can get quite big. The <B
+CLASS="COMMAND"
+>exigrep</B
+> utility comes into its own
+when looking for information about more than one message. Its first argument
+is a regular expression, and it picks out all the log lines concerned with any
+messages that have at least one log line that matches the expression. Thus it
+can be used to pick out all messages for one specific address, or all those to
+or from a specific host.</P
+><P
+>You can keep a general watch on what a running Exim is doing by running
+<B
+CLASS="COMMAND"
+>tail</B
+> on its main log file. Another way of doing this is to
+run the <B
+CLASS="COMMAND"
+>eximon</B
+> utility that comes with Exim. This is an X11
+application that puts up a scrolling display of the main log, and also shows
+a list of messages that are awaiting delivery, as well as some stripcharts
+about delivery activity.</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN16030"
+HREF="x-087-2-exim.queue.html#AEN16030"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The system load is a standard Unix measure of the
+average number of processes that are queued up, waiting to run. The
+<B
+CLASS="COMMAND"
+>uptime</B
+> shows load averages taken over the previous
+1, 5, and 15 minutes.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x15999.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-exim.options.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Compiling Exim</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-exim.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Miscellaneous config Options</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

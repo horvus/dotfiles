@@ -1,0 +1,1195 @@
+<HTML
+><HEAD
+><TITLE
+>Using dip</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Serial Line IP"
+HREF="x-087-2-slip.html"><LINK
+REL="PREVIOUS"
+TITLE="Dealing with Private IP Networks"
+HREF="x6009.html"><LINK
+REL="NEXT"
+TITLE="Running in Server Mode"
+HREF="x-087-2-slip.server.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x6009.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. Serial Line IP</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-slip.server.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-SLIP.DIP"
+>7.4. Using dip</A
+></H1
+><P
+>Now that was rather simple. Nevertheless, you might want to automate
+the steps previously described. It would be much better to have a
+simple command that performs all the steps necessary to open the
+serial device, cause the modem to dial the provider, log in, enable
+the SLIP line discipline, and configure the network interface. This is
+what the <B
+CLASS="COMMAND"
+>dip</B
+> command is for.</P
+><P
+><B
+CLASS="COMMAND"
+>dip</B
+> means <I
+CLASS="EMPHASIS"
+>Dialup IP</I
+>. It was
+written by Fred van Kempen and has been patched very heavily by a
+number of people. Today there is one strain that is used by almost
+everyone: Version <TT
+CLASS="LITERAL"
+>dip337p-uri</TT
+>, which is included
+with most modern Linux distributions, or is available from the
+<SPAN
+CLASS="SYSTEMITEM"
+>metalab.unc.edu</SPAN
+> FTP archive.</P
+><P
+><B
+CLASS="COMMAND"
+>dip</B
+> provides an interpreter for a simple scripting
+language that can handle the modem for you, convert the line to SLIP mode, and
+configure the interfaces. The script language is powerful enough to suit most configurations.</P
+><P
+>&#13;
+
+To be able to configure the SLIP interface, <B
+CLASS="COMMAND"
+>dip</B
+>
+requires root privilege. It would now be tempting to make
+<B
+CLASS="COMMAND"
+>dip</B
+> setuid to <SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+> so that all users can dial up some
+SLIP server without having to give them root access. This is very
+dangerous, though, because setting up bogus interfaces and default
+routes with <B
+CLASS="COMMAND"
+>dip</B
+> may disrupt routing on your
+network. Even worse, this action would give your users power to
+connect to <I
+CLASS="EMPHASIS"
+>any</I
+> SLIP server and launch dangerous
+attacks on your network. If you want to allow your users to fire up a
+SLIP connection, write small wrapper programs for each prospective
+SLIP server and have these wrappers invoke <B
+CLASS="COMMAND"
+>dip</B
+> with
+the specific script that establishes the connection. Carefully written
+wrapper programs can then safely be made setuid to <SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+>.<A
+NAME="X-087-2-FNSL1"
+HREF="#FTN.X-087-2-FNSL1"
+>[1]</A
+> An alternative,
+more flexible approach is to give trusted users root access to
+<B
+CLASS="COMMAND"
+>dip</B
+> using a program like <B
+CLASS="COMMAND"
+>sudo</B
+>.&#13;</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-SLIP.DIP.SAMPLE"
+>7.4.1. A Sample Script</A
+></H2
+><P
+>Assume that the host to which we make our SLIP connection is
+<SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+>, and that we have
+written a script for <B
+CLASS="COMMAND"
+>dip</B
+> to run called
+<TT
+CLASS="FILENAME"
+>cowslip.dip</TT
+> that makes our connection. We invoke
+<B
+CLASS="COMMAND"
+>dip</B
+> with the script name as argument:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>dip cowslip.dip</B
+></TT
+>
+DIP: Dialup IP Protocol Driver version 3.3.7 (12/13/93)
+Written by Fred N. van Kempen, MicroWalt Corporation.
+connected to cowslip.moo.com with addr 192.168.5.74
+#</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The script itself is shown in <A
+HREF="x-087-2-slip.dip.html#X-087-2-SLIP.FIG.SCRIPT"
+>Example 7-1</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SLIP.FIG.SCRIPT"
+></A
+><P
+><B
+>Example 7-1. A Sample dip Script</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># Sample dip script for dialing up cowslip
+# Set local and remote name and address
+	get $local vlager-slip
+	get $remote cowslip
+	port ttyS3                # choose a serial port
+	speed 38400              # set speed to max
+	modem HAYES              # set modem type
+	reset                    # reset modem and tty
+	flush                    # flush out modem response
+# Prepare for dialing.
+	send ATQ0V1E1X1\r
+	wait OK 2
+	if $errlvl != 0 goto error
+	dial 41988
+	if $errlvl != 0 goto error
+	wait CONNECT 60
+	if $errlvl != 0 goto error
+# Okay, we're connected now
+	sleep 3
+	send \r\n\r\n
+	wait ogin: 10
+	if $errlvl != 0 goto error
+	send Svlager\n
+	wait ssword: 5
+	if $errlvl != 0 goto error
+	send knockknock\n
+	wait running 30
+	if $errlvl != 0 goto error
+# We have logged in, and the remote side is firing up SLIP.
+	print Connected to $remote with address $rmtip
+	default                  # Make this link our default route
+	mode SLIP                # We go to SLIP mode, too
+# fall through in case of error
+error:
+	print SLIP to $remote failed.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;After connecting to <SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+>
+and enabling SLIP, <B
+CLASS="COMMAND"
+>dip</B
+> will detach from the
+terminal and go to the background. You can then start using the normal
+networking services on the SLIP link. To terminate the connection,
+simply invoke <B
+CLASS="COMMAND"
+>dip</B
+> with the
+<TT
+CLASS="OPTION"
+>&#8211;k</TT
+> option. This sends a hangup signal to
+<B
+CLASS="COMMAND"
+>dip</B
+>, using the process ID <B
+CLASS="COMMAND"
+>dip</B
+>
+records in <TT
+CLASS="FILENAME"
+>/etc/dip.pid</TT
+>:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>dip -k</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>In <B
+CLASS="COMMAND"
+>dip</B
+>'s scripting language, keywords prefixed with a dollar
+symbol denote variable names.  <B
+CLASS="COMMAND"
+>dip</B
+> has a predefined set of variables, which will be listed below.
+<SPAN
+CLASS="SYSTEMITEM"
+>$remote</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>$local</SPAN
+>, for instance, contain the
+hostnames of the remote and local hosts involved in the SLIP link.</P
+><P
+>The first two statements in the sample script are <B
+CLASS="COMMAND"
+>get</B
+>
+commands, which is <B
+CLASS="COMMAND"
+>dip</B
+>'s way to set a variable. Here, the
+local and remote hostnames are set to
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+>, respectively.</P
+><P
+>&#13;The next five statements set up the terminal line and the modem.
+<SPAN
+CLASS="SYSTEMITEM"
+>reset</SPAN
+> sends a reset string to the modem.
+The next statement flushes out the modem response so that the login chat in
+the next few lines works properly. This chat is pretty straightforward:
+it simply dials 41988, the phone number of
+<SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+>, and logs in to the account
+<SPAN
+CLASS="SYSTEMITEM"
+>Svlager</SPAN
+> using the password
+<SPAN
+CLASS="SYSTEMITEM"
+>knockknock</SPAN
+>. The
+<SPAN
+CLASS="SYSTEMITEM"
+>wait</SPAN
+> command makes <B
+CLASS="COMMAND"
+>dip</B
+>
+wait for the string given as its first argument; the number given as its second
+argument makes the wait time out after that many seconds if no such string is
+received. The <SPAN
+CLASS="SYSTEMITEM"
+>if</SPAN
+> commands interspersed
+in the login procedure check that no error occurred while executing the
+command.</P
+><P
+>The final commands executed after logging in are
+<SPAN
+CLASS="SYSTEMITEM"
+>default</SPAN
+>, which makes the SLIP link
+the default route to all hosts, and <SPAN
+CLASS="SYSTEMITEM"
+>mode</SPAN
+>,
+which enables SLIP mode on the line and configures the interface and routing
+table for you.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-SLIP.DIP.REFERENCE"
+>7.4.2. A dip Reference</A
+></H2
+><P
+>In this section, we will give a reference for most of
+<B
+CLASS="COMMAND"
+>dip</B
+>'s commands. You can get an overview of all the
+commands it provides by invoking <B
+CLASS="COMMAND"
+>dip</B
+> in test mode
+and entering the <SPAN
+CLASS="SYSTEMITEM"
+>help</SPAN
+>
+command. To learn about the syntax of a command, you may enter it
+without any arguments. Remember that this does not work with commands
+that take no arguments. The following example illustrates the
+<SPAN
+CLASS="SYSTEMITEM"
+>help</SPAN
+> command:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>dip -t</B
+></TT
+>
+DIP: Dialup IP Protocol Driver version 3.3.7p-uri (25 Dec 96)
+Written by Fred N. van Kempen, MicroWalt Corporation.
+Debian version 3.3.7p-2 (debian).
+
+DIP&#62; <TT
+CLASS="USERINPUT"
+><B
+>help</B
+></TT
+>
+DIP knows about the following commands:
+
+	beep         bootp        break        chatkey      config       
+	databits     dec          default      dial         echo         
+	flush        get          goto         help         if           
+	inc          init         mode         modem        netmask      
+	onexit       parity       password     proxyarp     print        
+	psend        port         quit         reset        securidfixed 
+	securid      send         shell        skey         sleep        
+	speed        stopbits     term         timeout      wait         
+
+DIP&#62; <TT
+CLASS="USERINPUT"
+><B
+>echo</B
+></TT
+>
+Usage: echo on|off
+DIP&#62;</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Throughout the following section, examples that display the
+<B
+CLASS="COMMAND"
+>DIP&#8201;&#62;</B
+> prompt show how to enter a command in test mode
+and what output it produces. Examples lacking this prompt should be taken
+as script excerpts.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN6144"
+>7.4.2.1. The modem commands</A
+></H3
+><P
+> 
+<B
+CLASS="COMMAND"
+>dip</B
+> provides a number of commands that configure your serial
+line and modem. Some of these are obvious, such as
+<SPAN
+CLASS="SYSTEMITEM"
+>port</SPAN
+>, which selects a serial port, and
+<SPAN
+CLASS="SYSTEMITEM"
+>speed</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>databits</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>stopbits</SPAN
+>, and
+<SPAN
+CLASS="SYSTEMITEM"
+>parity</SPAN
+>, which set
+the common line parameters.
+
+The <SPAN
+CLASS="SYSTEMITEM"
+>modem</SPAN
+> command selects a modem type.
+Currently, the only type supported is
+<SPAN
+CLASS="SYSTEMITEM"
+>HAYES</SPAN
+> (capitalization required).
+You have to provide <B
+CLASS="COMMAND"
+>dip</B
+> with a modem type, or else it will
+refuse to execute the <SPAN
+CLASS="SYSTEMITEM"
+>dial</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>reset</SPAN
+> commands. The
+<SPAN
+CLASS="SYSTEMITEM"
+>reset</SPAN
+> command sends a reset string
+to the modem; the string used depends on the modem type selected. For
+Hayes-compatible modems, this string is
+<SPAN
+CLASS="SYSTEMITEM"
+>ATZ</SPAN
+>.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>flush</SPAN
+> code can be used to flush
+out all responses the modem has sent so far. Otherwise, a chat script following
+<SPAN
+CLASS="SYSTEMITEM"
+>reset</SPAN
+> might be confused because it reads
+the <SPAN
+CLASS="SYSTEMITEM"
+>OK</SPAN
+> responses from earlier commands.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>init</SPAN
+> command selects an
+initialization string to be passed to the modem before dialing. The
+default for Hayes modems is &#8220;<SPAN
+CLASS="SYSTEMITEM"
+>ATE0 Q0
+V1 X1</SPAN
+>&#8221;, which turns on echoing of commands and long
+result codes, and selects blind dialing (no checking of dial
+tone). Modern modems have a good factory default configuration, so
+this is a little unnecessary, though it does no harm.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>dial</SPAN
+> command sends the
+initialization string to the modem and dials up the remote system. The
+default dial command for Hayes modems is <SPAN
+CLASS="SYSTEMITEM"
+>ATD</SPAN
+>.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN6174"
+>7.4.2.2. The echo command</A
+></H3
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>echo</SPAN
+> command serves as a debugging
+aid. Calling <SPAN
+CLASS="SYSTEMITEM"
+>echo on</SPAN
+> makes
+<B
+CLASS="COMMAND"
+>dip</B
+> echo to the console everything it sends to
+the serial device. This can be turned off again by calling
+<SPAN
+CLASS="SYSTEMITEM"
+>echo off</SPAN
+>.</P
+><P
+><B
+CLASS="COMMAND"
+>dip</B
+> also allows you to leave script mode
+temporarily and enter terminal mode. In this mode, you can use
+<B
+CLASS="COMMAND"
+>dip</B
+> just like any ordinary terminal program,
+writing the characters you type to the serial line, reading data from
+the serial line, and displaying the characters. To leave this mode,
+enter Ctrl-].</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN6184"
+>7.4.2.3. The get command</A
+></H3
+><P
+> 
+The <SPAN
+CLASS="SYSTEMITEM"
+>get</SPAN
+> command is
+<B
+CLASS="COMMAND"
+>dip</B
+>'s way of setting a variable. The simplest form is to
+set a variable to a constant, as we did in <TT
+CLASS="FILENAME"
+>cowslip.dip</TT
+>.
+You may, however, also prompt the user for input by specifying the keyword
+<SPAN
+CLASS="SYSTEMITEM"
+>ask</SPAN
+> instead of a value:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>DIP&#62; <TT
+CLASS="USERINPUT"
+><B
+>get $local ask</B
+></TT
+>
+Enter the value for $local: _</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>A third method is to obtain the value from the remote host.
+Bizarre as it seems at first, this is very useful in some cases.
+Some SLIP servers will not allow you to use your own IP address on the
+SLIP link, but will rather assign you one from a pool of addresses
+whenever you dial in, printing some message that informs you about
+the address you have been assigned. If the message looks something
+like &#8220;<TT
+CLASS="LITERAL"
+>Your address: 192.168.5.74</TT
+>&#8221;,
+the following piece of <B
+CLASS="COMMAND"
+>dip</B
+> code would let you
+pick up the address:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># finish login
+wait address: 10
+get $locip remote</PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN6199"
+>7.4.2.4. The print command</A
+></H3
+><P
+> 
+This is the command used to echo text to the console from which
+<B
+CLASS="COMMAND"
+>dip</B
+> was started. Any of <B
+CLASS="COMMAND"
+>dip</B
+>'s
+variables may be used in print commands. Here's an example:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>DIP&#62; <TT
+CLASS="USERINPUT"
+><B
+>print Using port $port at speed $speed</B
+></TT
+>
+Using port ttyS3 at speed 38400</PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN6208"
+>7.4.2.5. Variable names</A
+></H3
+><P
+><B
+CLASS="COMMAND"
+>dip</B
+> understands only a predefined set of variables. A
+variable name always begins with a dollar symbol and must be written in
+lowercase letters.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>$local</SPAN
+> and <SPAN
+CLASS="SYSTEMITEM"
+>$locip</SPAN
+> variables contain the local host's
+name and IP address. When you store the canonical hostname in
+<SPAN
+CLASS="SYSTEMITEM"
+>$local</SPAN
+>, <B
+CLASS="COMMAND"
+>dip</B
+>
+will automatically attempt to resolve the hostname to an IP address
+and to store it in the <SPAN
+CLASS="SYSTEMITEM"
+>$locip</SPAN
+>
+variable. A similar but backward process occurs when you assign an IP
+address to the <SPAN
+CLASS="SYSTEMITEM"
+>$locip</SPAN
+>
+variable; <B
+CLASS="COMMAND"
+>dip</B
+> will attempt to perform a reverse
+lookup to identify the name of the host and store it in the
+<SPAN
+CLASS="SYSTEMITEM"
+>$local</SPAN
+> variable.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>$remote</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>$rmtip</SPAN
+> variables operate in the same
+way for the remote host's name and address.
+<SPAN
+CLASS="SYSTEMITEM"
+>$mtu</SPAN
+> contains the MTU value for
+the connection.</P
+><P
+>These five variables are the only ones that may be assigned values
+directly using the <SPAN
+CLASS="SYSTEMITEM"
+>get</SPAN
+> command. A
+number of other variables are set as a result of the configuration
+commands bearing the same name, but may be used in
+<SPAN
+CLASS="SYSTEMITEM"
+>print</SPAN
+> statements;
+these variables are <SPAN
+CLASS="SYSTEMITEM"
+>$modem</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>$port</SPAN
+>, and
+<SPAN
+CLASS="SYSTEMITEM"
+>$speed</SPAN
+>.</P
+><P
+><SPAN
+CLASS="SYSTEMITEM"
+>$errlvl</SPAN
+> is the variable through which
+you can access the result of the last command executed. An error level of 0
+indicates success, while a nonzero value denotes an error.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN6233"
+>7.4.2.6. The if and goto commands</A
+></H3
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>if</SPAN
+> command is a conditional
+branch, rather than a full-featured programming <I
+CLASS="EMPHASIS"
+>if</I
+>
+statement. Its syntax is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>if <TT
+CLASS="REPLACEABLE"
+><I
+>var</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>op</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>number</I
+></TT
+> goto <TT
+CLASS="REPLACEABLE"
+><I
+>label</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The expression must be a simple comparison between one of the variables
+<SPAN
+CLASS="SYSTEMITEM"
+>$errlvl</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>$locip</SPAN
+>, and
+<SPAN
+CLASS="SYSTEMITEM"
+>$rmtip</SPAN
+>.
+<TT
+CLASS="REPLACEABLE"
+><I
+>var</I
+></TT
+> must be an integer number; the operator
+<TT
+CLASS="REPLACEABLE"
+><I
+>op</I
+></TT
+> may be one of <TT
+CLASS="LITERAL"
+>==</TT
+>,
+<TT
+CLASS="LITERAL"
+>!=</TT
+>, <TT
+CLASS="LITERAL"
+>&#60;</TT
+>, <TT
+CLASS="LITERAL"
+>&#62;</TT
+>,
+<TT
+CLASS="LITERAL"
+>&#60;=</TT
+>, and <TT
+CLASS="LITERAL"
+>&#62;=</TT
+>.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>goto</SPAN
+> command makes the execution
+of the script continue at the line following that bearing the
+<TT
+CLASS="REPLACEABLE"
+><I
+>label</I
+></TT
+>. A label must be the first word
+on the line and must be followed immediately by a colon.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN6258"
+>7.4.2.7. send, wait, and sleep</A
+></H3
+><P
+>These commands help implement simple chat scripts in
+<B
+CLASS="COMMAND"
+>dip</B
+>. The <SPAN
+CLASS="SYSTEMITEM"
+>send</SPAN
+> command outputs its arguments to the
+serial line. It does not support variables, but understands all
+C-style backslash character sequences, such as <SPAN
+CLASS="SYSTEMITEM"
+>\n</SPAN
+> for newline and <SPAN
+CLASS="SYSTEMITEM"
+>\b</SPAN
+> for backspace.  The tilde character (~)
+can be used as an abbreviation for carriage return/newline.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>wait</SPAN
+> command takes a word
+as an argument and will read all input on the serial line until it
+detects a sequence of characters that match this word. The word itself
+may not contain any blanks.  Optionally, you may give <SPAN
+CLASS="SYSTEMITEM"
+>wait</SPAN
+> a timeout value as a second argument;
+if the expected word is not received within that many seconds, the
+command will return with an <SPAN
+CLASS="SYSTEMITEM"
+>$errlvl</SPAN
+> value of 1. This command is used
+to detect login and other prompts.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>sleep</SPAN
+> command may be used to
+wait for a certain amount of time; for instance, to patiently wait for any
+login sequence to complete. Again, the interval is specified in seconds.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN6271"
+>7.4.2.8. mode and default</A
+></H3
+><P
+>These commands are used to flip the serial line to SLIP mode and
+configure the interface. </P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>mode</SPAN
+> command is the last command
+executed by <B
+CLASS="COMMAND"
+>dip</B
+> before going into daemon mode. Unless
+an error occurs, the command does not return.</P
+><P
+><SPAN
+CLASS="SYSTEMITEM"
+>mode</SPAN
+> takes a protocol name as
+argument. <B
+CLASS="COMMAND"
+>dip</B
+> currently recognizes
+<SPAN
+CLASS="SYSTEMITEM"
+>SLIP</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>CSLIP</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>SLIP6</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>CSLIP6</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>PPP</SPAN
+>,
+and <SPAN
+CLASS="SYSTEMITEM"
+>TERM</SPAN
+> as valid names. The current
+version of <B
+CLASS="COMMAND"
+>dip</B
+> does not understand adaptive SLIP, however.</P
+><P
+>After enabling SLIP mode on the serial line, <B
+CLASS="COMMAND"
+>dip</B
+> executes
+<B
+CLASS="COMMAND"
+>ifconfig</B
+> to configure the interface as a point-to-point
+link, and invokes <B
+CLASS="COMMAND"
+>route</B
+> to set the route to the remote host.</P
+><P
+>If, in addition, the script executes the <SPAN
+CLASS="SYSTEMITEM"
+>default</SPAN
+> command before <SPAN
+CLASS="SYSTEMITEM"
+>mode</SPAN
+>, <B
+CLASS="COMMAND"
+>dip</B
+> creates a
+default route that points to the SLIP link.</P
+></DIV
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNSL1"
+HREF="x-087-2-slip.dip.html#X-087-2-FNSL1"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+><B
+CLASS="COMMAND"
+>diplogin</B
+> must be run as
+setuid to <SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+>, too. See the
+section at the end of this chapter.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x6009.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-slip.server.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Dealing with Private IP Networks</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-slip.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Running in Server Mode</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

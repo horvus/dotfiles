@@ -1,0 +1,395 @@
+<HTML
+><HEAD
+><TITLE
+>The Point-to-Point Protocol</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Running in Server Mode"
+HREF="x-087-2-slip.server.html"><LINK
+REL="NEXT"
+TITLE="PPP on Linux"
+HREF="x6507.html"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-slip.server.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x6507.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="X-087-2-PPP"
+>Chapter 8. The Point-to-Point Protocol</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>8.1. <A
+HREF="x6507.html"
+>PPP on Linux</A
+></DT
+><DT
+>8.2. <A
+HREF="x6560.html"
+>Running pppd</A
+></DT
+><DT
+>8.3. <A
+HREF="x-087-2-ppp.options.html"
+>Using Options Files</A
+></DT
+><DT
+>8.4. <A
+HREF="x6675.html"
+>Using chat to Automate Dialing</A
+></DT
+><DT
+>8.5. <A
+HREF="x-087-2-ipconfig.options.html"
+>IP Configuration Options</A
+></DT
+><DD
+><DL
+><DT
+>8.5.1. <A
+HREF="x-087-2-ipconfig.options.html#AEN6784"
+>Choosing IP Addresses</A
+></DT
+><DT
+>8.5.2. <A
+HREF="x-087-2-ipconfig.options.html#AEN6843"
+>Routing Through a PPP Link</A
+></DT
+></DL
+></DD
+><DT
+>8.6. <A
+HREF="x6968.html"
+>Link Control Options</A
+></DT
+><DT
+>8.7. <A
+HREF="x7037.html"
+>General Security Considerations</A
+></DT
+><DT
+>8.8. <A
+HREF="x-087-2-ppp.authentication.html"
+>Authentication with PPP</A
+></DT
+><DD
+><DL
+><DT
+>8.8.1. <A
+HREF="x-087-2-ppp.authentication.html#AEN7101"
+>PAP Versus CHAP</A
+></DT
+><DT
+>8.8.2. <A
+HREF="x-087-2-ppp.authentication.html#AEN7136"
+>The CHAP Secrets File</A
+></DT
+><DT
+>8.8.3. <A
+HREF="x-087-2-ppp.authentication.html#AEN7224"
+>The PAP Secrets File</A
+></DT
+></DL
+></DD
+><DT
+>8.9. <A
+HREF="x7261.html"
+>Debugging Your PPP Setup</A
+></DT
+><DT
+>8.10. <A
+HREF="x7297.html"
+>More Advanced PPP Configurations</A
+></DT
+><DD
+><DL
+><DT
+>8.10.1. <A
+HREF="x7297.html#AEN7303"
+>PPP Server</A
+></DT
+><DT
+>8.10.2. <A
+HREF="x7297.html#AEN7379"
+>Demand Dialing</A
+></DT
+><DT
+>8.10.3. <A
+HREF="x7297.html#AEN7441"
+>Persistent Dialing</A
+></DT
+></DL
+></DD
+></DL
+></DIV
+><P
+>&#13;
+
+
+
+
+
+
+Like SLIP, PPP is a protocol used to send datagrams across a
+serial connection; however, it addresses a couple of the deficiencies
+of SLIP. First, it can carry a large number of protocols and is
+thus not limited to the IP protocol. It provides error detection
+on the link itself, while SLIP accepts and forwards
+corrupted datagrams as long as the corruption does not occur in the
+header. Equally important, it lets the communicating sides
+negotiate options, such as the IP address and the maximum datagram size
+at startup time, and provides client authorization.  This built-in
+negotiation allows reliable automation of the connection
+establishment, while the authentication removes the need for the
+clumsy user login accounts that SLIP requires. For each of these
+capabilities, PPP has a separate protocol. In this chapter, we briefly
+cover these basic building blocks of PPP. This discussion of PPP is
+far from complete; if you want to know more about PPP, we urge you to
+read its RFC specification and the dozen or so companion
+RFCs.<A
+NAME="X-087-2-FNPP01"
+HREF="#FTN.X-087-2-FNPP01"
+>[1]</A
+>
+There is also a comprehensive O'Reilly book on the topic
+of <I
+CLASS="EMPHASIS"
+>Using &#38; Managing PPP</I
+>, by Andrew Sun.</P
+><P
+>&#13;At the very bottom of PPP is the <I
+CLASS="EMPHASIS"
+>High-Level Data Link
+Control</I
+> (HDLC) protocol, which defines the
+boundaries around the individual PPP frames and provides a 16-bit
+checksum.<A
+NAME="X-087-2-FNPP02"
+HREF="#FTN.X-087-2-FNPP02"
+>[2]</A
+> As opposed to the more primitive SLIP
+encapsulation, a PPP frame is capable of holding packets from
+protocols other than IP, such as Novell's IPX or Appletalk.  PPP
+achieves this by adding a protocol field to the basic HDLC frame that
+identifies the type of packet carried by the frame.&#13;</P
+><P
+>&#13;The <I
+CLASS="EMPHASIS"
+>Link Control Protocol</I
+>, (LCP) is used on top of HDLC
+to negotiate options pertaining to the data link. For instance, the
+<I
+CLASS="EMPHASIS"
+>Maximum Receive Unit</I
+> (MRU), states the maximum
+datagram size that one side of the link agrees to receive.</P
+><P
+>&#13;
+
+An important step at the configuration stage of a PPP link is client
+authorization. Although it is not mandatory, it is really a must for
+dialup lines in order to keep out intruders.  Usually the called host
+(the server) asks the client to authorize itself by proving it knows
+some secret key.  If the caller fails to produce the correct secret,
+the connection is terminated.  With PPP, authorization works both
+ways; the caller may also ask the server to authenticate
+itself.  These authentication procedures are totally independent of
+each other.  There are two protocols for different types of
+authorization, which we will discuss further in this chapter: <I
+CLASS="EMPHASIS"
+>Password Authentication Protocol</I
+> (PAP)
+and <I
+CLASS="EMPHASIS"
+>Challenge Handshake Authentication Protocol</I
+>
+(CHAP).</P
+><P
+>&#13;
+
+Each network protocol that is routed across the data link (like IP and
+AppleTalk) is configured dynamically using a corresponding
+<I
+CLASS="EMPHASIS"
+>Network Control Protocol</I
+> (NCP).  To
+send IP datagrams across the link, both sides running PPP must first
+negotiate which IP address each of them uses. The control protocol
+used for this negotiation is the <I
+CLASS="EMPHASIS"
+>Internet Protocol Control
+Protocol</I
+> (IPCP).</P
+><P
+>&#13;
+
+
+Besides sending standard IP datagrams across the link, PPP also supports
+Van Jacobson header compression of IP datagrams. This technique
+shrinks the headers of TCP packets to as little as three bytes. It is
+also used in CSLIP, and is more colloquially referred to as VJ header
+compression.  The use of compression may be negotiated at startup time
+through IPCP, as well.</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP01"
+HREF="x-087-2-ppp.html#X-087-2-FNPP01"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> Relevant RFCs are listed
+in the Bibiliography at the end of this book.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP02"
+HREF="x-087-2-ppp.html#X-087-2-FNPP02"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> In fact, HDLC is a much
+more general protocol devised by the International Standards
+Organization (ISO) and is also an essential component of the X.25
+specification.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-slip.server.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x6507.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Running in Server Mode</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>PPP on Linux</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

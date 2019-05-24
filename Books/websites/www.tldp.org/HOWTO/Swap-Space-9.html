@@ -1,0 +1,79 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Swap Space Mini-HOWTO: The swapinit.sh script </TITLE>
+ <LINK HREF="Swap-Space-10.html" REL=next>
+ <LINK HREF="Swap-Space-8.html" REL=previous>
+ <LINK HREF="Swap-Space.html#toc9" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Swap-Space-10.html">Next</A>
+<A HREF="Swap-Space-8.html">Previous</A>
+<A HREF="Swap-Space.html#toc9">Contents</A>
+<HR>
+<H2><A NAME="swapinit"></A> <A NAME="s9">9. The swapinit.sh script </A></H2>
+
+<P>    
+This shell script initializes the swap space on the partition. The code for 
+signature detection has been repeated 6 times because many a times the 
+signature is properly detected only on the second or the third try.  
+<P>(Adapted from the original Swap-Space-HOWTO by H. Peter Anvin) 
+<BLOCKQUOTE><CODE>
+<PRE>
+ 
+#!/bin/sh 
+# 
+# swapinit.sh - activate the swap partition 
+# 
+# written by Rahul U. Joshi 
+# Verify and initialize swap space 
+# 
+ 
+echo -n 'Verifying swap space... ' 
+ 
+loopcount=0 
+ 
+# flag to indicate whether the partition has been activated or not 
+activated=0 
+ 
+# check for signatures 6 times before giving up 
+while [ $loopcount -lt 6 ] 
+  do 
+ 
+  if [ "`/bin/dd 2>/dev/null if=/dev/winswap bs=1 count=10  skip=4086`" = 'SWAP-SPACE' ]; then 
+    echo "Linux signature found, iteration $loopcount" 
+    echo "Activating swap partitions"  
+    swapon /dev/winswap 
+    activated=1 
+    break 
+ 
+  elif [ "`/bin/dd 2>/dev/null if=/dev/winswap bs=1 count=11 skip=43`" = 'SWAP SPACE ' ]; then    
+    echo "DOS signature found, iteration $loopcount" 
+    echo "Making swap partition"   
+    mkswap /dev/winswap YYYYY 
+    echo "Activating swap partitions"  
+    swapon /dev/winswap 
+    activated=1 
+    break 
+ 
+  else    
+   let loopcount=loopcount+1 
+  fi   
+ 
+  done 
+ 
+ 
+if [ $activated -ne 1 ] ; then 
+  echo "Swap signature not found after $loopcount tries" 
+  echo "No swapping partitions activated" 
+  exit 1 
+fi 
+</PRE>
+</CODE></BLOCKQUOTE>
+<HR>
+<A HREF="Swap-Space-10.html">Next</A>
+<A HREF="Swap-Space-8.html">Previous</A>
+<A HREF="Swap-Space.html#toc9">Contents</A>
+</BODY>
+</HTML>

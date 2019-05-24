@@ -1,0 +1,1591 @@
+<HTML
+><HEAD
+><TITLE
+>Performance Tuning and Troubleshooting</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="DSL HOWTO for Linux"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Securing Your Connection"
+HREF="secure.html"><LINK
+REL="NEXT"
+TITLE="Appendix: DSL Overview"
+HREF="overview.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>DSL HOWTO for Linux</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="secure.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="overview.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="TUNING">5. Performance Tuning and Troubleshooting</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN680">5.1. Tuning</H2
+><P
+> OK, now we are up and running, and we want to be running at warp factor nine.
+ No such thing as too fast, right? </P
+><P
+> Linux networking is pretty robust, even a default installation with no
+ <SPAN
+CLASS="QUOTE"
+>"tuning"</SPAN
+>. You may well not need to do anything else. But if your
+ connection is not performing up to what you think it should be, then possibly
+ there is a problem somewhere. This may be a more worthwhile approach than
+ the pursuit of any magical <SPAN
+CLASS="QUOTE"
+>"tweak"</SPAN
+>.  </P
+><P
+> A <EM
+>very</EM
+> rough guideline on what you might reasonably
+ expect as a maximum sync rate, based on distance from DSLAM/CO: &#13;</P
+><DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN688"><P
+></P
+><TABLE
+BORDER="1"
+WIDTH="100%"
+CLASS="CALSTABLE"
+><TBODY
+><TR
+><TD
+WIDTH="40"
+ALIGN="RIGHT"
+VALIGN="TOP"
+>      0-12 K ft  (0-3.6 km)   
+     </TD
+><TD
+WIDTH="40"
+ALIGN="LEFT"
+VALIGN="TOP"
+>            2000 Kbps or more (8100 max for ADSL)
+     </TD
+></TR
+><TR
+><TD
+WIDTH="40"
+ALIGN="RIGHT"
+VALIGN="TOP"
+>      12-16 K ft (3.6-4.6 km)   
+     </TD
+><TD
+WIDTH="40"
+ALIGN="LEFT"
+VALIGN="TOP"
+>            1500 Kbps to 1000 Kbps
+     </TD
+></TR
+><TR
+><TD
+WIDTH="40"
+ALIGN="RIGHT"
+VALIGN="TOP"
+>      16-18 K ft (4.6-5.4 km)   
+     </TD
+><TD
+WIDTH="40"
+ALIGN="LEFT"
+VALIGN="TOP"
+>            1200 Kbps to  512 Kbps
+     </TD
+></TR
+><TR
+><TD
+WIDTH="40"
+ALIGN="RIGHT"
+VALIGN="TOP"
+>      18-?? K ft (5.4-?? km)   
+     </TD
+><TD
+WIDTH="40"
+ALIGN="LEFT"
+VALIGN="TOP"
+>            512 Kbps to  128 Kbps or less :(
+     </TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+><P
+> There are many conceivable factors that could effect this one way or the
+ other. Newer generations of DSL will surely improve this, as will related 
+ technologies like repeaters.</P
+><P
+> You will loose 10-20% of the modem's attainable sync rate to networking
+ overheads (TCP, ATM, ethernet). So a 1500 Kbps connection, is only going to
+ realize about 1100-1300 Kbps or so of real world throughput. No tweaking is
+ going to change the built-in protocol overheads. Also, if your
+ service is capped at a lesser speed by your provider, then you can't get
+ above that speed no matter what. <EM
+>AND</EM
+> -- that there are
+ numerous variables that can effect your loop/signal quality, and subsequently
+ your speed (aka sync rate). Some of these may be beyond your control. 
+ </P
+><P
+> But there are a few things that you might want to look at.&#13;</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN709">5.1.1. TCP Receive Window</H3
+><P
+> For many of us, a default Linux installation is going to give something close
+ to optimum performance. Windows 9x users often get a big boost by increasing
+ their TCP Receive Window (RWIN). But this is because it is too small to start
+ with. This is just not the case with Linux where the default value is 32KB. &#13;</P
+><P
+> 
+ The exception here is if you have to routinely deal with a high latency
+ connection. For instance, if your provider has a satellite uplink that is
+ consistently adding unusual latency (250ms or greater?). Then a larger
+ TCP Window will likely help. For more on TCP Receive Window and related
+ issues, look at <A
+HREF="http://www.psc.edu/networking/perf_tune.html"
+TARGET="_top"
+>http://www.psc.edu/networking/perf_tune.html</A
+>. &#13;</P
+><P
+> The Receive Window is a buffer that helps control the flow of data. If 
+ set too low, it can be a bottleneck and restrict throughput. The optimum 
+ value for this depends completely on your bandwidth and latency. Latency being
+ what you would find as average roundtrip time (RTT) based on
+ <EM
+>your</EM
+> typical destinations and conditions. This can be
+ determined with <B
+CLASS="COMMAND"
+>ping</B
+>. For example, the Linux default of
+ 32KB is acceptable up to speeds of 2 Mbps and a typical latency of 125ms or so,
+ or 1.0 Mbps and latency of 250ms. Setting this value too high can also
+ adversely effect throughput, so don't over do it.&#13;</P
+><P
+> An example courtesy of Juha Saarinen of New Zealand:
+ </P
+><A
+NAME="AEN718"><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+> 
+The commonly used formula for working out the the tcp buffer is the
+<SPAN
+CLASS="QUOTE"
+>"bandwidth delay product"</SPAN
+> one:</P
+><P
+>      Buffer size = Bandwidth (bits/s) * RTT (seconds)</P
+><P
+>In my case, I have roughly 8Mbps downstream, but the ATM network can only
+support ~3.5Mbps sustained. I'm far away from the rest of the world, so to
+squeeze in a sufficient amount of 1,500 byte packets, with average RTTs of
+250ms, I should probably have a buffer of (3,500,000/8)*.25 = 106KB. (I've
+got 128KB at the moment, which works fine.)</P
+></BLOCKQUOTE
+><P
+> The Receive Window can be dynamically set in the /proc filesystem. This
+ requires entering a value that is twice the desired buffer size:&#13;</P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#13; #echo 262144 &#62; /proc/sys/net/core/rmem_default 
+ #echo 262144 &#62; /proc/sys/net/core/rmem_max
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>The above example actually sets the value to 128K. The Send Window can also 
+be set, but is not as likely to be a limiting factor on DSL connections as 
+the Receive Window:&#13;</P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+> 
+ #echo 262144 &#62; /proc/sys/net/core/wmem_default 
+ #echo 262144 &#62; /proc/sys/net/core/wmem_max
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> These values can also be set using the <B
+CLASS="COMMAND"
+>sysctl</B
+> command. See
+ the man page.
+ </P
+><P
+> Other suggested kernel options for those who want to squeeze every last bit  
+ out of that copper (selected entries only):
+ </P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#13; # sysctl -a 
+ net.ipv4.tcp_rfc1337 = 1
+ net.ipv4.ip_no_pmtu_disc = 0
+ net.ipv4.tcp_sack = 1
+ net.ipv4.tcp_fack = 1
+ net.ipv4.tcp_window_scaling = 1
+ net.ipv4.tcp_timestamps = 1
+ net.ipv4.tcp_ecn = 0
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> A brief description of these, and other, options may be found in 
+ <TT
+CLASS="FILENAME"
+>/usr/src/linux/Documentation/networking/ip-sysctl.txt</TT
+>, 
+ in the kernel source directory.&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN736">5.1.2. Interleaving</H3
+><P
+> <SPAN
+CLASS="QUOTE"
+>"Interleaving"</SPAN
+> is an error control mechanism of ADSL with DMT
+ line encoding. DMT is now the standard for ADSL, and is by far and away the
+ most prevalent form of ADSL. Interleaving buffers the raw data and corrects
+ errors on the fly at the DSLAM. This can significantly help marginal loops
+ that may be prone to line errors. The downside is that this buffering also adds
+ significant latency to the connection. So for those with reasonable quality
+ lines, interleaving is of no real benefit, and may actually add unnecessary 
+ latency.&#13;</P
+><P
+> Interleaving is an adjustable parameter and can be turned on or off by the
+ telco. Many telcos seem to like to have this on by default, since it probably 
+ reduces tech support calls in those cases where it does help stabilize a line. 
+ But everyone else pays a price. 
+ </P
+><P
+> 
+ How to know if your line is interleaved or not, and how to change it? Good
+ question. Generally speaking, if your first hop or two on a traceroute is 
+ less than 25ms or so, you can pretty much figure that interleaving is off. 
+ But there may be other factors such as how far away those hops actually are.
+ Unless your modem accurately reports this, the only other real way to know is
+ to talk to someone at the telco. This may prove easier said than done.&#13;</P
+><P
+> <SPAN
+CLASS="QUOTE"
+>"FastPath"</SPAN
+> DMT is synonymous with <SPAN
+CLASS="QUOTE"
+>"interleaving
+ off"</SPAN
+>. Again, this <EM
+>only</EM
+> applies to ADSL/DMT.
+ </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="BOTTLENECKS">5.1.3. TCP Bottlenecks</H3
+><P
+> DSL connections may suffer performance degradations under certain
+ circumstances. Thankfully, Linux has very robust and flexible networking
+ tools to help us deal with these.</P
+><P
+> One such common situation is where traffic bottlenecks are created whenever
+ data from a fast network segment hits a slower one. Such as ethernet hitting
+ a DSL modem/router. This can cause short term traffic backlogs, known as
+ <SPAN
+CLASS="QUOTE"
+>"queues"</SPAN
+> in the device. Queuing can result in degraded
+ performance, particularly for interactive protocols (like telnet or ssh) and
+ streaming protocols (like RealAudio), and increased latency for ICMP and
+ other network protocols. This is most evident when the upstream link is
+ saturated (since downstream data is queued at the ISP's end and we can't do
+ as much about that). The queued traffic is processed such that lower volume
+ traffic protocols (like ssh) often get drowned out so to speak, by the higher
+ volume, bulk traffic (like http or ftp), as there isn't any special
+ prioritizing in default usage. 
+ </P
+><P
+> And if the upstream queuing, or other factors, causes enough of a delay, it
+ can even decrease downstream bandwidth utilization by slowing the
+ ACKnowledgements (which are heading upstream), that are required to keep a
+ download moving at optimal rates. So it is possible that an upload can hurt
+ a simultaneous download.&#13;</P
+><P
+> Such effects can be largely mitigated with Linux's built-in traffic 
+ shaping abilities. The user space tool for manipulating the kernel's
+ advanced traffic routing features is <SPAN
+CLASS="APPLICATION"
+>iproute</SPAN
+>,
+ sometimes packaged as <SPAN
+CLASS="APPLICATION"
+>iproute2</SPAN
+>. This includes various
+ tools that can classify and prioritize traffic with a considerable degree of
+ flexibility. It also requires various kernel config options to be turned on.
+ And is also fairly close to Black Magic ;-) The definitive document on this
+ is the Advanced Routing and Traffic Control HOWTO (<A
+HREF="http://tldp.org/HOWTO/Adv-Routing-HOWTO.html"
+TARGET="_top"
+>http://tldp.org/HOWTO/Adv-Routing-HOWTO.html</A
+>).
+ Pay particular attention to the <SPAN
+CLASS="QUOTE"
+>"Cookbook"</SPAN
+> Section #15, and in
+ particular #15.8, <SPAN
+CLASS="QUOTE"
+>"The Ultimate Traffic Conditioner: Low Latency, Fast
+ Up &#38; Downloads"</SPAN
+>. A great read!&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN758">5.1.4. Dropped PPP Connections</H3
+><P
+> PPPoE and PPPoA both rely on the venerable PPP protocol. This 
+ protocol incorporates the Link Control Protocol (LCP), which is used to
+ maintain the viability of the connection. Each end can send LCP echoes to other
+ end, and if there is no response in the alloted time frame, the session is
+ presumed dead, and is torn down. Again, either end can initiate this process.
+ The client should then negotiate a new connection. But, this normally means a
+ new IP address is assigned along with the new session. &#13;</P
+><P
+> Perhaps this is undesirable? While you certainly can't control what happens on
+ the remote end in this regard, you can adjust PPP's very flexible way of
+ dealing with LCP echoes on your end, to increase the number of echoes, extend
+ the interval and timeout period on your end. This might help prolong the life
+ of an unstable connection in situations with marginal line conditions, or a
+ buggy peer on the other end. Read your client's documentation. YMMV.&#13;</P
+><P
+> Some providers may deliberately enforce some time limit. There is not much 
+ you can do about this.&#13;</P
+><P
+> Also, frequently dropped connections are often an indication of a line 
+ problem of some kind. This is something the telco should investigate.&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TROUBLE">5.2. Installation Problems</H2
+><P
+> Read this section, if you have no sync at all or are completely unable to
+ connect. See your modem's owner's manual for interpreting the modem's LEDs.
+ (Many will show a solid red (or orange) light if not in sync.)
+ </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="NOSYNC">5.2.1. No sync</H3
+><P
+> The modem sync LED has never been green.
+ </P
+><P
+> <P
+></P
+><UL
+><LI
+><P
+>    If doing a self-install, the DSL jack may be wired wrong, or the splitter
+    may be wired wrong. Also, the modem may be wired differently than standard
+    telco devices. See above. 
+
+   </P
+></LI
+><LI
+><P
+>    Is the modem Linux compatible? If ethernet interfaced, this should not be
+    a problem. But PCI or USB modems may require drivers just to achieve sync. 
+    This could be a show stopper since many PCI and USB modems are not
+    Linux compatible.  
+   </P
+></LI
+><LI
+><P
+>    Call your provider and make sure the line was provisioned. It is always
+    possible someone dropped the ball. They may even be able to run a remote
+    test on your line just to verify. There is a also remote possibility that
+    the DSLAM is down. They should know this as well.
+  
+   </P
+></LI
+><LI
+><P
+>    Disconnect the modem power cord and disconnect the DSL cord from the wall
+    jack. Plug it into the test jack inside the NID (outside phone box), and
+    run an extension cord if necessary for power. Temporarily disconnect the
+    wiring to the inside phone circuit. This should effectively bypass any
+    inside wiring and environmental issues. The ethernet cable to the NIC does
+    not need to be connected to run this test (true <EM
+>only</EM
+>
+    for ethernet modems). The modem will sync fine without it. (Easier said
+    than done, I know.) But if possible, move enough of your system where you
+    can view the modem's diagnostics (if available) and get the sync rate. If
+    this works, there is probably something wired incorrectly inside, or a
+    short in a connection somewhere, or there is severe electrical
+    interference on the DSL line. Double check the splitter and wall jack
+    connections. If a splitterless installation, look for bad wiring, bad
+    (e.g. corroded) connections on <EM
+>all</EM
+> jacks, bad
+    splices, or defective microfilters! 
+   </P
+><P
+>    If no sync on the above test, either the line was not readied, the
+    modem is defective, or the DSLAM is down. Note that PCI and USB
+    modems will need to load drivers before syncing, and thus make
+    this test a little more complicated.
+   
+   </P
+></LI
+><LI
+><P
+>    If you installed microfilters, remove these temporarily and unplug 
+    <EM
+>all</EM
+> telco devices, such as fax machines, etc. Possibly
+    a mircofilter is defective and shorting out the line.
+  
+   </P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN786">5.2.2. Network Card (NIC) Problems</H3
+><P
+> Symptoms here are: NIC is not recognized, modules won't load, or
+ <B
+CLASS="COMMAND"
+>ifconfig</B
+> shows the interface is not up, or is generating
+ lots of errors, etc.&#13;</P
+><P
+> <P
+></P
+><UL
+><LI
+><P
+>    Turn off Plug 'n Pray in BIOS. This may be labeled as <SPAN
+CLASS="QUOTE"
+>"non-Microsoft
+    OS"</SPAN
+> or similar. A sometimes symptom here is that the NIC is
+    assigned IRQ 0. Or there may be an error message like <SPAN
+CLASS="QUOTE"
+>"resource
+    temporarily unavailable"</SPAN
+>.
+  
+   </P
+></LI
+><LI
+><P
+>    Check for IRQ conflicts with <B
+CLASS="COMMAND"
+>cat /proc/interrupts</B
+>. If
+    the NIC is sharing an IRQ, try moving cards around in slots, or tinker
+    with BIOS IRQ settings. If an ISA card, you may need to get the setup
+    utility from the manufacturer and use it to set IRQ, etc. This may
+    require booting to DOS. Modern systems should theoretically be
+    able to handle IRQ sharing, so it is not necessarily a problem in and of
+    itself. Only if something is misbehaving.
+  
+   </P
+></LI
+><LI
+><P
+>    Possibly the wrong module is being loaded. Look through the kernel source
+    documentation in <TT
+CLASS="FILENAME"
+>/usr/src/linux/Documentation/*</TT
+> for
+    your card or chipset. Also, for comments and update information in
+    <TT
+CLASS="FILENAME"
+>/usr/src/linux/drivers/net/*.c</TT
+> for your respective
+    chipset. It is worth noting that there is more than one module for some
+    card types. This seems to be true of tulip and 3Com cards. Check boot
+    messages or use <B
+CLASS="COMMAND"
+>lspci -v</B
+> to see how the kernel is
+    identifying your card. You can use <B
+CLASS="COMMAND"
+>insmod</B
+>,
+    <B
+CLASS="COMMAND"
+>rmmod</B
+>, and <B
+CLASS="COMMAND"
+>modprobe</B
+> to test
+    different modules. See the respective man pages for more information.  
+   
+   </P
+></LI
+><LI
+><P
+>    Check the manufacturer's web site for Linux documentation. Or look at
+    Donald Becker's informative site at <A
+HREF="http://www.scyld.com/network/"
+TARGET="_top"
+>http://www.scyld.com/network/</A
+>.
+   
+   </P
+></LI
+><LI
+><P
+>    Some Linux NIC drivers reportedly work better as non-modular. In other
+    words, compile them into the kernel instead of as a module.
+  
+   </P
+></LI
+><LI
+><P
+>    It is also possible that the card is bad, or the drivers just aren't up to
+    snuff. Try another card. And you don't need an expensive, high quality
+    card necessarily either.
+    
+   </P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN814">5.2.3. IP Connection Problems</H3
+><P
+> Read this section if you are sure the modem is syncing, the NIC is recognized
+ and seems to be working properly, client software is installed and running
+ without error, but the connection to the ISP fails. Verify the modem is indeed
+ syncing by the LED(s). An IP connection failure may be evidenced by
+ <B
+CLASS="COMMAND"
+>ifconfig</B
+> not showing an active eth0 interface (or ppp0 for
+ PPPoX), or <B
+CLASS="COMMAND"
+>pinging</B
+> gateway and other destinations
+ generates '<TT
+CLASS="LITERAL"
+>network unreachable</TT
+>' or similar errors.
+ </P
+><P
+> <P
+></P
+><UL
+><LI
+><P
+>    Make sure you know which protocol your ISP is using. Are they using DHCP?
+    PPPoX? It is critical that you have this right. You may have to ask tech
+    support. 
+
+   </P
+></LI
+><LI
+><P
+>    If you are using DHCP, does the ISP require MAC address authentication,
+    and if so, do they have the right address? Did they or you typo it? If 
+    the ISP requires hostname authentication, is your DHCP client passing 
+    the required hostname? This is done with the <SPAN
+CLASS="QUOTE"
+>"- h"</SPAN
+> command 
+    line option.
+  
+   </P
+></LI
+><LI
+><P
+>    Look at <TT
+CLASS="FILENAME"
+>/var/log/messages</TT
+> and see if any useful clues
+    are there. Also, run <B
+CLASS="COMMAND"
+>tcpdump</B
+> while trying to initiate
+    the connection. <B
+CLASS="COMMAND"
+>tcpdump</B
+> output is fairly cryptic, but
+    you should be able to determine if there is any response at all. 
+  
+   </P
+></LI
+><LI
+><P
+>    If PPPoX, is the ISP using <TT
+CLASS="LITERAL"
+>username</TT
+> as an id, or 
+    <TT
+CLASS="LITERAL"
+>username@isp.com</TT
+>?
+  
+   </P
+></LI
+><LI
+><P
+>     CHAP, PAP, or other? I would set up both CHAP and PAP (see
+     <B
+CLASS="COMMAND"
+>man pppd</B
+>) just to be safe.
+   </P
+></LI
+><LI
+><P
+>    Try pinging the default gateway's address. Get this with '<B
+CLASS="COMMAND"
+>route
+    -n</B
+>'. If you can <B
+CLASS="COMMAND"
+>ping</B
+> by IP address (i.e.
+    111.222.333.444), but not by hostname, then likely nameservers are not
+    correctly setup in <TT
+CLASS="FILENAME"
+>/etc/resolv.conf</TT
+>. This is
+    configurable as to whether your connection protocol (e.g. PPPoE) does this 
+    automatically or not. And different distributions may have their own 
+    way of setting this up, so check their documentation first. In a pinch, 
+    just add them manually to <TT
+CLASS="FILENAME"
+>/etc/resolv.conf</TT
+>. 
+    <B
+CLASS="COMMAND"
+>pppd</B
+> also has the <SPAN
+CLASS="QUOTE"
+>"usepeerdns"</SPAN
+> option 
+    that can be enabled.
+   </P
+></LI
+><LI
+><P
+>    For <SPAN
+CLASS="APPLICATION"
+>rp-pppoe</SPAN
+>, let the PPPoE client bring up the ethernet interface. Do not 
+    have it come up on boot. Make sure there is no existing default route 
+    before starting PPPoE. For rp-pppoe, David Skoll recommends that 
+    <TT
+CLASS="FILENAME"
+>/etc/ppp/options</TT
+> be left empty. 
+   </P
+></LI
+><LI
+><P
+>    If running a firewall (e.g. with <SPAN
+CLASS="APPLICATION"
+>ipchains</SPAN
+>), try
+    temporarily taking it down. Possibly this is misconfigured, and not
+    allowing packets through.
+ 
+   </P
+></LI
+><LI
+><P
+>     Roaring Penguin has a very nice debug output with all kinds of 
+     system info, and even tips for correcting problems. See the docs 
+     for turning this well-done feature on.
+   </P
+></LI
+><LI
+><P
+>     If the modem was purchased from a source other than your ISP, it may the
+     wrong kind of modem. SDSL needs an SDSL modem, for instance. Also, for
+     ADSL there are CAP and DMT encodings, and these are incompatible with
+     each other.
+     
+   </P
+><P
+>      The modem may need to be configured for your ISP's service. All modems
+      have configurations for VCI, VPI, encapsulation, etc. Call tech support
+      for this information. Modem configuration is usually done by either 
+      telnetting or web browsing to the modem's IP address.
+
+    </P
+></LI
+></UL
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SYNCTR">5.3. Sync Problems</H2
+><P
+> Read this section if you have had a working connection, but now have lost
+ sync, are intermittently losing sync, your sync rate has dropped
+ significantly, or are getting a <SPAN
+CLASS="QUOTE"
+>"sync/no surf"</SPAN
+> condition.
+ (Better quality modems will have a way to report sync rate, usually via
+ telnet or a web browser interface. See the owner's manual.) </P
+><P
+> A loss of sync indicates a problem with the DSLAM, your line (inside or
+ outside) or your modem. DSLAMs typically have <SPAN
+CLASS="QUOTE"
+>"shelves"</SPAN
+> with
+ <SPAN
+CLASS="QUOTE"
+>"cards"</SPAN
+>. Alcatel DSLAM cards, just for instance, have a capacity
+ of four connections each. If the card goes bad, at most four customers are
+ effected. The point being that sync loss outages can be very isolated. Unlike
+ network outages that tend to effect large numbers of users. Sync outages are
+ a telco problem, not an ISP problem. If your service agreement is with the
+ ISP, you will need to contact them, who will in turn contact the telco.
+ </P
+><P
+> Degraded sync rates, and disruption of the DSL signal, can cause various
+ problems. Obviously, you will never get your maximum throughput under these
+ conditions. But, the symptoms are not always obvious as to whether the
+ problem is on your end or the provider's. 
+ </P
+><P
+> 
+ For instance, a poor inside wire connection may result in retransmissions of
+ packets that have been dropped. This can really reduce throughput and slow a
+ connection down. It is tempting to think of packet loss as a traditional
+ networking problem, but with DSL it is possible to be the result of a bad
+ line, impaired signal, or even the modem itself.
+ </P
+><P
+> Some things to try:
+ 
+ <P
+></P
+><UL
+><LI
+><P
+>   Power cycle the modem. Turn off the power button/switch, and physically
+   unplug the cable to the wall jack for 30 seconds or so. Turn back on, and
+   re-attach to the wall jack. This will force a resync. Unfortunately, the only
+   way to power down a PCI modem, is to reboot. This may fix a 
+   <SPAN
+CLASS="QUOTE"
+>"sync/no surf"</SPAN
+> condition that is caused by the modem, and
+   maybe other conditions too. 
+   
+   </P
+></LI
+><LI
+><P
+>  
+   See the <A
+HREF="tuning.html#NOSYNC"
+>above section</A
+> on moving the modem
+   lock, stock and barrel to the NID and thus bypassing all inside wiring.
+   If the situation is improved there, then the problem is inside somewhere. If
+   not, it is a telco problem.
+ 
+   </P
+></LI
+><LI
+><P
+>   RFI Bear-hunt: The DSL signal is fragile. There are a number of
+   things that can degrade it.  RFI, or Radio Frequency Interference,
+   from sources in and around the home/office is one common source of
+   reduced signal strength, intermittent sync loss, low
+   sync rates and high line error rates that can cause retransmissions and 
+   slow things down. DSL frequencies just happen to be in a range that is 
+   susceptible to many potential RFI sources. Our test tool here is simply a
+   portable AM radio. Tune it to any channel where you can get clear reception
+   -- it makes no difference where. The AM radio will pick up RFI that is in
+   the same frequency range as the DSL signal. It will sound like
+   <SPAN
+CLASS="QUOTE"
+>"frying bacon"</SPAN
+> type static. Put it against your computer's
+   power supply. You should hear some static. Move it away and the static
+   should fade pretty quickly. This will give you an idea of what RFI sounds
+   like. A decent quality power supply should produce only weak RFI --
+   probably not enough to cause a problem. Use the radio like a Geiger counter
+   and move it around your modem and DSL line. If you hear static, follow it
+   to the source. Things to be suspicious of: power supplies, transformers,
+   ballasts, electric motors, dimmer switches, high intensity lighting. Moving
+   the modem, or rerouting cables is sometimes enough. Keeping the line
+   between the modem and the wall jack as short as possible is a good idea
+   too.
+ 
+   </P
+></LI
+><LI
+><P
+>    Chronic sync problems are often due to a line problem somewhere.
+    Sometimes it is something as simple as a bad splice or corroded jack, and
+    easily remedied if it can be found. Most such conditions can be isolated
+    by a good telco tech. Check with your provider, and politely harass them
+    if you have to. If you get the run-around, ask to go over their heads.
+   
+   </P
+></LI
+><LI
+><P
+>    If you are near the distance limits of DSL, and having off and on sync
+    problems, try the <SPAN
+CLASS="QUOTE"
+>"Homerun"</SPAN
+> installation. See <A
+HREF="installation.html#HOMERUN"
+>above</A
+>. This can be effective in improving
+    marginal signal/sync conditions.
+   
+   </P
+></LI
+><LI
+><P
+>     If using a surge protector, try it without the surge protector. Some may
+     interfere with the DSL signal.
+  
+   </P
+></LI
+></UL
+></P
+><P
+> Another possibility is a nearby AM radio station, or bandit ham radio
+ operator that are disrupting the DSL signal since they operate in a similar 
+ frequency range. These may only cause problems at certain times of day, like
+ when the station boosts its signal at night. A good telco DSL tech may be
+ able to help minimize the impact of this. YMMV.
+ </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN888">5.4. Network and Throughput Problems</H2
+><P
+> Read this section if your connection is up, but are having throughput
+ problems. In other words, your speed isn't what it should be based on your
+ bit rate plan, and your distance from the CO. <SPAN
+CLASS="QUOTE"
+>"Network"</SPAN
+> here is
+ the WAN -- the ISP's gateway and local subnet/backbone, etc. Remember that a
+ marginal line can cause a reduced sync rate, and this will impact throughput.
+ See <A
+HREF="tuning.html#SYNCTR"
+>above</A
+>.&#13;</P
+><P
+> The two factors we will be looking for are <SPAN
+CLASS="QUOTE"
+>"latency"</SPAN
+> and
+ <SPAN
+CLASS="QUOTE"
+>"packet loss"</SPAN
+>. Both are pretty easy to track down with the
+ standard networking tools <B
+CLASS="COMMAND"
+>ping</B
+> and
+ <B
+CLASS="COMMAND"
+>traceroute</B
+>. If either of these occur in our path, they
+ will impact performance. Latency means <SPAN
+CLASS="QUOTE"
+>"responsiveness"</SPAN
+> or
+ <SPAN
+CLASS="QUOTE"
+>"lag time"</SPAN
+>. Actually what we are interested in is abnormally
+ high latency, since there is always some latency. Packet loss is when a
+ packet of data gets dropped somewhere along the way. TCP/IP will know
+ it's been <SPAN
+CLASS="QUOTE"
+>"lost"</SPAN
+>, and there will be a retransmission of the lost
+ data. Enough of this can really slow things down. Ideally packet loss should
+ be 0%. &#13;</P
+><P
+> What we really need to be concerned about is that part of the WAN
+ route that we routinely traverse. If you do a traceroute to several different
+ sites, you will probably see that the first few <SPAN
+CLASS="QUOTE"
+>"hops"</SPAN
+> tend to
+ be the same. These are your ISP's local backbone, and your ISP's upstream
+ provider's gateway. Any problem with any of this, and it will effect
+ everywhere you go and everything you do. 
+ </P
+><P
+> We can start looking for packet loss and latency by pinging two or three
+ different sites, hopefully in at least a couple of different directions. We
+ will be looking for packet loss and/or unusually high latency.
+ </P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#13; $ ping -c 12 -n www.tldp.org
+ PING www.tldp.org (152.19.254.81) : 56(84) bytes of data.
+ 64 bytes from 152.19.254.81: icmp_seq=0 ttl=242 time=62.1 ms
+ 64 bytes from 152.19.254.81: icmp_seq=1 ttl=242 time=60.8 ms
+ 64 bytes from 152.19.254.81: icmp_seq=2 ttl=242 time=59.9 ms
+ 64 bytes from 152.19.254.81: icmp_seq=3 ttl=242 time=61.8 ms
+ 64 bytes from 152.19.254.81: icmp_seq=4 ttl=242 time=64.1 ms
+ 64 bytes from 152.19.254.81: icmp_seq=5 ttl=242 time=62.8 ms
+ 64 bytes from 152.19.254.81: icmp_seq=6 ttl=242 time=62.6 ms
+ 64 bytes from 152.19.254.81: icmp_seq=7 ttl=242 time=60.3 ms
+ 64 bytes from 152.19.254.81: icmp_seq=8 ttl=242 time=61.1 ms
+ 64 bytes from 152.19.254.81: icmp_seq=9 ttl=242 time=60.9 ms
+ 64 bytes from 152.19.254.81: icmp_seq=10 ttl=242 time=62.4 ms
+ 64 bytes from 152.19.254.81: icmp_seq=11 ttl=242 time=63.0 ms
+ 
+ --- www.tldp.org ping statistics ---
+ 12 packets transmitted, 12 packets received, 0% packet loss
+ round-trip min/avg/max = 59.9/61.8/64.1 ms
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> The above example is pretty normal from here. (You probably have a very
+ different route to this site, and your results may thus be quite different.)
+ Apparently no serious underlying problems that would slow me down. The below
+ example reveals a problem:
+ </P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#13; $ ping -c 20 -n www.debian.org
+ 
+ PING www.debian.org (198.186.203.20) : 56(84) bytes of data.
+ 64 bytes from 198.186.203.20: icmp_seq=0 ttl=241 time=404.9 ms
+ 64 bytes from 198.186.203.20: icmp_seq=1 ttl=241 time=394.9 ms
+ 64 bytes from 198.186.203.20: icmp_seq=2 ttl=241 time=402.1 ms
+ 64 bytes from 198.186.203.20: icmp_seq=4 ttl=241 time=2870.3 ms
+ 64 bytes from 198.186.203.20: icmp_seq=7 ttl=241 time=126.9 ms
+ 64 bytes from 198.186.203.20: icmp_seq=12 ttl=241 time=88.3 ms
+ 64 bytes from 198.186.203.20: icmp_seq=13 ttl=241 time=87.9 ms
+ 64 bytes from 198.186.203.20: icmp_seq=14 ttl=241 time=87.7 ms
+ 64 bytes from 198.186.203.20: icmp_seq=15 ttl=241 time=85.0 ms
+ 64 bytes from 198.186.203.20: icmp_seq=16 ttl=241 time=84.5 ms
+ 64 bytes from 198.186.203.20: icmp_seq=17 ttl=241 time=90.7 ms
+ 64 bytes from 198.186.203.20: icmp_seq=18 ttl=241 time=87.3 ms
+ 64 bytes from 198.186.203.20: icmp_seq=19 ttl=241 time=87.6 ms
+ 
+ --- www.debian.org ping statistics ---
+ 20 packets transmitted, 13 packets received, 35% packet loss
+ round-trip min/avg/max = 84.5/376.7/2870.3 ms
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> High packet loss at 35%, and some really slow roundtrip times in there as
+ well. A little digging on this showed that it was a backbone router 13 hops 
+ into the traceroute that was the problem. While making this site really slow
+ from here, it would only effect those routes that happen to hit that same
+ router. Now what would really hurt us is if something similar happens with a
+ router that we tend to go through consistently. Like our gateway, or maybe
+ the second hop router too. Find these with <B
+CLASS="COMMAND"
+>traceroute</B
+>, by
+ just picking a random site:
+ </P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#13; $ traceroute www.bellsouth.net
+ 
+ traceroute to bellsouth.net (192.223.22.134), 30 hops max, 38 byte packets
+  1  adsl-78-196-1.sdf.bellsouth.net (216.78.196.1)  14.86ms  7.96ms 12.59ms
+  2  205.152.133.65 (205.152.133.65)                  7.90ms  8.12ms  7.73ms
+  3  205.152.133.248 (205.152.133.248)                8.99ms  8.52ms  8.17ms
+  4  Hssi4-1-0.GW1.IND1.ALTER.NET (157.130.100.153)  11.36ms 11.48ms 11.72ms
+  5  125.ATM3-0.XR2.CHI4.ALTER.NET (146.188.208.106) 14.46ms 14.23ms 14.40ms
+  6  194.at-1-0-0.TR2.CHI2.ALTER.NET (152.63.65.66)  16.48ms 15.69ms 16.37ms
+  7  126.at-5-1-0.TR2.ATL5.ALTER.NET (152.63.0.213)  65.66ms 66.18ms 66.39ms
+  8  296.ATM6-0.XR2.ATL1.ALTER.NET (152.63.81.37)    66.86ms 66.42ms 66.40ms
+  9  194.ATM8-0.GW1.ATL3.ALTER.NET (146.188.233.53)  67.87ms 68.69ms 69.63ms
+ 10  IMVI-gw.customer.ALTER.NET (157.130.69.202)     69.88ms 69.25ms 69.35ms
+ 11  www.bellsouth.net (192.223.22.134)              68.74ms 69.06ms 68.05ms
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> The first hop is the gateway. In fact, for me the first two hops are
+ <EM
+>always</EM
+> the same, and the first three or four are often
+ the same. So a problem with any of these may cause a problem anywhere I go.
+ (The specifics of your own situation may be a little different than this
+ example.) A <SPAN
+CLASS="QUOTE"
+>"normal"</SPAN
+> gateway ping (normal for me!):
+ </P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+> 
+ $ ping -c 12 -n 216.78.196.1
+ 
+ PING 216.78.196.1 (216.78.196.1) : 56(84) bytes of data.
+ 64 bytes from 216.78.196.1: icmp_seq=0 ttl=64 time=14.6 ms
+ 64 bytes from 216.78.196.1: icmp_seq=1 ttl=64 time=15.4 ms
+ 64 bytes from 216.78.196.1: icmp_seq=2 ttl=64 time=15.0 ms
+ 64 bytes from 216.78.196.1: icmp_seq=3 ttl=64 time=15.2 ms
+ 64 bytes from 216.78.196.1: icmp_seq=4 ttl=64 time=14.9 ms
+ 64 bytes from 216.78.196.1: icmp_seq=5 ttl=64 time=15.3 ms
+ 64 bytes from 216.78.196.1: icmp_seq=6 ttl=64 time=15.4 ms
+ 64 bytes from 216.78.196.1: icmp_seq=7 ttl=64 time=15.0 ms
+ 64 bytes from 216.78.196.1: icmp_seq=8 ttl=64 time=14.7 ms
+ 64 bytes from 216.78.196.1: icmp_seq=9 ttl=64 time=14.9 ms
+ 64 bytes from 216.78.196.1: icmp_seq=10 ttl=64 time=16.2 ms
+ 64 bytes from 216.78.196.1: icmp_seq=11 ttl=64 time=14.8 ms
+
+ --- 216.78.196.1 ping statistics ---
+ 12 packets transmitted, 12 packets received, 0% packet loss
+ round-trip min/avg/max = 14.6/15.1/16.2 ms
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> And a problem with the same gateway on a different day:
+ </P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#13; $ ping  -c 12 -n 216.78.196.1
+ 
+ PING 216.78.196.1 (216.78.196.1) : 56(84) bytes of data.
+ 64 bytes from 216.78.196.1: icmp_seq=0 ttl=64 time=20.5 ms
+ 64 bytes from 216.78.196.1: icmp_seq=3 ttl=64 time=22.0 ms
+ 64 bytes from 216.78.196.1: icmp_seq=4 ttl=64 time=21.8 ms
+ 64 bytes from 216.78.196.1: icmp_seq=6 ttl=64 time=32.0 ms
+ 64 bytes from 216.78.196.1: icmp_seq=8 ttl=64 time=21.7 ms
+ 64 bytes from 216.78.196.1: icmp_seq=9 ttl=64 time=42.0 ms
+ 64 bytes from 216.78.196.1: icmp_seq=10 ttl=64 time=26.8 ms
+ 
+ --- adsl-78-196-1.sdf.bellsouth.net ping statistics ---
+ 12 packets transmitted, 7 packets received, 41% packet loss
+ round-trip min/avg/max = 20.5/25.6/42.0 ms
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> 41% packet loss is very high, to the point where many services, like HTTP,
+ come to a screeching halt. Those services that were working, were working
+ very, very slowly. 
+ </P
+><P
+> It's a little tempting on this last real-life example to think this gateway
+ router is acting up. But, as it turned out, this was the result of a problem
+ in the DSLAM/ATM segment of the telco's network. So any first hop problem
+ with packet loss or high latency, may actually be the result of something
+ occurring before the first hop. We just don't have the tools to isolate
+ where it is starting well enough. Packet loss can be a telco problem, just as
+ much as an ISP/NSP problem. Or conceivably, even a modem problem. In which 
+ case try resetting the modem by power cycling <EM
+>and</EM
+> by 
+ unplugging/replugging the DSL cable (from the wall jack).&#13;</P
+><P
+> It is also quite possible for the modem itself to cause packet loss. The fix
+ here is to power cycle the modem, and resync by unplugging the DSL connection
+ for 30 seconds or so. In fact, any part of the connection can be a source of 
+ packet loss -- modem, DSLAM, ATM network, etc.
+ </P
+><P
+> If you do find a problem within your ISP's network, it's time to report the
+ problem to tech support.
+ </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN926">5.4.1. Miscellaneous Network Problems</H3
+><P
+> Some odds and ends:&#13;</P
+><P
+> <P
+></P
+><UL
+><LI
+><P
+>     <EM
+>Some Web pages won't load.</EM
+> For PPPoX users, the
+     MTU value could be too high. This will cause packet fragmentation, 
+     and likely will cause misbehaving routers to fail to route your 
+     requests per Path MTU Discovery specs.The correct ppp0 device setting
+     should be a maximum of 1492, but actually it needs to be 8 bytes less
+     than any router you pass through on the way to the site. If a router
+     somewhere is misconfigured, you could have problems. Try experimenting
+     with lower MTU values. Any LAN hosts behind the connection, may even need
+     to be even lower -- 1452 or maybe even 1412. If ECN is enabled, it might
+     also cause this problem. Cured with <SPAN
+CLASS="QUOTE"
+>"echo 0 &#62; cat
+     /proc/sys/net/ipv4/tcp_ecn"</SPAN
+>.
+   
+   </P
+></LI
+><LI
+><P
+>    <EM
+>Ping by IP address</EM
+> works, but not hostname. The
+    nameservers are not being setup correctly in
+    <TT
+CLASS="FILENAME"
+>/etc/resolv.conf</TT
+>. Check your client's (DHCP, PPPoX)
+    documentation or enter these manually with a text editor. Get the 
+    correct DNS server addresses from your ISP.
+
+   </P
+></LI
+><LI
+><P
+>    <EM
+>PPPoX disconnects</EM
+>. Unfortunately, PPPoX 
+    is more likely to drop connections than routed or bridged networks. PPP
+    can be sensitive to any line condition which results in a temporary
+    interruption of the connection. This may not be completely solvable,
+    depending on what and where the problem is. Check your client's docs for
+    <SPAN
+CLASS="QUOTE"
+>"LCP Keepalive"</SPAN
+> features. There generally is a timeout on
+    each end of the connection if the other end does not respond. If worse
+    comes to worse, set up a cron job to watch the connection, and
+    re-establish if necessary.
+    
+   </P
+><P
+>     Some providers may also be enforcing idle timeout disconnects. This is 
+     a different issue altogether, since it is deliberate. The solution here is to 
+     switch providers if you can.
+
+   </P
+></LI
+><LI
+><P
+>    <EM
+>Interface or route goes down for no reason</EM
+>. If
+    <B
+CLASS="COMMAND"
+>ifconfig</B
+> and/or <B
+CLASS="COMMAND"
+>route</B
+> show the
+    interface and/or route has automagically disappeared, it may be due to 
+    a buggy NIC driver. 
+   
+   </P
+></LI
+><LI
+><P
+>    Sub-par performance, or errors with the interface (e.g. eth0), may
+    possibly be caused by a duplex mismatch. This would be most apparent when
+    maxing out the connection. Most DSL modems and routers typically are set
+    to half duplex, and your NIC that interfaces with the modem should be set
+    likewise. 
+   
+   </P
+></LI
+></UL
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="THROUGHPUT">5.5. Measuring Throughput</H2
+><P
+> One of the first things most of us do is check our speeds to make sure we
+ aren't getting short changed, and that our system is up to snuff. Doing this
+ accurately is easier said than done however. First, remember you are losing
+ 10-20% right off the top due to networking protocol overhead. Just how much
+ is <SPAN
+CLASS="QUOTE"
+>"lost"</SPAN
+> here depends on your provider's network architecture,
+ where and how you are measuring this and other considerations. Most of us may
+ wind up being closer to 20% than 10%.
+ </P
+><P
+> 
+ Then, any time you hit the Internet, there is some slight degradation of
+ performance with each hop you take. Now this may not amount to much, as long
+ as you are not taking too many hops and all the components -- your system,
+ your ISP's network, your ISP's upstream provider, and the destination itself
+ -- are all working like well oiled machines. But there's the rub -- how do
+ you really know with so many variables in the mix? One flaky interface, on
+ one router, on one hop along the path, may cause misleading results.&#13;</P
+><P
+> Your absolute max speed is going to be at your point of connection to your
+ ISP -- the ISP's gateway. It can only go downhill from there, not up! So the
+ ideal test is as close to home as possible. This eliminates as many unknown
+ variables as possible. If your ISP has a local ftp server, this is an
+ excellent place to run your own tests. (Run a traceroute though just to see
+ how local it really is.) </P
+><P
+> 
+ If your ISP does not have this, look for an ftp site that is close -- the
+ fewer the hops, the better. And look for one that isn't too busy, or you will
+ get misleading results. Find a large file -- like 10 Megs -- and time the
+ download. Try this over several days, and at different times of day. The
+ server, and the backbone, are going to be busier at certain times of day,
+ which can skew results and you want to eliminate these variables as much as
+ possible. Your provider cannot compensate for heavy backbone traffic,
+ backbone bottlenecks, slow or busy servers, etc. &#13;</P
+><P
+> There are many test sites scattered around the web. Some are better than
+ others, but take these with a grain of salt. There are just too many
+ variables for these tests to reliably give you an accurate snapshot of your
+ connection and throughput. They may give you a general picture of whether you
+ are in the ballpark of where you think you should be or not. One good speed
+ test is <A
+HREF="http://www.dslreports.com/stest/0"
+TARGET="_top"
+>http://www.dslreports.com/stest/0</A
+>.
+ Another test is <A
+HREF="http://speedtest.mybc.com/"
+TARGET="_top"
+>http://speedtest.mybc.com/</A
+> (both are
+ Java). I find these to be better than some of the others out there.&#13;</P
+><P
+> Now keeping in mind that we are limited by the ~10-20% networking overhead rule,
+ here is an example. My speed is capped at 1472 Kbps sync rate. Minus the ~15%
+ is 1275 Kbps. My sync rate is known to be good and my distance to the CO is
+ about 11,000 Ft, which is close enough that I should be able to hit my real
+ world maximum throughput of 1275 Kbps or roughly 1.2-1.3 Mbps -- all other
+ things being equal. From dslreports.com speed test:
+ </P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#13; Test running..Downloaded 60900bytes in 5918ms
+ Downloaded 696000bytes in 4914ms
+ First guess is 1133kbps
+ fairly fast line - now test 2mb
+ Downloaded 1679100bytes in 11090ms
+ Upload got ok 1 bytes uploaded
+ Uploaded 1bytes in 211ms
+ Upload got ok 1 bytes uploaded
+ Uploaded 1bytes in 205ms
+ Upload got ok 1 bytes uploaded
+ Uploaded 1bytes in 207ms
+ Upload got ok 50000 bytes uploaded
+ Uploaded 50000bytes in 2065ms
+ Upload got ok 100000 bytes uploaded
+ Uploaded 100000bytes in 3911ms
+ 
+ ** Speed 1211(down)/215(up) kbps **
+ (At least 24 times faster than a 56k modem)
+ Finish.
+
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> 1.211 Mbps is probably about as good as I can realistically expect based on
+ my service. There is no reason for me to go troubleshooting or looking for
+ tweaks.  &#13;</P
+><P
+> <EM
+>Big Caution</EM
+>: my ISP uses a caching proxy server for
+ web pages. This is a big equalizer for these kinds of web based
+ tests. Without that, I surely would have been significantly slower on this
+ test. The effect of the proxy is that you are actually testing throughput
+ from the proxy -- NOT the test site. Just FYI. Another note: at the same time
+ I tried another test site and was consistently getting 600-700 Kbps. So YMMV
+ with these tests. (Usually I get the same on each, more or less.) Timing a
+ large ftp download from two different sites, I calculated about 1.25 Mbps. &#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="secure.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="overview.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Securing Your Connection</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Appendix: DSL Overview</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

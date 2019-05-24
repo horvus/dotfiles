@@ -1,0 +1,217 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Coffee Making: Hardware</TITLE>
+ <LINK HREF="Coffee-4.html" REL=next>
+ <LINK HREF="Coffee-2.html" REL=previous>
+ <LINK HREF="Coffee.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Coffee-4.html">Next</A>
+<A HREF="Coffee-2.html">Previous</A>
+<A HREF="Coffee.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Hardware</A></H2>
+
+<P>A generic diagram could look like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+
+---------   0-5V  ---------  ~220V   ----------------
+|  PC   |====>====|Circuit|==========|Coffee-Machine|
+---------         ---------          ----------------
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The concept is that we take a controling voltage from the computer,
+which drives an electrically isolated circuit with a Relay or Triac.
+<P>
+<P>You must choose a Relay circuit, if you have a coffee-machine
+greater than 200W. You can use a triac-based one if your coffee machine isn't high power.
+<P>All circuits presented are tested, but the results and risks are
+YOUR OWN RESPONSIBILITY.
+If you have no experience with electronics you should NOT try
+building it on these, otherwise you may get a bad one...
+<P>
+<P>You should be very careful while experimenting with 220V, 
+and using an appropriate fuse is absolutely advisable.
+<P>
+<H2><A NAME="ss3.1">3.1 Driving voltage 0-5V from the computer</A>
+</H2>
+
+<P>Here is a simple example to get a voltage 0-5V from the parallel
+port of the computer.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+
+      Back View          -----    Pin 10 - ACK
+      Male DB-25         |   |    Pin  9 - D7
+      Connector          |   |                           Pin 2 - D0
+                         v   v                           v   Pin 1 -
+~Strobe
+       ____________________________________________________________
+      /                                                            \
+      \     13  12  11  10   9   8   7   6   5   4   3   2   1     /
+       \                                                          /
+        \     25  24  23  22  21  20  19  18  17  16  15  14     /
+         \______________________________________________________/
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Pin 1 is Strobe (inverse logic)
+<P>Pins 2-9 is DATA BUS's signals, exactly what was written to the
+parallel port's latches with an OUTB command.
+<P>Pin 10 is the acknowledge signal (ACK), controlled by you, so that you can
+produce an interrupt to the CPU.
+<P>Pins 18-25 are short-circuited and this is the ground (GND).
+<P>
+<P>In detail:
+<BLOCKQUOTE><CODE>
+<PRE>
+
+&lt;= in   DB25    Cent    Name of         Reg
+=> out  pin     pin     Signal          Bit     Function Notes
+------  ----    ----    --------        ---     -----------------------------
+=>       1       1      -Strobe         C0-     Set Low pulse >0.5 us to send
+=>       2       2      Data 0          D0      Set to least significant data
+=>       3       3      Data 1          D1      ...
+=>       4       4      Data 2          D2      ...
+=>       5       5      Data 3          D3      ...
+=>       6       6      Data 4          D4      ...
+=>       7       7      Data 5          D5      ...
+=>       8       8      Data 6          D6      ...
+=>       9       9      Data 7          D7      Set to most significant data
+&lt;=      10      10      -Ack            S6+ IRQ Low Pulse ~ 5 uS, after accept
+&lt;=      11      11      +Busy           S7-     High for Busy/Offline/Error
+&lt;=      12      12      +PaperEnd       S5+     High for out of paper
+&lt;=      13      13      +SelectIn       S4+     High for printer selected
+=>      14      14      -AutoFd         C1-     Set Low to autofeed one line
+&lt;=      15      32      -Error          S3+     Low for Error/Offline/PaperEnd
+=>      16      31      -Init           C2+     Set Low pulse > 50uS to init
+=>      17      36      -Select         C3-     Set Low to select printer
+==      18-25   19-30,  Ground
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss3.2">3.2 Controlling with a Relay</A>
+</H2>
+
+<P>
+<P>The straight-forward circuit one can build is:
+<BLOCKQUOTE><CODE>
+<PRE>
+
+                             Vcc
+                              |
+                              +------+
+                              |    __|__
+                            Relay   /^\  Diode 1N4002
+                             Coil  /---\
+                              |      |
+                              +------+
+                              |
+                           | / 
+                 4.7K    B |/  C
+parallel port >-\/\/\/\/---|        NPN Transistor: BC547A or 2N2222A
+data pi                    |\  E
+                           | \
+                             V
+parallel port >--------------+
+ground pin                   |
+                          Ground
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Connect Vcc with the same voltage as the relay type (usually 5 or 12V).
+Obviously, the relay's specifications should be scaled for your
+coffee-machine.
+<P>Barmen, tend to put the relay AFTER the transistor, at the
+emitter (E) pin instead of the collector (C) pin. This is bad practice
+because it biases the transistor badly, and might result in bad coffee :-).
+Diode 1N4002 is useful to protect the transistor from the relay's currents. 
+If you don't use it the transistor will sooner become dark and smelly... 
+<P>
+<H2><A NAME="ss3.3">3.3 Controlling with TRIAC #1</A>
+</H2>
+
+<P>If you only want a simple circuit, you can use Motorola's 
+triac driver MOC301[012], together with a general purpose TRIAC like SC141D.
+This method has the advantage that you don't need any extra power supply.
+<P>
+<P>For non-inductive loads, this is the circuitry:
+<BLOCKQUOTE><CODE>
+<PRE>
+
+        270     1 +-------+ 6    180
+  +5v -VAVAVA-----+       +----VAVAVA-----+-------------- Line Hot
+                2 |  MOC  |               |
+  TTL in ---------+ 3012  +nc            VA  SC141D
+                  |       | 4           / |
+                nc+       +------------/  |
+                  +-------+               +----\/\/\/---- Line Neutral
+                                                LOAD
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>If you are going to work with 220V, try to obtain a 3021.
+Inductive loads should be used in conjuction with bypass capacitors,
+better consult <EM>Motorola Application Note AN-780</EM>.
+Coffee-machines are mainly resistive loads and not inductive (like a motor), but who knows what yours is?
+<P>
+<H2><A NAME="ss3.4">3.4 Controlling with TRIAC #2</A>
+</H2>
+
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+
++5VDC
+|    180                      180            2.2k
++---/\/\/\----+-----+   +----/\/\/-+--/\/\/\---+-------> 120V
+              |    1|   |6         |           |         Hot
+              |    +=====+         |           | MT1
+              |    | MC  | TRIAC   |          +-+
+              |    | 3032| Driver  |        G | | TRIAC
+              |    +=====+         |         /| |
+              \    2|   |4         |        / +-+
+       2N3904  |----+   |          |        |  | MT2
+              /     |   +--------- | -------+  |
+             V      \              |        |  |
+             |      /              |        \  |
+             |      \ 43    .01u  ---   10k /  |
+             |      /       500V  ---       \  |
+             |      |              |        /  |
+             +------+              |        |  |            Neutral
+             |                     +--------+--+---o    o--> 120V
+             /                                      load
+ >-/\/\--|  2N3904
+             \
+              V
+              |
+             ---
+            ///
+
+This design is for 120V. You should change resistors accordingly for 220V.
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Circuit description:
+<P>The MC3032 is an optoisolator TRIAC driver. 
+The 180-ohm resistor sets the current for the LED emitter in the optoisolator. 
+Change the value of this resistor - if necessary - to get a reasonable current 
+(e.g., 15 mA).
+<P>Note that you cannot test this circuit without a load.
+The TRIAC will not switch unless connected to an AC
+voltage source, so you can't test it for simple switching without applying AC 
+and a load. Note the 500V rating on the .01 capacitor.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Coffee-4.html">Next</A>
+<A HREF="Coffee-2.html">Previous</A>
+<A HREF="Coffee.html#toc3">Contents</A>
+</BODY>
+</HTML>

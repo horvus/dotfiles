@@ -1,0 +1,449 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+> The ruby_init service /etc/init.d/ruby_init</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="XFree Local Multi-User HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Experimental Backstreet Ruby configuration Script/ Service"
+HREF="app_ruby_init.html"><LINK
+REL="PREVIOUS"
+TITLE="The global configuration file /etc/sysconfig/ruby.conf"
+HREF="app_ruby_init_ruby_conf.html"><LINK
+REL="NEXT"
+TITLE="Modified hotplug input.agent /etc/hotplug/input.agent"
+HREF="app_ruby_init_input_agent.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>XFree Local Multi-User HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="app_ruby_init_ruby_conf.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Appendix D. Experimental Backstreet Ruby configuration Script/ Service</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="app_ruby_init_input_agent.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="app_ruby_init_service"
+></A
+>D.3. The ruby_init service <TT
+CLASS="filename"
+>/etc/init.d/ruby_init</TT
+></H1
+><P
+>The <TT
+CLASS="filename"
+>/etc/init.d/ruby_init</TT
+> service configures/ activates most of the settings specific to a Backstreet Ruby system.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#!/bin/sh
+#
+# ruby_init  This scripts configures cold-pluging for bruby, \
+#            loads additional input modules, manages the XFree \ 
+#	     and display manager configuration files
+#
+# chkconfig: 2345 02 98
+# description:	Configures the Bruby input subsystem and manages \
+#		XFree and display manager configuration files.
+# config: /etc/sysconfig/ruby.conf
+#
+# TODO 
+#	* handle commented out "PciOsConfig"
+# 	*? status/ ext-status
+#	- show config
+# 	- check wether curr. configuration matches setup ? 
+#	- make it work when hotplug files not installed ?
+#	  ( currently it will just just inform that they are not installed
+#	  and exit )
+#
+# $Id: XFree-Local-multi-user-HOWTO.xml,v 1.12 2003/11/11 14:52:42 gferg Exp $
+# - don't exit silently if hackvideo or modules loading is deactivated,
+#   run the script to the end
+# $Id: XFree-Local-multi-user-HOWTO.xml,v 1.12 2003/11/11 14:52:42 gferg Exp $
+# - show keyboard status per VT ,use sed instead of head(head is in /usr)
+# - *? status/ ext-status
+# - (mice &#38; evdev links)?
+# $Id: XFree-Local-multi-user-HOWTO.xml,v 1.12 2003/11/11 14:52:42 gferg Exp $
+# - include hackvideo handling (long time wondering what was missing)
+# $Id: XFree-Local-multi-user-HOWTO.xml,v 1.12 2003/11/11 14:52:42 gferg Exp $
+# - got it actually running
+# - use &#62;&#38; /dev/null to load variables from the config file 
+#   (what a mess)
+# $Id: XFree-Local-multi-user-HOWTO.xml,v 1.12 2003/11/11 14:52:42 gferg Exp $
+# - initial release
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+# source function library
+if [ -f /etc/init.d/functions ]; then
+. /etc/init.d/functions
+elif [ -f /etc/rc.d/init.d/functions ]; then
+	. /etc/rc.d/init.d/functions
+fi
+
+# source defaults
+if [ -f /etc/sysconfig/ruby.conf ]; then
+	#WTF, how to get rid of the ".... &#62;&#38; /dev/null"
+	. /etc/sysconfig/ruby.conf &#62;&#38; /dev/null 
+	RUBY_CONF="/etc/sysconfig/ruby.conf"
+else
+	action "ruby_init: Configuration file missing" /bin/false
+	exit 1 
+fi
+
+function get_status() {
+		run_hackvideo status
+#		prefbus_used ?
+#		print dumb_con=? 
+		get_kbds	#and curr. active VTs
+}
+
+
+function get_ext_status() {
+		run_input_rc status
+		run_hackvideo status
+#		prefbus_used ?
+#		print dumb_con=?
+		get_kbds	#and curr. active VTs
+		get_links mouse
+		get_links event
+}
+
+function run_start_restart() {
+     	   	load_modules
+		run_hackvideo start
+     	   	run_input_rc start
+     	   	run_auto_dm
+     	   	run_auto_xfree
+}
+
+function run_input_rc () {
+    for RC in /etc/hotplug/input.rc
+    do
+	eval "doit=\"\$HOTPLUG_RC_input\"" 
+	if [ "$doit" != yes -a "$1" != status ]; then
+	    continue
+	fi
+	$RC $1
+	if [ "$1" != status ]; then
+     	   action "bruby: configuring cold-pluged devices." $RC $1
+	fi
+    done
+}
+
+
+function run_hackvideo () {
+	eval "doit=\"\$HACK_VIDEO_ENABLE\""
+	if [ "$doit" != yes ]; then
+	    if [ "$1" = status ]; then
+		echo "XFree hackvideo not configured."
+	    fi
+	    return ;
+	fi
+	if [ -f /proc/bus/pci/hackvideo ]; then
+	   if [ -f /etc/X11/XF86Config-4 ]; then
+		   xf_file="/etc/X11/XF86Config-4"
+	   elif [ -f /etc/X11/XF86Config ]; then
+		   xf_file="/etc/X11/XF86Config"
+	   else
+		   action "bruby: XFree configuration file not found" /bin/false
+		   exit 1
+	   fi
+	   #fi
+	   eval "xf_hackvideo=`sed -n '/^#/d;s/^.*"PciOsConfig"[ 	]//p' $xf_file | sed -e 's/[ 	]//g'`"
+	   if [ "$xf_hackvideo" = "1" ]; then
+		case "$1" in 
+			start)
+				action "bruby: Enabling XFree hackvideo workaound." /bin/true
+				/bin/echo "1" &#62; /proc/bus/pci/hackvideo
+				;;
+			stop)	
+				action "bruby: Disabling XFree hackvideo workaound."
+				/bin/echo "0" &#62; /proc/bus/pci/hackvideo
+				;;
+			status)
+				eval "hack_enabled=`cat /proc/bus/pci/hackvideo`"
+				if [ $hack_enabled = 1 ]; then
+				    echo "XFree hackvideo activated"
+				else
+				    echo "XFree hackvideo not activated,"
+				    echo "but enabled in configuration. "
+				fi
+				;;
+			*)
+				;;
+		esac
+	   else
+			   action "bruby: Hackvideo not configured in XFree," /bin/false
+			   action "bruby: but enabled in $RUBY_CONF." /bin/false
+
+	   fi
+	else 
+				action "bruby: XFree hackvideo configured," /bin/false
+				action "bruby: but kernel hackvideo support missing." /bin/false
+	fi
+		
+}
+
+function load_modules () {
+	eval "doit=\"\$LOAD_MODULES\""
+	if [ "$doit" != yes -a "$1" != status ]; then
+	    return ;
+	fi
+     	action "bruby: loading additional modules." /bin/true
+	cat $RUBY_CONF | sed -n "/input modules /,/config/p" | while read module args
+	do
+	  case "$module" in
+	      \#*|"") continue ;;
+	  esac
+	  initlog -s "Loading module: $module"
+	  modprobe $module $args &#62;/dev/null 2&#62;&#38;1
+	done
+}
+
+function run_auto_xfree () {
+	eval "doit=\"\$AUTO_XFree\""
+	if [ "$doit" != yes -a "$1" != status ]; then
+	    return ;
+	fi
+	# (pixel) a kind of profile for XF86Config
+	# if no XFree=XXX given on kernel command-line, restore XF86Config.standard
+	for i in XF86Config XF86Config-4; do
+    	   if [ -L "/etc/X11/$i" ]; then
+              XFree=`sed -n 's/.*XFree=\(\w*\).*/\1/p' /proc/cmdline`
+              [ -n "$XFree" ] || XFree=standard
+              [ -r "/etc/X11/$i.$XFree" ] &#38;&#38; ln -sf "$i.$XFree" "/etc/X11/$i"
+    	  fi
+	done
+     	action "bruby: configuring XFree." /bin/true
+}
+
+function run_auto_dm () {
+	eval "doit=\"\$AUTO_DM\""
+	if [ "$doit" != yes -a "$1" != status ]; then
+	    return ;
+	fi
+	#
+	#the same like XF86Config but for gdm.conf &#38; Xservers
+	#
+	for i in xdm/Xservers gdm/gdm.conf; do
+    	   if [ -L "/etc/X11/$i" ]; then
+        	DumbCon=`sed -n 's/.*dumbcon=\([0-9]*\).*/\1/p' /proc/cmdline`
+        	[ -n "$DumbCon" ] || DumbCon=0
+        	[ -r "/etc/X11/$i.$DumbCon" ] &#38;&#38; ln -sf "/etc/X11/$i.$DumbCon" "/etc/X11/$i"
+    	   fi
+	done
+     	action "bruby: configuring display manager." /bin/true
+	echo "Setting up display managers for `expr $DumbCon + 1` Xservers"
+}
+
+
+function get_kbds() {
+	j=0
+	for i in /proc/bus/console/* 
+	   do 
+		echo
+		j=`expr $j + 1`
+		phys=`cat $i/keyboard`
+		if [ "$phys" = "" ];then
+		   echo " VT-`basename $i` : keyboard not attached"
+		else
+		   echo " VT-`basename $i` using :"
+#		   grep -n2 "$phys" /proc/bus/input/devices | sed -e '{/^B: /s;^B:.*;;};{s;^.*: ;;};' -e "/EV=/d" 
+ 		   grep -B2 -A1 "$phys" /proc/bus/input/devices | sed 's;^.*: ;;'  
+		fi
+	   done
+	echo
+	echo "Total of $j VT's avialable."
+}
+
+function get_links() {
+		echo
+ 		for i in  /dev/input/$1*br
+		    do 
+			real=`ls -l $i 2&#62;/dev/null | sed "{s;^.*/dev/input/;;};{s; -&#62;;;}" | cut -d " " -f 2`
+			if [ "$real" != "" ]; then
+			   echo "$i" 
+			   sed -e '/Name/,/Handl/s/.*: //;{/^B: /s;^B:.*;;};'  /proc/bus/input/devices | grep -B2 -A1 "$real"
+			else
+			    exit 0
+			fi     
+		    done
+}
+
+if [ -f /proc/bus/console  -o  -n tmp=`uname -r | sed -n 's:ruby::p'` ]; then
+   if [ -x /etc/hotplug/input.rc  -a  -f /etc/hotplug/input.agent ]; then	
+
+	case "$1" in
+    		start|restart)
+			run_start_restart
+			;;
+    		status)
+			get_status
+			touch /var/lock/subsys/ruby
+			;;
+    		ext-status)
+			get_ext_status
+			touch /var/lock/subsys/ruby
+			;;
+    		stop)
+			#run_hackvideo stop
+			run_input_rc stop
+        		rm -f /var/lock/subsys/ruby
+        		;;
+    		force-reload)
+			run_input_rc stop
+			run_input_rc start
+			touch /var/lock/subsys/ruby
+        		;;
+
+    		*)
+			gprintf "Usage: %s {start|stop|restart|status|ext-status|force_reload}\n" "$0"
+			exit 3
+			;;
+	esac
+
+   else if [ -f /etc/hotplug/input.rc -a -f /etc/hotplug/input.agent ]; then
+     	   action "Input: input.rc and input.agent installed, but not executable." /bin/false
+     	   action "Input: Please check the file permissions." /bin/false
+	else 
+	   action "Input: Failed to configure cold plugged devices."  /bin/false
+	   action "Input: input.rc or input.agent missing."  /bin/false
+        fi
+   fi
+fi
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="app_ruby_init_ruby_conf.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="app_ruby_init_input_agent.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The global configuration file <TT
+CLASS="filename"
+>/etc/sysconfig/ruby.conf</TT
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="app_ruby_init.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Modified hotplug input.agent <TT
+CLASS="filename"
+>/etc/hotplug/input.agent</TT
+></TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

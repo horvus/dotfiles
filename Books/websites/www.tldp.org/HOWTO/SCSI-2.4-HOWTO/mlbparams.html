@@ -1,0 +1,363 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>boot parameters</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux 2.4 SCSI subsystem HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Mid Level, Unifying layer"
+HREF="mlevel.html"><LINK
+REL="PREVIOUS"
+TITLE="Mid Level, Unifying layer"
+HREF="mlevel.html"><LINK
+REL="NEXT"
+TITLE="module parameters"
+HREF="mlmparams.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux 2.4 SCSI subsystem HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="mlevel.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. Mid Level, Unifying layer</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="mlmparams.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="mlbparams"
+></A
+>8.1. boot parameters</H1
+><P
+>&#13;SCSI drivers that are built into the kernel are checked in a pre-determined
+order to see if HBAs that they can control are present. The user has no
+control over this order which in most cases is
+arbitrary but in the case of some older ISA adapters is required to stop
+misidentification
+<A
+NAME="AEN371"
+HREF="#FTN.AEN371"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>
+.
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;
+scsi_logging=&#60;n&#62;
+    where &#60;n&#62; is 0 to turn logging off
+    where &#60;n&#62; is non-zero to turn logging on
+
+max_scsi_luns=&#60;n&#62;
+    where &#60;n&#62; is a number between 1 and 8 (&#60; lk 2.4.7),
+    	&#62;= lk 2.4.7 the upper limit can be much larger
+
+scsi_allow_ghost_devices=&#60;n&#62;
+    where (&#60;n&#62; - 1) is the maximum lu number to ghost if the
+        the corresponding device is offline. When &#60;n&#62;==0
+        (default) then don't ghost any devices (in lk 2.4.26
+        and later)
+
+scsihosts=host0:hosts1::host3 
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;The recently introduced devfs defines a "scsihosts"
+boot time parameter to give the user some control over this. See the
+devfs documentation [ref: <A
+HREF="refs.html#W5"
+>W5</A
+>] for a description.
+The host names given in the list to the "scsihosts" boot option are
+the names of lower level drivers (e.g. "scsihosts=advansys:imm::ide-scsi").
+<A
+NAME="AEN377"
+HREF="#FTN.AEN377"
+><SPAN
+CLASS="footnote"
+>[2]</SPAN
+></A
+>
+<A
+NAME="AEN383"
+HREF="#FTN.AEN383"
+><SPAN
+CLASS="footnote"
+>[3]</SPAN
+></A
+>
+Devfs does not need to be present for "scsihosts" to be used. The
+"scsihosts" parameter, if given, is echoed during in the boot up messages.
+For example:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;scsi: host order: advansys:imm::ide-scsi
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+Also if multiple HBA are present in a system then they are scanned in
+a fixed order (see footnote). The "scsihosts" parameter only effects how
+these HBAs are indexed (i.e. which SCSI adapter numbers are associated with
+them by the kernel). In the above example, if the "imm" driver is not found
+during boot up, then the scsi adapter number "1" is not allocated. If the
+"imm" driver is later loaded as a module, then it will adopt scsi adapter
+number "1". If a driver that is not named in "scsihosts" is found, then
+it will get the next available scsi adapter number (e.g. a built in
+aic7xxx driver would get scsi adapter number "2" in the above example).
+</P
+><P
+>&#13;A full list of kernel parameters with some explanations can be found
+in the file <TT
+CLASS="filename"
+>/usr/src/linux/Documentation/kernel-parameters.txt
+</TT
+>.
+</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN371"
+HREF="mlbparams.html#AEN371"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;PCI adapters are much "safer" for initialization code than the older ISA
+adapters. Hence the order of initialization of PCI adapters is unlikely
+to lead to lockups. In this case the order of initialization (and thus
+SCSI adapter numbers) of built in drivers may be modified by changing the
+order of entries in the SCSI subsystem Makefile (<TT
+CLASS="filename"
+>&#13;/usr/src/linux/drivers/scsi/Makefile</TT
+>). Beware: some adapters
+may be recognized by more than one lower level driver (e.g. those
+based on NCR chipsets).
+</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN377"
+HREF="mlbparams.html#AEN377"
+><SPAN
+CLASS="footnote"
+>[2]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;Either comma or colon can be delimiters for "scsihosts". This means that
+"scsihosts=advansys,imm,,ide-scsi" is also valid. Also if a machine's
+boot sequence involves an "initrd" stage (look in 
+<TT
+CLASS="filename"
+>/etc/grub.conf</TT
+> or <TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+>
+to find out if this is the case), then the <B
+CLASS="command"
+>mkinitrd</B
+>
+command should be run after a change to the "scsihosts" boot time parameter.
+This will generate a new initrd image that needs to be put in the
+correct place (most probably in the <TT
+CLASS="filename"
+>/boot</TT
+>
+directory).
+</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN383"
+HREF="mlbparams.html#AEN383"
+><SPAN
+CLASS="footnote"
+>[3]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;Using "scsihosts" can lead to a situation in which the computer's BIOS finds
+the boot track (and hence boot time parameters set in lilo or grub) on one
+disk while the kernel finds the root partition on another disk. This can
+be quite confusing when it is unplanned. Hence after changing (or adding)
+"scsihosts" in lilo or grub's configuration, it may be wise to boot the
+machine to see which disks are accessed.
+</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="mlevel.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="mlmparams.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Mid Level, Unifying layer</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="mlevel.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>module parameters</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

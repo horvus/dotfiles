@@ -1,0 +1,2415 @@
+<HTML
+><HEAD
+><TITLE
+>INN Configuration Files</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Internet News"
+HREF="x-087-2-inn.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring INN: the Basic Setup"
+HREF="x18326.html"><LINK
+REL="NEXT"
+TITLE="Running INN"
+HREF="x19004.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x18326.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 23. Internet News</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x19004.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN18341"
+>23.5. INN Configuration Files</A
+></H1
+><P
+>&#13;
+Having completed these general tasks, you can now turn to the really
+interesting part of INN: its configuration files. All these files reside in
+<TT
+CLASS="FILENAME"
+>/etc/news</TT
+>. Some changes to configurations files were
+introduced in Version 2, and it is Version 2 that we describe here. If you're
+running an older version, you should find this chapter useful to guide you in
+upgrading your configuration. During the next few sections, we will discuss
+them one by one, building the Virtual Brewery's configuration as an example.</P
+><P
+>If you want to find out more about the features of individual configuration
+files, you can also consult the manual pages; the INN distribution contains
+individual manual pages for each of them.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN18352"
+>23.5.1. Global Parameters</A
+></H2
+><P
+>&#13;There are a number of INN parameters that are global in nature; they
+are relevant to all newsgroups carried.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN18358"
+>23.5.1.1. The inn.conf file</A
+></H3
+><P
+>&#13;INN's main configuration file is <TT
+CLASS="FILENAME"
+>inn.conf</TT
+>. Among other
+things, it determines the name by which your machine is known on Usenet.
+Version 2 of INN allows a baffling number of parameters to be configured in 
+this file. Fortunately, most parameters have default values that are 
+reasonable for most sites. The <TT
+CLASS="FILENAME"
+>inn.conf(5)</TT
+> file details 
+all of the parameters, and you should read it carefully if you experience any 
+problems.</P
+><P
+>A simple example <TT
+CLASS="FILENAME"
+>inn.conf</TT
+> might look like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># Sample inn.conf for the Virtual Brewery
+server:          vlager.vbrew.com
+domain:          vbrew.com
+fromhost:        vbrew.com
+pathhost:        news.vbrew.com
+organization:    The Virtual Brewery
+mta:             /usr/sbin/sendmail -oi %s
+moderatormailer: %s@uunet.uu.net
+#
+# Paths to INN components and files.
+#
+pathnews:               /usr/lib/news
+pathbin:                /usr/lib/news/bin
+pathfilter:             /usr/lib/news/bin/filter
+pathcontrol:            /usr/lib/news/bin/control
+pathdb:                 /var/lib/news
+pathetc:                /etc/news
+pathrun:                /var/run/news
+pathlog:                /var/log/news
+pathhttp:               /var/log/news
+pathtmp:                /var/tmp
+pathspool:              /var/spool/news
+patharticles:           /var/spool/news/articles
+pathoverview:           /var/spool/news/overview
+pathoutgoing:           /var/spool/news/outgoing
+pathincoming:           /var/spool/news/incoming
+patharchive:            /var/spool/news/archive
+pathuniover:            /var/spool/news/uniover
+overviewname:           .overview</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The first line tells the programs <B
+CLASS="COMMAND"
+>rnews</B
+> and
+<B
+CLASS="COMMAND"
+>inews</B
+> which host to contact when delivering articles.
+This entry is absolutely crucial; to pass articles to
+<B
+CLASS="COMMAND"
+>innd</B
+>, they have to establish an NNTP connection with
+the server.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>domain</SPAN
+> keyword should specify
+the domain portion of the host's fully qualified domain name. A couple of
+programs must look up your host's fully qualified domain name; if your
+resolver library returns the unqualified hostname only, the name given in the
+<SPAN
+CLASS="SYSTEMITEM"
+>domain</SPAN
+> attribute is tacked onto it. It's not a problem to configure it either way, so it's best
+to define <SPAN
+CLASS="SYSTEMITEM"
+>domain</SPAN
+>.</P
+><P
+>The next line defines what hostname <B
+CLASS="COMMAND"
+>inews</B
+> is going to use
+when adding a <TT
+CLASS="REPLACEABLE"
+><I
+>From:</I
+></TT
+> line to articles posted by local users.
+Most newsreaders use the <TT
+CLASS="REPLACEABLE"
+><I
+>From:</I
+></TT
+> field when composing a
+reply mail message to the author of an article. If you omit this field, it
+will default to your news host's fully qualifed domain name. This is ot
+always the best choice. You might, for example, have news and mail handled
+by two different hosts. In this case, you would supply the fully qualified
+domain name of your mail host after the
+<SPAN
+CLASS="SYSTEMITEM"
+>fromhost</SPAN
+> statement.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>pathhost</SPAN
+> line defines the hostname
+INN is to add to the <TT
+CLASS="LITERAL"
+>Path:</TT
+> header field whenever it
+receives an article. In most cases, you will want to use the fully
+qualified domain name of your news server; you can then omit this field since
+that is the default. Occasionally you may want to use a generic name, such as
+<I
+CLASS="EMPHASIS"
+>news.vbrew.com</I
+>, when serving a large
+domain. Doing this allows you to move the news system easily to a different
+host, should you choose to at some time.</P
+><P
+>The next line contains the <SPAN
+CLASS="SYSTEMITEM"
+>organization</SPAN
+>
+keyword.  This statement allows you to configure what text
+<B
+CLASS="COMMAND"
+>inews</B
+> will put into the <TT
+CLASS="LITERAL"
+>Organization:</TT
+>
+line of articles posted by your local users. Formally, you would place a
+description of your organization or your organization's name in full here.
+Should you not wish to be so formal, it is fashionable for organizations with
+a sense of humor to exhibit it here.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>organization</SPAN
+> keyword is mandatory
+and specifies the pathname of the mail transport agent that will be used
+for posting moderator messages. <TT
+CLASS="LITERAL"
+>%s</TT
+> is replaced by the 
+moderator email address.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>moderatormailer</SPAN
+> entry defines a
+default address used when a user tries to post to a moderated newsgroup. The
+list of moderator addresses for each newsgroup is usually kept in a separate
+file, but you will have a hard time keeping track of all of them. The
+<SPAN
+CLASS="SYSTEMITEM"
+>moderatormailer</SPAN
+> entry is therefore
+consulted as a last resort; if it is defined, <B
+CLASS="COMMAND"
+>inews</B
+> will
+replace the <TT
+CLASS="LITERAL"
+>%s</TT
+> string with the (slightly transformed)
+newsgroup name and send the entire article to this address. For instance, 
+when posting to <SPAN
+CLASS="SYSTEMITEM"
+>soc.&#8201;feminism</SPAN
+>, the 
+article is mailed to 
+<SPAN
+CLASS="SYSTEMITEM"
+>soc-feminism@uunet.uu.net</SPAN
+>, given
+the above configuration. At UUNET, there should be a mail alias installed for
+each of these submissions addresses that automatically forwards all messages
+to the appropriate moderator.</P
+><P
+>Finally, each of the remaining entries specifies the location of some component
+file or executable belonging to INN. If you've installed INN from a package,
+these paths should have been configured for you. If you're installing from
+source, you'll need to ensure that they reflect where you've installed INN.</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN18401"
+>23.5.2. Configuring Newsgroups</A
+></H2
+><P
+>&#13;
+
+The news administrator on a system is able to control which newsgroups
+users have access to. INN provides two configuration files that
+allow the administrator to decide which newsgroups to support and provide
+descriptions for them.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN18414"
+>23.5.2.1. The active and newsgroups files</A
+></H3
+><P
+>&#13;
+The <TT
+CLASS="FILENAME"
+>active</TT
+> and <TT
+CLASS="FILENAME"
+>newsgroups</TT
+> files
+are used to store and describe the newsgroups hosted by this news server.
+They list which newsgroups we are interested in receiving and serving
+articles for, and administrative information about them. These files are 
+found in the <TT
+CLASS="FILENAME"
+>/var/lib/news/</TT
+> directory.</P
+><P
+>The <TT
+CLASS="FILENAME"
+>active</TT
+> file determines which newsgroups this
+server supports. Its syntax is straightforward. Each line in the
+<TT
+CLASS="FILENAME"
+>active</TT
+> file has four fields delimited by whitespace:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>name himark lomark flags</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <TT
+CLASS="REPLACEABLE"
+><I
+>name</I
+></TT
+> field is the name of the
+newsgroup.  The <TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+> field is the highest
+number that has been used for an article in that newsgroup. The
+<TT
+CLASS="REPLACEABLE"
+><I
+>lomark</I
+></TT
+> field is the lowest active number in
+use in the newsgroup. To illustrate how this works, consider the
+follow scenario.  Imagine that we have a newly created newsgroup:
+<TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+> and
+<TT
+CLASS="REPLACEABLE"
+><I
+>lowmark</I
+></TT
+> are both 0 because there are no
+articles. If we post 5 articles, they will be numbered 1 through
+5. <TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+> will now equal 5, the highest
+numbered article, and <TT
+CLASS="REPLACEABLE"
+><I
+>lowmark</I
+></TT
+> will equal 1,
+the lowest active article. If article 5 is cancelled there will be no
+change; <TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+> will remain at 5 to ensure
+that that article number is not reallocated and
+<TT
+CLASS="REPLACEABLE"
+><I
+>lowmark</I
+></TT
+> will remain at 1, the lowest active
+article. If we now cancel article 1, <TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+>
+will remain unchanged, but <TT
+CLASS="REPLACEABLE"
+><I
+>lowmark</I
+></TT
+> will now
+equal 2, because 1 is no longer active. If we now post a new article,
+it will be assigned article number 6, so
+<TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+> will now equal 6. Article 5 has been
+in use, so we won't reassign it. <TT
+CLASS="REPLACEABLE"
+><I
+>lowmark</I
+></TT
+>
+remains at 2. This mechanism allows us to easily allocate unique
+article numbers for new articles and to calculate approximately how
+many active articles there are in the group:
+<TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+>&#8211;<TT
+CLASS="REPLACEABLE"
+><I
+>lowmark</I
+></TT
+>.</P
+><P
+>The field may contain one of the following:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>y</DT
+><DD
+><P
+>Posting directly to this news server is allowed. </P
+></DD
+><DT
+>n</DT
+><DD
+><P
+>Posting directly to this news server is not allowed. This prevents newsreaders
+from posting directly to this news server. New articles may only be received
+from other news servers.</P
+></DD
+><DT
+>m</DT
+><DD
+><P
+>The group is moderated. Any articles posted to this newsgroup are forwarded 
+to the newsgroup moderator for approval before they enter the newsgroup. Most 
+newsgroups are unmoderated.</P
+></DD
+><DT
+>j</DT
+><DD
+><P
+>Articles in this group are not kept, but only passed on. This causes the
+news server to accept the article, but all it will do with it is pass it to
+the &#8220;up-stream&#8221; news servers. It will not make the articles
+available to newsreaders reading from this server.</P
+></DD
+><DT
+>x</DT
+><DD
+><P
+>Articles cannot be posted to this newsgroup. The only way that news articles
+are delivered to this server is by feeding them from another news server.
+Newsreaders may not directly write articles to this server.</P
+></DD
+><DT
+>=<TT
+CLASS="REPLACEABLE"
+><I
+>foo.bar</I
+></TT
+></DT
+><DD
+><P
+>Articles are locally filed into the ``foo.bar'' group.</P
+></DD
+></DL
+></DIV
+>
+
+In our simple server configuration we'll carry a small number of
+newsgroups, so our <TT
+CLASS="FILENAME"
+>/var/lib/news/active</TT
+> file will
+look like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>control 0000000000 0000000001 y
+junk 0000000000 0000000001 y
+rec.crafts.brewing 0000000000 0000000001 y
+rec.crafts.brewing.ales 0000000000 0000000001 y
+rec.crafts.brewing.badtaste 0000000000 0000000001 y
+rec.crafts.brewing.brandy 0000000000 0000000001 y
+rec.crafts.brewing.champagne 0000000000 0000000001 y
+rec.crafts.brewing.private 0000000000 0000000001 y</PRE
+></TD
+></TR
+></TABLE
+>
+
+The <TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+> and <TT
+CLASS="REPLACEABLE"
+><I
+>lomark</I
+></TT
+> 
+numbers in this example are those you would use when creating new newsgroups. 
+The <TT
+CLASS="REPLACEABLE"
+><I
+>himark</I
+></TT
+> and <TT
+CLASS="REPLACEABLE"
+><I
+>lomark</I
+></TT
+> 
+numbers will look quite different for a newsgroup that has been active for 
+some time.</P
+><P
+>The <TT
+CLASS="FILENAME"
+>newsgroups</TT
+> file is even simpler. It provides 
+one-line descriptions of newsgroups. Some newsreaders are
+able to read and present this information to a user to help them decide 
+whether they want to subscribe.</P
+><P
+>The format of the <TT
+CLASS="FILENAME"
+>newsgroups</TT
+> file is simply:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>name description</PRE
+></TD
+></TR
+></TABLE
+>
+
+The <TT
+CLASS="REPLACEABLE"
+><I
+>name</I
+></TT
+> field is the name of a newsgroup, and the &#60;<TT
+CLASS="REPLACEABLE"
+><I
+>description</I
+></TT
+> is a single line description of that newsgroup.</P
+><P
+>We want to describe the newsgroups that our server supports, so we'll build
+our <TT
+CLASS="FILENAME"
+>newsgroups</TT
+> file as follows:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>rec.crafts.brewing.ales         Home brewing Ales and Lagers
+rec.crafts.brewing.badtaste     Home brewing foul tasting brews
+rec.crafts.brewing.brandy       Home brewing your own Brandy
+rec.crafts.brewing.champagne    Home brew your own Champagne
+rec.crafts.brewing.private      The Virtual Brewery home brewers group</PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN18490"
+>23.5.3. Configuring Newsfeeds</A
+></H2
+><P
+>&#13;
+
+INN provides the news administrator the ability to control which
+newsgroups are forwarded on to other news servers and how they will be
+forwarded. The most common method uses the NNTP protocol described
+earlier, but INN also allows newsfeeds via other protocols, such as UUCP.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN18502"
+>23.5.3.1. The newsfeeds file</A
+></H3
+><P
+>&#13;The <TT
+CLASS="FILENAME"
+>newsfeeds</TT
+> file determines where news articles
+will be sent. It normally resides in the <TT
+CLASS="FILENAME"
+>/etc/news/</TT
+>
+directory.</P
+><P
+>The format of the <TT
+CLASS="FILENAME"
+>newsfeeds</TT
+> is a little complicated at
+first. We'll describe the general layout here, and the
+<TT
+CLASS="FILENAME"
+>newsfeeds(5)</TT
+> manual page describes
+what we leave out. The format is as follows:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># newsfeeds file format
+site:pattern:flags:param
+site2:pattern2\
+	:flags2:param2</PRE
+></TD
+></TR
+></TABLE
+>
+
+Each news feed to a site is described by a single line, or may be
+spread across multiple lines using the \ continuation character. The
+: characters delimit the fields in each line. The # character at the
+start of a line marks that line as a comment.</P
+><P
+>The <TT
+CLASS="REPLACEABLE"
+><I
+>site</I
+></TT
+> field names the site to which this feed
+description relates. The sitename can be coded any way you like and
+doesn't have to be the domain name of the site. The site name will be
+used later and will refer to an entry in a table that supplies the
+hostname to the <B
+CLASS="COMMAND"
+>innxmit</B
+> program that transmits the
+news articles by NNTP to the remote server. You may have multiple
+entries for each site; each entry will be treated individually.</P
+><P
+>The <TT
+CLASS="REPLACEABLE"
+><I
+>pattern</I
+></TT
+> field specifies which news groups are
+to be sent to this site. The default is to send all groups, so if that
+is what you want, just make this field empty. This field is usually a
+comma-delimited list of pattern-matching expressions. The * character
+matches zero or more of any character, the . character has no special
+significance, the ! character (if used at the start of an expression)
+performs a logical NOT, and the @ character at the start of a
+newsgroup name means &#8220;Do not forward any articles that are
+posted or crossposted to this group.&#8221; The list is read and
+parsed from left to right, so you should ensure that you place the
+more specific rules first.  The pattern:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>rec.crafts.brewing*,!rec.crafts.brewing.poison,@rec.crafts.brewing.private</PRE
+></TD
+></TR
+></TABLE
+><P
+>would send all of the <I
+CLASS="EMPHASIS"
+>rec.crafts.brewing</I
+> news heirarchy
+<I
+CLASS="EMPHASIS"
+>except</I
+> the <I
+CLASS="EMPHASIS"
+>rec.crafts.brewing.poison</I
+>. 
+It would not feed any articles that were either posted or crossposted to the
+<I
+CLASS="EMPHASIS"
+>rec.crafts.brewing.private</I
+> newsgroup; these articles will
+be trapped and available only to those people who use this server.
+If you reversed the first two patterns, the first pattern would be overridden
+by the second and you would end up feeding articles for the
+<I
+CLASS="EMPHASIS"
+>rec.crafts.brewing.poison</I
+> newsgroup. The same is true of
+the first and last patterns; you must always place the more specific
+patterns before any less specific patterns for them to take effect.</P
+><P
+><TT
+CLASS="REPLACEABLE"
+><I
+>flags</I
+></TT
+> controls and places constraints on the feed
+of news articles to this site. The <TT
+CLASS="REPLACEABLE"
+><I
+>flags</I
+></TT
+> field is a
+comma delimited list can contain any of the items from the following list, delimited by commands:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>&#60;<TT
+CLASS="REPLACEABLE"
+><I
+>size</I
+></TT
+></DT
+><DD
+><P
+>Article must be less then size bytes.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>A</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>items</I
+></TT
+></DT
+><DD
+><P
+>Article checks. <TT
+CLASS="REPLACEABLE"
+><I
+>items</I
+></TT
+> can be one or more of
+<TT
+CLASS="LITERAL"
+>d</TT
+> (must have Distribution header) or
+<TT
+CLASS="LITERAL"
+>p</TT
+> (don't check for site in Path header).</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>B</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>high</I
+></TT
+>/<TT
+CLASS="REPLACEABLE"
+><I
+>low</I
+></TT
+></DT
+><DD
+><P
+>Internal buffer size before writing to output.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>H</TT
+>[<TT
+CLASS="REPLACEABLE"
+><I
+>count</I
+></TT
+>]</DT
+><DD
+><P
+>Article must have less then <TT
+CLASS="REPLACEABLE"
+><I
+>count</I
+></TT
+> hops; the default is 1.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>I</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>size</I
+></TT
+></DT
+><DD
+><P
+>Internal buffer size (for a file feed).</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>M</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>pattern</I
+></TT
+></DT
+><DD
+><P
+>Only moderated groups that match the pattern.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>N</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>pattern</I
+></TT
+></DT
+><DD
+><P
+>Only unmoderated groups that match the pattern.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>S</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>size</I
+></TT
+></DT
+><DD
+><P
+>Start spooling if more than size bytes get queued.</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>T</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>type</I
+></TT
+></DT
+><DD
+><P
+>Feed types: <TT
+CLASS="LITERAL"
+>f</TT
+> (file), <TT
+CLASS="LITERAL"
+>m</TT
+> (funnel; the
+<TT
+CLASS="REPLACEABLE"
+><I
+>param</I
+></TT
+> field names the entry that articles will be
+funneled to), <TT
+CLASS="LITERAL"
+>p</TT
+> (pipe to program), <TT
+CLASS="LITERAL"
+>c</TT
+>
+(send to stdin channel of the <TT
+CLASS="REPLACEABLE"
+><I
+>param</I
+></TT
+> field's
+subprocess), and <TT
+CLASS="LITERAL"
+>x</TT
+> (like c, but handles commands on stdin).</P
+></DD
+><DT
+><TT
+CLASS="LITERAL"
+>W</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>items</I
+></TT
+></DT
+><DD
+><P
+>What to write: <TT
+CLASS="LITERAL"
+>b</TT
+> (article bytesize), <TT
+CLASS="LITERAL"
+>f</TT
+>
+(full path), <TT
+CLASS="LITERAL"
+>g</TT
+> (first newsgroup), <TT
+CLASS="LITERAL"
+>m</TT
+>
+(Message ID), <TT
+CLASS="LITERAL"
+>n</TT
+> (relative path), <TT
+CLASS="LITERAL"
+>s</TT
+> (site
+that fed article), <TT
+CLASS="LITERAL"
+>t</TT
+> (time received), <TT
+CLASS="LITERAL"
+>*</TT
+>
+(names of funnel feed-ins or all sites that get the article),
+<TT
+CLASS="LITERAL"
+>N</TT
+> (newsgroups header), <TT
+CLASS="LITERAL"
+>D</TT
+> (distribution
+header), <TT
+CLASS="LITERAL"
+>H</TT
+> (all headers), <TT
+CLASS="LITERAL"
+>O</TT
+> (overview
+data), and <TT
+CLASS="LITERAL"
+>R</TT
+> (replication data).</P
+></DD
+></DL
+></DIV
+><P
+>The <TT
+CLASS="LITERAL"
+>param</TT
+> field has special coding that is dependent on
+the type of feed. In the most common configuration it is where you specify
+the name of the output file to which you will write the outgoing feed.
+In other configurations you can leave it out. In yet other configurations
+it takes on different meanings. If you want to do something unusual, the
+<TT
+CLASS="FILENAME"
+>newsfeeds(5)</TT
+> manual page will explain the use of the
+<TT
+CLASS="LITERAL"
+>param</TT
+> field in some detail.</P
+><P
+>There is a special site name that should be coded as <TT
+CLASS="LITERAL"
+>ME</TT
+>
+and should be the first entry in the file. This entry is used to control
+the default settings for your news feeds. If the <TT
+CLASS="LITERAL"
+>ME</TT
+>
+entry has a distribution list associated with it, this list will
+be prepended to each of the other site entries before they are sent.
+This allows you to, for example, declare some
+newsgroups to be automatically fed, or automatically blocked from
+feeding, without having to repeat the pattern in each site entry.</P
+><P
+>We mentioned earlier that it was possible to use some special feeds to
+generate thread data that makes the newsreader's job easier. We'll do this
+by exploiting the <B
+CLASS="COMMAND"
+>overchan</B
+> command that is part of the
+INN distribution. To do this, we've created a special local feed called
+<TT
+CLASS="LITERAL"
+>overview</TT
+> that will pass the news articles to the
+<B
+CLASS="COMMAND"
+>overchan</B
+> command for processing into overview data.</P
+><P
+>Our news server will provide only one external news feed, which goes to 
+the Groucho Marx University, and they receive articles for
+all newsgroups except the <I
+CLASS="EMPHASIS"
+>control</I
+> and
+<I
+CLASS="EMPHASIS"
+>junk</I
+> newsgroups, the
+<I
+CLASS="EMPHASIS"
+>rec.crafts.brewing.private</I
+> newsgroup, which will be 
+kept locally, and the <I
+CLASS="EMPHASIS"
+>rec.crafts.brewing.poison</I
+>
+newsgroup, which we don't want people from our brewery seen posting to.</P
+><P
+>We'll use the <B
+CLASS="COMMAND"
+>nntpsend</B
+> command to transport the news via
+NNTP to the <SPAN
+CLASS="SYSTEMITEM"
+>news.groucho.edu</SPAN
+> server. <B
+CLASS="COMMAND"
+>nntpsend</B
+> requires us to use the &#8220;file&#8221;
+delivery method and to write the article's pathname and article ID. Note
+that we've set the <TT
+CLASS="REPLACEABLE"
+><I
+>param</I
+></TT
+> field to the name of the output 
+file. We'll talk a little more about the <B
+CLASS="COMMAND"
+>nntpsend</B
+> 
+command in a moment. Our resulting newsfeed's configuration is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/news/newsfeeds file for the Virtual Brewery
+#
+# Send all newsgroups except the control and junk ones by default
+ME:!control,!junk::
+#
+# Generate overview data for any newsreaders to use.
+overview::Tc,WO:/usr/lib/news/bin/overchan
+#
+# Feed the Groucho Marx University everything except our private newsgroup
+# and any articles posted to the rec.crafts.brewing.poison newsgroup.
+gmarxu:!rec.crafts.brewing.poison,@rec.crafts.brewing.private:\
+	Tf,Wnm:news.groucho.edu
+#</PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN18637"
+>23.5.3.2. The nntpsend.ctl file</A
+></H3
+><P
+>&#13;
+The <B
+CLASS="COMMAND"
+>nntpsend</B
+> program manages the transmission of
+news articles using the NNTP protocol by calling the
+<B
+CLASS="COMMAND"
+>innxmit</B
+> command. We saw a simple use of the
+<B
+CLASS="COMMAND"
+>nntpsend</B
+> command earlier, but it too has a
+configuration file that provides us with some flexibility in how we
+configure our news feeds.</P
+><P
+>The <B
+CLASS="COMMAND"
+>nntpsend</B
+> command expects to find batch files
+for the sites it will feed. It expects those batch files to be named
+<TT
+CLASS="FILENAME"
+>/var/spool/news/out.going/<TT
+CLASS="REPLACEABLE"
+><I
+>sitename</I
+></TT
+></TT
+>. <B
+CLASS="COMMAND"
+>innd</B
+>
+creates these batch files when acting on an entry in the
+<TT
+CLASS="FILENAME"
+>newsfeeds</TT
+>, which we saw in the previous
+sections. We specified the sitename as the filename in the
+<TT
+CLASS="REPLACEABLE"
+><I
+>param</I
+></TT
+> field, and that satisfies the
+<B
+CLASS="COMMAND"
+>nntpsend</B
+> command's input requirements.</P
+><P
+>The <B
+CLASS="COMMAND"
+>nntpsend</B
+> command has a configuration file called
+<TT
+CLASS="FILENAME"
+>nntpsend.ctl</TT
+> that is usually stored in the
+<TT
+CLASS="FILENAME"
+>/etc/news/</TT
+> directory.</P
+><P
+>The <TT
+CLASS="FILENAME"
+>nntpsend.ctl</TT
+> file allows us to associate a fully
+qualified domain name, some news feed size constraints, and a number of
+transmission parameters with a news feed site name. The sitename is a means
+of uniquely identifying a logical feed of articles.
+The general format of the file is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>sitename:fqdn:max_size:[args]</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The following list describes the elements of this format:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>sitename</I
+></TT
+></DT
+><DD
+><P
+>The sitename as supplied in the <TT
+CLASS="FILENAME"
+>newsfeeds</TT
+> file</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>fqdn</I
+></TT
+></DT
+><DD
+><P
+>The fully qualified domain name of the news server to which we will be feeding
+the news articles</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>max_size</I
+></TT
+></DT
+><DD
+><P
+>The maximum volume of news to feed in any single transfer</P
+></DD
+><DT
+><TT
+CLASS="REPLACEABLE"
+><I
+>args</I
+></TT
+></DT
+><DD
+><P
+>Additional arguments to pass to the <B
+CLASS="COMMAND"
+>innxmit</B
+> command</P
+></DD
+></DL
+></DIV
+><P
+>Our sample configuration requires a very simple
+<TT
+CLASS="FILENAME"
+>nntpsend.ctl</TT
+> file. We have only one news feed. We'll
+restrict the feed to a maximum of 2 MB of traffic and we'll pass an
+argument to the <B
+CLASS="COMMAND"
+>innxmit</B
+> that sets a 3-minute
+(180 second) timeout. If we were a larger site and had many news feeds,
+we'd simply create new entries for each new feed site that looked much
+the same as this one:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/news/nntpsend.ctl
+#
+gmarxu:news.groucho.edu:2m:-t 180
+#</PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN18693"
+>23.5.4. Controlling Newsreader Access</A
+></H2
+><P
+>&#13;
+Not so many years ago, it was common for organizations to provide public
+access to their news servers. Today it is difficult to locate public news
+servers; most organizations carefully control who has access to their
+servers, typically restricting access to users supported on their network.
+INN provides configuration files to control this access.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN18703"
+>23.5.4.1. The incoming.conf file</A
+></H3
+><P
+>&#13;
+We mentioned in our introduction to INN that it achieves some of its
+efficiency and size by separating the news feed mechanism from the
+newsreading mechanism.  The
+<TT
+CLASS="FILENAME"
+>/etc/news/incoming.conf</TT
+> file is where you specify
+which hosts will be feeding you news using the NNTP protocol, as well
+as where you define some parameters that control the way articles are
+fed to you from these hosts.  Any host not listed in this file that
+connects to the news socket will not be handled by the
+<B
+CLASS="COMMAND"
+>innd</B
+> daemon; instead, it will be handled by the
+<B
+CLASS="COMMAND"
+>nnrpd</B
+> daemon.</P
+><P
+>The <TT
+CLASS="FILENAME"
+>/etc/news/incoming.conf</TT
+> file syntax is
+very simple, but it takes a moment to come to terms with. Three types of
+valid entries are allowed: key/value pairs, which are how you specify
+attributes and their values; peers, which is how you specify the name
+of a host allowed to send articles to us using NNTP; and groups, a means 
+of applying key/value pairs to groups of peers.  Key/value
+pairs can have three different types of scope. Global pairs apply to
+every peer defined in the file. Group pairs apply to all peers defined
+within that group. Peer pairs apply only to that one peer. Specific
+definitions override less specific ones: therefore, peer definitions
+override group definitions, which in turn override global pairs.</P
+><P
+>Curly brace characters (<TT
+CLASS="LITERAL"
+>{}</TT
+>) are used to delimit the
+start and end of the <TT
+CLASS="LITERAL"
+>group</TT
+> and <TT
+CLASS="LITERAL"
+>peer</TT
+>
+specifications. The # character marks the rest of the
+line it appears on as a comment. Key/value pairs are separated by the
+colon character and appear one to a line.</P
+><P
+>A number of different keys may be specified. The more common
+and useful are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>hostname</DT
+><DD
+><P
+>This key specifies a comma-separated list of fully qualifed names or IP
+addresses of the peers that we'll allow to send us articles. If this key is
+not supplied, the hostname defaults to the label of the peer.</P
+></DD
+><DT
+>streaming</DT
+><DD
+><P
+>This key determines whether streaming commands are allowed from this host.
+It is a Boolean value that defaults to <TT
+CLASS="LITERAL"
+>true</TT
+>.</P
+></DD
+><DT
+>max-connections</DT
+><DD
+><P
+>This key specifies the maximum number of connections allowed from this group
+or peer. A value of zero means unlimited (which can also be specified using
+<TT
+CLASS="LITERAL"
+>none</TT
+>).</P
+></DD
+><DT
+>password</DT
+><DD
+><P
+>This key allows you to specify the password that must be used by a peer if it
+is to be allowed to transfer news. The default is to not require a password.</P
+></DD
+><DT
+>patterns</DT
+><DD
+><P
+>This key specifies the newsgroups that we accept from the associated peer.
+This field is coded according to precisely the same rules as we used in our
+<TT
+CLASS="FILENAME"
+>newsfeeds</TT
+> file.</P
+></DD
+></DL
+></DIV
+>&#13;</P
+><P
+>In our example we have only one host that we are expecting to feed us
+news: our upstream news provider at Groucho Marx
+University. We'll have no password, but we will ensure that we don't
+accept any articles for our private newsgroup from outside. Our
+<TT
+CLASS="FILENAME"
+>hosts.nntp</TT
+> looks like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># Virtual Brewery incoming.conf file.
+
+# Global settings
+streaming:       true
+max-connections: 5
+
+# Allow NNTP posting from our local host.
+peer ME {
+    hostname: "localhost, 127.0.0.1"
+}
+
+# Allow groucho to send us all newsgroup except our local ones.
+peer groucho {
+    hostname: news.groucho.edu
+    patterns: !rec.crafts.brewing.private
+}</PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN18749"
+>23.5.4.2. The nnrp.access file</A
+></H3
+><P
+>&#13;
+We mentioned earlier that newsreaders, and in fact any host not listed
+in the <TT
+CLASS="FILENAME"
+>hosts.nntp</TT
+>, that connect to the INN news
+server are handled by the <B
+CLASS="COMMAND"
+>nnrpd</B
+> program. <B
+CLASS="COMMAND"
+>nnrpd</B
+> uses the
+<TT
+CLASS="FILENAME"
+>/etc/news/nnrp.access</TT
+> file to determine who is
+allowed to make use of the news server, and what permissions they
+should have.</P
+><P
+>The <TT
+CLASS="FILENAME"
+>nnrp.access</TT
+> file has a similar structure to the other
+configuration files we've looked at. It comprises a set of patterns used to
+match against the connecting host's domain name or IP address, and fields
+that determine what access and permission it should be given. Each entry
+should appear on a line by itself, and fields are separated by colons. The
+last entry in this file that matches the connecting host will be the one
+used, so again, you should put general patterns first and follow them with
+more specific ones later in the file. The five fields of each entry in
+the order they should appear are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>Hostname or IP address</DT
+><DD
+><P
+>This field conforms to <TT
+CLASS="FILENAME"
+>wildmat(3)</TT
+> pattern-matching rules. It is a pattern that describes the connecting host's name or IP address.</P
+></DD
+><DT
+>Permissions</DT
+><DD
+><P
+>This field determines what permissions the matching host should be granted.
+There are two permissons you may configure: <TT
+CLASS="LITERAL"
+>R</TT
+> gives
+read permissions, and <TT
+CLASS="LITERAL"
+>P</TT
+> gives posting permissions.</P
+></DD
+><DT
+>Username</DT
+><DD
+><P
+>This field is optional and allows you to specify a username that an NNTP
+client must log into the server before being allowed to post news
+articles. This field may be left blank. No user authentication is required
+to read articles.</P
+></DD
+><DT
+>Password</DT
+><DD
+><P
+>This field is optional and is the password accompanying the
+<TT
+CLASS="REPLACEABLE"
+><I
+>username</I
+></TT
+> field. Leaving this field blank means that no
+password is required to post articles.</P
+></DD
+><DT
+>Newsgroups</DT
+><DD
+><P
+>This field is a pattern specifying which newsgroups the client is allowed to
+access. The pattern follows the same rules as those used in the
+<TT
+CLASS="FILENAME"
+>newsfeeds</TT
+> file. The default for this field is no
+newsgroups, so you would normally have a pattern configured here.</P
+></DD
+></DL
+></DIV
+>&#13;</P
+><P
+>In the virtual brewery example, we will allow any NNTP client in the Virtual 
+Brewery domain to both read and post to all newsgroups. We will allow any NNTP
+client read-only access to all newsgroups except our private internal
+newsgroup. Our <TT
+CLASS="FILENAME"
+>nnrp.access</TT
+> file will look like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># Virtual Brewery - nnrp.access
+# We will allow public reading of all newsgroups except our private one.
+*:R:::*,!rec.crafts.brewing.private
+
+# Any host with the Virtual Brewery domain may Read and Post to all 
+# newsgroups
+*.vbrew.com:RP::*</PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN18793"
+>23.5.5. Expiring News Articles</A
+></H2
+><P
+>&#13;
+
+When news articles are received by a news server, they are stored to
+disk. News articles need to be available to users for some period of
+time to be useful, so a large operating news server can consume lots
+of disk space. To ensure that the disk space is used effectively, you
+can opt to delete news articles automatically after a period of
+time. This is called <B
+CLASS="COMMAND"
+>article expiration</B
+>. Naturally,
+INN provides a means of automatically expiring news articles.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN18807"
+>23.5.5.1. The expire.ctl file</A
+></H3
+><P
+>&#13;The INN server uses a program called <B
+CLASS="COMMAND"
+>expire</B
+> to delete
+expired news articles. The <B
+CLASS="COMMAND"
+>expire</B
+> program in turn uses a
+file called <TT
+CLASS="FILENAME"
+>/etc/news/expire.ctl</TT
+> to configure
+the rules that govern article expiration.</P
+><P
+>The syntax of <TT
+CLASS="FILENAME"
+>/etc/news/expire.ctl</TT
+> is fairly simple.
+As with most configuration files, empty lines or lines beginning with the # 
+character are ignored. The general idea is that you specify
+one rule per line. Each rule defines how article expiration will be performed
+on newsgroups matching a supplied pattern. The rule syntax looks like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="REPLACEABLE"
+><I
+>pattern</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>modflag</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>keep</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>default</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>purge</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The following list describes the fields:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>pattern</DT
+><DD
+><P
+>This field is a comma-delimited list of patterns matching names of
+newsgroups.  The <TT
+CLASS="FILENAME"
+>wildmat</TT
+>&#8201;(3) routine is used to
+match these patterns. The last rule matching a newsgroup name is the
+one that is applied, so if you want to specify wildcard (*) rules,
+they should be listed first in this file.</P
+></DD
+><DT
+>modflag</DT
+><DD
+><P
+>This flag describes how this rule applies to moderated newsgroups. It can be
+coded with an <TT
+CLASS="LITERAL"
+>M</TT
+> to mean that this rule applies only to
+moderated newsgroups, a <TT
+CLASS="LITERAL"
+>U</TT
+> to mean that this rule applies 
+only to unmoderated newsgroups, or an <TT
+CLASS="LITERAL"
+>A</TT
+> to mean that this 
+rule ignores the moderated status and applies to all groups.</P
+></DD
+><DT
+>keep</DT
+><DD
+><P
+>This field allows you to specify the minimum time an article with an
+&#8220;Expires&#8221; header will be kept before it is expired. The units
+are days, and are a floating point, so you may specify values like
+<TT
+CLASS="LITERAL"
+>7.5</TT
+> for seven-and-a-half days. You may also specify 
+<TT
+CLASS="LITERAL"
+>never</TT
+> if you wish articles to stay in a newsgroup forever.</P
+></DD
+><DT
+>default</DT
+><DD
+><P
+>This field is the most important. This field allows you to specify the
+time an article without an <TT
+CLASS="LITERAL"
+>Expires</TT
+> header will be
+kept. Most articles won't have an <TT
+CLASS="LITERAL"
+>Expires</TT
+>
+header. This field is coded in the same way as the
+<TT
+CLASS="REPLACEABLE"
+><I
+>keep</I
+></TT
+> field, with <TT
+CLASS="LITERAL"
+>never</TT
+> meaning
+that articles without <TT
+CLASS="LITERAL"
+>Expires</TT
+> headers will never be
+expired.</P
+></DD
+><DT
+>purge</DT
+><DD
+><P
+>This field allows you to specify the maximum time an article with an 
+<TT
+CLASS="LITERAL"
+>Expires</TT
+> header will be kept before it is expired. The coding
+of this field is the same as for the <TT
+CLASS="LITERAL"
+>keep</TT
+> field.</P
+></DD
+></DL
+></DIV
+></P
+><P
+>Our requirements are simple. We will keep all articles in all newsgroups
+for 14 days by default, and between 7 and 21 days for articles that have
+an <TT
+CLASS="LITERAL"
+>Expires</TT
+> header.
+The <I
+CLASS="EMPHASIS"
+>rec.crafts.brewing.private</I
+> newsgroup is our internal
+newsgroup, so we'll make sure we don't expire any articles from it:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># expire.ctl file for the Virtual Brewery
+
+# Expire all articles in 14 days by default, 7-21 days for those with
+# Expires: headers
+*:A:7:14:21
+
+# This is a special internal newsgroup, which we will never expire.
+rec.crafts.brewing.private:A:never:never:never</PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>We will mention one special type of entry you may have in your
+<TT
+CLASS="FILENAME"
+>/etc/news/expires.ctl</TT
+> file.
+You may have exactly one line that looks like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/remember/:<TT
+CLASS="REPLACEABLE"
+><I
+>days</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+This entry allows you to specify the minimum number of days that an article
+will be remembered in the history file, irrespective of whether the article
+itself has been expired or not. This might be useful if one of the sites that
+is feeding you articles is infrequent and has a habit of sending you old
+articles every now and again. Setting the <TT
+CLASS="REPLACEABLE"
+><I
+>/remember/</I
+></TT
+>
+field helps to prevent the upstream server from sending you the article again,
+even if it has already been expired from your server. If your server remembers
+it has already received the article, it will reject attempts to resend it.
+It is important to remember that this setting has no effect at all on article
+expiration; it affects only the time that details of an article are kept in the history database.</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN18867"
+>23.5.6. Handling Control Messages</A
+></H2
+><P
+>&#13;Just as with C News, INN can automatically process control messages.
+INN provides a powerful configuration mechanism to control what action will
+occur for each of a variety of control messages, and an access control
+mechanism to control who can initiate actions against which newsgroups.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN18873"
+>23.5.6.1. The control.ctl file</A
+></H3
+><P
+>&#13;The <TT
+CLASS="FILENAME"
+>control.ctl</TT
+> file is fairly simple in structure.
+The syntax rules for this file are much the same as for the other INN
+configuration files. Lines beginning with <TT
+CLASS="LITERAL"
+>#</TT
+>
+are ignored, lines may be continued using <TT
+CLASS="LITERAL"
+>/</TT
+>, and
+fields are delimited by <TT
+CLASS="LITERAL"
+>:</TT
+>.</P
+><P
+>When a control message is received, it is tested against each rule in turn.
+The last rule in the file that matches the message is the rule that will be
+used, so you should put any generic rules at the start of the file and
+more specific rules at the end of the file. The general syntax of the file is:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="REPLACEABLE"
+><I
+>message</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>from</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>newsgroups</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>action</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The meanings of each of the fields are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>message</DT
+><DD
+><P
+>This is the name of the control message. Typical control messages are
+described later.</P
+></DD
+><DT
+>from</DT
+><DD
+><P
+>This is a shell-style pattern matching the email address of the person 
+sending the message. The email address is converted to lowercase before comparison. </P
+></DD
+><DT
+>newsgroups</DT
+><DD
+><P
+>If the control message is <TT
+CLASS="LITERAL"
+>newgroup</TT
+> or
+<TT
+CLASS="LITERAL"
+>rmgroup</TT
+>, this field is a shell-style pattern matching
+the newsgroup created or removed.</P
+></DD
+><DT
+>action</DT
+><DD
+><P
+>This field specifies what action to take for any message matching the rule. 
+There are quite a number of actions we can take; they are
+described in the next list.</P
+></DD
+></DL
+></DIV
+></P
+><P
+>The <TT
+CLASS="REPLACEABLE"
+><I
+>message</I
+></TT
+> field of each line can have one of the following values:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>checkgroups</DT
+><DD
+><P
+>This message requests that news administrators resynchonrize their
+active newsgroups database against the list of newsgroups supplied in
+the control message.</P
+></DD
+><DT
+>newgroup</DT
+><DD
+><P
+>This message requests the creation of a new newsgroup. The body of the
+control message should contain a short description of the purpose of
+the newsgroup to be created.</P
+></DD
+><DT
+>rmgroup</DT
+><DD
+><P
+>requests that a newsgroup be removed.</P
+></DD
+><DT
+>sendsys</DT
+><DD
+><P
+>&#13;This message requests that the <TT
+CLASS="FILENAME"
+>sys</TT
+> file of this
+news server be transmitted by mail to the originator of the control
+message. RFC-1036 states that it is a requirement of Usenet membership
+that this information be publicly available because it is used to
+keep the map of Usenet up to date.</P
+></DD
+><DT
+>version</DT
+><DD
+><P
+>&#13;This message requests that the hostname and version of news server
+software be returned to the originator of the control message.&#13;</P
+></DD
+><DT
+>all</DT
+><DD
+><P
+>This is a special coding that will match any control message.</P
+></DD
+></DL
+></DIV
+><P
+>The <TT
+CLASS="REPLACEABLE"
+><I
+>message</I
+></TT
+> field may include the following actions:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>doit</DT
+><DD
+><P
+>The requested command is performed. In many cases, a mail message will
+be sent to the administrator to advise them that the action has taken place.</P
+></DD
+><DT
+>doit=<TT
+CLASS="REPLACEABLE"
+><I
+>file</I
+></TT
+></DT
+><DD
+><P
+>This is the same as the <TT
+CLASS="LITERAL"
+>doit</TT
+> action except
+that a log message will be written to the <I
+CLASS="EMPHASIS"
+>file</I
+>
+log file. If the specified file is <I
+CLASS="EMPHASIS"
+>mail</I
+>, the log
+entry is sent by email. If the specified file is the null string, the
+log message is written to <TT
+CLASS="FILENAME"
+>/dev/null</TT
+> and is equivalent
+to using the unqualified <TT
+CLASS="LITERAL"
+>doit</TT
+> action. If the
+<I
+CLASS="EMPHASIS"
+>file</I
+> name begins with a / character, the name is 
+taken to be an absolute filename for the logfile; otherwise, the specified 
+name is translated to
+<TT
+CLASS="FILENAME"
+>/var/log/news/file.log</TT
+>.</P
+></DD
+><DT
+>doifarg</DT
+><DD
+><P
+>The requested command is performed if the command has an argument.
+If the command has no argument, the control message is ignored.</P
+></DD
+><DT
+>drop</DT
+><DD
+><P
+>The requested command is ignored.</P
+></DD
+><DT
+>log</DT
+><DD
+><P
+>A log message is sent to the <TT
+CLASS="LITERAL"
+>stderr</TT
+> output of the
+<B
+CLASS="COMMAND"
+>innd</B
+> process. This is normally directed out to the
+<TT
+CLASS="FILENAME"
+>/var/log/news/errlog</TT
+> file.</P
+></DD
+><DT
+>log=<TT
+CLASS="REPLACEABLE"
+><I
+>file</I
+></TT
+></DT
+><DD
+><P
+>This is the same as a <TT
+CLASS="LITERAL"
+>log</TT
+> action, except the
+logfile is specified as per the rules given for the
+<TT
+CLASS="LITERAL"
+>doit</TT
+>=<TT
+CLASS="REPLACEABLE"
+><I
+>file</I
+></TT
+> action.</P
+></DD
+><DT
+>mail</DT
+><DD
+><P
+>An email message is sent to the news administrator containing the
+requested command details. No other action takes place.</P
+></DD
+><DT
+>verify-*</DT
+><DD
+><P
+>&#13;
+If an action begins with the string &#8220;<TT
+CLASS="LITERAL"
+>verify-</TT
+>&#8221;, 
+then the control message is authenticated using PGP (or
+GPG).<A
+NAME="AEN18994"
+HREF="#FTN.AEN18994"
+>[1]</A
+></P
+></DD
+></DL
+></DIV
+><P
+>So that you can see what a <TT
+CLASS="FILENAME"
+>control.ctl</TT
+> file would look 
+like in practice, here is a very short illustrative sample:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>## Sample /etc/news/control.ctl
+##
+## Warning: You should not use this file, it is illustrative only.
+
+##	Control Message Handling
+all:*:*:mail
+checkgroups:*:*:mail
+ihave:*:*:drop
+sendme:*:*:drop
+sendsys:*:*:log=sendsys
+senduuname:*:*:log=senduuname
+version:*:*:log=version
+newgroup:*:*:mail
+rmgroup:*:*:mail
+
+##  Handle control messages for the eight most important news heirarchies
+##  COMP, HUMANITIES, MISC, NEWS, REC, SCI, SOC, TALK
+checkgroups:*:comp.*|humanities.*|misc.*|news.*|rec.*|sci.*|soc.*|talk.*:drop
+newgroup:*:comp.*|humanities.*|misc.*|news.*|rec.*|sci.*|soc.*|talk.*:drop
+rmgroup:*:comp.*|humanities.*|misc.*|news.*|rec.*|sci.*|soc.*|talk.*:drop
+checkgroups:group-admin@isc.org:*:verify-news.announce.newgroups
+newgroup:group-admin@isc.org:comp.*|misc.*|news.*:verify-news.announce.newgroups
+newgroup:group-admin@isc.org:rec.*|sci.*|soc.*:verify-news.announce.newgroups
+newgroup:group-admin@isc.org:talk.*|humanities.*:verify-news.announce.newgroups
+rmgroup:group-admin@isc.org:comp.*|misc.*|news.*:verify-news.announce.newgroups
+rmgroup:group-admin@isc.org:rec.*|sci.*|soc.*:verify-news.announce.newgroups
+rmgroup:group-admin@isc.org:talk.*|humanities.*:verify-news.announce.newgroups
+
+## GNU ( Free Software Foundation )
+newgroup:gnu@prep.ai.mit.edu:gnu.*:doit
+newgroup:news@*ai.mit.edu:gnu.*:doit
+rmgroup:gnu@prep.ai.mit.edu:gnu.*:doit
+rmgroup:news@*ai.mit.edu:gnu.*:doit
+
+## LINUX (Newsfeed from news.lameter.com)
+checkgroups:christoph@lameter.com:linux.*:doit
+newgroup:christoph@lameter.com:linux.*:doit
+rmgroup:christoph@lameter.com:linux.*:doit</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN18994"
+HREF="x18341.html#AEN18994"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>PGP and GPG are tools designed to authenticate or encrypt messages using
+public key techniques. GPG is the GNU free version of PGP. GPG may be found
+at <SPAN
+CLASS="SYSTEMITEM"
+>http://www.gnupg.org/</SPAN
+>, and PGP may be
+found at <SPAN
+CLASS="SYSTEMITEM"
+>http://www.pgp.com/</SPAN
+>.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x18326.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x19004.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring INN: the Basic Setup</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-inn.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Running INN</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

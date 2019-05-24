@@ -1,0 +1,683 @@
+<HTML
+><HEAD
+><TITLE
+>UUCP Transfers and Remote Execution</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="ManagingTaylor UUCP"
+HREF="x-087-2-uucp.html"><LINK
+REL="PREVIOUS"
+TITLE="ManagingTaylor UUCP"
+HREF="x-087-2-uucp.html"><LINK
+REL="NEXT"
+TITLE="UUCP Configuration Files"
+HREF="x-087-2-uucp.config.files.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-uucp.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 16. ManagingTaylor UUCP</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-uucp.config.files.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-UUCP.INTRO.GRADES"
+>16.1. UUCP Transfers and Remote Execution</A
+></H1
+><P
+> 
+
+
+The concept of jobs is vital to understanding UUCP.
+Every transfer that a user initiates with <B
+CLASS="COMMAND"
+>uucp</B
+> or
+<B
+CLASS="COMMAND"
+>uux</B
+> is called a <B
+CLASS="COMMAND"
+>job</B
+>. It is made up of 
+a command to be executed on a remote system, a collection of files to 
+be transferred between sites, or both.</P
+><P
+>As an example, the following command makes UUCP copy the file
+<TT
+CLASS="FILENAME"
+>netguide.ps</TT
+> to a remote host named
+<SPAN
+CLASS="SYSTEMITEM"
+>pablo</SPAN
+> and execute the
+<B
+CLASS="COMMAND"
+>lpr</B
+> command on
+<SPAN
+CLASS="SYSTEMITEM"
+>pablo</SPAN
+>
+to print the file:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>uux -r pablo!lpr !netguide.ps</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+> 
+ 
+
+UUCP does not generally call the remote system immediately to execute a job
+(or else you could make do with <B
+CLASS="COMMAND"
+>kermit</B
+>). Instead, it
+temporarily stores the job description away. This is called
+<I
+CLASS="EMPHASIS"
+>spooling</I
+>. The directory tree under which jobs are stored
+is therefore called the <I
+CLASS="EMPHASIS"
+>spool directory</I
+> and is generally
+located in <TT
+CLASS="FILENAME"
+>/var/spool/uucp</TT
+>. In our example, the job
+description would contain information about the remote command to be executed
+(<B
+CLASS="COMMAND"
+>lpr</B
+>), the user who requested the execution, and a couple
+of other items. In addition to the job description, UUCP has to store the
+input file <TT
+CLASS="FILENAME"
+>netguide.ps</TT
+>.</P
+><P
+>The exact location and naming of spool files may vary, depending on
+some compile-time options. HDB-compatible UUCPs generally store spool
+files in a <TT
+CLASS="FILENAME"
+>/var/spool/uucp</TT
+> subdirectory with the name
+of the remote site. When compiled for Taylor configuration, UUCP creates
+subdirectories below the site-specific spool directory for different types
+of spool files.</P
+><P
+>At regular intervals, UUCP dials up the remote system.  When a connection to
+the remote machine is established, UUCP transfers the files describing the
+job, plus any input files.  The incoming jobs will not be executed
+immediately, but only after the connection terminates. Execution is handled 
+by <B
+CLASS="COMMAND"
+>uuxqt</B
+>, which also takes care of forwarding any jobs that
+are designated for another site.</P
+><P
+>&#13;
+
+To distinguish between more and less important jobs, UUCP associates a
+<I
+CLASS="EMPHASIS"
+>grade</I
+> with each job. This is a single digit ranging
+from 0 through 9, A through Z, and a through z, in decreasing precedence. Mail
+is customarily spooled with grade B or C, while news is spooled with grade
+N. Jobs with higher grades are transferred earlier. Grades may be assigned
+using the <TT
+CLASS="OPTION"
+>&#8211;g</TT
+> flag when invoking <B
+CLASS="COMMAND"
+>uucp</B
+>
+or <B
+CLASS="COMMAND"
+>uux</B
+>.</P
+><P
+>You can also prohibit the transfer of jobs below a given grade at certain
+times. To do this we set the <I
+CLASS="EMPHASIS"
+>maximum spool grade</I
+>
+that will be prohibited during a conversation. The maximum spool grade 
+defaults to z, meaning all grades will be transferred every time. Note the 
+semantic ambiguity here: a file is transferred only if it has a grade 
+<I
+CLASS="EMPHASIS"
+>equal to</I
+> or <I
+CLASS="EMPHASIS"
+>above</I
+> the maximum spool grade threshold.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-UUCICO.CONNECT"
+>16.1.1. The Inner Workings of uucico</A
+></H2
+><P
+>&#13; 
+To understand why <B
+CLASS="COMMAND"
+>uucico</B
+> needs to know particular 
+information, a quick description of how it actually connects to a remote 
+system is helpful.</P
+><P
+> 
+When you execute <B
+CLASS="COMMAND"
+>uucico -s <TT
+CLASS="REPLACEABLE"
+><I
+>system</I
+></TT
+></B
+>
+from the command line, <B
+CLASS="COMMAND"
+>uucico</B
+> first has to connect
+physically. The actions taken depend on the type of connection to
+open. Thus, when using a telephone line, it has to find a modem and dial
+out. Over TCP, it has to call <TT
+CLASS="FUNCTION"
+>gethostbyname</TT
+> to convert
+the name to a network address, find out which port to open, and bind the
+address to the corresponding socket.</P
+><P
+>&#13;
+A successful connection is followed by authorization. This procedure 
+generally consists of the remote system
+asking for a login name and possibly a password. This exchange is commonly
+called the <I
+CLASS="EMPHASIS"
+>login chat</I
+>. The authorization procedure is
+performed either by the usual
+<B
+CLASS="COMMAND"
+>getty/login</B
+> suite,
+or on TCP sockets by <B
+CLASS="COMMAND"
+>uucico</B
+> itself.  If authorization
+succeeds, the remote end fires up <B
+CLASS="COMMAND"
+>uucico</B
+>. The local copy of
+<B
+CLASS="COMMAND"
+>uucico</B
+> that initiated the connection is referred to as
+<I
+CLASS="EMPHASIS"
+>master</I
+>, and the remote copy as <I
+CLASS="EMPHASIS"
+>slave</I
+>.</P
+><P
+>&#13;
+
+ 
+Next follows the <I
+CLASS="EMPHASIS"
+>handshake phase</I
+>&#8201;: the master sends
+its hostname plus several flags.  The slave checks this hostname for
+permission to log in, send, and receive files, etc.  The flags describe
+(among other things) the maximum grade of spool files to transfer. If
+enabled, a conversation count or <I
+CLASS="EMPHASIS"
+>call sequence number</I
+>
+check takes place here. With this feature, both sites maintain a count of
+successful connections, which are compared. If they do not match, the
+handshake fails. This is useful to protect yourself against impostors.</P
+><P
+>Finally, the two <B
+CLASS="COMMAND"
+>uucico</B
+>s try to agree on a common
+<I
+CLASS="EMPHASIS"
+>transfer protocol</I
+>. This protocol governs the way data is
+transferred, checked for consistency, and retransmitted in case of an error.
+There is a need for different protocols because of the differing types of
+connections supported. For example, telephone lines require a
+&#8220;safe&#8221; protocol, which is pessimistic about errors, while TCP
+transmission is inherently reliable and can use a more efficient protocol that
+foregoes most extra error checking.</P
+><P
+>After the handshake is complete, the actual transmission phase begins.
+Both ends turn on the selected protocol driver. At this point, the drivers
+possibly perform a protocol-specific initialization sequence.</P
+><P
+>The master then sends all files queued for the remote system whose
+spool grade is high enough. When it has finished, it informs the slave
+that it is done and that the slave may now hang up. The slave now can
+either agree to hang up or take over the conversation.  This is a
+change of roles: now the remote system becomes master, and the local one
+becomes slave. The new master now sends its files.  When done, both
+<B
+CLASS="COMMAND"
+>uucico</B
+>&#8201;s exchange termination messages and close the
+connection.</P
+><P
+>If you need additional information on UUCP, please refer to the
+source code. There is also a really antique article floating around the Net, 
+written by David A. Novitz, which gives a detailed description of the UUCP
+protocol.<A
+NAME="X-087-2-FNUU02"
+HREF="#FTN.X-087-2-FNUU02"
+>[1]</A
+> The Taylor UUCP FAQ also
+discusses some details UUCP's implementation. It is posted to
+<SPAN
+CLASS="SYSTEMITEM"
+>comp.mail.uucp</SPAN
+> regularly.
+&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN12640"
+>16.1.2. uucico Command-line Options</A
+></H2
+><P
+>&#13;
+
+ 
+In this section, we describe the most important command-line options for
+<B
+CLASS="COMMAND"
+>uucico</B
+>&#8201;:</P
+><P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="OPTION"
+>&#8211; &#8211; system, &#8211;s <TT
+CLASS="REPLACEABLE"
+><I
+>system</I
+></TT
+></TT
+></DT
+><DD
+><P
+>Calls the named <TT
+CLASS="REPLACEABLE"
+><I
+>system</I
+></TT
+> unless prohibited by call-time
+restrictions.</P
+></DD
+><DT
+><TT
+CLASS="OPTION"
+>&#8211;S <TT
+CLASS="REPLACEABLE"
+><I
+>system</I
+></TT
+></TT
+></DT
+><DD
+><P
+>Calls the named <TT
+CLASS="REPLACEABLE"
+><I
+>system</I
+></TT
+> unconditionally.</P
+></DD
+><DT
+><TT
+CLASS="OPTION"
+>&#8211; &#8211;master, &#8211;r1</TT
+></DT
+><DD
+><P
+>Starts <B
+CLASS="COMMAND"
+>uucico</B
+> in master mode. This is the default when
+<TT
+CLASS="OPTION"
+>&#8211;s</TT
+> or <TT
+CLASS="OPTION"
+>&#8211;S</TT
+> is given. All by itself,
+the <TT
+CLASS="OPTION"
+>&#8211;r1</TT
+> option causes <B
+CLASS="COMMAND"
+>uucico</B
+> to try
+to call all systems in the <TT
+CLASS="FILENAME"
+>sys</TT
+> file described in the 
+next section of this chapter, unless prohibited by call or retry time 
+restrictions.</P
+></DD
+><DT
+><TT
+CLASS="OPTION"
+>&#8211; &#8211;slave, &#8211;r0</TT
+></DT
+><DD
+><P
+>Starts <B
+CLASS="COMMAND"
+>uucico</B
+> in slave mode. This is the default
+when no <TT
+CLASS="OPTION"
+>&#8211;s</TT
+> or <TT
+CLASS="OPTION"
+>&#8211;S</TT
+> is
+given.  In slave mode, either standard input/output are assumed to be
+connected to a serial port, or the TCP port specified by the
+<TT
+CLASS="OPTION"
+>&#8211;p</TT
+> option is used.</P
+></DD
+><DT
+><TT
+CLASS="OPTION"
+>&#8211; &#8211;ifwork, &#8211;C</TT
+></DT
+><DD
+><P
+>This option supplements <TT
+CLASS="OPTION"
+>&#8211;s</TT
+> or
+<TT
+CLASS="OPTION"
+>&#8211;S</TT
+> and tells <B
+CLASS="COMMAND"
+>uucico</B
+> to call the
+named system only if there are jobs spooled for it.</P
+></DD
+><DT
+><TT
+CLASS="OPTION"
+>&#8211; &#8211;debug <TT
+CLASS="REPLACEABLE"
+><I
+>type</I
+></TT
+>, &#8211;x <TT
+CLASS="REPLACEABLE"
+><I
+>type</I
+></TT
+></TT
+>, <TT
+CLASS="OPTION"
+>&#8211;X <TT
+CLASS="REPLACEABLE"
+><I
+>type</I
+></TT
+></TT
+></DT
+><DD
+><P
+>Turns on debugging of the specified type. Several types can be given as a
+comma-separated list. The following types are valid:
+<SPAN
+CLASS="SYSTEMITEM"
+>abnormal</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>chat</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>handshake</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>uucp-proto</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>proto</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>port</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>config</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>spooldir</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>execute</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>incoming</SPAN
+>, and
+<SPAN
+CLASS="SYSTEMITEM"
+>outgoing</SPAN
+>.
+Using <SPAN
+CLASS="SYSTEMITEM"
+>all</SPAN
+> turns on all options.  For
+compatibility with other UUCP implementations, a number may be specified
+instead, which turns on debugging for the first <TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+>
+items from the above list.</P
+><P
+>Debugging messages will be logged to the <TT
+CLASS="FILENAME"
+>Debug</TT
+>
+file below <TT
+CLASS="FILENAME"
+>/var/spool/uucp</TT
+>.</P
+></DD
+></DL
+></DIV
+></P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNUU02"
+HREF="x-087-2-uucp.intro.grades.html#X-087-2-FNUU02"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>It's also included in the 4.4BSD <I
+CLASS="EMPHASIS"
+>System Manager's Manual</I
+>.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.config.files.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>ManagingTaylor UUCP</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-uucp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>UUCP Configuration Files</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

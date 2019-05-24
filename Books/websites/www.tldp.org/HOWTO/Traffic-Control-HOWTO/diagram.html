@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Diagram</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Traffic Control HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Scripts for use with QoS/Traffic Control"
+HREF="scripts.html"><LINK
+REL="NEXT"
+TITLE="Annotated Traffic Control Links"
+HREF="links.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Traffic Control HOWTO: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="scripts.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="links.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="diagram"
+></A
+>10. Diagram</H1
+><P
+>&#13;  </P
+><P
+>&#13;  </P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="d-general"
+></A
+>10.1. General diagram</H2
+><P
+>&#13;      Below is a general diagram of the relationships of the components of a
+      classful queuing discipline (HTB pictured).  A larger version of
+      the diagram is
+      <A
+HREF="http://linux-ip.net/traffic-control/htb-class.png"
+TARGET="_top"
+>available</A
+>.
+    </P
+><P
+>&#13;    </P
+><DIV
+CLASS="example"
+><A
+NAME="d-tcng-config"
+></A
+><P
+><B
+>Example 11. An example HTB <B
+CLASS="command"
+>tcng</B
+> configuration</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;/*
+ *
+ *  possible mock up of diagram shown at
+ *  http://linux-ip.net/traffic-control/htb-class.png
+ *
+ */
+
+$m_web = trTCM (
+                 cir 512  kbps,  /* commited information rate */
+                 cbs 10   kB,    /* burst for CIR */
+                 pir 1024 kbps,  /* peak information rate */
+                 pbs 10   kB     /* burst for PIR */
+               ) ;
+
+dev eth0 {
+    egress {
+
+        class ( &#60;$web&#62; )  if tcp_dport == PORT_HTTP &#38;&#38;  __trTCM_green( $m_web );
+        class ( &#60;$bulk&#62; ) if tcp_dport == PORT_HTTP &#38;&#38; __trTCM_yellow( $m_web );
+        drop              if                              __trTCM_red( $m_web );
+        class ( &#60;$bulk&#62; ) if tcp_dport == PORT_SSH ;
+
+        htb () {  /* root qdisc */
+
+            class ( rate 1544kbps, ceil 1544kbps ) {  /* root class */
+
+                $web  = class ( rate 512kbps, ceil  512kbps ) { sfq ; } ;
+                $bulk = class ( rate 512kbps, ceil 1544kbps ) { sfq ; } ;
+
+            }
+        }
+    }
+}
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="images/htb-class.png"></P
+></DIV
+><P
+>&#13;    </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="scripts.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="links.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Scripts for use with QoS/Traffic Control</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Annotated Traffic Control Links</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,285 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>The buffer cache</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Memory Management"
+HREF="memory-management.html"><LINK
+REL="PREVIOUS"
+TITLE="Allocating swap space"
+HREF="swap-allocation.html"><LINK
+REL="NEXT"
+TITLE="System Monitoring"
+HREF="system-monitoring.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="swap-allocation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Memory Management</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="system-monitoring.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BUFFER-CACHE"
+></A
+>6.6. The buffer cache</H1
+><P
+>Reading from a disk
+	is very slow compared to accessing (real) memory.  In addition,
+	it is common to read the same part of a disk several times
+	during relatively short periods of time.  For example, one
+	might first read an e-mail message, then read the letter into
+	an editor when replying to it, then make the mail program read
+	it again when copying it to a folder.  Or, consider how often
+	the command <B
+CLASS="COMMAND"
+>ls</B
+> might be run on a system with
+	many users.  By reading the information from disk only once
+	and then keeping it in memory until no longer needed, one can
+	speed up all but the first read.  This is called <I
+CLASS="GLOSSTERM"
+>disk
+	buffering</I
+>, and the memory used for the purpose is
+	called the <I
+CLASS="GLOSSTERM"
+>buffer cache</I
+>.</P
+><P
+>Since memory is, unfortunately, a finite, nay, scarce
+	resource, the buffer cache usually cannot be big enough (it
+	can't hold all the data one ever wants to use).  When the cache
+	fills up, the data that has been unused for the longest time
+	is discarded and the memory thus freed is used for the new
+	data.</P
+><P
+>Disk buffering works for writes as well.	On the one hand,
+	data that is written is often soon read again (e.g., a source
+	code file is saved to a file, then read by the compiler),
+	so putting data that is written in the cache is a good idea.
+	On the other hand, by only putting the data into the cache, not
+	writing it to disk at once, the program that writes runs quicker.
+	The writes can then be done in the background, without slowing
+	down the other programs.</P
+><P
+>Most operating systems have buffer caches (although
+	they might be called something else), but not all of
+	them work according to the above principles.  Some are
+	<I
+CLASS="GLOSSTERM"
+>write-through</I
+>: the data is written to disk
+	at once (it is kept in the cache as well, of course).  The cache
+	is called <I
+CLASS="GLOSSTERM"
+>write-back</I
+> if the writes are done
+	at a later time.  Write-back is more efficient than write-through,
+	but also a bit more prone to errors: if the machine crashes,
+	or the power is cut at a bad moment, or the floppy is removed
+	from the disk drive before the data in the cache waiting to be
+	written gets written, the changes in the cache are usually lost.
+	This might even mean that the filesystem (if there is one) is
+	not in full working order, perhaps because the unwritten data
+	held important changes to the bookkeeping information.</P
+><P
+>Because of this, you should never turn off the
+	power without using a proper shutdown procedure 
+	or remove a floppy from the
+	disk drive until it has been unmounted (if it was mounted)
+	or after whatever program is using it has signaled that it
+	is finished and the floppy drive light doesn't shine anymore.
+	The <B
+CLASS="COMMAND"
+>sync</B
+> command <I
+CLASS="GLOSSTERM"
+>flushes</I
+>
+	the buffer, i.e., forces all unwritten data to be written to disk,
+	and can be used when one wants to be sure that everything is
+	safely written.  In traditional UNIX systems, there is a program
+	called <B
+CLASS="COMMAND"
+>update</B
+> running in the background
+	which does a <B
+CLASS="COMMAND"
+>sync</B
+> every 30 seconds, so
+	it is usually not necessary to use <B
+CLASS="COMMAND"
+>sync</B
+>.
+	Linux has an additional daemon, <B
+CLASS="COMMAND"
+>bdflush</B
+>,
+	which does a more imperfect sync more frequently to avoid the
+	sudden freeze due to heavy disk I/O that <B
+CLASS="COMMAND"
+>sync</B
+>
+	sometimes causes.</P
+><P
+>Under Linux, <B
+CLASS="COMMAND"
+>bdflush</B
+> is started by
+	<B
+CLASS="COMMAND"
+>update</B
+>.  There is usually no reason to worry
+	about it, but if <B
+CLASS="COMMAND"
+>bdflush</B
+> happens to die for
+	some reason, the kernel will warn about this, and you should
+	start it by hand (<B
+CLASS="COMMAND"
+>/sbin/update</B
+>).</P
+><P
+>The cache does not actually buffer files, but blocks, which
+	are the smallest units of disk I/O (under Linux, they are usually
+	1 KB).	This way, also directories, super blocks, other filesystem
+	bookkeeping data, and non-filesystem disks are cached.</P
+><P
+>The effectiveness of a cache is primarily decided by its
+	size.  A small cache is next to useless: it will hold so little
+	data that all cached data is flushed from the cache before it
+	is reused.  The critical size depends on how much data is read
+	and written, and how often the same data is accessed.  The only
+	way to know is to experiment.</P
+><P
+>If the cache is of a fixed size, it is not very good to have
+	it too big, either, because that might make the free memory too
+	small and cause swapping (which is also slow).	To make the most
+	efficient use of real memory, Linux automatically uses all free
+	RAM for buffer cache, but also automatically makes the cache
+	smaller when programs need more memory.</P
+><P
+>Under Linux, you do not need to do anything to make use
+	of the cache, it happens completely automatically.  Except for
+	following the proper procedures for shutdown and removing
+	floppies, you do not need to worry about it.  </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="swap-allocation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="system-monitoring.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Allocating swap space</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="memory-management.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>System Monitoring</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

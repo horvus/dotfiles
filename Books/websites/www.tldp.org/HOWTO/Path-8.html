@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>PATH HOWTO: Network servers</TITLE>
+ <LINK HREF="Path-9.html" REL=next>
+ <LINK HREF="Path-7.html" REL=previous>
+ <LINK HREF="Path.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Path-9.html">Next</A>
+<A HREF="Path-7.html">Previous</A>
+<A HREF="Path.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. Network servers</A></H2>
+
+<P>
+<P>
+<P>Most network servers should not invoke subprocesses of any kind.  For
+security reasons, their path should be minimal.
+<P>An important exception is all the services that allow logging in to the
+system from network.  This section describes what is the environment
+in these cases.  If the command is executed in the remote machine with
+rsh it gets different path than if it is executed with ssh.
+Similarly, logging in with rlogin, Telnet or ssh is different.
+<P>
+<P>
+<H2><A NAME="ss8.1">8.1 inetd</A>
+</H2>
+
+<P>
+<P>Most network servers do not have process of their own waiting for
+requests all the time.  This work is delegated to an Internet super
+server called inetd.  Inetd listens for all the defined network ports
+and starts the appropriate server when there is an incoming request.
+This behaviour is defined in /etc/inetd.conf.
+<P>inetd is started from system startup scripts.  It inherits just path
+of init process.  It does not modify it and all the servers started
+from inetd has init path.  An example of such a server is imapd, the
+server of IMAP post office protocol.
+<P>Other examples of inetd processes are telnetd, rlogind, talkd, ftp,
+popd, many http servers and so on.
+<P>Often usage of inetd is still complicated by using a separate tcpd
+program to start the real server.  It is a program that makes
+additional security checks before starting the real application.  It
+does not affect the path (not verified).
+<P>
+<P>
+<H2><A NAME="ss8.2">8.2 rsh</A>
+</H2>
+
+<P>
+<P>rsh daemon sets the path from _PATH_DEFPATH (/usr/include/paths.h)
+that is the same path that login program uses for normal users. Root
+will get the same path than the normal user.
+<P>Actually, rshd executes the command it gets with the command line:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+shell -c command-line
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>and shell is not a login shell. It is desirable that all the shells
+mentioned in /etc/passwd support -c option to give on the command
+line.
+<P>
+<P>
+<H2><A NAME="ss8.3">8.3 rlogin</A>
+</H2>
+
+<P>
+<P>Rlogin is invokes login to make the real login procedure. If you login
+with rlogin, you get the same path than in login. Most other ways to
+log in to a Linux computer do not use login. Note the difference with
+rsh.
+<P>The login command actually used is
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+login -p -h host-name user-name
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>-p preserves the environment except the variables HOME, PATH, SHELL,
+TERM, MAIL and LOGNAME. -h tells the remote host name for logging.
+<P>
+<P>
+<H2><A NAME="ss8.4">8.4 telnet</A>
+</H2>
+
+<P>
+<P>Telnet is similar than rlogin. It uses the login program and the
+command line to invoke it in a similar way.
+<P>
+<P>
+<H2><A NAME="ss8.5">8.5 ssh</A>
+</H2>
+
+<P>
+<P>ssh has a path setting of it's own. It has a fixed path where it adds
+the directory where ssh is. Often this means that /usr/bin is in the
+path twice:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+/usr/local/bin:/usr/bin:/bin:.:/usr/bin
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The path does not contain /usr/X11/bin and shell invoked by ssh
+command is not a login shell. Thus
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ssh remotehost xterm
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>never works and anything in /etc/profile or /etc/csh.cshrc can change
+this.  You must always use explicit path /usr/bin/X11/xterm.
+<P>ssh searches environment variables of form VAR=VALUE from file
+/etc/environment. Unfortunately this causes some problems with
+XFree86.
+<P>
+<P>
+<HR>
+<A HREF="Path-9.html">Next</A>
+<A HREF="Path-7.html">Previous</A>
+<A HREF="Path.html#toc8">Contents</A>
+</BODY>
+</HTML>

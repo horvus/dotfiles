@@ -1,0 +1,694 @@
+<HTML
+><HEAD
+><TITLE
+>Installing on an existing Linux system</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Linux ATA RAID HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Installing Native Linux RAID"
+HREF="nativeraid.html"><LINK
+REL="NEXT"
+TITLE="Upgrading Kernel"
+HREF="upgrading.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux ATA RAID HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="nativeraid.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="upgrading.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="EXISTING">7. Installing on an existing Linux system</H1
+><P
+>This section explains how to install Linux Native ATA RAID on non-OS disks you may have on a running Linux machine. Non-OS disks are those which do not contain any Linux OS partitions such as <TT
+CLASS="FILENAME"
+>/</TT
+>, <TT
+CLASS="FILENAME"
+>/usr</TT
+>, <TT
+CLASS="FILENAME"
+>/var</TT
+>, <TT
+CLASS="FILENAME"
+>/boot</TT
+>.  In other words, we have a working Linux machine with two free disks and we want to setup ATA RAID mirror (raid 1) on those two disks. When we save important data on such a mirror device, our data is protected. Ofcourse, like any other RAID 1, we will experience improved read speeds while reading the data and slightly decreased write speeds while modifying or adding new data to the mirror device. Therefore, using RAID 1 for data disks is recommended if the data disk is more frequently read than written to.  A web server hosting rarely changing web sites is a good example where web content is rarely modified but very frequently accessed by users.</P
+><P
+>Here are the steps to install non-OS ATA RAID if your RAID chip is from Promise Technology:</P
+><P
+><P
+></P
+><UL
+><LI
+><P
+>Find out IO address numbers and IRQ number(s) for your Promise RAID chip/card.</P
+></LI
+><LI
+><P
+>Edit <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> and insert appropriate <EM
+>Append Line</EM
+></P
+></LI
+><LI
+><P
+>Enable ataraid support either by automatically loading ataraid module when your Linux machine starts up or by statically building ataraid support into your kernel</P
+></LI
+></UL
+></P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="APPENDLINE">7.1. Append Line</H2
+><P
+>For the purpose of understanding various tasks involving Promise FastTrack RAID such as upgrading or troubleshooting, we introduce a noun: <EM
+>Append Line</EM
+></P
+><P
+>All the <TT
+CLASS="FILENAME"
+>ide</TT
+> options you pass at the LILO <TT
+CLASS="PROMPT"
+>boot:</TT
+> prompt at the time of booting, when put together as a string, make up the <EM
+>Append Line</EM
+>.  All the <TT
+CLASS="FILENAME"
+>ide</TT
+> options in double quotes after <TT
+CLASS="FILENAME"
+>append=</TT
+> keyword in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> also make up the <EM
+>Append Line</EM
+>.</P
+><P
+>For example, if you type</P
+><P
+> 
+<B
+CLASS="COMMAND"
+>linux-new ide2=0x0001,0x0009,9 ide3=0x2000,0x2009,10 ide4=none nousb expert root=/dev/hda3</B
+></P
+><P
+>at <TT
+CLASS="PROMPT"
+>boot:</TT
+> prompt at the time of booting your Linux computer, then <EM
+>Append Line</EM
+> is the string</P
+><P
+><EM
+>ide2=0x0001,0x0009,9 ide3=0x2000,0x2009,10 ide4=none</EM
+>.</P
+><P
+>Similarly, if your <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> has the following section, your <EM
+>Append Line</EM
+> is</P
+><P
+><EM
+>ide2=0x9400,0x9002 ide3=0x8800,0x8402</EM
+>.</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>image=/boot/vmlinuz-2.4.9-10
+	label=linuxold
+	read-only
+	root=/dev/hde9
+	append="nousb ide2=0x9400,0x9002 ide3=0x8800,0x8402"
+	initrd="initrd.img"</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>When we experience problems booting a Linux machine with RAID, we may have to use an appropriate <EM
+>Append Line</EM
+>. Therefore, it is important to determine and write down the <EM
+>Append Line</EM
+>. This will help you fix your problems later or upgrade your kernel smoothly or add/remove additional hard disks.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DETERMINE">7.2. Determining the Append Line</H2
+><P
+>To determine the correct <EM
+>Append Line</EM
+>, we should first know how all our <TT
+CLASS="FILENAME"
+>ide</TT
+> devices are connected. IDE devices can be hard disks, ATAPI CDROM(s) <EM
+>etc</EM
+>. Once we determine the <EM
+>Append Line</EM
+>, we can append it to the <TT
+CLASS="PROMPT"
+>boot:</TT
+> options (at the time of booting) or we can alternatively assign it as a string value to the append paramater in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>. Unless you love to remember complicated <TT
+CLASS="PROMPT"
+>boot:</TT
+> options and type them at boot time every time, you should choose the second method, <EM
+>i.e.</EM
+>, insert it into <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> . You can do so by inserting <TT
+CLASS="FILENAME"
+>append="</TT
+><EM
+>Your Append Line Here</EM
+><TT
+CLASS="FILENAME"
+>"</TT
+>, saving file and then activating new <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> by running the command <B
+CLASS="COMMAND"
+>/sbin/lilo</B
+>.</P
+><P
+>For the purpose of understanding better, lets say that your <TT
+CLASS="FILENAME"
+>ide</TT
+> devices are as follows:</P
+><P
+><P
+></P
+><UL
+><LI
+><P
+><TT
+CLASS="FILENAME"
+>ide0</TT
+>: <TT
+CLASS="FILENAME"
+>hda</TT
+> , <TT
+CLASS="FILENAME"
+>hdb</TT
+> (hard disks)</P
+></LI
+><LI
+><P
+><TT
+CLASS="FILENAME"
+>ide1</TT
+>: <TT
+CLASS="FILENAME"
+>hdc</TT
+> , <TT
+CLASS="FILENAME"
+>hdd</TT
+> (hard disks or other ide devices like CDROM)</P
+></LI
+><LI
+><P
+><TT
+CLASS="FILENAME"
+>ide2</TT
+>: <TT
+CLASS="FILENAME"
+>hde</TT
+> (first free disk)</P
+></LI
+><LI
+><P
+><TT
+CLASS="FILENAME"
+>ide3</TT
+>: <TT
+CLASS="FILENAME"
+>hdg</TT
+> (second free disk)</P
+></LI
+></UL
+></P
+><P
+>The two free disks above (<TT
+CLASS="FILENAME"
+>hde</TT
+> and <TT
+CLASS="FILENAME"
+>hdg</TT
+>) are the ones we would like to setup as RAID 1 to create <TT
+CLASS="FILENAME"
+>/dev/ataraid/d0</TT
+> raid device. Note that we do not have <TT
+CLASS="FILENAME"
+>hdf</TT
+> or <TT
+CLASS="FILENAME"
+>hdh</TT
+> because that is how we used the IDE/RAID ports on Promise chip. It is not a good idea to connect two hard disks to the same Promise controller IDE port. In the above example, we used Primary Master and Secondary Master connections on the Promise Technology card.</P
+><P
+>If you do not know how various <TT
+CLASS="FILENAME"
+>ide</TT
+> devices are connected in your computer, take a look at <TT
+CLASS="FILENAME"
+>/proc/devices</TT
+> and <TT
+CLASS="FILENAME"
+>/proc/ide/*</TT
+>. You can also carefully go through boot log file, <TT
+CLASS="FILENAME"
+>/var/log/bootlog</TT
+> (or type <B
+CLASS="COMMAND"
+>dmesg | more</B
+> right after your Linux system boots) to find your <TT
+CLASS="FILENAME"
+>ide</TT
+> devices. Now type <B
+CLASS="COMMAND"
+>less /proc/pci</B
+> and locate appropriate information about Promise Technology. In the output of <B
+CLASS="COMMAND"
+>less /proc/pci</B
+>, you can see somewhere information about your Promise chip, something like:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+> Bus  0, device  17, function  0:
+    Unknown mass storage controller: Promise Technology Unknown device (rev 2).
+      Vendor id=105a. Device id=d30.
+      Medium devsel.  IRQ 10.  Master Capable.  Latency=32.  
+      I/O at 0x9400 [0x9401].
+      I/O at 0x9000 [0x9001].
+      I/O at 0x8800 [0x8801].
+      I/O at 0x8400 [0x8401].
+      I/O at 0x8000 [0x8001].
+      Non-prefetchable 32 bit memory at 0xd5800000 [0xd5800000].</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>From this output, we learn that our Promise Technology card uses IRQ 10 for both <TT
+CLASS="FILENAME"
+>ide</TT
+> ports (<TT
+CLASS="FILENAME"
+>ide2</TT
+> and <TT
+CLASS="FILENAME"
+>ide3</TT
+>). Using same IRQ is perfectly alright as long as your kernel supports PCI IRQ Sharing. By default, our Linux kernel is configured to support PCI IRQ sharing. From the above output, we also learn that our Promise Technology card uses various IO addresses. For the purpose of identifying Promise Technology disks properly at boot time, we only want the IRQ number(s) and the first four IO Address numbers outside  [ ]. Write down on a piece of paper this information. In this case, from the above output:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>IRQ<SUB
+>1</SUB
+> = 10
+IRQ<SUB
+>2</SUB
+> = 10
+IO<SUB
+>1</SUB
+> = 0x9400
+IO<SUB
+>2</SUB
+> = 0x9000
+IO<SUB
+>3</SUB
+> = 0x8800
+IO<SUB
+>4</SUB
+> = 0x8400</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Now, we have to evaluate the following to obtain the correct <EM
+>Append Line</EM
+>. Then either specify this <EM
+>Append Line</EM
+> at boot time or specify it in lilo configuration file.</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>ideX=IO<SUB
+>1</SUB
+>,IO<SUB
+>2</SUB
+>+0x0002,IRQ<SUB
+>1</SUB
+> ideY=IO<SUB
+>3</SUB
+>,IO<SUB
+>4</SUB
+>+0x0002,IRQ<SUB
+>2</SUB
+>
+where ideX and ideY are the two IDE ports of Promise card our free disks are using.</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>In our example, the above <EM
+>Append Line</EM
+> will become:</P
+><P
+><TT
+CLASS="FILENAME"
+>ide2=0x9400,0x9002,10 ide3=0x8800,0x8402,10</TT
+></P
+><P
+>If, for example, we want to boot kernel version 2.4.18, labelled <TT
+CLASS="FILENAME"
+>linux</TT
+> according to <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>, then we specify our <EM
+>Append Line</EM
+> in one of the following two methods:</P
+><P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>At boot time<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>boot: </TT
+><TT
+CLASS="USERINPUT"
+><B
+>linux ide2=0x9400,0x9002,10 ide3=0x8800,0x8402,10</B
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>If you choose this method, you should manually type the <EM
+>Append Line</EM
+> after the kernel label <TT
+CLASS="FILENAME"
+>linux</TT
+> everytime you boot your Linux machine.</P
+></LI
+><LI
+><P
+>In <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>image=/boot/vmlinuz-2.2.18
+	label=linux
+	read-only
+	root=/dev/hda1
+	append="ide2=0x9400,0x9002,10 ide3=0x8800,0x8402,10"</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>If you choose this method, you have to run lilo once to activate changes by typing <B
+CLASS="COMMAND"
+>/sbin/lilo</B
+>. And you do not have to type anything extra at boot time.</P
+></LI
+></OL
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SETTINGUP">7.3. Setting Up RAID 1</H2
+><P
+>If you want to setup RAID 1 using Promise Technology proprietary driver (<TT
+CLASS="FILENAME"
+>ft.o</TT
+>), you can download Promise Driver (<TT
+CLASS="FILENAME"
+>ft.o</TT
+>) into <TT
+CLASS="FILENAME"
+>/lib/modules/kernel-version</TT
+> and load the module by typing <B
+CLASS="COMMAND"
+>modprobe -k ft</B
+>. You should then be able to access your new raid device as <TT
+CLASS="FILENAME"
+>/dev/sdc</TT
+> or something like that. But if it does not work, then determine your <EM
+>Append Line</EM
+> and add it to <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>. If you are setting up RAID on an existing Linux system and are using either Promise Technology <TT
+CLASS="FILENAME"
+>ft</TT
+> driver or Linux native <TT
+CLASS="FILENAME"
+>ataraid</TT
+> driver, then use of <EM
+>Append Line</EM
+> in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> is strongly recommended. Once you reboot with your new <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> that contains <EM
+>Append Line</EM
+>, you can load either driver (<TT
+CLASS="FILENAME"
+>ft.o</TT
+> from Promise Technology or <TT
+CLASS="FILENAME"
+>ataraid.o</TT
+>, the Linux Native RAID module) to enable RAID except when your kernel has built-in ataraid support in which case you do not have to load ataraid module.</P
+><P
+>As Linux Native RAID is recommended, let us discuss that in detail. To setup Linux Native RAID on an existing Linux machine, insert <EM
+>Append Line</EM
+> into <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> as explained above.
+Now, activate changes by typing <B
+CLASS="COMMAND"
+>/sbin/lilo</B
+>. Then reboot your computer. After your computers reboots, load ataraid module manually if your kernel does not have ataraid built-in support or <TT
+CLASS="FILENAME"
+>ataraid.o</TT
+> module failed to load for some reason. If you compiled your kernel with static ataraid support (ataraid not as module), then you can start formatting and using your mirror disk <TT
+CLASS="FILENAME"
+>/dev/ataraid/d0</TT
+> right away. </P
+><P
+>But if you compile ataraid as a seperate module, then type <B
+CLASS="COMMAND"
+>lsmod</B
+> and see ataraid is listed. If not, manually load it by typing <B
+CLASS="COMMAND"
+>modprobe -k ataraid</B
+>. If you dont see any errors, then you can start using your mirror disk <TT
+CLASS="FILENAME"
+>/dev/ataraid/d0</TT
+> right away. Format it, mount it and use it just like you normally do. </P
+><P
+>The fact that you can use <TT
+CLASS="FILENAME"
+>/dev/ataraid/d0</TT
+> implies that you are successful in your mission. Please do not access <TT
+CLASS="FILENAME"
+>/dev/hde</TT
+>, <TT
+CLASS="FILENAME"
+>/dev/hdg</TT
+> or any of their partitions directly, although Linux will let you do that. Once you make a mirror device from two disks, you should always access the mirror device and not the disks directly.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="nativeraid.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="upgrading.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Installing Native Linux RAID</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Upgrading Kernel</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

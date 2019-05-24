@@ -1,0 +1,478 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>GCC Inline Assembly</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux Assembly HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Assemblers"
+HREF="assemblers.html"><LINK
+REL="PREVIOUS"
+TITLE="Assemblers"
+HREF="assemblers.html"><LINK
+REL="NEXT"
+TITLE="GAS"
+HREF="gas.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Assembly HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="assemblers.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. Assemblers</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="gas.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="AEN263"
+></A
+>3.1. GCC Inline Assembly</H1
+><P
+>&#13;The well-known GNU C/C++ Compiler (GCC), an optimizing 32-bit compiler at the
+heart of the GNU project, supports the x86 architecture quite well, and
+includes the ability to insert assembly code in C programs, in such a way that
+register allocation can be either specified or left to GCC. GCC works on most
+available platforms, notably Linux, *BSD, VSTa, OS/2, *DOS, Win*, etc.
+</P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN266"
+></A
+>3.1.1. Where to find GCC</H2
+><P
+>&#13;GCC home page is http://gcc.gnu.org.
+</P
+><P
+>&#13;<A
+NAME=""
+></A
+>
+DOS port of GCC is called
+DJGPP.
+</P
+><P
+>&#13;There are two Win32 GCC ports:
+cygwin and
+mingw 
+</P
+><P
+>&#13;There is also an OS/2 port of GCC called EMX;
+it works under DOS too,
+and includes lots of unix-emulation library routines.
+Look around the following site:
+
+ftp://ftp.leo.org/pub/comp/os/os2/leo/gnu/emx+gcc/.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN278"
+></A
+>3.1.2. Where to find docs for GCC Inline Asm</H2
+><P
+>&#13;The documentation of GCC includes documentation files in TeXinfo format.
+You can compile them with TeX and print then result,
+or convert them to <TT
+CLASS="filename"
+>.info</TT
+>, and browse them with emacs,
+or convert them to <TT
+CLASS="filename"
+>.html</TT
+>, or nearly whatever you like;
+convert (with the right tools) to whatever you like,
+or just read as is. The <TT
+CLASS="filename"
+>.info</TT
+> files
+are generally found on any good installation for GCC.
+</P
+><P
+>&#13;The right section to look for is <TT
+CLASS="literal"
+>C Extensions::Extended Asm::</TT
+>
+</P
+><P
+>&#13;Section	<TT
+CLASS="literal"
+>Invoking GCC::Submodel Options::i386 Options::</TT
+> might
+help too. Particularly, it gives the i386 specific constraint names for
+registers: 
+<TT
+CLASS="literal"
+>abcdSDB</TT
+> correspond to
+<TT
+CLASS="literal"
+>%eax</TT
+>,
+<TT
+CLASS="literal"
+>%ebx</TT
+>,
+<TT
+CLASS="literal"
+>%ecx</TT
+>,
+<TT
+CLASS="literal"
+>%edx</TT
+>,
+<TT
+CLASS="literal"
+>%esi</TT
+>,
+<TT
+CLASS="literal"
+>%edi</TT
+>
+and
+<TT
+CLASS="literal"
+>%ebp</TT
+>
+respectively (no letter for <TT
+CLASS="literal"
+>%esp</TT
+>).
+</P
+><P
+>&#13;The DJGPP Games resource (not only for game hackers) had page specifically
+about assembly, but it's down. Its data have nonetheless been recovered on the
+DJGPP site, that contains a mine of other
+useful information:
+
+http://www.delorie.com/djgpp/doc/brennan/.
+</P
+><P
+>&#13;GCC depends on GAS for assembling and follows its syntax (see below);
+do mind that inline asm needs percent characters to be quoted,
+they will be passed to GAS.
+See the section about GAS below.
+</P
+><P
+>&#13;Find <EM
+>lots</EM
+> of useful examples in the
+<TT
+CLASS="filename"
+>linux/include/asm-i386/</TT
+>
+subdirectory of the sources for the Linux kernel.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN304"
+></A
+>3.1.3. Invoking GCC to build proper inline assembly code</H2
+><P
+>&#13;Because assembly routines from the kernel headers (and most likely your own
+headers, if you try making your assembly programming as clean as it is in the
+linux kernel) are embedded in <TT
+CLASS="function"
+>extern inline</TT
+> functions,
+GCC must be invoked with the <TT
+CLASS="option"
+>-O</TT
+> flag (or <TT
+CLASS="option"
+>-O2</TT
+>,
+<TT
+CLASS="option"
+>-O3</TT
+>, etc), for these routines to be available. If not, your
+code may compile, but not link properly, since it will be looking for
+non-inlined <TT
+CLASS="function"
+>extern</TT
+> functions in the libraries against
+which your program is being linked! Another way is to link against libraries
+that include fallback versions of the routines.
+</P
+><P
+>&#13;Inline assembly can be disabled with <TT
+CLASS="option"
+>-fno-asm</TT
+>, which will have
+the compiler die when using extended inline asm syntax, or else generate calls
+to an external function named <TT
+CLASS="function"
+>asm()</TT
+> that the linker can't
+resolve. To counter such flag, <TT
+CLASS="option"
+>-fasm</TT
+> restores treatment of the
+<TT
+CLASS="literal"
+>asm</TT
+> keyword.
+</P
+><P
+>&#13;More generally, good compile flags for GCC on the x86 platform are
+</P
+><P
+>&#13;<B
+CLASS="command"
+>gcc -O2 -fomit-frame-pointer -W -Wall</B
+>
+</P
+><P
+>&#13;<TT
+CLASS="option"
+>-O2</TT
+> is the good optimization level in most cases. Optimizing
+besides it takes more time, and yields code that is much larger, but only a bit
+faster; such over-optimization might be useful for tight loops only (if any),
+which you may be doing in assembly anyway. In cases when you need really strong
+compiler optimization for a few files, do consider using up to
+<TT
+CLASS="option"
+>-O6</TT
+>.
+</P
+><P
+>&#13;<TT
+CLASS="option"
+>-fomit-frame-pointer</TT
+> allows generated code to skip the stupid
+frame pointer maintenance, which makes code smaller and faster, and frees a
+register for further optimizations. It precludes the easy use of debugging tools
+(<B
+CLASS="command"
+>gdb</B
+>), but when you use these, you just don't care about size
+and speed anymore anyway.
+</P
+><P
+>&#13;<TT
+CLASS="option"
+>-W -Wall</TT
+> enables all useful warnings and helps you to catch
+obvious stupid errors.
+</P
+><P
+>&#13;You can add some CPU-specific <TT
+CLASS="option"
+>-m486</TT
+> or such flag so that GCC
+will produce code that is more adapted to your precise CPU. Note that modern
+GCC has <TT
+CLASS="option"
+>-mpentium</TT
+> and such flags (and
+PGCC has even more), whereas
+GCC 2.7.x and older versions do not. A good choice of CPU-specific flags should
+be in the Linux kernel. Check the TeXinfo documentation of your current GCC
+installation for more.
+</P
+><P
+>&#13;<TT
+CLASS="option"
+>-m386</TT
+> will help optimize for size, hence also for speed on
+computers whose memory is tight and/or loaded, since big programs cause swap,
+which more than counters any "optimization" intended by the larger code. In
+such settings, it might be useful to stop using C, and use instead a language
+that favors code factorization, such as a functional language and/or FORTH,
+and use a bytecode- or wordcode- based implementation.
+</P
+><P
+>&#13;Note that you can vary code generation flags from file to file, so
+performance-critical files will use maximum optimization, whereas other files
+will be optimized for size.
+</P
+><P
+>&#13;To optimize even more, option <TT
+CLASS="option"
+>-mregparm=2</TT
+> and/or corresponding
+function attribute might help, but might pose lots of problems when linking to
+foreign code, <EM
+>including <SPAN
+CLASS="application"
+>libc</SPAN
+></EM
+>.
+There are ways to correctly declare foreign functions so the right call
+sequences be generated, or you might want to recompile the foreign libraries
+to use the same register-based calling convention...
+</P
+><P
+>&#13;Note that you can add make these flags the default by editing file
+<TT
+CLASS="filename"
+>/usr/lib/gcc-lib/i486-linux/2.7.2.3/specs</TT
+> or wherever that
+is on your system (better not add <TT
+CLASS="option"
+>-W -Wall</TT
+> there, though). The
+exact location of the GCC specs files on system can be found by
+<B
+CLASS="command"
+>gcc -v</B
+>.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN343"
+></A
+>3.1.4. Macro support</H2
+><P
+>&#13;GCC allows (and requires) you to specify register constraints in your inline
+assembly code, so the optimizer always know about it; thus, inline assembly
+code is really made of patterns, not forcibly exact code.
+</P
+><P
+>&#13;Thus, you can put your assembly into CPP macros, and inline C functions, so
+anyone can use it in as any C function/macro. Inline functions resemble macros
+very much, but are sometimes cleaner to use. Beware that in all those cases,
+code will be duplicated, so only local labels (of <TT
+CLASS="literal"
+>1:</TT
+> style)
+should be defined in that asm code. However, a macro would allow the name for
+a non local defined label to be passed as a parameter (or else, you should use
+additional meta-programming methods). Also, note that propagating inline asm
+code will spread potential bugs in them; so watch out doubly for register
+constraints in such inline asm code.
+</P
+><P
+>&#13;Lastly, the C language itself may be considered as a good abstraction to
+assembly programming, which relieves you from most of the trouble of assembling.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="assemblers.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="gas.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Assemblers</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="assemblers.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>GAS</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

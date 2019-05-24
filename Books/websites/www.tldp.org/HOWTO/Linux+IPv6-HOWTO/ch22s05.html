@@ -1,0 +1,41 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>5. Dynamic Host Configuration v6 Server (dhcp6s)</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="ch22.html" title="Chapter 22. Hints for IPv6-enabled daemons"><link rel="prev" href="ch22s04.html" title="4. Router Advertisement Daemon (radvd)"><link rel="next" href="ch22s06.html" title="6. ISC Dynamic Host Configuration Server (dhcpd)"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">5. Dynamic Host Configuration v6 Server (dhcp6s)</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch22s04.html">Prev</a> </td><th width="60%" align="center">Chapter 22. Hints for IPv6-enabled daemons</th><td width="20%" align="right"> <a accesskey="n" href="ch22s06.html">Next</a></td></tr></table><hr></div><div class="sect1"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="hints-daemons-dhcpv6."></a>5. Dynamic Host Configuration v6 Server (dhcp6s)</h2></div></div></div><p>DHCPv6 can be used for stateful configurations. The daemon itself need not necessary run on the Linux default IPv6 gateway router. </p><p>You can specify more information than by using radvd. The are most similar to IPv4 DHCP server.</p><p>After a proper configuration, the daemon reacts on received ICMPv6 multicast packets sent by a client to address ff02::1:2</p><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51490016"></a>5.1. Configuration of the DHCPv6 server (dhcp6s)</h3></div></div></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51490656"></a>5.1.1. Simple configuration</h4></div></div></div><p>dhcp6s's config file is normally /etc/dhcp6s.conf. An simple example looks like following:</p><pre class="screen">
+interface eth0 {
+        server-preference 255;
+        renew-time 60;
+        rebind-time 90;
+        prefer-life-time 130;
+        valid-life-time 200;
+        allow rapid-commit;
+        option dns_servers 2001:db8:0:f101::1 sub.domain.example;
+        link AAA {
+                range 2001:db8:0:f101::1000 to 2001:db8:0:f101::ffff/64;
+                prefix 2001:db8:0:f101::/64;
+        };
+};
+</pre></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51492160"></a>5.2. Configuration of the DHCPv6 client (dhcp6c)</h3></div></div></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51492800"></a>5.2.1. Simple configuration</h4></div></div></div><p>dhcp6c's config file is normally /etc/dhcp6c.conf. An simple example looks like following:</p><pre class="screen">
+interface eth0 {
+        send rapid-commit;
+        request domain-name-servers;
+}; 
+</pre></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51495472"></a>5.3. Usage</h3></div></div></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51496112"></a>5.3.1. dhcpv6_server</h4></div></div></div><p>Start server, e.g.</p><pre class="screen">
+# service dhcp6s start
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51497504"></a>5.3.2. dhcpv6_client</h4></div></div></div><p>Start client in foreground, e.g.</p><pre class="screen">
+# dhcp6c -f eth0
+</pre></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51498896"></a>5.4. Debugging</h3></div></div></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51499536"></a>5.4.1. dhcpv6_server</h4></div></div></div><p>The server has one foreground and two debug toggles (both should be used for debugging), here is an example:</p><pre class="screen">
+# dhcp6s -d -D -f eth0
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51501056"></a>5.4.2. dhcpv6_client</h4></div></div></div><p>As general debugging for test whether the IPv6 DHCP server is reable on the link use an IPv6 ping to the DHCP multicast address:</p><pre class="screen">
+# ping6 -I eth0 ff02::1:2
+</pre><p>The client has one foreground and two debug toggles, here is an example:</p><pre class="screen">
+# dhcp6c -d -f eth0
+Oct/03/2005 17:18:16 dhcpv6 doesn't support hardware type 776 
+Oct/03/2005 17:18:16 doesn't support sit0 address family 0 
+Oct/03/2005 17:18:16 netlink_recv_rtgenmsg error 
+Oct/03/2005 17:18:16 netlink_recv_rtgenmsg error 
+Oct/03/2005 17:18:17 status code for this address is: success 
+Oct/03/2005 17:18:17 status code: success 
+Oct/03/2005 17:18:17 netlink_recv_rtgenmsg error 
+Oct/03/2005 17:18:17 netlink_recv_rtgenmsg error 
+Oct/03/2005 17:18:17 assigned address 2001:db8:0:f101::1002 prefix len is not
+¬ in any RAs prefix length using 64 bit instead 
+Oct/03/2005 17:18:17 renew time 60, rebind time 9
+</pre><p>Note that the netlink error messages have no impact.</p></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch22s04.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ch22.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch22s06.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">4. Router Advertisement Daemon (radvd) </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 6. ISC Dynamic Host Configuration Server (dhcpd)</td></tr></table></div></body></html>

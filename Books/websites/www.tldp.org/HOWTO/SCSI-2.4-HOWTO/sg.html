@@ -1,0 +1,463 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Generic driver (sg)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux 2.4 SCSI subsystem HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Upper level drivers"
+HREF="ulevel.html"><LINK
+REL="PREVIOUS"
+TITLE="Tape driver (st)"
+HREF="st.html"><LINK
+REL="NEXT"
+TITLE="Lower Level drivers"
+HREF="llevel.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux 2.4 SCSI subsystem HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="st.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. Upper level drivers</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="llevel.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sg"
+></A
+>9.4. Generic driver (sg)</H1
+><P
+>&#13;All types of SCSI devices are accessible via the sg driver. This means
+devices such as CDROM drives can be accessed both via the sr and sg
+drivers. Other SCSI devices such as scanners can only be accessed
+via the sg driver.
+The sg driver is capable of recognizing 256 SCSI devices. Any number of
+devices (up to the overall limit of 256) can be added after the sg
+driver is loaded.
+</P
+><P
+>&#13;See reference <A
+HREF="refs.html#W4"
+>W4</A
+> for the SCSI Generic (sg) driver
+documentation (also found there is the sg_utils package). 
+For SCSI standards see reference <A
+HREF="refs.html#W1"
+>W1</A
+> and for a
+book on the subject of SCSI programming and pass through mechanisms see
+reference <A
+HREF="refs.html#B3"
+>B3</A
+>.
+</P
+><P
+>&#13;The sg driver in lk 2.4 is "version 3" which adds an additional interface
+structure and some new ioctl()s. The most interesting new ioctl()
+is SG_IO which sends a SCSI command and waits for its response. 
+See the Linux Documentation Project site:
+<A
+HREF="http://www.tldp.org/HOWTO/SCSI-Generic-HOWTO/"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>www.tldp.org/HOWTO/SCSI-Generic-HOWTO/</TT
+></A
+> 
+for a full description of the sg driver.
+A (possibly later) version of this document can be found at
+<A
+HREF="http://www.torque.net/sg/p/sg_v3_ho.html"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>www.torque.net/sg/p/sg_v3_ho.html</TT
+></A
+>.
+</P
+><P
+>&#13;The abbreviation "sg" is used within the kernel to refer both to the
+SCSI generic driver and the scatter-gather capability offered by many
+modern IO devices (usually associated with DMA). The context usually
+makes it clear which one is being referred to. As an example, note the
+contorted sg ioctl() named SG_GET_SG_TABLESIZE where the second "SG"
+refers to scatter gather.
+</P
+><P
+>&#13;The public interface for sg is found in the file: <TT
+CLASS="filename"
+>&#13;/usr/src/linux/include/scsi/sg.h</TT
+>. Depending on the distribution
+this may or may not contain the same information as <TT
+CLASS="filename"
+>&#13;/usr/include/scsi/sg.h</TT
+> which is controlled by the GNU library
+maintainers. If these 2 files are not the same use the former header
+file. Those writing applications based on sg should see its documentation
+for more on this matter.
+</P
+><P
+>&#13;The sg driver registers all SCSI devices (with a current maximum of 256)
+as they are seen. Each newly registered SCSI device gets allocated the
+next available minor device number. At least initially this will be the
+same sequence that devices are displayed in mid level's <B
+CLASS="command"
+>&#13;cat /proc/scsi/scsi</B
+>. The sg devices device mapping can be
+seen with <B
+CLASS="command"
+>cat /proc/scsi/sg/devices</B
+> or <B
+CLASS="command"
+>&#13;cat /proc/scsi/sg/device_strs</B
+>. Differences between
+<B
+CLASS="command"
+>cat /proc/scsi/scsi</B
+> and sg orderings will appear when
+a low level driver is removed (e.g. <B
+CLASS="command"
+>rmmod aha1542</B
+>) or
+when a device is removed with remove-single-device.
+The sg driver will leave remaining SCSI device mapping to minor device
+numbers unchanged. This potentially leaves a "hole" in the sg mapping.
+An example follows:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;$ cat /proc/scsi/scsi 
+Attached devices: 
+Host: scsi0 Channel: 00 Id: 00 Lun: 00
+  Vendor: IBM      Model: DNES-309170W     Rev: SA30
+  Type:   Direct-Access            ANSI SCSI revision: 03
+Host: scsi1 Channel: 00 Id: 02 Lun: 00
+  Vendor: PIONEER  Model: DVD-ROM DVD-303  Rev: 1.10
+  Type:   CD-ROM                   ANSI SCSI revision: 02
+Host: scsi1 Channel: 00 Id: 06 Lun: 00
+  Vendor: YAMAHA   Model: CRW4416S         Rev: 1.0g
+  Type:   CD-ROM                   ANSI SCSI revision: 02
+
+$ cat /proc/scsi/sg/device_strs 
+IBM             DNES-309170W            SA30
+PIONEER         DVD-ROM DVD-303         1.10
+YAMAHA          CRW4416S                1.0g
+
+$ echo "scsi remove-single-device 1 0 2 0" &#62; /proc/scsi/scsi
+
+$ cat /proc/scsi/scsi 
+Attached devices: 
+Host: scsi0 Channel: 00 Id: 00 Lun: 00
+  Vendor: IBM      Model: DNES-309170W     Rev: SA30
+  Type:   Direct-Access            ANSI SCSI revision: 03
+Host: scsi1 Channel: 00 Id: 06 Lun: 00
+  Vendor: YAMAHA   Model: CRW4416S         Rev: 1.0g
+  Type:   CD-ROM                   ANSI SCSI revision: 02
+
+$ cat /proc/scsi/sg/device_strs 
+IBM             DNES-309170W            SA30
+&#60;no active device&#62;
+YAMAHA          CRW4416S                1.0g
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+Notice how the sg driver maintains the row positions of the remaining
+devices in the "device_strs" output. So when the Pioneer
+dvd player is removed, a hole opens up in the sg device mapping
+which is not reflected in the <B
+CLASS="command"
+>cat /proc/scsi/scsi</B
+>
+output. That "hole" corresponds to the device name <TT
+CLASS="filename"
+>&#13;/dev/sg1</TT
+>.
+</P
+><P
+>&#13;The new sg_io_hdr interface includes a data transfer residual count
+field called "resid". Only some lower level adapters support this
+feature and those that don't always yield zero in this field. At
+the time of writing the advansys, aha152x and the sym53c8xx
+drivers support this feature.
+</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sgbparams"
+></A
+>9.4.1. sg boot parameters</H2
+><P
+>&#13;The sg driver maintains a reserved buffer for each open file descriptor.
+The purpose is to guarantee applications that data transfers up to the
+size of the reserved buffer will not fail for lack of kernel memory. This
+is important for applications like cdrecord that cannot easily recover
+(the CDR) from a ENOMEM error.
+</P
+><P
+>&#13;In the absence of the boot parameter 'sg_def_reserved_size' or the sg module
+parameter 'def_reserved_size', then each time a sg file descriptor is opened
+the reserved buffer size is inherited from SG_DEF_RESERVED_SIZE which is
+defined in <TT
+CLASS="filename"
+>include/linux/sg.h</TT
+>.
+</P
+><P
+>&#13;The SG_DEF_RESERVED_SIZE define value can be overridden by this kernel boot
+option:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;    sg_def_reserved_size=&#60;n&#62;
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sgmparams"
+></A
+>9.4.2. sg module parameters</H2
+><P
+>&#13;When the sg module is loaded the SG_DEF_RESERVED_SIZE define value can be
+overridden by supplying this option:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;    def_reserved_size=&#60;n&#62;
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sgproc"
+></A
+>9.4.3. sg proc interface</H2
+><P
+>&#13;All the following files are readable by all and produce ASCII output
+when read. The file
+'def_reserved_size' is also writable by root. The ASCII output has been
+formatted in such a way as to be human and machine readable (and hence
+a compromise). Use Unix commands of the form <B
+CLASS="command"
+>cat device_hdrs devices
+</B
+> to see the output of tables.
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;
+/proc/scsi/sg/debug       [internal state of sg driver]
+/proc/scsi/sg/def_reserved_size
+                          [like boot/module load parameter]
+/proc/scsi/sg/devices     [table of numeric device data]
+/proc/scsi/sg/device_hdr  [column headers for sg/devices]
+/proc/scsi/sg/device_strs [table of strings from INQUIRY]
+/proc/scsi/sg/hosts       [table of numeric host data]
+/proc/scsi/sg/host_hdr    [column headers for sg/hosts]
+/proc/scsi/sg/host_strs   [table of string ids for hosts]
+/proc/scsi/sg/version     [sg version number and date]
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+All the above files are owned by root and readable by all while
+<TT
+CLASS="filename"
+>def_reserved_size</TT
+> is writable by root. For the
+<TT
+CLASS="filename"
+>devices</TT
+> and <TT
+CLASS="filename"
+>device_strs</TT
+> files
+the first row output corresponds to <TT
+CLASS="filename"
+>/dev/sg0</TT
+>
+(sg minor device number 0). The second row output corresponds to
+<TT
+CLASS="filename"
+>/dev/sg1</TT
+>, etc.
+For the <TT
+CLASS="filename"
+>hosts</TT
+> and <TT
+CLASS="filename"
+>host_strs</TT
+>
+files the first row output corresponds to host (adapter number) 0, etc.
+For numeric tables a missing device or host is indicated by a row
+of "-1" values. For string tables a missing device or host is indicated
+by a row containing "&#60;no active device/host&#62;".
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="st.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="llevel.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Tape driver (st)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="ulevel.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Lower Level drivers</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

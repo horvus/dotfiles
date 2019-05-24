@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Sat (Satellite Technology) HOWTO: Technical Information</TITLE>
+ <LINK HREF="Sat-HOWTO-4.html" REL=next>
+ <LINK HREF="Sat-HOWTO-2.html" REL=previous>
+ <LINK HREF="Sat-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Sat-HOWTO-4.html">Next</A>
+<A HREF="Sat-HOWTO-2.html">Previous</A>
+<A HREF="Sat-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Technical Information</A></H2>
+
+<H2><A NAME="ss3.1">3.1 General working</A>
+</H2>
+
+<P>We now try to understand how satellite connection works and at what conditions.
+<P>We can imagine a satellite link as a classical Wireless link, I mean a
+link between 2 systems which don't use a real cable to talk each other.
+<P>Wireless link is very different from Wired link cause we have some additional
+problems to solve, such as reachability, privacy problems and so on. Also there
+could be weather problems, particularly in snow or rain conditions.
+<P>Anyway, we have to consider the first principle behind Wireless communication:
+line of sight free, which is a MUST unless we are unable to talk. For more
+you can see the 
+<A HREF="http://www.fatamorgana.com/bertolinux/">Wireless-HOWTO</A>.
+<P>In sat connections we use a special kind of antenna, a parabolic one, that
+gives us a very high gain in RX, needed to receive satellite signal: in fact
+satellite has a geostational orbital at 36.000 km and the only kind of antenna
+we can use for receiving is just a parabolic one.
+<H2><A NAME="ss3.2">3.2 Frequencies</A>
+</H2>
+
+<P>Frequency we receive is from 11GHz up to 12.7 GHz (from the satellite transponder,
+the transmitter sending us datas), a very high freq., but the feed (converter
+in the center of the parabola) converts it to, in output, 1-2 GHz so that we'll
+able to send signal to the receiver through the cable (up to 40m depending
+to cable loss).
+<H2><A NAME="ss3.3">3.3 DVB Receiver Card</A>
+</H2>
+
+<P>
+<PRE>
+ 
+1 GHz Signal --&gt; |RX|--&gt; |ADC| --&gt; |Low Level Network| --&gt; |O.S. TCP/IP Stack|--&gt; Data
+                |____________________________________|
+                                DVB Card
+</PRE>
+<P>Now we can imagine a classical RX at 1 GHz receiving analog signals from
+the Sat, converting it to digital signals and giving all to the low level network
+layer (ISO OSI 1,2): here, card firmware builds a 2 level packet (pretty like
+ethernet) to be sent to our PC with Linux, Windows, or other system, and in
+the end, we will only have to transform it to a TCP/IP packet.
+<H2><A NAME="ss3.4">3.4 Data Link Level DVB setting</A>
+</H2>
+
+<P>Here we have to config some settings, directly to the DVB card:
+<P>
+<OL>
+<LI>Frequency working, we have to set the satellite frequency (as from magazines):
+it is between 11.8 GHz and 12.8 GHz for example 12640000 KHz</LI>
+<LI>Symbol rate, measured in symbols per seconds, typically 22 MS/s (Mega Symbols
+per seconds)</LI>
+<LI>Polarization, which is an antenna setting configurable in software: possible
+values are H (Horizontal) or V (Vertical).</LI>
+<LI>PIDs. The PID is used for select a trasmission between many signal from
+same frequency. </LI>
+<LI>Also we have to specify the bitfilter mask, which tells us how large is
+the destination MAC addresses group (bitfilter mask is similar to TCP/IP netmask,
+the only difference is that the bitfilter mask is 48 bit size while TCP/IP
+netmask is 32 bit size). Always Internet data is sent with Unicast PID, while
+Video always is sent using Multicast PID .</LI>
+<LI>Calculate MAC address: here we specify what will be our MAC address (for
+our DVB card). You need to do this cause some ISP uses an algorithm (see Appendix
+A for more) which calculates your MAC address from your IP address, some other
+ISP uses your own MAC address.</LI>
+</OL>
+<H2><A NAME="ss3.5">3.5 TCP/IP working</A>
+</H2>
+
+<P>As we said in 2.2 section, first we have to make a request using the modem
+interface (i.e. ppp0 or whatever we use to reach Internet), then the answer
+will return to our DVB interface (dvb0). 
+<P>Modern O.S. allow us to receive packets from an input interface, different
+from the output interface from where we made the request: to do it we have
+to "disable" some packets flow control, such as type an 
+<P>echo "0" &gt; /proc/sys/net/ipv4/conf/dvb0/rp_filter (for Linux).
+<H2><A NAME="ss3.6">3.6 Authentication</A>
+</H2>
+
+<P>It remains only one thing to complete our description: authentication method.
+<P>Some Sat ISPs use the so called "Proxy Authentication": when you used their
+proxy, you also need to give login and password to continue the request (you
+should have been subscribed some kind of account to use their sat service):
+once done, the ISP use your IP address to calculate your MAC address (see Appendix
+A for more), to which send the answer.
+<P>Some other ISPs require you make a VPN connection (using your login and
+password) first, then they will control your registration account (where they
+retrieve your MAC address) and will send data directly to (and only to) your
+card (your MAC address).
+<P>Anyway noticed that you can modify your dvb sat filter value to be able
+to receive packets destined to EVERY mac address (related to a single frequency).
+<H2><A NAME="ss3.7">3.7 Services I can use with a sat connection</A>
+</H2>
+
+<P>Typically services you can have from sat connections depend on what authentication
+system is used by ISP: 
+<P>
+<UL>
+<LI>with classical "Proxy Authentication" you can only use HTTP and FTP service,
+while</LI>
+<LI>with VPN connection you have (ideally) no limit to services you can use,
+the only limit is decided by RTT (time access) to satellite, about 500-1000
+ms average: so you can forget to use "Voice" or other "Real Time" services!! (see
+<A HREF="http://www.fatamorgana.com/bertolinux">VoIP-HOWTO</A> for more). Anyway you still can use: mail, chat, telnet, ping, dns and so
+on.</LI>
+</UL>
+<HR>
+<A HREF="Sat-HOWTO-4.html">Next</A>
+<A HREF="Sat-HOWTO-2.html">Previous</A>
+<A HREF="Sat-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

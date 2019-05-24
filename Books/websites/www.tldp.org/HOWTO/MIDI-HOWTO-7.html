@@ -1,0 +1,264 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The Linux MIDI-HOWTO : Configuring MIDI devices.</TITLE>
+ <LINK HREF="MIDI-HOWTO-8.html" REL=next>
+ <LINK HREF="MIDI-HOWTO-6.html" REL=previous>
+ <LINK HREF="MIDI-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="MIDI-HOWTO-8.html">Next</A>
+<A HREF="MIDI-HOWTO-6.html">Previous</A>
+<A HREF="MIDI-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Configuring MIDI devices.</A></H2>
+
+<P>
+<P>MIDI devices can be integrated into the soundcard or be a separate device.  External MIDI interfaces may be attached to either the serial or USB port.
+<P>The first *and most important* thing you should do is check if your card is supported!
+<P>
+<A HREF="http://www.alsa-project.org/soundcards.php3">http://www.alsa-project.org/soundcards.php3</A><P>
+<A HREF="http://www.4front-tech.com/osshw.html">http://www.4front-tech.com/osshw.html</A><P>Configuring MIDI devices varies with Linux distributions.  A well supported card may be configured when you install the OS.   
+<P>The Linux kernel includes the OSS drivers and in the 2.5 kernel the ALSA drivers.  Most distributions provide a configuration tool (mostly for soundcards), but if you are using the MIDI port of a sound card it should be configured.  Under RedHat you would use sndconfig, under SuSE yast, and Mandrake, DrakConf. 
+<P>If none of the above tools will configure your MIDI interface, or you are experiencing problems, the following steps should be taken:
+<P>Does lsmod show any MIDI related modules?  Here's a typical output from an OSS based system.
+<HR>
+<PRE>
+[root@beatbox]# lsmod
+Module                  Size  Used by
+lockd                  32208   1  (autoclean)
+sunrpc                 54640   1  (autoclean) [lockd]
+autofs                  9456   2  (autoclean)
+usb-ohci               12624   0  (unused)
+usbcore                43632   1  [usb-ohci]
+hisax                 470096   0  (autoclean) (unused)
+isdn                  104208   0  (autoclean) [hisax]
+slhc                    4544   0  (autoclean) [isdn]
+eepro100               16144   1  (autoclean)
+
+#---- Soundcard modules
+    opl3                   11376   2 
+    mad16                   7968   1 
+    ad1848                 16848   1  [mad16]
+    sb                     34752   1  [mad16]
+    uart401                 6384   1  [mad16 sb]
+    sound                  58368   0  [opl3 mad16 ad1848 sb uart401]
+
+soundlow                 464   0  [sound]
+soundcore               2800   6  [sb sound]
+nls_cp437               3952   2  (autoclean)
+vfat                    9408   1  (autoclean)
+fat                    30432   1  (autoclean) [vfat]
+ide-scsi                7664   0 
+</PRE>
+<HR>
+<P>Look for mpu401, olp3, uart401 and oss.  
+<P>If you are using USB devices don't forget to check if the USB modules are there.
+<P>
+<P>To check the config cat the sndstat file:
+<P>
+<HR>
+<PRE>
+[root@beatbox]# cat /dev/sndstat 
+OSS/Free:3.8s2++-971130
+Load type: Driver loaded as a module
+Kernel: Linux mega 2.2.17-21mdk #1 Thu Oct 5 13:16:08 CEST 2000 i686
+Config options: 0
+
+Installed drivers: 
+
+Card config: 
+
+Audio devices:
+0: MAD16 WSS (82C930) (DUPLEX)
+
+Synth devices:
+0: Yamaha OPL3
+
+Midi devices:
+0: Mad16/Mozart
+
+Timers:
+0: System clock
+
+Mixers:
+0: MAD16 WSS (82C930)
+</PRE>
+<HR>
+<P>We see here that the MIDI device is a mad16 and this is listed in the lsmod output above.
+<P>
+<P>If you see nothing related to MIDI check the contents of your /etc/modules.conf file.
+<P>
+<HR>
+<PRE>
+[root@beatbox]# cat /etc/modules.conf
+alias net-pf-4 ipx 
+pre-install pcmcia_core /etc/rc.d/init.d/pcmcia start 
+alias usb-interface usb-ohci 
+alias parport_lowlevel parport_pc 
+alias block-major-11 scsi_hostadapter 
+pre-install plip modprobe parport_pc ; echo 7 > /proc/parport/0/irq 
+alias scsi_hostadapter ide-scsi 
+alias eth0 eepro100 
+alias eth1 hisax 
+
+#---- Soundcard
+    alias sound-slot-0 mad16 
+    options sound dmabuf=1 
+    alias midi opl3 
+    options opl3 io=0x388 
+    options sb support=1 
+    options mad16 io=0x530 irq=5 dma=0 dma16=1 mpu_io=0x300 mpu_irq=7 joystick=1
+</PRE>
+<HR>
+<P>Here's the output of /proc/modules to check to see if the MIDI modules are loaded into the Kernel.
+<P>
+<HR>
+<PRE>
+[root@mega /proc]# cat modules
+0000-001f : dma1
+0020-003f : pic1
+0040-005f : timer
+0060-006f : keyboard
+0070-007f : rtc
+0080-008f : dma page reg
+00a0-00bf : pic2
+00c0-00df : dma2
+00f0-00ff : fpu
+0170-0177 : ide1
+01f0-01f7 : ide0
+02f8-02ff : serial(auto)
+
+#---- MIDI device
+    0300-0303 : MPU-401 UART
+
+0376-0376 : ide1
+0388-038b : Yamaha OPL3
+03c0-03df : vga+
+03f6-03f6 : ide0
+03f8-03ff : serial(auto)
+0530-0533 : MAD16 WSS config
+0534-0537 : MAD16 WSS
+de00-de1f : Intel Speedo3 Ethernet
+f000-f007 : ide0
+f008-f00f : ide1
+</PRE>
+<HR>
+ 
+<P>You should see something similar to the above.  If not you'll need to install MIDI drivers.
+<P>If you are going to be using ALSA 0.5x divers, which you shouldn't do, I suggest a good read of Valentijn Sessink's Alsa-sound-mini-HOWTO which can be found at the link below:
+<P>
+<A HREF="http://www.linuxdoc.org/HOWTO/mini/Alsa-sound.html">http://www.linuxdoc.org/HOWTO/mini/Alsa-sound.html</A><P>You are strongly recommended to use ALSA greater than version 0.9.  For ALSA drivers later than 0.9x you should have a good read of the ALSA-HOWTO by Madhu Maddy.
+<P>
+<A HREF="http://www.alsa-project.org/alsa-doc/alsa-howto/">http://www.alsa-project.org/alsa-doc/alsa-howto/</A><P>
+<H2><A NAME="ss7.1">7.1 ALSA 0.9 quick install</A>
+</H2>
+
+<P>Below is a very quick install run-though for installing the ALSA 0.9 drivers and libs which is a required configuration for most MIDI apps.
+<P>
+<P>
+<HR>
+<PRE>
+[root@beatbox] # tar jxvf alsa-driver....tar.bz2
+[root@beatbox] # cd alsa-driver.....
+[root@beatbox] # ./configure
+
+messages - no errors
+
+[root@beatbox] # make
+
+messages - no errors
+
+[root@beatbox] # make install
+
+messages - no errors
+
+[root@beatbox] # ./snddevices
+</PRE>
+<HR>
+<P>Now you will need to edit /etc/modules.conf, or the ALSA file in your modules directory on some distributions.  There may be entries for other, non-MIDI, devices, so be careful when you are editing the file.
+<P>A typical system may have old ALSA or OSS configurations in the file, you will need to remove, or better still comment them out.
+<P>Below is a typical modules.conf file showing the ALSA config with OSS.
+<P>
+<HR>
+<PRE>
+alias char-major-116 snd
+alias char-major-14 soundcore
+
+alias snd-card-0 (MIDI/Sound card)
+alias sound-slot-0 snd-card-0
+
+alias sound-service-0-0 snd-mixer-oss
+alias sound-service-0-1 snd-seq-oss
+alias sound-service-0-3 snd-pcm-oss
+alias sound-service-0-12 snd-pcm-oss
+</PRE>
+<HR>
+<P>Change the (MIDI/Sound card) entry to that of your card.  This information can normally be found on the ALSA website.  
+<P>With the ALSA drivers installed, now you will need to install the header library files needed by ALSA based programs.  This is what is contained in the alsa-libs package.
+<P>Make sure you have a matching pair of alsa-drivers and alsa-libs!
+<P>
+<HR>
+<PRE>
+[root@beatbox] # tar jxvf alsa-libs....tar.bz2
+[root@beatbox] # cd alsa-libs.....
+[root@beatbox] # ./configure
+
+messages - no errors
+
+[root@beatbox] # make
+
+messages - no errors
+
+[root@beatbox] # make install
+</PRE>
+<HR>
+ 
+<P>Your system should now be configured :)
+<P>You can check this with a simple C program, if it compiles and can be executed then your system should be ok.
+<P>
+<HR>
+<PRE>
+// Compile this test program like so: gcc alsatest.c -o alsatest -lasound
+
+#include &lt;stdio.h>
+#include &lt;alsa/asoundlib.h>
+
+int main (int argc, char *argv[])
+{
+  snd_seq_t *seq_handle;
+
+  if (snd_seq_open(&amp;seq_handle, "hw", SND_SEQ_OPEN_DUPLEX, 0) &lt; 0) {
+    fprintf(stderr, "Error opening ALSA sequencer.\n");
+    exit(1);
+  }
+
+printf("The ALSA libraries are installed.\n");
+return 0;
+}
+
+</PRE>
+<HR>
+<P>
+<P>
+<P>
+<H2><A NAME="ss7.2">7.2 Latency</A>
+</H2>
+
+<P>
+<P>MIDI is a real-time protocol and latency issues are a serious problem. 
+<P>There are now several developers working on improving the latency times and improvements in the kernel are making Linux a fine platform for MIDI.
+<P>Although stock Linux distributions may run fine, pro set-ups should apply low-latency patches.  More information can be found here:
+<P>
+<A HREF="http://www.gardena.net/benno/linux/audio/">http://www.gardena.net/benno/linux/audio/</A><P>
+<A HREF="http://www.linuxdj.com/audio/lad/resourceslatency.php3">http://www.linuxdj.com/audio/lad/resourceslatency.php3</A><P>
+<P>Low Latency Mini Howto
+<P>
+<A HREF="http://www.boosthardware.com/LAU/guide/Low_latency-Mini-HOWTO.html">http://www.boosthardware.com/LAU/guide/Low_latency-Mini-HOWTO.html</A><P>
+<HR>
+<A HREF="MIDI-HOWTO-8.html">Next</A>
+<A HREF="MIDI-HOWTO-6.html">Previous</A>
+<A HREF="MIDI-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

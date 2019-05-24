@@ -1,0 +1,683 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Modem-HOWTO: Locating the Serial Port: IO address, IRQs </TITLE>
+ <LINK HREF="Modem-HOWTO-7.html" REL=next>
+ <LINK HREF="Modem-HOWTO-5.html" REL=previous>
+ <LINK HREF="Modem-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Modem-HOWTO-7.html">Next</A>
+<A HREF="Modem-HOWTO-5.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="locate_port"></A> <A NAME="s6">6.</A> <A HREF="Modem-HOWTO.html#toc6">Locating the Serial Port: IO address, IRQs </A></H2>
+
+<H2><A NAME="ss6.1">6.1</A> <A HREF="Modem-HOWTO.html#toc6.1">What Bus is my Serial Port On?</A>
+</H2>
+
+<P>If you need to find a serial port it often helps if you know what
+bus it's on.  If the serial port is on a card, you may know what bus
+the card inserts into such as a PCI slot.  But if the serial port is
+built into the motherboard it may not be clear what bus it's on.  For
+old motherboards that have ISA bus slots, it's likely on the ISA bus
+and may not even be Plug-and-Play.  But even if all your slots are
+PCI, the serial port is likely to be on either an ISA bus or LPC bus
+(also called a "LPC interface").  LPC is common on laptop computers.
+Type "lspci" to see if it shows "LPC".  Unfortunately, the LPC bus has
+no standard Plug-and-Play method for low-level configuring devices on
+it.  But according to the specs, the BIOS is supposed to do such
+configuring (using ACPI ??).  To see if you have a LPC bus, type
+"lspci" and look for a LPC bridge or the like.</P>
+
+<H2><A NAME="ss6.2">6.2</A> <A HREF="Modem-HOWTO.html#toc6.2">IO &amp; IRQ Overview</A>
+</H2>
+
+<P> For a serial port to work properly it first must be given both an
+IO address and an IRQ.  For old hardware (of mid 1990s), jumpers on a
+card or a saved BIOS setting does it.  For newer hardware the BIOS
+or Linux must set them at boot-time, and the new hardware doesn't
+remember how it was set once it's powered down.  Enabling the hardware
+(by using software) gives it both an IRQ and an IO address.  Without
+an IO address, it can't be used.  Without an IRQ it will need to use
+inefficient polling methods for which one must set the IRQ to 0 in the
+serial driver.  Using digital signals sent to the hardware by the BIOS
+or Linux, it all should get configured automatically (provided the
+BIOS has not been previously set up to disable it).  So you only
+need to read this if you're having problems or if you want to
+understand how it works.</P>
+<P>The driver must of course know both the IO address and IRQ so that it
+can talk to the serial port chip.   Modern serial port drivers (kernel
+2.4) try to determine this by PnP methods so one doesn't normally need
+to tell the driver (by using "setserial").   A driver may also set an
+IO address or IRQ in the hardware.  But unfortunately, there is some
+PCI serial port hardware that the driver doesn't recognize so you
+might need to enable the port yourself.  See 
+<A HREF="#pci_enabled">PCI: Enabling a disabled port</A></P>
+<P>For the old ISA bus, the driver also probes likely serial port
+addresses to see if there are any serial ports there.  This works for
+the case of jumpers and sometimes works for a ISA PnP port when the
+driver doesn't do ISA PnP (prior to kernel 2.4).</P>
+<P>Locating the serial port by giving it an IRQ and IO address is
+low-level configuring.  It's often automatically done by the serial
+driver but sometimes you have to do it yourself.  What follows repeats
+what was said above but in more detail.</P>
+<P>The low-level configuring consists of assigning an IO address, IRQ,
+and names (such as ttyS2 = tts/2).  This IO-IRQ pair must be set in
+both the hardware and told to the serial driver.  And the driver needs
+to call this pair a name (such as ttyS2).  We could call this "io-irq"
+configuring for short.  The modern way to do this is for the driver to
+use PnP methods to detect/set the IO/IRQ and then remember what it
+did.  An easy way for a driver to do this is for the driver to ask the
+kernel to enable the device and then the kernel tells the driver what
+IO/IRQ it has used.  The old way is using the "setserial" program to
+tell the driver.  For jumpers, there is no PnP but the driver might
+detect the port if the jumpers are set to the usual I0/IRQ.  If you
+need to configure but don't understand certain details it's easy to
+get into trouble.</P>
+<P>When Linux starts, an effort is made to detect and configure
+(low-level) the serial ports.  Exactly what happens depends on your
+BIOS, hardware, Linux distribution, kernel version, etc.  If the
+serial ports work OK, there may be no need for you to do any more
+low-level configuring.</P>
+<P>If you're having problems with the serial ports, then you may need to
+do low-level configuring.  If you have kernel 2.2 or lower, 
+then you need to do it if you:</P>
+<P>
+<UL>
+<LI> Plan to use more than 2 ISA serial ports</LI>
+<LI> Are installing a new serial port (such as an internal modem)</LI>
+<LI> One or more of your serial ports have non-standard IRQs or IO
+addresses</LI>
+</UL>
+</P>
+<P>Starting with kernel 2.2 you may be able to use more that 2 serial
+ports without doing any low-level configuring by sharing interrupts.
+All PCI ports should support this but for ISA it only works for some
+hardware.  It may be just as easy to give each port a unique interrupt
+if they are available.  See 
+<A HREF="#int_share-2.2">Interrupt sharing and Kernels 2.2+</A></P>
+<P>The low-level configuring (setting the IRQ and IO address) seems to
+cause people more trouble than the high-level stuff, although for many
+it's fully automatic and there is no configuring to be done.  Until
+the port is enabled and the serial driver knows the correct IRQ and IO
+address, the port will not usually not work at all.  </P>
+<P>A port may be disabled, either by the BIOS or by failure of Linux to
+find and enable the port.  For modern ports (provided the BIOS hasn't
+disabled them) manual PnP tools such as lspci should be able to find
+them.  Applications, and utilities such as "setserial" and "scanport"
+(Debian only ??) only probe I0 addresses, don't use PnP tools, and
+thus can't detect disabled ports. </P>
+<P>Even if an ISA port can be found by the probing done by the serial
+driver it may work extremely slow if the IRQ is wrong.  See 
+<A HREF="Modem-HOWTO-18.html#slow_">Extremely Slow: Text appears on the screen slowly after long delays</A>.  PCI ports are less likely to get the IRQ wrong.</P>
+<P>IO address, IRQs, etc. are called "resources" and we are thus
+configuring certain resources.  But there are many other types of
+"resources" so the term has many other meanings.  In summary, the
+low-level configuring consists of enabling the device, giving it a
+name (ttyS2 for example) and putting two values (an IRQ number and IO
+address) into two places:</P>
+<P>
+<OL>
+<LI> The device driver (done by PnP or "<CODE>setserial</CODE>")</LI>
+<LI> Configuration registers of the serial port hardware itself,
+done by PnP software (or jumpers on legacy hardware).</LI>
+</OL>
+</P>
+<P>You may watch the start-up (= boot-time) messages.  They are usually
+correct.  But if you're having problems, your serial port may not show
+up at all or if you do see a message from  "setserial" it may not
+show the true configuration of the hardware (and it is not necessarily
+supposed to).  See 
+<A HREF="#boot_mesgs">I/O Address &amp; IRQ: Boot-time messages</A>.</P>
+
+<H2><A NAME="PCI_ser_conf"></A> <A NAME="ss6.3">6.3</A> <A HREF="Modem-HOWTO.html#toc6.3">PCI Bus Support </A>
+</H2>
+
+<H3>Introduction</H3>
+
+<P>Although some PCI modems are "winmodems" without a Linux driver
+(and will not work under Linux), other PCI modems will often work OK
+under Linux.  If it's a software modem, then you need to find a driver
+for it since support for "winmodems" is not built into their serial
+driver.  See Linmodem-HOWTO. </P>
+<P>If you have kernel 2.4 or better, then there should be support for PnP
+for both the PCI and ISA buses (either built-in or by modules).  Some
+PCI serial ports can be automatically detected and low-level
+configured by the serial driver.  Others may not be.  </P>
+<P>While kernel 2.2 supported PCI in general, it had no support for PCI
+serial ports (although some people got them working anyway).  Starting
+with kernel 2.4, the serial driver will read the id number digitally
+stored in the serial hardware to determine how to support it (if it
+knows how).  It should assign an I/O address to it, determine its
+IRQ, etc.  So you don't need to use "setserial" for it.  </P>
+<P>There is a possible problem if you don't use the device filesystem.
+The driver may assign the port to say tt/ttyS4 per a boot-time
+message (use <CODE>dmesg</CODE> to see it).  But if you don't have a "file"
+/dev/ttyS4 then the port will not work.  So you will then need to
+create it, using<BR>
+<CODE>cd /dev; ./MAKEDEV ttyS4</CODE><BR>
+For the device filesystem, the driver should create the device <CODE>tts/1</CODE></P>
+
+<H3>More info on PCI</H3>
+
+<P>PCI ports are not well standardized.  Some use main memory for
+communication with the PC.  Some require special enabling of the IRQ.
+The output of "lspci -vv" can help determine if one can be supported.
+If you see a 4-digit IO port, the port might work by just telling
+"setserial" the IO port and the IRQ.  
+Some people have gotten a 3COM 3CP5610 PCI Modem to work that
+way.For example, if lspci shows IRQ 10, I/O at 0xecb8 and you decide to
+name it ttyS2 then the command is:</P>
+<P>setserial /dev/ttyS2 irq 10 port 0xecb8 autoconfig</P>
+<P>Note that the boot-time message "Probing PCI hardware" means reading
+the PnP configuration registers in the PCI devices which detects info
+about all PCI cards and on-board PCI devices This is different that
+the probing of IO addresses by the serial driver which means reading
+certain IO addresses to see if what's read looks like there's a serial
+port at that address.</P>
+
+<H2><A NAME="ss6.4">6.4</A> <A HREF="Modem-HOWTO.html#toc6.4">Common mistakes made re low-level configuring</A>
+</H2>
+
+<P> Here are some common mistakes people make:
+<UL>
+<LI>setserial command: They run it (without the "autoconfig" and
+auto_irq options) and think it has checked the hardware to see if
+what it shows is correct (it hasn't).</LI>
+<LI>setserial messages:  They see them displayed on the screen at
+boot-time (or by giving the setserial command) and erroneously think
+that the result always shows how their hardware is actually
+configured.</LI>
+<LI>/proc/interrupts: When their serial device isn't in use they
+don't see its interrupt there, and erroneously conclude that their
+serial port can't be found (or doesn't have an interrupt set).</LI>
+<LI>/proc/ioports and /proc/tty/driver/serial: People think this
+shows the actual hardware configuration when it only shows about the
+same info (possibly erroneous) as setserial.</LI>
+</UL>
+</P>
+
+<H2><A NAME="what_is_io_irq"></A> <A NAME="ss6.5">6.5</A> <A HREF="Modem-HOWTO.html#toc6.5">IRQ &amp; IO Address Must be Correct </A>
+</H2>
+
+<P>There are really two answers to the question "What is my IO and
+IRQ?" 1. What the device driver thinks has been set (This is what
+setserial usually sets and shows.).  2. What is actually set in the
+hardware.  Both 1. and 2. above should be the same.  If they're not it
+spells trouble since the driver has incorrect info on the physical
+serial port.  In some cases the hardware is disabled so it has no IO
+address or IRQ.</P>
+<P>If the driver has the wrong IO address it will try to send data to a
+non-existing serial port --or even worse, to some other device.  If it
+has the wrong IRQ the driver will not get interrupt service requests
+from the serial port, resulting in a very slow or no response.  See
+<A HREF="Modem-HOWTO-18.html#slow_">Extremely Slow: Text appears on the screen slowly after long delays</A>.  If it has the wrong model of UART there
+is also apt to be trouble.  To determine if both I0-IRQ pairs are
+identical you must find out how they are set in both the driver and
+the hardware.</P>
+
+<H2><A NAME="ss6.6">6.6</A> <A HREF="Modem-HOWTO.html#toc6.6">What is the IO Address and IRQ per the driver ?</A>
+</H2>
+
+<H3>Introduction</H3>
+
+<P>What the driver thinks is not necessarily how the hardware is
+actually set.  If everything works OK then what the driver thinks is
+likely correct (set in the hardware) and you don't need to investigate
+(unless you're curious or want to become a guru).  Ways to determine
+what the driver thinks include: boot-time messages 
+<A HREF="#boot_mesgs">I/O Address &amp; IRQ: Boot-time messages</A>, the
+/proc directory "files" 
+<A HREF="#proc_dir">The /proc directory and setserial</A>, and the "setserial" command.</P>
+
+
+<H3><A NAME="boot_mesgs"></A> I/O Address &amp; IRQ: Boot-time messages </H3>
+
+<P> In many cases your ports will automatically get low-level
+configured at boot-time (but not always correctly).  To see what is
+happening, look at the start-up messages on the screen.  Don't neglect
+to check the messages from the BIOS before Linux is loaded (no
+examples shown here).  These BIOS messages may be frozen by pressing
+the Pause key (while holding down shift).  It's often tricky to freeze
+them and you may need to hit Ctrl-Alt-Del while Linux is booting to
+start rebooting and try again.  What these messages display may change
+as booting progresses and it's often tricky to freeze it at exactly the
+right words.</P>
+<P>Use Shift-PageUp to scroll back to the messages after they have
+flashed by.  Shift-PageDown will scroll in the opposite direction.
+The <CODE>dmesg</CODE> command (or looking at logs in /var/log) will show only
+the first of these two messages.  Here's an example of the start-up
+messages (as of 2004, almost the same as for 1999).  Note that in
+older versions ttyS1 was displayed in these messages as ttyS01, etc.</P>
+<P>At first you see what was detected (but the irq is only a wild guess):</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Serial driver version 4.27 with no serial options enabled
+ttyS0 at 0x03f8 (irq = 4) is a 16550A
+ttyS1 at 0x02f8 (irq = 3) is a 16550A
+ttyS2 at 0x03e8 (irq = 4) is a 16550A
+ttyS4 at port 0xeff0 (irq = 10) is a 16550A
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Note that ttyS0-ttyS2 were detected by probing the standard addresses
+while ttyS4 is a PCI port detected by probing the PCI configuration.
+Later setserial shows you  what was saved in a configuration file
+(which you may edit), but it's not necessarily correct either:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Loading the saved-state of the serial devices...
+/dev/ttyS1 at 0x02f8 (irq = 3) is a 16550A
+/dev/ttyS2 at 0x03e8 (irq = 5) is a 16550A
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Note that the configuration file only had ttyS1-2 in it so that ttyS0
+and ttyS4 were not affected by it.  There is also a slight
+discrepancy: The first message shows ttyS2 at irq=4 while the second
+shows it at irq=5.  In most cases the second message is the correct
+one.  But if you're having trouble, it may be misleading.  Before reading
+the explanation of all of this complexity in the rest of this section,
+you might just try using your serial port and see if it works OK.  If
+so it may not be essential to read further.</P>
+<P>The second message is from the <CODE>setserial</CODE> program being run at
+boot-time from a script in the /etc directory tree.  It shows what the
+device driver thinks is the correct configuration.  But this too could
+be wrong.  For example, the irq could actually be set to irq=8 in the
+hardware (both messages wrong).  The irq=5 could be there because the
+configuration file is incorrect.  </P>
+<P>With old jumper-set serial ports Linux sometimes gets IRQs wrong
+because it doesn't by default probe for IRQs.  It just assumes the
+"standard" ones (first message) or accepts what is in a configuration
+file (second message).  Neither of these is necessarily correct.  If
+the serial driver has the wrong IRQ, the serial port is very slow or
+doesn't seem to work at all.</P>
+<P>The first message is a result of Linux probing the ISA serial port
+addresses but it doesn't probe for IRQs.  If a port shows up here it
+exists but the IRQ may be wrong.  Linux doesn't check IRQs because
+doing so is not foolproof.  It just assumes the IRQs are as shown
+because they are the "standard" values.  You may check them manually
+with <CODE>setserial</CODE> using the <CODE>autoconfig</CODE> and <CODE>auto_irq</CODE>
+options but this isn't guaranteed to be correct either.</P>
+<P>The data shown by the BIOS messages (which you see at first before
+Linux is booted) are what is initially set in the hardware.  If your
+serial port is Plug-and-Play (PnP) then it's possible that "isapnp" or
+"setpci" will run and change these settings.  Look for messages about
+this after Linux starts.  The last serial port message shown in the
+example above should agree with the BIOS messages (as possibly
+modified by isapnp or setpci).  If they don't agree then you either
+need to change the setting in the port hardware or use setserial to
+tell the driver what is actually set in the hardware.</P>
+<P>Also, if you have Plug-and-Play (PnP) serial ports, they can only be
+found by PnP software unless the IRQ and IO has been set inside the
+hardware by Plug-and-Play software.  Prior to kernel 2.4 this was a
+common reason why the start-up messages did not show a serial port
+that physically exists.  A PnP BIOS may automatically low-level
+configure them.  PnP configuring will be explained later.</P>
+
+<H3><A NAME="proc_dir"></A> The /proc directory and setserial  </H3>
+
+<P> Type "setserial -g /dev/ttyS*".   There are some other
+ways to find this info by looking at "files" in the /proc directory.
+Be warned that there is no guarantee that the same is set in the
+hardware.</P>
+<P><CODE>/proc/ioports</CODE> will show the IO addresses that the drivers are using.
+<CODE>/proc/interrupts</CODE> shows the IRQs that are used by drivers of
+currently running processes (that have devices open).  It shows how
+many interrupts have actually be issued.
+<CODE>/proc/tty/driver/serial</CODE> shows much of the above, plus the
+number of bytes that have been received and sent (even if the device
+is not now open).</P>
+<P>Note that for the IO addresses and IRQ assignments, you are only seeing
+what the driver thinks and not necessarily what is actually set in the
+hardware.  The data on the actual number of interrupts issued and
+bytes processed is real however.  If you see a large number of
+interrupts and/or bytes then it probably means that the device is (or
+was) working.  But the interrupts might be from another device.  If
+there are no bytes received (rx:0) but bytes were transmitted (tx:3749
+for example), then only one direction of flow is working (or being
+utilized).</P>
+<P>Sometimes a showing of just a few interrupts doesn't mean that the
+interrupt is actually being physically generated by any serial port.
+Thus if you see almost no interrupts for a port that you're trying to
+use, that interrupt might not be set in the hardware.  To view
+/proc/interrupts to check on a program that you're currently running
+(such as "minicom") you need to keep the program running while you
+view it.</P>
+
+<H2><A NAME="io-irq_in_hdw"></A> <A NAME="ss6.7">6.7</A> <A HREF="Modem-HOWTO.html#toc6.7">What is the IO Address &amp; IRQ of my Serial Port Hardware?</A>
+ </H2>
+
+<H3>Introduction</H3>
+
+<P>If it's PCI or ISA PnP then what's set in the hardware has been done
+by PnP methods.  Even if nothing has been set or the port disabled,
+PnP ports may still be found by using "lspci -v" or "isapnp
+--dumpregs".  Ports disabled by jumpers (or hardware failures) are
+completely lost.  See 
+<A HREF="#isa_pnp_dump">ISA PnP ports</A>,
+<A HREF="#pci_io_irq">PCI: What IOs and IRQs have been set?</A>,
+<A HREF="#pci_enabled">PCI: Enabling a disabled port</A></P>
+<P>PnP ports don't store their configuration in the hardware when the
+power is turned off.  This is in contrast to Jumpers (non-PnP) which
+remain the same with the power off.  That's why a PnP port is more
+likely to be found in a disabled state than an old non-PnP one.</P>
+
+<H3><A NAME="pci_io_irq"></A> PCI: What IOs and IRQs have been set? </H3>
+
+<P> For PCI, the BIOS almost always sets the IRQ and may set the IO
+address as well.  To see how it's set use "lspci -vv" (best) or look
+in /proc/bus/pci (or for kernels &lt;2.2 /proc/pci).  The modem's
+serial port is often called a "Communication controller".  Look for
+this.  If lspci shows "I/O ports at ... [disabled]" then the serial
+port is disabled and the hardware has no IO address so it's lost and
+can't be used.  See 
+<A HREF="#pci_enabled">PCI: Enabling a disabled port</A> for how to enable it.</P>
+<P>If more than one IO address is shown, the first one is more likely to
+be it.  You can't change the IRQ (at least not with "setpci")   This
+is because if one writes an IRQ it it's hardware register no action is
+taken on it.  It's the BIOS that should actually set up the IRQs and
+then write the correct value to this register for lspci to view.  If
+you must, change the IO address with "setpci" by changing the
+BASE_ADDRESS_0 or the like.  </P>
+
+<H3><A NAME="pci_enabled"></A> PCI: Enabling a disabled port </H3>
+
+<P>If the port communicates via an IO address then "lspci -vv" should
+show "Control: I/O+ ..." with + meaning that the IO address is
+enabled.  If it shows "I/O-" (and "I/O ports at ... [disabled]") then
+you may need to use the setpci command to enable it.  For example
+"setpci -d 151f:000 command=101".  151f is the vendor id, and 000 is
+the device id both obtained from "lspci -n -v" or from /proc/bus/pci
+or from "scanpci -v".  The "command=101" means that 101 is put into
+the command register which is the same as the "Control" register
+displayed by "lspci".  The 101h sets two bits: the 1 sets I/O to + and
+the 100 part keeps SERR# set to +.   In this case only the SERR# bit
+of the Control register was initially observed to be + when the lspci
+command was run.  So we kept it enabled to + by setting bit 8 (where
+bit 0 is I/O) to 1 by the first 1 in 101.  Some serial cards don't use
+SERR# so if you see SERR#- then there's no need to enable it so then
+use: command=1.  Then you'll need to set up "setserial" to tell the
+driver the IO and IRQ.</P>
+<P>Bit 8 is actually the 9th bit since we started counting bits from 0.
+Don't be alarmed that lspci shows a lot of - signs showing that the
+card doesn't have many features available (or enabled).  Serial ports
+are relatively slow and don't need these features.</P>
+<P>Another way to enable it is to let the BIOS do it by telling the BIOS
+that you don't have a plug-and-play operating system.  Then the BIOS
+should enable it when you start your PC. If you have MS Windows9x on
+the same PC then doing this might cause problems with Windows (see
+Plug-and-Play-HOWTO).</P>
+
+<H3><A NAME="isa_pnp_dump"></A> ISA PnP ports </H3>
+
+<P>For an ISA Plug-and-Play (PnP) port one may try the <CODE>pnpdump</CODE>
+program (part of <CODE>isapnptools</CODE>).  If you use the --dumpregs option
+then it should tell you the actual IO address and IRQ set in the port.
+It should also find an ISA PnP port that is disabled.  The address it
+"trys" is not the device's IO address, but a special address used for
+communicating with PnP cards.</P>
+
+<H3>Finding a port that is not disabled (ISA, PCI, PnP, non-PnP)</H3>
+
+<P> Perhaps the BIOS messages will tell you some info before Linux
+starts booting.  Use the shift-PageUp key to step back thru the
+boot-time messages and look at the very first ones which are from the
+BIOS.  This is how it was before Linux started.  Setserial can't
+change it but isapnp or setpci can.  Starting with kernel 2.4, the
+serial driver can make such changes for many (but not all) serial
+ports.</P>
+<P>Using "scanport" (Debian only ??) will probe all I/O ports and will
+indicate what it thinks may be serial port.  After this you could try
+probing with setserial using the "autoconfig" option.  You'll need to
+guess the addresses to probe at (using clues from "scanport").  See
+<A HREF="Modem-HOWTO-10.html#set_serial">What is Setserial</A>.</P>
+<P>For a port set with jumpers, the IO ports and IRQs are set per the
+jumpers. If the port is not Plug-and-Play (PnP) but has been setup by
+using a DOS program, then it's set at whatever the person who ran that
+program set it to.</P>
+
+<H3>Exploring via MS Windows (a last resort)</H3>
+
+<P>For PnP ports, checking on how it's configured under DOS/Windows
+may (or may not) imply how it's under Linux.  MS Windows stores its
+configuration info in its Registry which is not used by Linux so they
+are not necessarily configured the same.  If you let a PnP BIOS
+automatically do the configuring when you start Linux (and have told
+the BIOS that you don't have a PnP operating system when starting
+Linux) then Linux should use whatever configuration is in the BIOS's
+non-volatile memory.  Windows also makes use of the same non-volatile
+memory but doesn't necessarily configure it that way.</P>
+
+<H2><A NAME="choose_IRQ"></A> <A NAME="ss6.8">6.8</A> <A HREF="Modem-HOWTO.html#toc6.8">Choosing Serial IRQs </A>
+</H2>
+
+<P> If you have Plug-and-Play ports then either a PnP BIOS or a
+serial driver may configure all your devices for you so then you may
+not need to choose any IRQs.  PnP software determines what it thinks
+is best and assigns them (but it's not always best).  But if you
+directly use isapnp (ISA bus) or jumpers then you have to choose.  If
+you already know what IRQ you want to use you could skip this section
+except that you may want to know that IRQ 0 has a special use (see the
+following paragraph).</P>
+
+<H3>IRQ 0 is not an IRQ</H3>
+
+<P> While IRQ 0 is actually the timer (in hardware) it has a special
+meaning for setting a serial port with setserial.  It tells the driver
+that there is no interrupt for the port and the driver then will use
+polling methods.  Such polling puts more load on the CPU but can be
+tried if there is an interrupt conflict or mis-set interrupt.  The
+advantage of assigning IRQ 0 is that you don't need to know what
+interrupt is set in the hardware.  It should be used only as a
+temporary expedient until you are able to find a real interrupt to
+use.</P>
+
+<H3><A NAME="int_share-2.2"></A> Interrupt sharing,  Kernels 2.2+ </H3>
+
+<P> Sharing of IRQs is where two devices use the same IRQ.  As a
+general rule, this wasn't allowed for the ISA bus.   The PCI bus may
+share IRQs but one can't share the same IRQ between the ISA and the
+PCI bus.  Most multi-port boards may share IRQs.  Sharing is not as
+efficient since every time a shared interrupt is given a check must be
+made to determine where it came from.  Thus if it's feasible, it's
+nicer to allocate every device its own interrupt.</P>
+<P>Prior to kernel 2.2, serial IRQs could not be shared with each other
+except for most multiport boards.  Starting with kernel 2.2 serial
+IRQs may be sometimes shared between serial ports.  In order for
+sharing to work in 2.2 the kernel must have been compiled with
+CONFIG_SERIAL_SHARE_IRQ, and the serial port hardware must support
+sharing (so that if two serial cards put different voltages on the
+same interrupt wire, only the voltage that means "this is an
+interrupt" will prevail).  Since the PCI bus specs permit sharing, any
+PCI card should allow sharing.</P>
+
+<H3>What IRQs to choose?</H3>
+
+<P> The serial hardware often has only a limited number of IRQs.  Also
+you don't want IRQ conflicts.  So there may not be much of a choice.
+Your PC may normally come with <CODE>ttyS0</CODE> and <CODE>ttyS2</CODE> at IRQ 4, and
+<CODE>ttyS1</CODE> and <CODE>ttyS3</CODE> at IRQ 3.  Looking at
+<CODE>/proc/interrupts</CODE> will show which IRQs are being used by
+programs currently running.  You likely don't want to use one of
+these.  Before IRQ 5 was used for sound cards, it was often used for a
+serial port.</P>
+<P>Here is how Greg (original author of Serial-HOWTO) set his up in
+/etc/rc.d/rc.serial.  rc.serial is a file (shell script) which runs at
+start-up (it may have a different name or location).  For versions of
+"setserial" after 2.15 it's not always done this way anymore but this
+example does show the choice of IRQs.</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+/sbin/setserial /dev/ttyS0 irq 3        # my serial mouse
+/sbin/setserial /dev/ttyS1 irq 4        # my Wyse dumb terminal
+/sbin/setserial /dev/ttyS2 irq 5        # my Zoom modem
+/sbin/setserial /dev/ttyS3 irq 9        # my USR modem
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Standard IRQ assignments:
+<PRE>
+        IRQ  0    Timer channel 0 (May mean "no interrupt".  See below.)
+        IRQ  1    Keyboard
+        IRQ  2    Cascade for controller 2
+        IRQ  3    Serial port 2
+        IRQ  4    Serial port 1
+        IRQ  5    Parallel port 2, Sound card
+        IRQ  6    Floppy diskette
+        IRQ  7    Parallel port 1
+        IRQ  8    Real-time clock
+        IRQ  9    Redirected to IRQ2
+        IRQ 10    not assigned
+        IRQ 11    not assigned
+        IRQ 12    not assigned
+        IRQ 13    Math co-processor
+        IRQ 14    Hard disk controller 1
+        IRQ 15    Hard disk controller 2
+</PRE>
+</P>
+
+<P>There is really no Right Thing to do when choosing interrupts.  Try to
+find one that isn't being used by the motherboard, or any other
+boards.  2, 3, 4, 5, 7, 10, 11, 12 or 15 are possible choices.  Note
+that IRQ 2 is the same as IRQ 9.  You can call it either 2 or 9, the
+serial driver is very understanding.  If you have a very old serial
+board it may not be able to use IRQs 8 and above.</P>
+<P>Make sure you don't use IRQs 1, 6, 8, 13 or 14!  These are used by
+your motherboard.  You will make her very unhappy by taking her IRQs.
+When you are done you might want to double-check
+<CODE>/proc/interrupts</CODE> when programs that use interrupts are being
+run and make sure there are no conflicts.</P>
+
+<H2><A NAME="choose_address"></A> <A NAME="ss6.9">6.9</A> <A HREF="Modem-HOWTO.html#toc6.9">Choosing Addresses --Video card conflict with ttyS3</A>
+</H2>
+
+<P> Here's a problem with some old serial cards.  The IO address of
+the IBM 8514 video board (and others like it) is allegedly 0x?2e8
+where ? is 2, 4, 8, or 9.  This may conflict with the IO address of
+<CODE>ttyS3</CODE> at 0x02e8.  Your may think that this shouldn't happen since
+the addresses are different in the high order digit (the leading 0 in
+02e8).  You're right, but a poorly designed serial port may ignore the
+high order digit and respond to any address that ends in 2e8.  That is
+bad news if you try to use <CODE>ttyS3</CODE> (ISA bus) at this IO address.</P>
+<P>For the ISA bus you should try to use the default addresses shown
+below.  PCI cards use different addresses so as not to conflict with
+ISA addresses.  The addresses shown below represent the first address
+of an 8-byte range.  For example 3f8 is really the range 3f8-3ff.
+Each serial device (as well as other types of devices that use IO
+addresses) needs its own unique address range.  There should be no
+overlaps (conflicts).  Here are the default addresses for commonly
+used serial ports on the ISA bus:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ttyS0 address 0x3f8
+ttyS1 address 0x2f8
+ttyS2 address 0x3e8
+ttyS3 address 0x2e8
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Suppose there is an address conflict (as reported by <CODE>setserial -g
+/dev/ttyS*</CODE>) between a real serial port and another port which
+does not physically exist (and shows UART: unknown).  Such a conflict
+shouldn't cause problems but it sometimes does in older kernels.  To
+avoid this problem don't permit such address conflicts or delete
+/dev/ttySx if it doesn't physically exist.</P>
+
+<H2><A NAME="io-irq_methods"></A> <A NAME="ss6.10">6.10</A> <A HREF="Modem-HOWTO.html#toc6.10">Set IO Address &amp; IRQ in the hardware (mostly for PnP)</A>
+ </H2>
+
+<P> After it's set in the hardware don't forget to insure that it also
+gets set in the driver by using <CODE>setserial</CODE>.  For non-PnP serial
+ports they are either set in hardware by jumpers or by running a DOS
+program ("jumperless") to set them (it may disable PnP).  The rest of
+this subsection is only for PnP serial ports.  Here's a list of the
+possible methods of configuring PnP serial ports:</P>
+<P>
+<UL>
+<LI> Using a PnP BIOS CMOS setup menu
+(usually only for external
+modems
+on ttyS0 (Com1) and ttyS1 (Com2))</LI>
+<LI> Letting a PnP BIOS automatically configure a PnP serial port
+See 
+<A HREF="#bios_conf">Using a PnP BIOS to I0-IRQ Configure</A></LI>
+<LI> Doing nothing if the serial driver recognized your card OK</LI>
+<LI> Using <CODE>isapnp</CODE> for a PnP serial port (non-PCI)</LI>
+<LI> Using setpci (pciutils or pcitools) for the PCI bus</LI>
+</UL>
+</P>
+<P>The IO address and IRQ must be set (by PnP) in their registers each
+time the system is powered on since PnP hardware doesn't remember how
+it was set when the power is shut off.  A simple way to do this is to
+let a PnP BIOS know that you don't have a PnP OS and the BIOS will
+automatically do this each time you start.  This might cause problems
+in Windows (which is a PnP OS) if you start Windows with the BIOS
+thinking that Windows is not a PnP OS.  See Plug-and-Play-HOWTO.</P>
+<P>Plug-and-Play (PnP) was designed to automate this io-irq configuring,
+but for Linux it initially made life much more complicated.  In modern
+Linux (2.4 kernels --partially in 2.2 kernels), each device driver has
+to do its own PnP (using supplied software which it may utilize).
+There is unfortunately no centralized planning for assigning IO
+addresses and IRQs as there is in MS Windows.   But it usually works
+out OK in Linux anyway.</P>
+
+<H3><A NAME="bios_conf"></A> Using a PnP BIOS to I0-IRQ Configure </H3>
+
+<P> While the explanation of how to use setpci or isapnp for io-irq
+configuring should come with such software, this is not the case if
+you want to let a PnP BIOS do such configuring.  Not all PnP BIOS can
+do this.  The BIOS usually has a CMOS menu for setting up the first
+two serial ports.  This menu may be hard to find.  For an "Award"
+BIOS it was found under "chipset features setup"  There is often
+little to choose from.  For ISA serial ports, the first two ports
+normally get set at the standard IO addresses and IRQs.  See 
+<A HREF="Modem-HOWTO-9.html#dev_nos">More on Serial Port Names</A></P>
+<P>Whether you like it or not, when you start up a PC, a PnP BIOS starts
+to do PnP (io-irq) configuring of hardware devices.  It may do the job
+partially and turn the rest over to a PnP OS (which Linux is in some
+sense) or if thinks you don't have a PnP OS it may fully configure all
+the PnP devices but not configure the device drivers.</P>
+<P>If you tell the BIOS that you don't have a PnP OS, then the PnP BIOS
+should do the configuring of all PnP serial ports --not just the first
+two.  An indirect way to control what the BIOS does (if you have
+Windows 9x on the same PC) is to "force" a configuration under
+Windows.  See Plug-and-Play-HOWTO and search for "forced".  It's
+easier to use the CMOS BIOS menu which may override what you
+"forced" under Windows.  There could be a BIOS option that can set or
+disable this "override" capability.</P>
+<P>If you add a new PnP device, the BIOS should PnP configure it.  It
+could even change the io-irq of existing devices if required to avoid
+any conflicts.  For this purpose, it keeps a list of non-PnP devices
+provided that you have told the BIOS how these non-PnP devices are
+io-irq configured.  One way to tell the BIOS this is by running a
+program called ICU under DOS/Windows.</P>
+<P>But how do you find out what the BIOS has done so that you set up the
+device drivers with this info?  The BIOS itself may provide some info,
+either in its setup menus of via messages on the screen when you turn
+on your computer.  See 
+<A HREF="#io-irq_in_hdw">What is set in my serial port hardware?</A>.  Other ways of finding out is to use lspci for
+the PCI bus or isapnp --dumpregs for the ISA bus.  The cryptic results
+it shows you may not be clear to a novice.</P>
+
+<H2><A NAME="ss6.11">6.11</A> <A HREF="Modem-HOWTO.html#toc6.11">Giving the IRQ and IO Address to Setserial</A>
+</H2>
+
+<P> Once you've set the IRQ and IO address in the hardware (or arranged
+for it to be done by PnP) you also need to insure that the "setserial"
+command is run each time you start Linux.  See the subsection 
+<A HREF="Modem-HOWTO-10.html#sets_boot_time">Boot-time Configuration</A></P>
+
+
+<HR>
+<A HREF="Modem-HOWTO-7.html">Next</A>
+<A HREF="Modem-HOWTO-5.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

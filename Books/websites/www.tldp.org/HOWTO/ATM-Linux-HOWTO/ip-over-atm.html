@@ -1,0 +1,959 @@
+<HTML
+><HEAD
+><TITLE
+>IP Over ATM</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="ATM on Linux HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Signaling"
+HREF="signaling.html"><LINK
+REL="NEXT"
+TITLE="Bibliography"
+HREF="bibliography.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>ATM on Linux HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="signaling.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="bibliography.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="IP-OVER-ATM"
+>6. IP Over ATM</A
+></H1
+><P
+>IP over ATM is supported with Classical IP over ATM (CLIP, defined in
+RFC1577 [<A
+HREF="bibliography.html#RFC1577"
+>RFC1577</A
+>], LAN Emulation (LANE, defined in
+[<A
+HREF="bibliography.html#LANEV1"
+>lanev1</A
+>] and [<A
+HREF="bibliography.html#LANEV2"
+>lanev2</A
+>])
+and Multi-Protocol Over ATM (MPOA, client only, defined in
+[<A
+HREF="bibliography.html#MPOAV1"
+>mpoav1</A
+>]).</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="IP-OVER-ATM.CLIP"
+>6.1. CLIP</A
+></H2
+><P
+>A demon process is used to generate and answer ARP queries.
+The actual kernel part maintains a small lookup table only containing partial
+information.</P
+><P
+>Man pages:
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>atmarpd</SPAN
+>(8)</SPAN
+>,
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>atmarp</SPAN
+>(8)</SPAN
+></P
+><P
+><SPAN
+CLASS="APPLICATION"
+>atmsigd</SPAN
+> and <SPAN
+CLASS="APPLICATION"
+>ilmid</SPAN
+>
+must already be running when <SPAN
+CLASS="APPLICATION"
+>atmarpd</SPAN
+> is
+started. Use the <TT
+CLASS="PARAMETER"
+><I
+>-b</I
+></TT
+>
+option to make sure they're properly synchronized,
+e.g.
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN744"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#!/bin/sh
+atmsigd -b
+ilmid -b
+atmarpd -b
+...</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+
+works, but
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN746"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#!/bin/sh
+atmsigd &#38;
+ilmid &#38;
+atmarpd &#38;
+...</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+
+frequently doesn't (yet).</P
+><P
+>The <SPAN
+CLASS="APPLICATION"
+>atmarp</SPAN
+> program is used to configure ATMARP.
+First, you have to
+start <SPAN
+CLASS="APPLICATION"
+>atmsigd</SPAN
+>, <SPAN
+CLASS="APPLICATION"
+>ilmid</SPAN
+>, and
+<SPAN
+CLASS="APPLICATION"
+>atmarpd</SPAN
+>, then create an IP
+interface and configure it:
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN753"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># atmarp -c <TT
+CLASS="REPLACEABLE"
+><I
+>interface_name</I
+></TT
+>
+# ifconfig atm0 <TT
+CLASS="REPLACEABLE"
+><I
+>local_address</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>possibly_more_options</I
+></TT
+> up</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+
+e.g.
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN758"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># atmarp -c atm0
+# ifconfig atm0 10.0.0.3 up</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>If only PVCs will be used, they can now be created with a command like
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN761"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># atmarp -s 10.0.0.4 0.0.70</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>NULL encapsulation is used if the <TT
+CLASS="PARAMETER"
+><I
+>null</I
+></TT
+>
+keyword is specified.
+Note that ARP requires LLC/SNAP encapsulation. NULL encapsulation can
+therefore only be used for PVCs.</P
+><P
+>When using SVCs, some additional configuration work may be necessary. If the
+machine is acting as the ATMARP server on that LIS, no additional
+configuration is required. Otherwise, the ATM address of the ATMARP
+server has to be configured. This is done by creating an entry for the
+network address with the option <TT
+CLASS="PARAMETER"
+><I
+>arpsrv</I
+></TT
+>
+set, e.g.
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN767"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># atmarp -s \
+  10.0.0.0 47.0005.80.ffe100.0000.f215.1065.0020EA000756.00 \
+  arpsrv</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>Note that the ATMARP server currently has to be started and configured
+before any clients are configured.</P
+><P
+>The kernel ATMARP table can be read via \path{/proc/net/atm/arp}. The table
+used by <SPAN
+CLASS="APPLICATION"
+>atmarpd</SPAN
+>
+is regularly printed on standard error if <SPAN
+CLASS="APPLICATION"
+>atmarpd</SPAN
+>
+is started with the <TT
+CLASS="PARAMETER"
+><I
+>-d</I
+></TT
+> option.
+If <SPAN
+CLASS="APPLICATION"
+>atmarpd</SPAN
+> is invoked without
+<TT
+CLASS="PARAMETER"
+><I
+>-d</I
+></TT
+>, the table is written to the file
+<TT
+CLASS="FILENAME"
+>atmarpd.table</TT
+> in the dump
+directory (by default <TT
+CLASS="FILENAME"
+>/var/run</TT
+>; can be
+changed with <TT
+CLASS="PARAMETER"
+><I
+>-D</I
+></TT
+>), and
+it can be read with <B
+CLASS="COMMAND"
+>atmarp -a</B
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="IP-OVER-ATM.LAN-EMULATION"
+>6.2. LAN Emulation</A
+></H2
+><P
+>Besides Classical IP over ATM, LAN Emulation (LANE) can be used to
+carry IP over ATM. LANE emulates the characteristics of legacy LAN
+technology, such as support for broadcasts. LANE server support is
+described in the <TT
+CLASS="FILENAME"
+>src/lane/USAGE</TT
+> file in the linux-atm 
+distribution.</P
+><P
+>Man pages:
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>bus</SPAN
+>(8)</SPAN
+>,
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>lecs</SPAN
+>(8)</SPAN
+>,
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>les</SPAN
+>(8)</SPAN
+>, and
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>zeppelin</SPAN
+>(8)</SPAN
+></P
+><P
+>If you plan to run more than one LANE clients, LANE service or LANE
+clients and LANE service, you need to specify different local ATM
+addresses for each demon. Since all the LANE demons use similar
+service access points (SAPs) they need different ATM addresses to
+differentiate between connections.</P
+><P
+>Just as with CLIP, the LANE client consists of two parts: a demon
+process called <SPAN
+CLASS="APPLICATION"
+>zeppelin</SPAN
+>
+which takes care of the LANE protocol
+and kernel part which contains LANE ARP cache.</P
+><P
+><SPAN
+CLASS="APPLICATION"
+>atmsigd</SPAN
+> and <SPAN
+CLASS="APPLICATION"
+>ilmid</SPAN
+>
+must already be running when
+<SPAN
+CLASS="APPLICATION"
+>zeppelin</SPAN
+> is started. When
+<SPAN
+CLASS="APPLICATION"
+>zeppelin</SPAN
+> starts, the kernel
+creates a new interface which can then be configured:
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN805"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># zeppelin <TT
+CLASS="REPLACEABLE"
+><I
+>possibly_more_options</I
+></TT
+> &#38;
+# ifconfig lec0 <TT
+CLASS="REPLACEABLE"
+><I
+>local_address</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>possibly_more_options</I
+></TT
+> up</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>In the example below, two LANE clients are started. The first client
+uses default interface <SPAN
+CLASS="INTERFACE"
+>lec0</SPAN
+>,
+default listen address and tries to
+join the default ELAN. The other LANE client gets interface
+<SPAN
+CLASS="INTERFACE"
+>lec2</SPAN
+>
+assigned to it, binds to local address
+<TT
+CLASS="PARAMETER"
+><I
+>mybox3</I
+></TT
+>, tries to join
+ELAN called <TT
+CLASS="PARAMETER"
+><I
+>myelan</I
+></TT
+>
+and will bridge packets between ELAN and
+Ethernet segments. Address <TT
+CLASS="PARAMETER"
+><I
+>mybox3</I
+></TT
+>
+is defined in
+<TT
+CLASS="FILENAME"
+>/etc/hosts.atm</TT
+>. Rest of the bridging can be configured
+by reading the Bridging mini-HOWTO. [<A
+HREF="bibliography.html#BRIDGE-HOWTO"
+>bridge-howto</A
+>]
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN818"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># zeppelin &#38;
+# ifconfig lec0 10.1.1.42 netmask 255.255.255.0 \
+                          broadcast 10.1.1.255 up
+#
+# zeppelin -i 2 -l mybox3 -n myelan -p &#38;
+# ifconfig lec2 10.1.2.42 netmask 255.255.255.0 \
+                          broadcast 10.1.2.255 up</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>By default, <SPAN
+CLASS="APPLICATION"
+>zeppelin</SPAN
+> uses interface
+<SPAN
+CLASS="INTERFACE"
+>lec0</SPAN
+>, binds to local
+ATM address using selector byte value 0, tries to contact LECS using
+Well-Known LECS address, joins the default ELAN as defined by the
+LECS, accepts the MTU size as defined by the LES and will not act as
+an proxy LEC. These parameters can be tailored with command line
+options which are defined in
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>zeppelin</SPAN
+>(8)</SPAN
+>.</P
+><P
+><SPAN
+CLASS="APPLICATION"
+>zeppelin</SPAN
+> will automatically join any ELANs
+which use higher
+MTU than the default MTU of 1516 bytes. The MTU of the LANE
+interface will adjust itself according to the MTU of the current
+ELAN.</P
+><P
+>The state of the LANE ARP cache entries can be monitored through
+<TT
+CLASS="FILENAME"
+>/proc/net/atm/lec</TT
+>.
+For each entry the MAC and ATM addresses and status 
+is listed. If the entry has an active connection, the connection
+identifiers are also listed.</P
+><P
+>The LANE service (
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>lecs</SPAN
+>(8)</SPAN
+>,
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>les</SPAN
+>(8)</SPAN
+>, and
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>bus</SPAN
+>(8)</SPAN
+>)
+is
+configured using configuration files. The configuration file syntax is
+listed on the respective manual pages.</P
+><P
+>A more detailed description of Linux LANE services is discussed in
+Marko Kiiskilä's Master's Thesis
+[<A
+HREF="bibliography.html#KIIS"
+>kiis</A
+>].
+&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="IP-OVER-ATM.MPOA"
+>6.3. MPOA</A
+></H2
+><P
+>The Linux MPOA client continues the tradition of user space -- kernel
+divided ATM services. The demon process called
+<SPAN
+CLASS="APPLICATION"
+>mpcd</SPAN
+> processes
+MPOA control packets while the kernel holds MPOA ingress and egress
+caches and does the packet forwarding.</P
+><P
+>Man page:
+<SPAN
+CLASS="CITEREFENTRY"
+><SPAN
+CLASS="REFENTRYTITLE"
+>mpcd</SPAN
+>(8)</SPAN
+></P
+><P
+><SPAN
+CLASS="APPLICATION"
+>atmsigd</SPAN
+> and <SPAN
+CLASS="APPLICATION"
+>ilmid</SPAN
+>
+must already be running when
+<SPAN
+CLASS="APPLICATION"
+>mpcd</SPAN
+> is started.
+Since MPOA detects IP layer flows from LANE
+traffic, you need to have <SPAN
+CLASS="APPLICATION"
+>zeppelin</SPAN
+>
+running before MPOA can
+function. However, the order in which <SPAN
+CLASS="APPLICATION"
+>zeppelin</SPAN
+>
+and <SPAN
+CLASS="APPLICATION"
+>mpcd</SPAN
+>
+is started is not fixed. You can kill any of the demons at your will
+and restart it later without need to restart the other demon. The
+easiest way to disable MPOA is to kill the running
+<SPAN
+CLASS="APPLICATION"
+>mpcd</SPAN
+>.</P
+><P
+>Below is the example from Section
+<A
+HREF="ip-over-atm.html#IP-OVER-ATM.LAN-EMULATION"
+><I
+>LAN Emulation</I
+></A
+>
+which starts two LANE
+clients. The configuration has been augmented with two MPOA clients
+which the LANE clients will serve.
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN860"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># zeppelin &#38;
+# ifconfig lec0 10.1.1.42 netmask 255.255.255.0 \
+                          broadcast 10.1.1.255 up
+# mpcd -s mybox1 -l mybox2 &#38;
+#
+# zeppelin -i 2 -l mybox3 -n myelan -p &#38;
+# ifconfig lec2 10.1.2.42 netmask 255.255.255.0 \
+                          broadcast 10.1.2.255 up
+# mpcd -i 2 -s mybox4 -l mybox5 &#38;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>The MPOA demon needs two different local ATM addresses which it uses
+when initiating and receiving data and control connections. The
+addresses can be the same as with e.g.
+<SPAN
+CLASS="APPLICATION"
+>zeppelin</SPAN
+> but must be
+different among other <SPAN
+CLASS="APPLICATION"
+>mpcd</SPAN
+> demons. By default,
+<SPAN
+CLASS="APPLICATION"
+>mpcd</SPAN
+> does
+not retrieve configuration information from the LECS. The necessary
+command line options and an example of using LECS are shown on the
+<SPAN
+CLASS="APPLICATION"
+>mpcd</SPAN
+> manual page.
+The manual page also lists the rest of the available options.</P
+><P
+>The contents of MPOA ingress and egress caches can be monitored
+through the <TT
+CLASS="FILENAME"
+>/proc/net/atm/mpc</TT
+> file.</P
+><P
+>The Linux MPOA client also supports CBR traffic class for shortcuts
+SVCs instead of default UBR. The QoS specifications for future
+shortcuts can be set and modified using
+<TT
+CLASS="FILENAME"
+>/proc/net/atm/mpc</TT
+>.
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN871"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># echo add 130.230.54.146 tx=80000,1600 rx=tx &#62; /proc/net/atm/mpc
+#             # generate enough traffic to trigger a shortcut
+# cat /proc/net/atm/mpc 
+QoS entries for shortcuts:
+IP address
+  TX:max_pcr pcr     min_pcr max_cdv max_sdu
+  RX:max_pcr pcr     min_pcr max_cdv max_sdu
+130.230.54.146  
+     80000   0       0       0       1600   
+     80000   0       0       0       1600   
+
+Interface 2:
+
+Ingress Entries:
+IP address      State     Holding time  Packets fwded  VPI VCI
+130.230.4.3     invalid   1160          0           
+130.230.54.146  resolved  542           151            0   109
+...</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+
+The shortcut to IP address <TT
+CLASS="PARAMETER"
+><I
+>130.230.54.146</I
+></TT
+>
+was established with
+the parameters shown above. There also exist patches which extend the
+flow detection to fully support layer 4 flows. The layer 4 flows are
+expressed as a 5 tuple (proto, local addr, local port, remote addr,
+remote port) and they identify application to application flows. If
+you are interested, see
+<A
+HREF="ftp://sunsite.tut.fi/pub/Local/linux-atm/mpoa/"
+TARGET="_top"
+>ftp://sunsite.tut.fi/pub/Local/linux-atm/mpoa/</A
+>
+for the latest
+patch.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="signaling.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="bibliography.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Signaling</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Bibliography</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

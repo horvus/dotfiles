@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Ethernet-Howto: Software Configuration and Card Diagnostics</TITLE>
+ <LINK HREF="Ethernet-HOWTO-7.html" REL=next>
+ <LINK HREF="Ethernet-HOWTO-5.html" REL=previous>
+ <LINK HREF="Ethernet-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Ethernet-HOWTO-7.html">Next</A>
+<A HREF="Ethernet-HOWTO-5.html">Previous</A>
+<A HREF="Ethernet-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="utils"></A> <A NAME="s6">6. Software Configuration and Card Diagnostics</A></H2>
+
+<P>
+<P>For the oldest (or the cheapest) ISA cards, the card settings 
+(I/O, IRQ, output media, etc.) were set by little black
+jumper blocks over rows of pins.  As cards got more fancy,
+these settings were switched electronically, and the end
+user could store the preferred settings in non volatile
+memory built into the card.  A vendor supplied program
+was used by the end user to alter these settings, removing
+the need to open the computer up just to reconfigure a card.
+<P>In most cases, if the configuration is done by software,
+and stored in an EEPROM, you will usually have to boot
+DOS, and use the vendor supplied DOS program to set the cards
+IRQ, I/O, mem_addr and whatnot. Besides, hopefully it is
+something you will only be setting once. If you don't have
+the DOS software for your card, try looking on the WWW site
+of your card manufacturer. If you don't know the site name,
+take a guess at it, i.e. `www.my_vendor.com' where `my_vendor'
+is the name of your card manufacturer. This works for SMC,
+3Com, and many <EM>many</EM> other manufacturers.
+<P>There are some cards for which Linux versions of
+the config utils exist, and they are listed here.
+Donald has written a few small card diagnostic
+programs that run under Linux. Most of these are a result
+of debugging tools that he has created while writing the
+various drivers. Don't expect
+fancy menu-driven interfaces. You will have to read the
+source code to use most of these. Even if your particular
+card doesn't have a corresponding diagnostic, you can
+still get some information just by typing
+<CODE>cat /proc/net/dev</CODE> -- assuming that your card
+was at least detected at boot.
+<P>In either case, you will have to run most of these programs
+as root (to allow I/O to the ports) and you probably want
+to shut down the ethercard before doing so by typing
+<CODE>ifconfig eth0 down</CODE> first.
+<P>
+<H2><A NAME="config"></A> <A NAME="ss6.1">6.1 Configuration Programs for Ethernet Cards</A>
+</H2>
+
+<P>
+<P>
+<H3>WD80x3 Cards</H3>
+
+<P>
+<P>For people with wd80x3 cards, there is the program <CODE>wdsetup</CODE>
+which can be found in <CODE>wdsetup-0.6a.tar.gz</CODE> on Linux ftp sites.
+It is not being actively maintained, and has
+not been updated for quite a while. If it works fine for you
+then great, if not, use the DOS version that you should have got
+with your card. If you don't have the DOS version, you will be
+glad to know that the SMC setup/driver disks are available
+at SMC's ftp site.
+Of course, you <EM>have</EM> to have an EEPROM card to use this utility.
+Old, <EM>old</EM> wd8003 cards, and some wd8013 clones use jumpers
+to set up the card instead.
+<P>
+<H3>Digital / DEC Cards</H3>
+
+<P>
+<P>The Digital EtherWorks 3 card can be configured in a similar
+fashion to the DOS program <CODE>NICSETUP.EXE</CODE>. David C. Davies
+wrote this and other tools for the EtherWorks 3 in conjunction
+with the driver. Look on you local linux FTP site in the directory
+<CODE>/pub/linux/system/Network/management</CODE> for the file
+that is named <CODE>ewrk3tools-X.XX.tar.gz</CODE>.
+<P>
+<H3>NE2000+ or AT/LANTIC Cards</H3>
+
+<P>
+<P>Some Nat Semi DP83905 implementations (such as the AT/LANTIC
+and the NE2000+) are software configurable. (Note that these
+cards can also emulate a wd8013 card!) You can get the setup
+file <CODE>atlantic.c</CODE> from Donald's ftp
+server, <CODE>www.scyld.com</CODE> to configure this card.
+In addition, the configuration programs for the Kingston
+DP83905 cards seem to work with all cards, as they don't
+check for a vendor specific address before allowing you to
+use them. Start at the following URL:
+<A HREF="http://www.kingston.com/">Kingston</A>
+and search for the programs <CODE>20XX12.EXE</CODE> and <CODE>INFOSET.EXE</CODE>
+<P>Be careful when configuring NE2000+ cards, as you can give
+them bad setting values which can cause problems. A typical
+example is accidentally enabling the boot ROM in the EEPROM
+(even if no ROM is installed) to a setting that conflicts
+with the VGA card. The result is a computer that just beeps
+at you when you turn it on and nothing appears on the screen.
+<P>You can typically
+recover from this by doing the following: Remove the card
+from the machine, and then boot and enter the CMOS setup.
+Change the `Display Adapter' to `Not Installed' and change
+the default boot drive to `A:' (your floppy drive).
+Also change the `Wait for F1 if any Error' to `Disabled'.
+This way, the computer should boot without user intervention.
+Now create a bootable DOS floppy (`format a: /s /u') and copy
+the program <CODE>default.exe</CODE> from the <CODE>20XX12.EXE</CODE> archive
+above onto that floppy. Then
+type <CODE>echo default > a:autoexec.bat</CODE>
+so that the program to set the card back to sane defaults will
+be run automatically when you boot from this floppy.
+Shut the machine off, re-install the ne2000+ card, insert your
+new boot floppy, and power it back up. It will still probably beep
+at you, but eventually you should see the floppy light come on
+as it boots from the floppy. Wait a minute or two for the floppy
+to stop, indicating that it has finished running the <CODE>default.exe</CODE>
+program, and then power down your computer. When you then turn it
+on again, you should hopefully have a working display again,
+allowing you to change your CMOS settings back, and to change
+the card's EEPROM settings back to the values you want.
+<P>Note that if you don't have DOS handy, you can do the whole
+method above with a linux boot disk that automatically runs
+Donald's <CODE>atlantic</CODE> program (with the right command line
+switches) instead of a DOS boot disk that automatically runs
+the <CODE>default.exe</CODE> program.
+<P>
+<H3>3Com Cards</H3>
+
+<P>
+<P>The 3Com Etherlink III family of cards (i.e. 3c5x9) can
+be configured by using another config utility from Donald.
+You can get the file <CODE>3c5x9setup.c</CODE>
+from Donald's ftp server, <CODE>www.scyld.com</CODE> to
+configure these cards. (Note that the DOS 3c5x9B config
+utility may have more options pertaining to the new ``B''
+series of the Etherlink III family.)
+<P>
+<P>
+<H2><A NAME="diag"></A> <A NAME="ss6.2">6.2 Diagnostic Programs for Ethernet Cards</A>
+</H2>
+
+<P>
+<P>Any of the diagnostic programs that Donald has written can
+be obtained from his website.
+<P>
+<A HREF="http://www.scyld.com/network">Ethercard Diagnostics</A><P>Allied Telesis AT1700 -- <CODE>at1700.c</CODE> 
+<P>Cabletron E21XX -- <CODE>e21.c</CODE> 
+<P>HP PCLAN+ -- <CODE>hp+.c</CODE> 
+<P>Intel EtherExpress -- <CODE>eexpress.c</CODE>
+<P>PCI NE2000 cards -- <CODE>ne2k-pci-diag.c</CODE>
+<P>ISA NE2000 cards -- <CODE>ne2k.c</CODE>
+<P>RealTek (ATP) Pocket adaptor <CODE>atp-diag.c</CODE>
+<P>All Other Cards -- try typing <CODE>cat /proc/net/dev</CODE> and
+<CODE>dmesg</CODE> to see what useful info the kernel has on the
+card in question.
+<P>
+<HR>
+<A HREF="Ethernet-HOWTO-7.html">Next</A>
+<A HREF="Ethernet-HOWTO-5.html">Previous</A>
+<A HREF="Ethernet-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

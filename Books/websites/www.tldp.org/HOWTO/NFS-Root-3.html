@@ -1,0 +1,225 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>NFS-Root mini-HOWTO: Setup on the server</TITLE>
+ <LINK HREF="NFS-Root-4.html" REL=next>
+ <LINK HREF="NFS-Root-2.html" REL=previous>
+ <LINK HREF="NFS-Root.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="NFS-Root-4.html">Next</A>
+<A HREF="NFS-Root-2.html">Previous</A>
+<A HREF="NFS-Root.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Setup on the server</A></H2>
+
+<H2><A NAME="ss3.1">3.1 Compiling the kernels</A>
+</H2>
+
+<P>On the server side, if you don't plan to use the old, user-mode NFS daemon,
+you'll need to compile NFS server support into the kernel (``NFS server
+support,'' a.k.a. <EM>knfsd</EM> or <CODE>CONFIG_NFSD</CODE>).
+If you plan to use the older <EM>RARP</EM> protocol to assign the client an
+IP address, <EM>RARP</EM> support in the kernel of the server is probably a good
+idea. (You must have it if you will boot via RARP without kernel parameters.)
+On the other hand, it doesn't help you if the client isn't on the same
+subnet as the server.
+<P>
+<P>The kernel for the workstation needs the following settings, as a minimum:
+<UL>
+<LI> <EM>NFS filesystem support</EM> (<CODE>CONFIG_NFS_FS</CODE>).  Note that
+there is no need for <EM>ext2</EM> support.</LI>
+<LI> <EM>Root file system on NFS</EM> (<CODE>CONFIG_ROOT_NFS</CODE>).</LI>
+<LI> <EM>Ethernet (10 or 100Mbit)</EM> (<CODE>CONFIG_NET_ETHERNET</CODE>).</LI>
+<LI> The ethernet driver for the workstation's network card (or onboard
+ethernet chip, if it's built into the motherboard or chipset).</LI>
+</UL>
+
+Where there is an option to compile something in as a module, do <EM>not</EM>
+do so; modules only work <EM>after</EM> the kernel is booted, and these things
+are needed <EM>during</EM> boot.
+<P>
+<P>For dynamically assigned IP numbers, you'll also need to select one or more
+of these kernel options:
+<UL>
+<LI> <EM>IP: kernel level autoconfiguration</EM> (<CODE>CONFIG_IP_PNP</CODE>)</LI>
+<LI> <EM>RARP support</EM> (<CODE>CONFIG_IP_PNP_RARP</CODE>)</LI>
+<LI> <EM>BOOTP support</EM> (<CODE>CONFIG_IP_PNP_BOOTP</CODE>)</LI>
+<LI> <EM>DHCP support</EM> (<CODE>CONFIG_IP_PNP_DHCP</CODE>)</LI>
+</UL>
+<P>
+<P>If the workstation will be booted without kernel parameters, you need
+also to set the root device to 0:255. Do this by creating a dummy
+device file with <CODE>mknod /dev/nfsroot b 0 255</CODE>. After having
+created such a device file, you can set root device of the kernel
+image with <CODE>rdev &lt;<EM>kernel-image</EM>&gt; /dev/nfsroot</CODE>.
+[<EM>NOTE:  Modern kernels recognize <CODE>root=/dev/nfs</CODE> as a command-line
+argument; for consistency and/or compatibility, it may be better to use
+<CODE>/dev/nfs</CODE> as the device name instead of <CODE>/dev/nfsroot</CODE>.</EM>]
+<P>
+<H2><A NAME="ss3.2">3.2 Creation of the root filesystem</A>
+</H2>
+
+<H3>Copying the filesystem</H3>
+
+<P><EM> Warning: while these instruction might work for you, they are by
+no means sensefull in a production environment. For a better way to
+set up a root filesystem for the clients, see the NFS-Root-Client
+mini-HOWTO by Ofer Maor <CODE>&lt;ofer@hadar.co.il&gt;</CODE>.</EM>
+<P>
+<P>After having decided where to place the root tree, create it with
+(e.g.) <CODE>mkdir -p &lt;<EM>directory</EM>&gt;</CODE> and 
+<CODE>tar cClf / - | tar xpCf &lt;<EM>directory</EM>&gt; -</CODE>.
+<P>
+<P>If you boot your kernel without LILO, then the rootdir has to be
+<CODE>/tftpboot/&lt;<EM>IP-address</EM>&gt;</CODE>. If you don't like it, you
+can change it in the top Makefile in the kernel sources, look for a line like:
+<CODE>NFS_ROOT = -DNFS_ROOT="\"/tftpboot/%s\""</CODE>
+If you change this, you have to recompile the kernel.
+<P>
+<P>
+<H3>Changes to the root filesystem</H3>
+
+<P>Now trim the unneeded files, and check the /etc/rc.d scripts. Some
+important points:
+<UL>
+<LI> One important thing is eth0 setup. The workstation comes up
+with eth0 set up, at least partially. Setting the
+IP address of the workstation to the the IP address of the server
+is not considered a clever thing to do. (As it happened to the original author
+on one of his early attempts.)
+</LI>
+<LI>Another point is the /etc/fstab of the workstation. It should
+be set up for NFS filesystems.
+&lt;<EM>NOTE:  this is not true in 2.4 kernels; the NFS mount is implicit and
+may actually cause mount(1) error messages if it's explicitly listed in
+/etc/fstab.  It is not clear when this changed.</EM>&gt;
+</LI>
+<LI> <B>WARNING</B>: Don't confuse the server root filesystem and the
+workstation root filesystem. (I've already patched up a
+rc.inet1 on the server, and wondered why the workstation still
+didn't work.)</LI>
+</UL>
+<P>
+<H3>Exporting the filesystem</H3>
+
+<P>Export the root dir to the workstation.
+The basic idea is to edit <CODE>/etc/exports</CODE> to include
+a line similar to one of the following:
+<P>
+<P>
+<UL>
+<LI> <CODE>/path/on/server/to/nfs_root
+&lt;<EM>client-IP-number</EM>&gt;(rw,no_root_squash,no_all_squash)
+&lt;<EM>2nd-client-IP-number</EM>&gt;(rw,no_root_squash,no_all_squash)</CODE></LI>
+<LI> <CODE>/path/on/server/to/nfs_root
+&lt;<EM>client-IP-network</EM>&gt;/&lt;<EM>client-IP-netmask</EM>&gt;(rw,no_root_squash,no_all_squash)</CODE></LI>
+</UL>
+<P>
+<P>For example, a DHCP client receiving an IP address on a class C subnet would 
+need an exports entry similar to this:
+<P>
+<P>
+<UL>
+<LI> <CODE>/path/on/server/to/nfs_root
+192.168.263.0/255.255.255.0(rw,no_root_squash,no_all_squash)</CODE></LI>
+</UL>
+<P>
+<P>The <CODE>no_root_squash</CODE> parameter allows the superuser (root) to be treated
+as such by the NFS server; otherwise <EM>root</EM> will be remapped to <EM>nobody</EM>
+and will generally be unable to do anything useful with the filesystem.  The
+<CODE>no_all_squash</CODE> parameter is similar but applies to non-root users.
+See the <CODE>exports(5)</CODE> man page for details.
+<P>
+<P>You will have to notify the NFS server after making any changes to the
+exports file.  Under Red Hat this can easily be done by typing
+<CODE>/etc/rc.d/init.d/nfs stop; /etc/rc.d/init.d/nfs start</CODE>.
+On other systems, a simple
+<CODE>/etc/rc.d/init.d/nfs restart</CODE> or even <CODE>exportfs -a</CODE> may
+suffice, while on older machines running the user-mode NFS daemon you may
+actually need to <CODE>killall -HUP rpc.mountd; killall -HUP rpc.nfsd</CODE>.
+(Do <EM>not</EM> <CODE>killall -HUP rpc.portmap</CODE>, however!)
+<P>
+<P>You may also need to edit <CODE>/etc/hosts.allow</CODE> and/or
+<CODE>/etc/hosts.deny</CODE> if tcp_wrappers are installed.  In particular,
+if the remote system (client) gets <EM>RPC: connection refused</EM> errors,
+<CODE>/etc/hosts.deny</CODE> probably contains <CODE>portmap: ALL</CODE> or <CODE>ALL: ALL</CODE>.
+To enable the client to use the server's portmapper, add a corresponding
+line to <CODE>/etc/hosts.allow</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+portmap: &lt;client-IP-number&gt;
+portmap: &lt;2nd-client-IP-number&gt;
+portmap: &lt;client-IP-network&gt;/&lt;client-IP-netmask&gt;
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>There is no need to restart anything in this case.  You can check by
+running <CODE>rpcinfo -p</CODE> on the NFS server and
+<CODE>rpcinfo -p <EM>NFS-server</EM></CODE> on a Linux client within the allowed
+range; the RPC services listed by both should match.
+<P>
+<P>In case of problems, check <CODE>/var/log/messages</CODE> and
+<CODE>/var/log/syslog</CODE> for errors (for example, run <CODE>tail -f
+/var/log/messages /var/log/syslog</CODE> and then try booting the client),
+and check your man pages (exports, exportfs, portmap, etc.).  As a last
+resort, a reboot of the NFS server may help, but that's a borderline
+Microsoftism...
+<P>
+<P>
+<H3>RARP setup</H3>
+
+<P>Set up the <EM>RARP</EM> somewhere on the net. If you boot without a
+nfsroot parameter, the <EM>RARP</EM> server has to be the <EM>NFS</EM>
+server. Usually this will be the <EM>NFS</EM> server. To do this, you
+will need to run a kernel with <EM>RARP</EM> support.
+<P>
+<P>To do this, execute (and install it somewhere in <CODE>/etc/rc.d</CODE> of
+the server!):
+<P>
+<P><CODE>/sbin/rarp -s &lt;<EM>ip-addr</EM>&gt; &lt;<EM>hardware-addr</EM>&gt;</CODE>
+<P>
+<P> where
+<DL>
+<DT><B>ip-addr</B><DD><P>is the IP address of the workstation, and
+<DT><B>hardware-addr</B><DD><P>is the ethernet address of the network card of
+the workstation.
+</DL>
+<P>
+<P>example: <CODE>/sbin/rarp -s 131.131.90.200 00:00:c0:47:10:12</CODE>
+<P>
+<P>You can also use a symbolic name instead of the IP address, as
+long the server is able to find out the IP address. (/etc/hosts
+or <EM>DNS</EM> lookups)
+<P>
+<H3>BOOTP setup</H3>
+
+<P>For <EM>BOOTP</EM> setup you need to edit <CODE>/etc/bootptab</CODE>. Please
+consult the <EM>bootpd(8)</EM> and <EM>bootptab(5)</EM> man pages.
+<P>
+<H3>DHCP setup</H3>
+
+<P>There is no need for the DHCP server to be the same as the NFS server,
+and in most cases, a DHCP server will already be set up.  If one is not,
+however, consult the DHCP mini-HOWTO for further help.
+<P>
+<H3>Finding out hardware addresses</H3>
+
+<P>I don't know the hardware address! How can I find it out?
+<UL>
+<LI> Boot the kernel disk you made, and watch for the line where
+the network card is recognized. It usually contains 6 hex
+bytes, that should be the address of the card.</LI>
+<LI> Boot the workstation with some OS with TCP/IP networking
+enabled. Then ping the workstation from the server. Look in
+the ARP-cache by executing:
+<CODE>/sbin/arp -a</CODE></LI>
+</UL>
+<P>
+<HR>
+<A HREF="NFS-Root-4.html">Next</A>
+<A HREF="NFS-Root-2.html">Previous</A>
+<A HREF="NFS-Root.html#toc3">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,516 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux PCMCIA HOWTO: Compilation and installation</TITLE>
+ <LINK HREF="PCMCIA-HOWTO-3.html" REL=next>
+ <LINK HREF="PCMCIA-HOWTO-1.html" REL=previous>
+ <LINK HREF="PCMCIA-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="PCMCIA-HOWTO-3.html">Next</A>
+<A HREF="PCMCIA-HOWTO-1.html">Previous</A>
+<A HREF="PCMCIA-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="compile"></A> <A NAME="s2">2. Compilation and installation</A></H2>
+
+<H2><A NAME="ss2.1">2.1 Prerequisites and kernel setup</A>
+</H2>
+
+<P>Before starting, you should think about whether you really need to
+compile the PCMCIA package yourself.  All common Linux distributions
+come with pre-compiled driver packages.  Generally, you only need to
+install the drivers from scratch if you need a new feature of the
+current drivers, or if you've updated and/or reconfigured your kernel
+in a way that is incompatible with the drivers included with your
+Linux distribution.  While compiling the package is not technically
+difficult, it does require some general Linux familiarity.
+<P>The following things should be installed on your system before you
+begin:
+<UL>
+<LI>A 2.0, 2.2, 2.4, or 2.6 series kernel source tree.</LI>
+<LI>An appropriate set of module utilities.</LI>
+<LI>(Optional) the ``XForms'' X11 user interface toolkit.</LI>
+</UL>
+<P>You need to have a complete linux source tree for your kernel, not
+just an up-to-date kernel image.  The driver modules contain some
+references to kernel source files.  While you may want to build a new
+kernel to remove unnecessary drivers, installing PCMCIA does not
+require you to do so.
+<P>Current ``stable'' kernel sources and patches are available from
+<A HREF="ftp://ftp.kernel.org/pub/linux/kernel/v2.4">ftp://ftp.kernel.org/pub/linux/kernel/v2.4</A>.  Current
+module utilities can be found in the same locations.  
+<P>In the Linux kernel source tree, the <CODE>Documentation/Changes</CODE>
+file describes the versions of all sorts of other system components
+that are required for that kernel release.  You may want to check
+through this and verify that your system is up to date, especially if
+you have updated your kernel.  If you are using a development kernel,
+be sure that you are using the right combination of shared libraries
+and module tools.
+<P>On x86 based systems, if you plan to use 16-bit PC Card devices, you
+should also enable <CODE>CONFIG_ISA</CODE>, for recent kernels.  These cards
+behave much like ISA devices, and the PCMCIA drivers use
+<CODE>CONFIG_ISA</CODE> to judge whether a platform supports ISA bus
+interrupts.
+<P>When configuring your kernel, if you plan on using a PCMCIA ethernet
+card, you should turn on networking support but turn off the normal
+Linux network card drivers, including the ``pocket and portable
+adapters''.  The PCMCIA network card drivers are all implemented as
+loadable modules.  Any drivers compiled into your kernel will only
+waste space.
+<P>If you want to use SLIP, PPP, or PLIP, you do need to either configure
+your kernel with these enabled, or use the loadable module versions of
+these drivers.
+<P>In order to use a PCMCIA token ring adapter, your kernel should be
+configured with ``Token Ring driver support'' (<CODE>CONFIG_TR</CODE>)
+enabled, though you should leave <CODE>CONFIG_IBMTR</CODE> off.
+<P>If you want to use a PCMCIA IDE adapter, your kernel should be
+configured with <CODE>CONFIG_BLK_DEV_IDE_PCMCIA</CODE> enabled, for 2.0.*
+kernels.  Newer kernels do not require a special configuration
+setting.
+<P>If you will be using a PCMCIA SCSI adapter, then enable
+<CODE>CONFIG_SCSI</CODE> when configuring your kernel.  Also, enable any top
+level drivers (SCSI disk, tape, cdrom, generic) that you expect to
+use.  All low-level drivers for particular host adapters should be
+disabled, as they will just take up space.
+<P>This package includes an X-based card status utility called
+<CODE>cardinfo</CODE>.  This utility is based on a freely distributed user
+interface toolkit called the XForms Library.  This library is
+available as a separate package with most Linux distributions.  If you
+would like to build <CODE>cardinfo</CODE>, you should install XForms and all
+the normal X header files and libraries before configuring the PCMCIA
+package.  This tool is completely optional.
+<P>
+<H2><A NAME="ss2.2">2.2 Kernel PCMCIA support</A>
+</H2>
+
+<P>
+<P>PCMCIA driver support is included in the 2.4 and later linux kernel
+trees.  While it shares most of the same code with the standalone
+PCMCIA driver package, there are some important differences.  The
+kernel PCMCIA support is also still evolving.
+<P>The kernel PCMCIA code has the same functionality as the driver side
+of the pcmcia-cs package.  It does not eliminate the need to install
+the pcmcia-cs package, since it requires the same user tools
+(<CODE>cardmgr</CODE>, <CODE>cardctl</CODE>, <CODE>/etc/pcmcia/*</CODE> files).  The
+drivers in pcmcia-cs can still be built for 2.4 kernels, so you 
+have a choice of using either the in-kernel PCMCIA drivers, or the
+drivers included in pcmcia-cs.  With 2.5 and later kernels, the
+standalone drivers cannot be used.
+<P>To use the kernel PCMCIA drivers, configure the kernel with
+<CODE>CONFIG_HOTPLUG</CODE>, <CODE>CONFIG_PCMCIA</CODE>, and usually
+<CODE>CONFIG_CARDBUS</CODE> enabled.  On x86 based systems, <CODE>CONFIG_ISA</CODE>
+should also be enabled.  The drivers can either be built into the
+kernel or built as modules.  PCMCIA client driver options are listed
+in their regular driver categories; thus, PCMCIA network drivers are
+in a submenu of network drivers, and PCMCIA serial drivers are in a
+submenu of character drivers.
+<P>In the standalone pcmcia-cs drivers, the <CODE>i82365</CODE> module supports
+both ISA-to-PCMCIA, PCI-to-PCMCIA, and PCI-to-CardBus bridges.  The
+CardBus socket driver in the 2.4 tree is the <CODE>yenta_socket</CODE> driver.
+It is selected by the <CODE>CONFIG_CARDBUS</CODE> option.  In your PCMCIA
+startup options, this driver should be specified in place of the
+<CODE>i82365</CODE> driver.  The kernel version of the <CODE>i82365</CODE> driver,
+selected by <CODE>CONFIG_I82365</CODE>, only supports ISA-to-PCMCIA bridges.
+PCI-to-PCMCIA bridges that are not CardBus capable, like the Cirrus
+PD6729, are not supported at all by the kernel PCMCIA drivers.
+<P>When compiling the standalone PCMCIA package, the Configure script
+decides whether or not to build any kernel modules by looking at the
+value of the <CODE>CONFIG_PCMCIA</CODE> option in your kernel configuration.
+If <CODE>CONFIG_PCMCIA</CODE> is enabled, then by default, no driver
+components are built.  If <CODE>CONFIG_PCMCIA</CODE> is disabled, then all the
+modules will be built and installed.  It is safe to compile the user
+tools (cardmgr, cardctl, etc) in a PCMCIA package whose version number
+differs from the PCMCIA version number in the kernel source tree.  The
+kernel PCMCIA header files take precedence over the ones included in
+the PCMCIA package, if <CODE>CONFIG_PCMCIA</CODE> is enabled.
+<P>
+<H2><A NAME="ss2.3">2.3 Installation</A>
+</H2>
+
+<P>Here is a synopsis of the installation process:
+<P>
+<UL>
+<LI>Unpack pcmcia-cs-3.2.?.tar.gz in /usr/src.</LI>
+<LI>Run ``<CODE>make config</CODE>'' in the new <CODE>pcmcia-cs-3.2.?</CODE> directory.</LI>
+<LI>Run ``<CODE>make all</CODE>'', then ``<CODE>make install</CODE>''.</LI>
+<LI>Customize the startup script and the option files in
+<CODE>/etc/pcmcia</CODE> for your site, if needed.</LI>
+</UL>
+<P>If you plan to install any contributed client drivers not included in
+the core PCMCIA distribution, unpack each of them in the top-level
+directory of the PCMCIA source tree.  Then follow the normal build
+instructions.  The extra drivers will be compiled and installed
+automatically.  
+<P>Running ``<CODE>make config</CODE>'' prompts for a few configuration options,
+and checks out your system to verify that it satisfies all
+prerequisites for installing PCMCIA support.  In most cases, you'll be
+able to just accept all the default configuration options.  Be sure to
+carefully check the output of this command in case there are problems.
+The following options are available:
+<P>
+<DL>
+<DT><B>Linux kernel source directory?</B><DD><P>This is the location of the source tree for the kernel you want to use
+with PCMCIA.  Often this is <CODE>/usr/src/linux</CODE>, but the default
+location depends on what Linux distribution you're using (or on where
+you've chosen to place your kernel source tree).
+<P>
+<DT><B>Build 'trusting' versions of card utilities?</B><DD><P>Some of the support utilities (<CODE>cardctl</CODE> and <CODE>cardinfo</CODE>) can be
+compiled either in ``safe'' or ``trusting'' forms.  The ``safe'' forms
+prevent non-root users from modifying card configurations.  The
+``trusting'' forms permit ordinary users to issue commands to suspend
+and resume cards, reset cards, and change the current configuration
+scheme.  The default is to build the safe forms.
+<P>
+<DT><B>Include 32-bit (CardBus) card support?</B><DD><P>This option must be selected if you wish to use 32-bit CardBus cards.
+It is not required for CardBus bridge support, if you only plan to use
+16-bit PC Cards.
+<P>
+<DT><B>Include PnP BIOS resource checking?</B><DD><P>This builds additional code into the PCMCIA core module to communicate
+with a system's PnP BIOS to obtain resource information for built-in
+``motherboard'' devices (serial and parallel ports, sound, etc), to
+help avoid resource conflicts.  If enabled, some extra resource files
+will be created under <CODE>/proc/bus/pccard</CODE>, and the <CODE>lspnp</CODE>
+and <CODE>setpnp</CODE> tools can be used to view and manipulate PnP BIOS
+devices.  However, this setting causes problems on some laptops and is
+not turned on by default.
+<P>
+<DT><B>Module install directory?</B><DD><P>The directory that new kernel modules will be installed into.
+Normally this should be the subdirectory of <CODE>/lib/modules</CODE> that
+matches your kernel version.
+<P>
+<DT><B>How to set kernel-specific options?</B><DD><P>There are a few kernel configuration options that affect the PCMCIA
+tools.  The configuration script can deduce these from the running
+kernel (the default and most common case).  Alternatively, if you are
+compiling for installation on another machine, it can read the
+configuration from a kernel source tree, or each option can be set
+interactively.
+<P>
+</DL>
+<P>The <CODE>Configure</CODE> script can also be executed non-interactively, for
+automatic builds or to quickly reconfigure after a kernel update.
+Some additional less-frequently-used options can be only be set from
+the command line.  Running ``<CODE>Configure --help</CODE>'' lists all
+available options.
+<P>Running ``<CODE>make all</CODE>'' followed by ``<CODE>make install</CODE>'' will build
+and then install the kernel modules and utility programs.  Kernel
+modules are installed under <CODE>/lib/modules/&lt;version&gt;/pcmcia</CODE>.
+The <CODE>cardmgr</CODE> and <CODE>cardctl</CODE> programs are installed in
+<CODE>/sbin</CODE>.  If <CODE>cardinfo</CODE> is built, it is installed in
+<CODE>/usr/bin/X11</CODE>.  
+<P>Configuration files will be installed in the <CODE>/etc/pcmcia</CODE>
+directory.  If you are installing over an older version, your old
+config scripts will be backed up before being replaced.  The saved
+scripts will be given an <CODE>*.O</CODE> extension.
+<P>If you don't know what kind of host controller your system uses, you
+can use the <CODE>pcic_probe</CODE> utility in the <CODE>cardmgr/</CODE>
+subdirectory to determine this.  There are several major types: the
+Databook TCIC-2 type and the Intel i82365SL-compatible type.  With the
+kernel PCMCIA subsystem, Intel compatible controllers are further
+subdivided into ISA-bus 16-bit bridges, and PCI-based CardBus bridges.
+<P>In a few cases, the <CODE>pcic_probe</CODE> command will be unable to determine
+your controller type automatically.  If you have a Halikan NBD 486
+system, it has a TCIC-2 controller at an unusual location: you'll need
+to edit <CODE>rc.pcmcia</CODE> to load the <CODE>tcic</CODE> module, and also set the
+<CODE>PCIC_OPTS</CODE> parameter to ``<CODE>tcic_base=0x02c0</CODE>''.
+<P>On some old pre-PCI systems using Cirrus controllers, including the
+NEC Versa M, the BIOS puts the controller in a special suspended state
+at system startup time.  On these systems, the <CODE>pcic_probe</CODE> command will
+fail to find any known host controller.  If this happens, edit
+<CODE>rc.pcmcia</CODE> and set <CODE>PCIC</CODE> to <CODE>i82365</CODE>, and <CODE>PCIC_OPTS</CODE> to
+``<CODE>wakeup=1</CODE>''.
+<P>
+<H2><A NAME="startup"></A> <A NAME="ss2.4">2.4 Startup options</A>
+</H2>
+
+<P>The PCMCIA startup script recognizes several groups of startup
+options, set via environment variables.  Multiple options should be
+separated by spaces and enclosed in quotes.  Placement of startup
+options depends on the Linux distribution used.  They may be placed
+directly in the startup script, or they may be kept in a separate
+option file.  See the 
+<A HREF="#distributions">Notes about specific Linux distributions</A> for specifics.  The following variables
+can be set: 
+<P>
+<DL>
+<DT><B><CODE>PCMCIA</CODE></B><DD><P>This variable specifies whether PCMCIA support should be started up,
+or not.  If it is set to anything other than ``yes'', then the startup
+script will be disabled.
+<DT><B><CODE>PCIC</CODE></B><DD><P>This identifies the PC Card Interface Controller driver module.  There
+are several options: ``tcic'', ``i82365'', and (for the kernel PCMCIA
+subsystem) ``yenta_socket''.  Virtually all current controllers are in
+the ``i82365'' group for the standalone drivers, and ``yenta_socket''
+for the kernel drivers.  This is the only mandatory option setting.
+<DT><B><CODE>PCIC_OPTS</CODE></B><DD><P>This specifies options for the PCIC module.  Some host controllers
+have optional features that may or may not be implemented in a
+particular system.  In some cases, it is impossible for the socket
+driver to detect if these features are implemented.  See the
+corresponding man page for a complete description of the available
+options. 
+<DT><B><CODE>CORE_OPTS</CODE></B><DD><P>This specifies options for the <CODE>pcmcia_core</CODE> module, which
+implements the core PC Card driver services.  See ``<CODE>man
+pcmcia_core</CODE>'' for more information.
+<DT><B><CODE>CARDMGR_OPTS</CODE></B><DD><P>This specifies options to be passed to the <CODE>cardmgr</CODE> daemon.  See
+``<CODE>man cardmgr</CODE>'' for more information.
+<DT><B><CODE>SCHEME</CODE></B><DD><P>If set, then the PC Card configuration scheme will be initialized to
+this at driver startup time.  See the 
+<A HREF="PCMCIA-HOWTO-4.html#config">Overview of the PCMCIA configuration scripts</A> for a discussion of schemes.
+</DL>
+<P>The low level socket drivers, <CODE>tcic</CODE> and <CODE>i82365</CODE>, have various
+bus timing parameters that may need to be adjusted for certain systems
+with unusual bus clocking.  Symptoms of timing problems can include
+card recognition problems, lock-ups under heavy loads, high error
+rates, or poor device performance.  Only certain host bridges have
+adjustable timing parameters: check the corresponding man page to see
+what options are available for your controller.  Here is a brief
+summary:
+<P>
+<UL>
+<LI>ISA-bus Cirrus controllers have numerous configurable timing
+parameters.  The most important seems to be the <CODE>cmd_time</CODE> flag,
+which determines the length of PCMCIA bus cycles.  Fast 486 systems
+(i.e., DX4-100) seem to often benefit from increasing this from 6 (the
+default) to 12 or 16.</LI>
+<LI>The Cirrus PD6729 PCI controller has the <CODE>fast_pci</CODE> flag, which
+should be set if the PCI bus speed is greater than 25 MHz.</LI>
+<LI>For Vadem VG-468 controllers, the <CODE>async_clock</CODE> flag changes the
+relative clocking of PCMCIA bus and host bus cycles.  Setting this
+flag adds extra wait states to some operations.  However, I have yet
+to hear of a laptop that needs this.</LI>
+<LI>The <CODE>pcmcia_core</CODE> module has the <CODE>cis_speed</CODE> parameter for
+changing the memory speed used for accessing a card's Card Information
+Structure (CIS).  On some systems, increasing this parameter (i.e.,
+slowing down card accesses) may fix card recognition problems.</LI>
+<LI>Another <CODE>pcmcia_core</CODE> parameter, <CODE>io_speed</CODE>, can be used to slow
+down accesses to IO cards.  It may help in certain cases with systems
+that have out-of-spec PCMCIA bus timing.</LI>
+<LI>This is not a timing issue, but if you have more than one ISA-to-PCMCIA
+controller in your system or extra sockets in a laptop docking station,
+the <CODE>i82365</CODE> module should be loaded with the <CODE>extra_sockets</CODE>
+parameter set to 1.  This should not be necessary for detection of
+PCI-to-PCMCIA or PCI-to-CardBus bridges.</LI>
+</UL>
+<P>Here are some timing settings for a few old systems:
+<P>
+<UL>
+<LI>On the ARM Pentium-90 or Midwest Micro Soundbook Plus, use
+``<CODE>freq_bypass=1 cmd_time=8</CODE>''.</LI>
+<LI>On a Compaq Presario 1220, try ``<CODE>setup_time=1</CODE>''.</LI>
+<LI>On a Midwest Micro Soundbook Elite, use ``<CODE>cmd_time=12</CODE>''.</LI>
+<LI>On a Gateway Liberty, try ``<CODE>cmd_time=16</CODE>''.</LI>
+<LI>On a Samsung SENS 810, use ``<CODE>fast_pci=1</CODE>''.</LI>
+</UL>
+<P>
+<H3>Card readers for desktop systems</H3>
+
+<P>While almost all PCMCIA card readers and card docks work fine under
+Linux, some require special startup options because they do not behave
+exactly like laptop PCMCIA bridges.  PCI card readers, in particular,
+may handle interrupts differently.  Some of the following parameter
+settings are only available for the <CODE>i82365</CODE> module in the
+standalone drivers; the kernel's <CODE>yenta_socket</CODE> driver is not
+configurable.
+<P>
+<UL>
+<LI>The Linksys ProConnect PCMRDWR and Antec DataChute ISA card readers
+are ``ISA Plug and Play'' devices.  To use these, you must first
+activate them with the Linux isapnp tools.  See the man pages for
+<CODE>pnpdump</CODE> and <CODE>isapnp</CODE> for more information.</LI>
+<LI>For Chase CardPORT and Altec ISA card readers using the Cirrus PD6722
+ISA-to-PCMCIA bridge, the <CODE>i82365</CODE> driver should be loaded with a
+``<CODE>has_ring=0</CODE>'' parameter to prevent irq 15 conflicts.</LI>
+<LI>For Elan P-series PCI card readers based on the Cirrus PD6729
+PCI-to-PCMCIA bridge chip, the <CODE>i82365</CODE> driver requires a
+``<CODE>irq_mode=1</CODE>'' parameter.</LI>
+<LI>For the Sycard PCChost1200 host adapter, the <CODE>i82365</CODE> driver
+requires a ``<CODE>p2cclk=1</CODE>'' parameter.</LI>
+<LI>For the Alex Electronics PCICBI host adapter based on the TI 1221
+bridge, the <CODE>i82365</CODE> driver requires ``<CODE>p2cclk=1 irq_mode=0</CODE>''
+as well as PCMCIA driver release 3.1.23 or later.</LI>
+<LI>With SCM Microsystems SBP series PCI card readers (which are also
+being distributed with Lucent WaveLAN IEEE cards), and for the
+Synchrotech PCM-CR-PC2IF and PCM-CR-PC2IR, it is necessary to
+specify ``<CODE>irq_mode=0</CODE>'' for the <CODE>i82365</CODE> module, to force use
+of PCI interrupts.</LI>
+<LI>For the ActionTec PC 750 card reader, and for the Antec Datachute PCI
+card reader, the <CODE>i82365</CODE> driver requires a ``<CODE>irq_list=0</CODE>''
+parameter, to indicate that ISA interrupts are unavailable.</LI>
+<LI>The PLX Technologies PCI9052 (also sold as the Linksys WDT11) is not a
+general purpose PCMCIA card reader at all: it is a PCI interface card
+for use with certain wireless adapters, that makes them look like
+ordinary PCI devices.  These devices are not supported.</LI>
+</UL>
+<P>
+<H2><A NAME="ss2.5">2.5 System resource settings</A>
+</H2>
+
+<P>Card Services should automatically avoid allocating IO ports and
+interrupts already in use by other standard devices.  It will also
+attempt to detect conflicts with unknown devices, but this is not
+completely reliable.  In some cases, you may need to explicitly
+exclude resources for a device in <CODE>/etc/pcmcia/config.opts</CODE>.
+<P>Here are some resource settings for specific laptop types.  View this
+list with suspicion: it may give useful hints for solving problems,
+but it is inevitably out of date and certainly contains mistakes.
+Corrections and additions are welcome. 
+<P>
+<UL>
+<LI>On the AMS SoundPro, exclude irq 10.</LI>
+<LI>On some AMS TravelPro 5300 models, use memory 0xc8000-0xcffff.</LI>
+<LI>On the BMX 486DX2-66, exclude irq 5, irq 9.</LI>
+<LI>On the Chicony NB5, use memory 0xda000-0xdffff.</LI>
+<LI>On the Compaq Presario 900Z, exclude port 0x3b0-0x3bb.</LI>
+<LI>On the Compaq Presario 1020, exclude port 0x2f8-0x2ff, irq 3, irq 5.</LI>
+<LI>On the Compaq Presario 2120EA, exclude irq 10.</LI>
+<LI>On the Dell Inspiron 7000, exclude irq 3, irq 5.</LI>
+<LI>On the Dell Inspiron 8000, exclude port 0x800-0x8ff.</LI>
+<LI>On the Fujitsu C series, exclude port 0x200-0x27f.</LI>
+<LI>On the HP Omnibook 4000C, exclude port 0x300-0x30f.</LI>
+<LI>On the HP Omnibook 4100, exclude port 0x220-0x22f.</LI>
+<LI>On the IBM ThinkPad 380, and maybe the 385 and 600 series, exclude
+port 0x230-0x233, and irq 5.</LI>
+<LI>On IBM ThinkPad 600 and 770 models with internal modems, exclude port
+0x2f8-0x2ff.</LI>
+<LI>On the IBM ThinkPad 600E and 770Z, change the high memory window to
+0x60000000-0x60ffffff.</LI>
+<LI>On the Micron Millenia Transport, exclude irq 5, irq 9.</LI>
+<LI>On the NEC Versa M, exclude irq 9, port 0x2e0-2ff.</LI>
+<LI>On the NEC Versa P/75, exclude irq 5, irq 9.</LI>
+<LI>On the NEC Versa S, exclude irq 9, irq 12.</LI>
+<LI>On the NEC Versa 6000 series, exclude port 0x2f8-0x33f, irq 9, irq 10.</LI>
+<LI>On the NEC Versa SX, exclude port 0x300-0x31f.</LI>
+<LI>On the ProStar 9200, Altima Virage, and Acquiline Hurricane DX4-100,
+exclude irq 5, port 0x330-0x35f.  Maybe use memory 0xd8000-0xdffff.</LI>
+<LI>On the Siemens Nixdorf SIMATIC PG 720C, use memory 0xc0000-0xcffff,
+port 0x300-0x3bf.</LI>
+<LI>On the TI TravelMate 5000, use memory 0xd4000-0xdffff.</LI>
+<LI>On the Toshiba Satellite 4030CDS, exclude irq 9.</LI>
+<LI>On the Toshiba T4900 CT, exclude irq 5, port 0x2e0-0x2e8, port
+0x330-0x338.</LI>
+<LI>On the Toshiba Tecra 8000, exclude irq 3, irq 5, irq 9.</LI>
+<LI>On the Twinhead 5100, HP 4000, Sharp PC-8700 and PC-8900, exclude
+irq 9 (sound), irq 12.</LI>
+<LI>On an MPC 800 Series, exclude irq 5, port 0x300-0x30f for the CD-ROM.</LI>
+</UL>
+<P>
+<H3>PowerBook specific settings</H3>
+
+<P>On PowerPC based PowerBook systems, the default system resources in
+<CODE>/etc/pcmcia/config.opts</CODE> file are no good at all.  Replace all
+the IO port and window definitions with something like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+include port 0x100-0x4ff, port 0x1000-0x17ff
+include memory 0x80000000-0x80ffffff
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="distributions"></A> <A NAME="ss2.6">2.6 Notes about specific Linux distributions</A>
+</H2>
+
+<P>This section is incomplete.  Corrections and additions are welcome.
+<P>
+<H3>Debian</H3>
+
+<P>Debian uses a System V boot script arrangement.  The PCMCIA startup
+script is installed as <CODE>/etc/init.d/pcmcia</CODE>.  New packages use
+<CODE>/etc/default/pcmcia</CODE> for startup options; older versions used
+<CODE>/etc/pcmcia.conf</CODE> for this purpose.  Debian's syslog
+configuration will place kernel messages in <CODE>/var/log/messages</CODE>
+and <CODE>cardmgr</CODE> messages in <CODE>/var/log/daemon.log</CODE>.
+<P>Debian distributes the PCMCIA system in two packages: the
+``<CODE>pcmcia-cs</CODE>'' package contains <CODE>cardmgr</CODE> and other tools, man
+pages, and configuration scripts; and the ``<CODE>pcmcia-modules</CODE>''
+package contains the kernel driver modules.
+<P>Starting with 3.1.25, a clean PCMCIA install will identify Debian
+systems and create a special <CODE>network.opts</CODE> file that, in the
+absence of other network configuration settings, uses Debian's
+<CODE>ifup</CODE> and <CODE>ifdown</CODE> commands to configure a network card based
+on settings in <CODE>/etc/network/interfaces</CODE>.
+<P>
+<H3>Red Hat, Caldera, Mandrake</H3>
+
+<P>These distributions use a System V boot script organization.  The
+PCMCIA startup script is installed as
+<CODE>/etc/rc.d/init.d/pcmcia</CODE>, and boot options are kept in
+<CODE>/etc/sysconfig/pcmcia</CODE>.  Beware that installing the Red Hat
+package may install a default boot option file that has PCMCIA
+disabled.  To enable PCMCIA, the ``<CODE>PCMCIA</CODE>'' variable should be
+set to ``<CODE>yes</CODE>''.  Red Hat's default <CODE>syslogd</CODE> configuration will
+record all interesting messages in <CODE>/var/log/messages</CODE>.
+<P>Red Hat's PCMCIA package contains a replacement for the network setup
+script, <CODE>/etc/pcmcia/network</CODE>, which meshes with the Red Hat
+<CODE>linuxconf</CODE> configuration system.  This is convenient for the case
+where just one network adapter is used, with one set of network
+parameters, but does not have the full flexibility of the regular
+PCMCIA network script.  Compiling and installing a clean PCMCIA source
+distribution will overwrite the network script, breaking the link to
+the Red Hat tools.  If you prefer using the Red Hat tools, either use
+only Red Hat RPM's, or replace <CODE>/etc/pcmcia/network.opts</CODE> with
+the following:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+if [ -f /etc/sysconfig/network-scripts/ifcfg-$2 ] ; then
+    start_fn () {
+        . /etc/sysconfig/network-scripts/ifcfg-$1
+        if [ "$ONBOOT" = "yes" ] ; then /sbin/ifup $1 ; fi
+    }
+    stop_fn () {
+        /sbin/ifdown $1
+    }
+fi
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Starting with the 3.1.22 release, the PCMCIA installation script will
+automatically append a variant of this to the default
+<CODE>network.opts</CODE> file, so this problem should no longer be an issue.
+<P>If you do use <CODE>linuxconf</CODE> (or <CODE>netconf</CODE>) to configure your
+network interface, leave the ``kernel module'', ``I/O port'', and
+``irq'' parameters blank.  Setting these parameters may interfere with
+proper operation of the PCMCIA subsystem.
+<P>At boot time, when the Red Hat network subsystem starts up, it may say
+``Delaying eth0 initialization'' and ``[FAILED]''.  This is actually
+not a failure: it means that this network interface will not be
+initialized until after the PCMCIA network device is configured.
+<P>Red Hat bundles their slightly modified PCMCIA source distribution
+with their kernel sources, rather than as a separate source package.
+When preparing to build a new set of PCMCIA drivers, you will
+generally want to install Red Hat's kernel-source RPM
+(<CODE>kernel-source-*.i386.rpm</CODE>), and not the kernel SRPM
+(<CODE>kernel-*.src.rpm</CODE>).  The SRPM is tailored for building their
+kernel RPM files, which is not exactly what you want.  With Red Hat
+7.0, the kernel-source RPM also includes a mis-configured PCMCIA
+source tree; if you want to use it, delete their PCMCIA config.out
+file and re-do "make config".
+<P>
+<H3>Slackware</H3>
+
+<P>Slackware uses a BSD boot script arrangement.  The PCMCIA startup
+script is installed as <CODE>/etc/rc.d/rc.pcmcia</CODE>, and boot options
+are specified in <CODE>rc.pcmcia</CODE> itself.  The PCMCIA startup script
+is invoked from <CODE>/etc/rc.d/rc.S</CODE>.
+<P>
+<H3>SuSE</H3>
+
+<P>SuSE uses a System V init script arrangement, with init scripts stored
+under <CODE>/etc/init.d</CODE>.  The PCMCIA startup script is installed as
+<CODE>/etc/init.d/pcmcia</CODE>, and startup options are kept in
+<CODE>/etc/rc.config</CODE>.  Before release 7.0, init scripts were kept
+under <CODE>/sbin/init.d</CODE>.  In early SuSE releases (pre-5.3), the
+PCMCIA startup script was somewhat limited and did not allow PCMCIA
+startup variables to be overridden from the <CODE>lilo</CODE> boot prompt.
+<P>SuSE 8.0 includes both the standalone PCMCIA modules, and the 2.4
+kernel PCMCIA subsystem modules.  A new variable, <CODE>PCMCIA_SYSTEM</CODE>,
+is available in <CODE>/etc/sysconfig/pcmcia</CODE> to choose between
+these.  It can be set to either ``kernel'' or ``external''.
+<P>To look up current PCMCIA issues in SuSE's support database, go to
+<A HREF="http://sdb.suse.de/cgi-bin/sdbsearch_en.cgi?stichwort=PCMCIA">http://sdb.suse.de/cgi-bin/sdbsearch_en.cgi?stichwort=PCMCIA</A>.
+<P>
+<HR>
+<A HREF="PCMCIA-HOWTO-3.html">Next</A>
+<A HREF="PCMCIA-HOWTO-1.html">Previous</A>
+<A HREF="PCMCIA-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,867 @@
+<HTML
+><HEAD
+><TITLE
+>Building a Custom Kernel</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Administration Made Easy"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Upgrading Linux and Other Applications"
+HREF="upgrading-linux.html"><LINK
+REL="PREVIOUS"
+TITLE="Upgrading a Red Hat Stock Kernel"
+HREF="kernel-upgrade.html"><LINK
+REL="NEXT"
+TITLE="Moving to the Linux 2.2.x Kernels"
+HREF="linux-2.2.x.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Administration Made Easy</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="kernel-upgrade.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 10. Upgrading Linux and Other Applications</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="linux-2.2.x.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="KERNEL-CUSTOM"
+>10.6. Building a Custom Kernel</A
+></H1
+><P
+>If you are running Linux on a system with hardware or wish to use
+features not supported in the stock kernels, or perhaps you wish to reduce
+the kernel memory footprint to make better use of your system memory, you
+may find it necessary to build your own custom kernel.</P
+><P
+>Upgrading the kernel involves configuring desired modules,
+compiling the kernel and modules, and finally installing the kernel
+image.  This is followed by a system reboot (with fingers crossed!)  to
+load the new kernel.  All of this is documented in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>README</TT
+></TT
+>'' file which comes with
+each kernel package.  Further information can be found in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>Documentation/</TT
+></TT
+>'' subdirectory.  
+A particularly helpful file there is
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>Configure.help</TT
+></TT
+>'' which contains
+detailed information on the available kernel compile options and
+modules.</P
+><P
+>The following is a sample session demonstrating the build of a
+custom kernel, version 2.0.36 on the Intel platform.  While building a
+custom kernel is usually just a matter of configuring, compiling &#38;
+installing, sometimes (usually in the case of new hardware) it is
+necessary to download additional driver software should your hardware not
+yet be supported by the kernel version you are compiling.</P
+><P
+>The first step in building a custom kernel is to download and
+install the kernel sources from either RPM (preferred) or from tarball.  
+See <A
+HREF="linux-kernel-upgrades.html"
+>Section 10.4</A
+> for details on obtaining the
+appropriate files.</P
+><P
+>Next, use the ``<TT
+CLASS="LITERAL"
+>rpm</TT
+>'' utility (or
+``<TT
+CLASS="LITERAL"
+>tar</TT
+>'', as appropriate) to install the kernel source
+tree and header files.  For example, to install the 2.0.36-3 kernel RPM
+files:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>rpm -Uvh kernel-source-2.0.36-3.i386.rpm kernel-headers-2.0.36-3.i386.rpm</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>rpm -Uvh kernel-ibcs-2.0.36-3.i386.rpm</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>(If you are running Linux on a notebook, you would also likely
+install the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>kernel-pcmcia-cs-2.0.36-3.i386.rpm</TT
+></TT
+>''
+file, which provides power management features.)</P
+><P
+>After installing the kernel files, you should be able to find the
+new source tree in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/usr/src/linux/</TT
+></TT
+>''
+directory.</P
+><P
+>The next step is to download any additional driver files (if
+applicable) and install them in the new kernel source tree.  For example,
+to add support for the Mylex DAC960 hardware RAID controller, I would
+download the driver software from the <A
+HREF="http://www.dandelion.com/"
+TARGET="_top"
+> http://www.dandelion.com/</A
+> web
+site.  Unfortunately, such driver software are usually only offered as
+tarballs and need to be installed using the ``<TT
+CLASS="LITERAL"
+>tar</TT
+>''
+utility.  For example:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>cd /usr/src/</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>tar zxvpf DAC960-2.0.0-Beta4.tar.gz</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>You should read the documentation provided with your additional
+driver software, if applicable.  For example, the DAC960 driver includes
+a ``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>README</TT
+></TT
+>'' file which gives
+instructions on where the newly downloaded files should be located, and
+how to apply the kernel patch:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>mv README.DAC960 DAC960.[ch] /usr/src/linux/drivers/block</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>patch -p0 &#60; DAC960.patch</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>The next step is to ensure your system's symbolic file links are
+consistent with the new kernel tree.  Actually, this step only needs to be
+done once, so the following needs to be done only if you haven't compiled
+a custom kernel before:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>mail:/usr/src#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>cd /usr/include</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/usr/include#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>rm -rf asm linux scsi</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/usr/include#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ln -s /usr/src/linux/include/asm-i386 asm</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/usr/include#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ln -s /usr/src/linux/include/linux linux</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/usr/include#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ln -s /usr/src/linux/include/scsi scsi</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>Note: The above step is no longer necessary for 2.2.x or
+higher kernel versions.</P
+></BLOCKQUOTE
+></DIV
+><P
+>The next step is to configure your kernel settings.  This is the
+most important step in building the custom kernel.  If you disable the
+wrong settings, you may leave out support for features or hardware you
+need. However, if you <EM
+>enable</EM
+> the wrong settings, you
+will be needlessly enlarging the kernel and wasting your valuable system
+memory (that being said, it is probably better to err on the side of the
+latter rather than the former).</P
+><P
+>The best way of ensuring you compile the kernel properly is to know
+what features you will need to use, and what hardware is in your system
+that you will require support for.  After you have gained experience in
+customizing your kernel a few times, the process will become <SPAN
+CLASS="QUOTE"
+>"old
+hat"</SPAN
+> and won't seem so intimidating!</P
+><P
+>Type the following to begin the configuration process:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>mail:/usr/include#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>cd /usr/src/linux</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/usr/src/linux#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>make mrproper</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/usr/src/linux#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>make menuconfig</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>(You could type ``<TT
+CLASS="LITERAL"
+>make xconfig</TT
+>'' instead of
+``<TT
+CLASS="LITERAL"
+>make menuconfig</TT
+>'' if you have the X Window System
+running; see <A
+HREF="xwindows-configuration.html"
+>Chapter 5</A
+> for details on how
+to get X working.)</P
+><P
+>To configure your kernel, go through the various settings and select
+(enable) whichever ones you require, and de-select (disable) the ones you
+do not require.  You can choose between having such support built right
+into the kernel, or having it built as a module which is loaded and
+unloaded by the kernel as needed.  (If you compile a feature that is
+actually needed to boot your system, such as a SCSI driver, as a module,
+you will need to create a RAMdisk image or your system will not boot. This
+is done with the ``<TT
+CLASS="LITERAL"
+>mkinitrd</TT
+>'' command; this procedure is
+described a little further down.)</P
+><P
+>When going through the configuration settings, you can select
+<TT
+CLASS="LITERAL"
+>&#60;Help&#62;</TT
+> for a description of what a given kernel
+option is for.</P
+><P
+>After you have configured your kernel settings, type the following
+commands to compile your kernel:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>mail:/usr/src/linux#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>make dep ; make clean</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/usr/src/linux#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>make bzImage</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/usr/src/linux#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>make modules</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>If you are <EM
+>recompiling</EM
+> the same kernel as you
+have previously (2.0.36-3 in this example), you will likely want to move
+the existing modules to a backup directory as with the following
+command:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>mail:/usr/src/linux#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>mv /lib/modules/2.0.36-3 /lib/modules/2.0.36-3-backup</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>Now, type the following command to actually install the new
+modules:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>mail:/usr/src/linux#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>make modules_install</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>The next step is to copy the kernel into the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/boot/</TT
+></TT
+>'' directory and use LILO
+to update the boot record so that the new kernel is recognized.  The
+following commands will make a backup copy of your existing kernel, copy
+the new kernel over, and then refresh the LILO boot record:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>mail:/usr/src/linux#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>cd /boot</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/boot#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>cp vmlinuz vmlinuz.OLD</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/boot#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>cp /usr/src/linux/arch/i386/boot/bzImage vmlinuz-2.0.36</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>mail:/boot#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>/sbin/lilo</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>Finally, you will need to edit your
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+></TT
+>'' file, and make
+sure the <SPAN
+CLASS="QUOTE"
+>"image"</SPAN
+> reference is pointing to the new kernel.
+You should also add a section which points to your backup kernel, called,
+perhaps, <SPAN
+CLASS="QUOTE"
+>"OldLinux"</SPAN
+>.  Here is an example file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>boot=/dev/hda
+map=/boot/map
+install=/boot/boot.b
+prompt
+timeout=50
+image=/boot/vmlinuz
+	label=Linux
+	root=/dev/hdb1
+	read-only
+image=/boot/vmlinuz.OLD
+	label=OldLinux
+        read-only</PRE
+></TD
+></TR
+></TABLE
+><P
+>By adding your backup kernel information in this way, should your
+new kernel fail to boot properly (perhaps a device is not recognized, or
+a daemon doesn't start as it should), you can simply type
+``<TT
+CLASS="LITERAL"
+>OldLinux</TT
+>'' to boot from the old kernel and
+investigate the problem.</P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>Note: As mentioned previously, if you've compiled a feature required
+to boot your system as a module, you will need to create an initial
+RAMdisk image in order to boot your system.  (Don't forget to compile your
+kernel with support for such an initial boot image.)</P
+></BLOCKQUOTE
+></DIV
+><P
+>The procedure to create and use an initial RAMdisk image is as
+follows:</P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Add an entry in your
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+></TT
+>'' to boot off
+the initial RAMdisk image; this is shown as an addition to the example
+configuration file shown earlier:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>image=/boot/vmlinuz
+        label=Linux
+        root=/dev/hdb1
+        initrd=/boot/initrd-2.2.4-4.img
+        read-only</PRE
+></TD
+></TR
+></TABLE
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>The loopback device needs to be loaded before you are able
+to use the mkinitrd command.  Make sure the loopback device module is
+loaded:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>/sbin/insmod loop</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>(If you get an error message about not being able to load the
+loopback module, you may need to specify the full path to the module for
+the <EM
+>current</EM
+> kernel your system is still running on,
+for example
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/lib/modules/2.0.35/loop</TT
+></TT
+>''.)</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Use the ``<TT
+CLASS="LITERAL"
+>mkinitrd</TT
+>'' command to
+actually create the image:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>/sbin/mkinitrd /boot/initrd-2.0.36-3.img 2.0.36-3</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+>Run ``<TT
+CLASS="LITERAL"
+>/sbin/lilo</TT
+>'' to update your boot
+loader.</P
+></LI
+></UL
+><P
+>Now, shut down your system and boot the new kernel!</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>mail:/boot#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>/sbin/shutdown -r now</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>If your kernel refuses to boot altogether, don't panic.  Boot off the boot
+disk that was created during the installation of Linux .  If you don't
+have copies of this disks, you should be able to create one from the Red
+Hat CD.  Insert the boot diskette into the drive and reboot the computer.  
+When you see the <SPAN
+CLASS="QUOTE"
+>"boot:"</SPAN
+> prompt, type:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>mount root=/dev/hda1</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>The above command assumes your <SPAN
+CLASS="QUOTE"
+>"/"</SPAN
+> (root) partition is
+located on /dev/hda1.</P
+><P
+>Linux should then boot normally (although since you are using the
+kernel from the boot disk, not all services or devices may operate
+properly for this session), and then you can restore your old kernel and
+reinstall the LILO boot loader information (ie. ``<TT
+CLASS="LITERAL"
+>mv /vmlinuz.old
+/vmlinuz ; /sbin/lilo</TT
+>'') and shutdown/restart.  You can then try
+recompiling the kernel with different options and try again.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="kernel-upgrade.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="linux-2.2.x.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Upgrading a Red Hat Stock Kernel</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="upgrading-linux.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Moving to the Linux 2.2.x Kernels</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

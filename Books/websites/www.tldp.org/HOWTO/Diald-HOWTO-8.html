@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Diald Howto: Connecting a proxy/firewall to an ISP using a modem and PPP</TITLE>
+ <LINK HREF="Diald-HOWTO-9.html" REL=next>
+ <LINK HREF="Diald-HOWTO-7.html" REL=previous>
+ <LINK HREF="Diald-HOWTO.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Diald-HOWTO-9.html">Next</A>
+<A HREF="Diald-HOWTO-7.html">Previous</A>
+<A HREF="Diald-HOWTO.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. Connecting a proxy/firewall to an ISP using a modem and PPP</A></H2>
+
+<P>
+<P>Connecting a private net to the Internet with dedicated server which
+handles packet routing from the local network to the Internet along with
+proxy/caching services and security firewalling is a complex theme that is
+beyond the scope of this document. There are other «Howto» documents that
+handle these topics much more comprehensively. At the end of this
+document you can find a list of links and references to such documents.
+<P>Here, we are only configuring <EM>Diald</EM> supposing that the computer
+already uses IP-Masquerading, has a web proxy like <EM>Squid</EM> or similar
+working, an ISP connection correctly configured and that access security
+to TCP/UDP ports have been revised (<CODE>/etc/inetd.conf</CODE> file and
+others like <CODE>securetty</CODE>, <CODE>host.allow</CODE>, etc).  
+<P>Basically, the only need is to reconfigure the rules for
+masquerading/filtering/accessing each time the set of interfaces change,
+that is, when the interface ppp0 is stablished and when it is deleted. A
+good location to do that are the ip-up and ip-down scripts from <EM>pppd</EM>.
+<P>
+<H2><A NAME="ss8.1">8.1 Example for Debian 2.1</A>
+</H2>
+
+<P>
+<P>With Debian, it is sufficient to install the <EM>ipmasq</EM> package answering
+that you want to change rules sinchronously with <EM>pppd</EM> when seting it
+up. Two scripts will be created inside <CODE>/etc/ppp/ip-up.d</CODE> and
+<CODE>/etc/ppp/ip-down.d</CODE> directories to call <CODE>/sbin/ipmasq</CODE>, a
+script that analizes existing interfaces and makes a simple configuration
+that is valid in many cases, but you can personalize it using rule files
+in <CODE>/etc/ipmasq/rules</CODE>.  
+<P>The only correction after installing this package is to change when the
+startup script for <EM>ipmasq</EM> is run, deleting the symbolic link from
+<CODE>/etc/rcS.d</CODE> and creating a new one in <CODE>/etc/rc2.d</CODE> to run
+it after <CODE>S20diald</CODE>. Now, when <CODE>ipmasq</CODE> is executed to analyze
+interfaces <CODE>sl0</CODE> already exist. <CODE>S90ipmasq</CODE> is a good name for this
+symbolic link to <CODE>/etc/init.d/ipmasq</CODE>.
+<P>Using Debian there is no need to worry about the kernel version, as the
+<CODE>/sbin/ipmasq</CODE> script uses <CODE>ipfwadm</CODE> or <CODE>ipchains</CODE> as
+needed.
+<P>
+<H2><A NAME="ss8.2">8.2 Example for Suse 6.1</A>
+</H2>
+
+<P>
+<P>This example is from Mr Cornish Rex, <CODE>
+<A HREF="mailto:troll@tnet.com.au">troll@tnet.com.au</A></CODE>.
+<P>The following ip-masp and routing control commands are for use with
+version 2.2 kernels, using ipchains, but they are not valid for version
+2.0 kernels.
+<P>We are going to supose that the ethernet interface has the 192.168.1.1 ip
+address with 16 bit netmask, that is, 255.255.0.0.
+<P>This is the <CODE>/etc/ppp/ip-up</CODE> file:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/sh
+# $1 = Interface
+# $2 = Tty device
+# $3 = speed
+# $4 = local ip
+# $5 = remote ip
+# $6 = ipparam
+/sbin/ipchains -F input
+/sbin/ipchains -P input DENY
+/sbin/ipchains -A input -j ACCEPT -i eth0 -s 192.168.0.0/16 -d 0.0.0.0/0
+/sbin/ipchains -A input -j DENY -p udp -i $1 -s 0.0.0.0/0 -d $4/32 0:52 -l
+/sbin/ipchains -A input -j DENY -p udp -i $1 -s 0.0.0.0/0 -d $4/32 54:1023 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 0:112 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 114:1023 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 6000:6010 -l
+/sbin/ipchains -A input -j DENY -p icmp --icmp-type echo-request \
+-i $1 -s 0.0.0.0/0 -l
+/sbin/ipchains -A input -j DENY -p icmp -f -i $1 -s 0.0.0.0/0 -l
+/sbin/ipchains -A input -j DENY -p udp -i $1 -s 0.0.0.0/0 -d $4/32 5555 -l
+/sbin/ipchains -A input -j DENY -p udp -i $1 -s 0.0.0.0/0 -d $4/32 8000 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 8000 -l
+/sbin/ipchains -A input -j DENY -p udp -i $1 -s 0.0.0.0/0 -d $4/32 6667 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 6667 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 4557 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 4559 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 4001 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 2005 -l
+/sbin/ipchains -A input -j DENY -p tcp -i $1 -s 0.0.0.0/0 -d $4/32 6711 -l
+/sbin/ipchains -A input -j DENY -i $1 -s 192.168.0.0/16 -d 0.0.0.0/0 -l
+/sbin/ipchains -A input -j ACCEPT -i $1 -s 0.0.0.0/0 -d $4/32
+/sbin/ipchains -A input -j ACCEPT -i lo -s 0.0.0.0/0 -d 0.0.0.0/0
+/sbin/ipchains -A input -j DENY -s 0.0.0.0/0 -d 0.0.0.0/0 -l
+
+/sbin/ipchains -F output
+/sbin/ipchains -P output DENY
+/sbin/ipchains -A output -j ACCEPT -i eth0 -s 0.0.0.0/0 -d 192.168.0.0/16
+/sbin/ipchains -A output -j DENY -i $1 -s 192.168.0.0/16 -d 0.0.0.0/0 -l
+/sbin/ipchains -A output -j ACCEPT -i $1 -s $4/32 -d 0.0.0.0/0
+/sbin/ipchains -A output -j ACCEPT -i lo -s 0.0.0.0/0 -d 0.0.0.0/0
+/sbin/ipchains -A output -j DENY -s 0.0.0.0/0 -d 0.0.0.0/0
+
+/sbin/ipchains -F forward
+/sbin/ipchains -P forward DENY
+/sbin/ipchains -M -S 120 120 120
+/sbin/ipchains -A forward -j MASQ -s 192.168.1.0/24 
+/sbin/ipchains -A forward -j DENY -s 0.0.0.0/0 -d 0.0.0.0/0
+
+exit 0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This is the <CODE>/etc/ppp/ip-down</CODE> file:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/sh
+# $1 = Interface
+# $2 = Tty device
+# $3 = Speed
+# $4 = Local ip
+# $5 = Remote ip
+/sbin/ipchains -F input
+/sbin/ipchains -F output
+/sbin/ipchains -F forward
+/sbin/ipchains-restore &lt; /etc/ppp/orig.chains
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Last file in last script, orig.chains, is the following file (original
+status of ipchains):
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# orig.chains
+# created with: ipchains-save > orig.chains
+:input ACCEPT
+:forward ACCEPT
+:output ACCEPT
+-A input -s 0.0.0.0/0.0.0.0 -d 192.168.1.1/255.255.255.255
+-A output -s 192.168.1.1/255.255.255.255 -d 0.0.0.0/0.0.0.0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss8.3">8.3 Example for Slackware 3.6</A>
+</H2>
+
+<P>
+<P>This example is from Hoo Kok Mun, <CODE>
+<A HREF="mailto:hkmun@pacific.net.sg">hkmun@pacific.net.sg</A></CODE>.
+<P>This is the most simple example i have seen, but fully functional. From
+the beginning, this example configures masquerading, before the <CODE>sl0</CODE>
+interface exists, and it does not change when the <CODE>ppp0</CODE> interface
+appears. If you need advanced security considerations, it may be a little
+limited.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#/etc/rc.d/rc.local
+/sbin/ipfwadm -F -p deny
+/sbin/ipfwadm  -F -a m -S 192.168.0.0/24 -D 0.0.0.0/0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>As you can see, it is for version 2.0 kernels.
+<P>
+<HR>
+<A HREF="Diald-HOWTO-9.html">Next</A>
+<A HREF="Diald-HOWTO-7.html">Previous</A>
+<A HREF="Diald-HOWTO.html#toc8">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,500 @@
+<HTML
+><HEAD
+><TITLE
+>Implementation</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="ADSL Bandwidth Management HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="How it Works"
+HREF="how-it-works.html"><LINK
+REL="NEXT"
+TITLE="Testing the New Queue"
+HREF="testing.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>ADSL Bandwidth Management HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="how-it-works.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="testing.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="IMPLEMENTATION"
+></A
+>4. Implementation</H1
+><P
+>Now with all of the explanation out of the way it's time to implement bandwidth management with Linux.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN161"
+></A
+>4.1. Caveats</H2
+><P
+>        Limiting the actual rate of data sent to the DSL modem is not as simple as it may seem.  Most DSL modems
+	are really just ethernet bridges that bridge data back and forth between your linux box and the gateway
+	at your ISP. Most DSL modems use ATM as a link layer to send data.  ATM sends data in cells that are always
+        53 bytes long.  5 of these
+	bytes are header information, leaving 48 bytes available for data.  Even if you are sending 1 byte of data,
+	an entire 53 bytes of bandwidth are consumed sent since ATM cells are always 53 bytes long.  This means that
+	if you are
+	sending a typical TCP ACK packet which consists of 0 bytes data + 20 bytes TCP header + 20 bytes IP header
+	+ 18 bytes Ethernet header.  In actuality, even though the ethernet packet you are sending has only 40 bytes of
+	payload (TCP and IP header), the minimum payload for an Ethernet packet is 46 bytes of data, so the remaining
+	6 bytes are padded with nulls.  This means that the actual length of the Ethernet packet plus header is
+	18 + 46 = 64 bytes.  In order to send 64 bytes over ATM, you have to send two ATM cells which consume 106 
+	bytes of bandwidth.  This means for every TCP ACK packet, you're wasting 42 bytes of bandwidth.
+	This would be okay if Linux accounted for the
+	encapsulation that the DSL modem uses, but instead, Linux only accounts the TCP header, IP header, and 14 bytes
+	of the MAC address (Linux doesn't count the 4 bytes CRC since this is handled at the hardware level).  Linux
+	doesn't count the minimum Ethernet packet size of 46 bytes, nor does it take into account the fixed ATM cell
+	size.
+      </P
+><P
+>        What all of this means is that you'll have to limit your outbound bandwidth to somewhat less than your
+	true capacity (until we can figure out a packet scheduler that can account for the various types of
+	encapsulation being used).  You may find that you've figured out a good number to limit your bandwidth to, but
+	then you download a big file and the latency starts to shoot up over 3 seconds.  This is most likely
+	because the bandwidth those small ACK packets consume is being miscalculated by Linux.
+      </P
+><P
+>	I have been working on a solution to this problem for a few months and have almost settled on a solution
+	that I will soon release to the public for further testing.  The solution involves using a user-space
+	queue instead of linux's QoS to rate-limit packets.  I've basically implemented a simple HTB queue
+	using linux user-space queues.  This solution (so far) has been able to regulate outbound traffic SO WELL
+	that even during a massive bulk download (several streams) and bulk upload (gnutella, several streams)
+	the latency PEAKS at 400ms over my nominal no-traffic latency of about 15ms.  For more information on
+	this QoS method, subscribe to the email list for updates or check back on updates to this HOWTO.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN166"
+></A
+>4.2. Script: myshaper</H2
+><P
+>The following is a listing of the script which I use to control bandwidth on my Linux router.  It uses
+      several of the concepts covered in the document.  Outbound traffic is placed into one of 7 queues depending
+      on type.  Inbound traffic is placed into two queues with TCP packets being dropped first (lowest priority) if
+      the inbound data is over-rate.  The rates given in this script seem to work OK for my setup but your results may vary.</P
+><TABLE
+CLASS="SIDEBAR"
+BORDER="1"
+CELLPADDING="5"
+><TR
+><TD
+><DIV
+CLASS="SIDEBAR"
+><A
+NAME="AEN169"
+></A
+><P
+></P
+><P
+>This script was originally based on the ADSL WonderShaper as seen at the <A
+HREF="http://www.lartc.org"
+TARGET="_top"
+>LARTC website</A
+>.</P
+><P
+></P
+></DIV
+></TD
+></TR
+></TABLE
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#!/bin/bash
+#
+# myshaper - DSL/Cable modem outbound traffic shaper and prioritizer.
+#            Based on the ADSL/Cable wondershaper (www.lartc.org)
+#
+# Written by Dan Singletary (8/7/02)
+#
+# NOTE!! - This script assumes your kernel has been patched with the
+#          appropriate HTB queue and IMQ patches available here:
+#          (subnote: future kernels may not require patching)
+#
+#       http://luxik.cdi.cz/~devik/qos/htb/
+#       http://luxik.cdi.cz/~patrick/imq/
+#
+# Configuration options for myshaper:
+#  DEV    - set to ethX that connects to DSL/Cable Modem
+#  RATEUP - set this to slightly lower than your
+#           outbound bandwidth on the DSL/Cable Modem.
+#           I have a 1500/128 DSL line and setting
+#           RATEUP=90 works well for my 128kbps upstream.
+#           However, your mileage may vary.
+#  RATEDN - set this to slightly lower than your
+#           inbound bandwidth on the DSL/Cable Modem.
+#
+#
+#  Theory on using imq to "shape" inbound traffic:
+#
+#     It's impossible to directly limit the rate of data that will
+#  be sent to you by other hosts on the internet.  In order to shape
+#  the inbound traffic rate, we have to rely on the congestion avoidance
+#  algorithms in TCP.  Because of this, WE CAN ONLY ATTEMPT TO SHAPE
+#  INBOUND TRAFFIC ON TCP CONNECTIONS.  This means that any traffic that
+#  is not tcp should be placed in the high-prio class, since dropping
+#  a non-tcp packet will most likely result in a retransmit which will
+#  do nothing but unnecessarily consume bandwidth.  
+#     We attempt to shape inbound TCP traffic by dropping tcp packets
+#  when they overflow the HTB queue which will only pass them on at
+#  a certain rate (RATEDN) which is slightly lower than the actual
+#  capability of the inbound device.  By dropping TCP packets that
+#  are over-rate, we are simulating the same packets getting dropped
+#  due to a queue-overflow on our ISP's side.  The advantage of this
+#  is that our ISP's queue will never fill because TCP will slow it's
+#  transmission rate in response to the dropped packets in the assumption
+#  that it has filled the ISP's queue, when in reality it has not.
+#     The advantage of using a priority-based queuing discipline is
+#  that we can specifically choose NOT to drop certain types of packets
+#  that we place in the higher priority buckets (ssh, telnet, etc).  This
+#  is because packets will always be dequeued from the lowest priority class
+#  with the stipulation that packets will still be dequeued from every
+#  class fairly at a minimum rate (in this script, each bucket will deliver
+#  at least it's fair share of 1/7 of the bandwidth).  
+#
+#  Reiterating main points:
+#   * Dropping a tcp packet on a connection will lead to a slower rate
+#     of reception for that connection due to the congestion avoidance algorithm.
+#   * We gain nothing from dropping non-TCP packets.  In fact, if they
+#     were important they would probably be retransmitted anyways so we want to
+#     try to never drop these packets.  This means that saturated TCP connections
+#     will not negatively effect protocols that don't have a built-in retransmit like TCP.
+#   * Slowing down incoming TCP connections such that the total inbound rate is less
+#     than the true capability of the device (ADSL/Cable Modem) SHOULD result in little
+#     to no packets being queued on the ISP's side (DSLAM, cable concentrator, etc).  Since
+#     these ISP queues have been observed to queue 4 seconds of data at 1500Kbps or 6 megabits
+#     of data, having no packets queued there will mean lower latency.
+#
+#  Caveats (questions posed before testing):
+#   * Will limiting inbound traffic in this fashion result in poor bulk TCP performance?
+#     - Preliminary answer is no!  Seems that by prioritizing ACK packets (small &#60;64b)
+#       we maximize throughput by not wasting bandwidth on retransmitted packets
+#       that we already have.
+#   
+
+# NOTE: The following configuration works well for my 
+# setup: 1.5M/128K ADSL via Pacific Bell Internet (SBC Global Services)
+
+DEV=eth0
+RATEUP=90
+RATEDN=700  # Note that this is significantly lower than the capacity of 1500.
+            # Because of this, you may not want to bother limiting inbound traffic
+            # until a better implementation such as TCP window manipulation can be used.
+
+# 
+# End Configuration Options
+#
+
+if [ "$1" = "status" ]
+then
+        echo "[qdisc]"
+        tc -s qdisc show dev $DEV
+        tc -s qdisc show dev imq0
+        echo "[class]"
+        tc -s class show dev $DEV
+        tc -s class show dev imq0
+        echo "[filter]"
+        tc -s filter show dev $DEV
+        tc -s filter show dev imq0
+        echo "[iptables]"
+        iptables -t mangle -L MYSHAPER-OUT -v -x 2&#62; /dev/null
+        iptables -t mangle -L MYSHAPER-IN -v -x 2&#62; /dev/null
+        exit
+fi
+
+# Reset everything to a known state (cleared)
+tc qdisc del dev $DEV root    2&#62; /dev/null &#62; /dev/null
+tc qdisc del dev imq0 root 2&#62; /dev/null &#62; /dev/null
+iptables -t mangle -D POSTROUTING -o $DEV -j MYSHAPER-OUT 2&#62; /dev/null &#62; /dev/null
+iptables -t mangle -F MYSHAPER-OUT 2&#62; /dev/null &#62; /dev/null
+iptables -t mangle -X MYSHAPER-OUT 2&#62; /dev/null &#62; /dev/null
+iptables -t mangle -D PREROUTING -i $DEV -j MYSHAPER-IN 2&#62; /dev/null &#62; /dev/null
+iptables -t mangle -F MYSHAPER-IN 2&#62; /dev/null &#62; /dev/null
+iptables -t mangle -X MYSHAPER-IN 2&#62; /dev/null &#62; /dev/null
+ip link set imq0 down 2&#62; /dev/null &#62; /dev/null
+rmmod imq 2&#62; /dev/null &#62; /dev/null
+
+if [ "$1" = "stop" ] 
+then 
+        echo "Shaping removed on $DEV."
+        exit
+fi
+
+###########################################################
+#
+# Outbound Shaping (limits total bandwidth to RATEUP)
+
+# set queue size to give latency of about 2 seconds on low-prio packets
+ip link set dev $DEV qlen 30
+
+# changes mtu on the outbound device.  Lowering the mtu will result
+# in lower latency but will also cause slightly lower throughput due 
+# to IP and TCP protocol overhead.
+ip link set dev $DEV mtu 1000
+
+# add HTB root qdisc
+tc qdisc add dev $DEV root handle 1: htb default 26
+
+# add main rate limit classes
+tc class add dev $DEV parent 1: classid 1:1 htb rate ${RATEUP}kbit
+
+# add leaf classes - We grant each class at LEAST it's "fair share" of bandwidth.
+#                    this way no class will ever be starved by another class.  Each
+#                    class is also permitted to consume all of the available bandwidth
+#                    if no other classes are in use.
+tc class add dev $DEV parent 1:1 classid 1:20 htb rate $[$RATEUP/7]kbit ceil ${RATEUP}kbit prio 0
+tc class add dev $DEV parent 1:1 classid 1:21 htb rate $[$RATEUP/7]kbit ceil ${RATEUP}kbit prio 1
+tc class add dev $DEV parent 1:1 classid 1:22 htb rate $[$RATEUP/7]kbit ceil ${RATEUP}kbit prio 2
+tc class add dev $DEV parent 1:1 classid 1:23 htb rate $[$RATEUP/7]kbit ceil ${RATEUP}kbit prio 3
+tc class add dev $DEV parent 1:1 classid 1:24 htb rate $[$RATEUP/7]kbit ceil ${RATEUP}kbit prio 4
+tc class add dev $DEV parent 1:1 classid 1:25 htb rate $[$RATEUP/7]kbit ceil ${RATEUP}kbit prio 5
+tc class add dev $DEV parent 1:1 classid 1:26 htb rate $[$RATEUP/7]kbit ceil ${RATEUP}kbit prio 6
+
+# attach qdisc to leaf classes - here we at SFQ to each priority class.  SFQ insures that
+#                                within each class connections will be treated (almost) fairly.
+tc qdisc add dev $DEV parent 1:20 handle 20: sfq perturb 10
+tc qdisc add dev $DEV parent 1:21 handle 21: sfq perturb 10
+tc qdisc add dev $DEV parent 1:22 handle 22: sfq perturb 10
+tc qdisc add dev $DEV parent 1:23 handle 23: sfq perturb 10
+tc qdisc add dev $DEV parent 1:24 handle 24: sfq perturb 10
+tc qdisc add dev $DEV parent 1:25 handle 25: sfq perturb 10
+tc qdisc add dev $DEV parent 1:26 handle 26: sfq perturb 10
+
+# filter traffic into classes by fwmark - here we direct traffic into priority class according to
+#                                         the fwmark set on the packet (we set fwmark with iptables
+#                                         later).  Note that above we've set the default priority
+#                                         class to 1:26 so unmarked packets (or packets marked with
+#                                         unfamiliar IDs) will be defaulted to the lowest priority
+#                                         class.
+tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 20 fw flowid 1:20
+tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 21 fw flowid 1:21
+tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 22 fw flowid 1:22
+tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 23 fw flowid 1:23
+tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 24 fw flowid 1:24
+tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 25 fw flowid 1:25
+tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 26 fw flowid 1:26
+
+# add MYSHAPER-OUT chain to the mangle table in iptables - this sets up the table we'll use
+#                                                      to filter and mark packets.
+iptables -t mangle -N MYSHAPER-OUT
+iptables -t mangle -I POSTROUTING -o $DEV -j MYSHAPER-OUT
+
+# add fwmark entries to classify different types of traffic - Set fwmark from 20-26 according to
+#                                                             desired class. 20 is highest prio.
+iptables -t mangle -A MYSHAPER-OUT -p tcp --sport 0:1024 -j MARK --set-mark 23 # Default for low port traffic 
+iptables -t mangle -A MYSHAPER-OUT -p tcp --dport 0:1024 -j MARK --set-mark 23 # "" 
+iptables -t mangle -A MYSHAPER-OUT -p tcp --dport 20 -j MARK --set-mark 26     # ftp-data port, low prio
+iptables -t mangle -A MYSHAPER-OUT -p tcp --dport 5190 -j MARK --set-mark 23   # aol instant messenger
+iptables -t mangle -A MYSHAPER-OUT -p icmp -j MARK --set-mark 20               # ICMP (ping) - high prio, impress friends
+iptables -t mangle -A MYSHAPER-OUT -p udp -j MARK --set-mark 21                # DNS name resolution (small packets)
+iptables -t mangle -A MYSHAPER-OUT -p tcp --dport ssh -j MARK --set-mark 22    # secure shell
+iptables -t mangle -A MYSHAPER-OUT -p tcp --sport ssh -j MARK --set-mark 22    # secure shell
+iptables -t mangle -A MYSHAPER-OUT -p tcp --dport telnet -j MARK --set-mark 22 # telnet (ew...)
+iptables -t mangle -A MYSHAPER-OUT -p tcp --sport telnet -j MARK --set-mark 22 # telnet (ew...)
+iptables -t mangle -A MYSHAPER-OUT -p ipv6-crypt -j MARK --set-mark 24         # IPSec - we don't know what the payload is though...
+iptables -t mangle -A MYSHAPER-OUT -p tcp --sport http -j MARK --set-mark 25   # Local web server
+iptables -t mangle -A MYSHAPER-OUT -p tcp -m length --length :64 -j MARK --set-mark 21 # small packets (probably just ACKs)
+iptables -t mangle -A MYSHAPER-OUT -m mark --mark 0 -j MARK --set-mark 26      # redundant- mark any unmarked packets as 26 (low prio)
+
+# Done with outbound shaping
+#
+####################################################
+
+echo "Outbound shaping added to $DEV.  Rate: ${RATEUP}Kbit/sec."
+
+# uncomment following line if you only want upstream shaping.
+# exit
+
+####################################################
+#
+# Inbound Shaping (limits total bandwidth to RATEDN)
+
+# make sure imq module is loaded
+
+modprobe imq numdevs=1
+
+ip link set imq0 up
+
+# add qdisc - default low-prio class 1:21
+
+tc qdisc add dev imq0 handle 1: root htb default 21
+
+# add main rate limit classes
+tc class add dev imq0 parent 1: classid 1:1 htb rate ${RATEDN}kbit
+
+# add leaf classes - TCP traffic in 21, non TCP traffic in 20
+#
+tc class add dev imq0 parent 1:1 classid 1:20 htb rate $[$RATEDN/2]kbit ceil ${RATEDN}kbit prio 0
+tc class add dev imq0 parent 1:1 classid 1:21 htb rate $[$RATEDN/2]kbit ceil ${RATEDN}kbit prio 1
+
+# attach qdisc to leaf classes - here we at SFQ to each priority class.  SFQ insures that
+#                                within each class connections will be treated (almost) fairly.
+tc qdisc add dev imq0 parent 1:20 handle 20: sfq perturb 10
+tc qdisc add dev imq0 parent 1:21 handle 21: red limit 1000000 min 5000 max 100000 avpkt 1000 burst 50
+
+# filter traffic into classes by fwmark - here we direct traffic into priority class according to
+#                                         the fwmark set on the packet (we set fwmark with iptables
+#                                         later).  Note that above we've set the default priority
+#                                         class to 1:26 so unmarked packets (or packets marked with
+#                                         unfamiliar IDs) will be defaulted to the lowest priority
+#                                         class.
+tc filter add dev imq0 parent 1:0 prio 0 protocol ip handle 20 fw flowid 1:20
+tc filter add dev imq0 parent 1:0 prio 0 protocol ip handle 21 fw flowid 1:21
+
+# add MYSHAPER-IN chain to the mangle table in iptables - this sets up the table we'll use
+#                                                         to filter and mark packets.
+iptables -t mangle -N MYSHAPER-IN
+iptables -t mangle -I PREROUTING -i $DEV -j MYSHAPER-IN
+
+# add fwmark entries to classify different types of traffic - Set fwmark from 20-26 according to
+#                                                             desired class. 20 is highest prio.
+iptables -t mangle -A MYSHAPER-IN -p ! tcp -j MARK --set-mark 20              # Set non-tcp packets to highest priority
+iptables -t mangle -A MYSHAPER-IN -p tcp -m length --length :64 -j MARK --set-mark 20 # short TCP packets are probably ACKs
+iptables -t mangle -A MYSHAPER-IN -p tcp --dport ssh -j MARK --set-mark 20    # secure shell
+iptables -t mangle -A MYSHAPER-IN -p tcp --sport ssh -j MARK --set-mark 20    # secure shell
+iptables -t mangle -A MYSHAPER-IN -p tcp --dport telnet -j MARK --set-mark 20 # telnet (ew...)
+iptables -t mangle -A MYSHAPER-IN -p tcp --sport telnet -j MARK --set-mark 20 # telnet (ew...)
+iptables -t mangle -A MYSHAPER-IN -m mark --mark 0 -j MARK --set-mark 21              # redundant- mark any unmarked packets as 26 (low prio)
+
+# finally, instruct these packets to go through the imq0 we set up above
+iptables -t mangle -A MYSHAPER-IN -j IMQ
+
+# Done with inbound shaping 
+#
+####################################################
+
+echo "Inbound shaping added to $DEV.  Rate: ${RATEDN}Kbit/sec."</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="how-it-works.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="testing.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>How it Works</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Testing the New Queue</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

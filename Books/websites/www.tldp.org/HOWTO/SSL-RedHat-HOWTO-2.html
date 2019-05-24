@@ -1,0 +1,272 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Building a Secure RedHat Apache Server HOWTO: Introduction to Secure Sockets Layer/Private Key Infrastructure</TITLE>
+ <LINK HREF="SSL-RedHat-HOWTO-3.html" REL=next>
+ <LINK HREF="SSL-RedHat-HOWTO-1.html" REL=previous>
+ <LINK HREF="SSL-RedHat-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="SSL-RedHat-HOWTO-3.html">Next</A>
+<A HREF="SSL-RedHat-HOWTO-1.html">Previous</A>
+<A HREF="SSL-RedHat-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. Introduction to Secure Sockets Layer/Private Key Infrastructure</A></H2>
+
+<P>PKI is an <EM>asymmetric key system</EM> which consists of a public key (which is
+sent to clients) and a private key (stays local on the server).  PKI differs
+from a <EM>symmetric key system</EM> in which both the client and server use the
+same key for encryption/decryption.
+<P>
+<P>
+<H2><A NAME="ss2.1">2.1 Responsibilities of SSL/PKI</A>
+</H2>
+
+<P>SSL sets out to fulfill requirements that make it acceptable for
+use in the transmission of even the most sensitive of transactions,
+such as credit card information, medical records, legal documents,
+and e-commerce applications.  Each application can choose to utilize
+some or all of the following criteria depending on the sensitivity
+and value of the transactions it will be processing.
+<P>
+<DL>
+<DT><B>Privacy</B><DD><P>Let's say that a message is to be coded
+for transmission from A to B. A uses B's public key to encrypt the
+message. In this way B will be the only person who can decode and
+read this message using his private key. We cannot however be sure
+that A is the person who he claims to be.
+<P>
+<DT><B>Authenticity</B><DD><P>In order to be sure that A is the person who
+he claims to be, we want guaranteed authenticity.  This requires a
+slightly more complex coding process. In this case, A's message to B
+is first encrypted with A's private key and then with B's public key.
+B now has to decrypt it first with his private key and then with A's
+public key. Now B can be sure that A is who he claims to be as nobody
+else could create a message encrypted with his private key. SSL
+achieves this with the use of certificates (PKI). A certificate is
+issued by a <EM>neutral</EM> third party - such as a certificate
+authority (CA) - and includes a digital signature and/or a time stamp
+in addition to the public key of the certified party.  A self-signed
+digital certificate can be created by anyone with the correct SSL
+tools, but self-signed certificates lack the weight of validation
+performed by a mutually respected neutral third party.
+<P>
+<DT><B>integrity</B><DD><P>In SSL, integrity is guaranteed by using a MAC
+(Message Authentication Code) with the necessary hash table
+functions.  Upon generation of a message, the MAC is obtained by
+applying a hash function and the result is then added to the message.
+After the message has been received, validity is then checked by
+comparing the message's embedded MAC with a new MAC computed from the
+received message.  This would immediately reveal messages that have
+been altered by a third party.
+<P>
+<DT><B>Non-Repudiation</B><DD><P>Non-repudiation protects both parties from
+each other during online transactions.  It prevents one or the other
+from saying that they did not send a particular piece of
+information.  Non-repudiation does not allow either party to alter
+the transaction after it has been made.  Digital non-repudiation is
+the equivalent of signing a contract, in the traditional sense.
+</DL>
+<P>
+<P>
+<H2><A NAME="ss2.2">2.2 How SSL Works</A>
+</H2>
+
+<P>The SSL protocol includes two sub-protocols: the SSL record protocol and the
+SSL handshake protocol.  The SSL record protocol defines the format used to
+transmit data. The SSL handshake protocol involves using the SSL record
+protocol to exchange a series of messages between an SSL-enabled server and
+an SSL-enabled client when they first establish an SSL connection. This
+exchange of messages is designed to facilitate the following actions:
+<P>
+<UL>
+<LI>Authenticate the server to the client.  The server certificate is signed by
+a Certificate Authority to insure that it is not corrupted and establishes a
+<EM>chain of trust</EM>.</LI>
+<LI>Allow the client and server to select the cryptographic algorithms, or
+ciphers, that they both support.</LI>
+<LI>Optionally authenticate the client to the server.</LI>
+<LI>Use public-key encryption techniques to generate shared secrets.</LI>
+<LI>Establish an encrypted SSL connection.</LI>
+</UL>
+<P>
+<P>
+<H3>SSL Handshake Protocol</H3>
+
+<P>The Handshake Protocol is used to co-ordinate the state of the client
+and the server. During the handshake, the following events take place:
+<P>
+<UL>
+<LI>Certificates are exchanged between the client and server (asymmetric keys).
+The server sends its public key to the client.  If the server is set to
+verify client authentication via a certificate, the client sends its public
+key to the server.  The validity dates on the certificates are verified and
+they are checked for the digital signature of a trusted certificate
+authority.   If the validity date and/or digital signature are not correct,
+the browser will issue a warning to the user.  The user is then given the
+option to trust the certificate holder.</LI>
+<LI>The client then generates a random key (symmetric key). These will be used
+for encryption and for calculating MACs. They are encrypted using the
+server's public key and sent to the server.  Only the server has the ability
+to decrypt the new random key.  The new symmetric key is used for encrypting
+the data that is sent between client and server.
+<P>Note:  The use of a symmetric key after server-browser authentication
+greatly enhances subsequent throughput performance.
+</LI>
+<LI>A message encryption algorithm and a hash function for integrity are
+negotiated.  This negotiation process could be carried out such that the
+client presents a list of supported algorithms to the server, which, in
+turn, selects the strongest cipher available to both of them. Identifiers
+for the chosen encryption algorithm and hash function are stored in the
+cipher spec field of the current state for use by the record protocol.</LI>
+<LI>All of the following fields are set during handshaking: Protocol Version,
+Session ID, Cipher Suite, Compression Method and two random values
+ClientHello.random and ServerHello.random.</LI>
+</UL>
+<P>
+<P><B>Note:</B> An IP address is required for each SSL connection.
+Name based virtual hosts are resolved during the application layer.
+Remember Secure Sockets Layer resides below the application layer.
+<P>
+<P>
+<H3>Session Key(Symmetric Code)</H3>
+
+<P>
+<UL>
+<LI>40-bit, originally used only for export purposes</LI>
+<LI>56-bit, used by DES</LI>
+<LI>64-bit key - used by CAST, 256 times stronger than 56-bit</LI>
+<LI>80-bit key - used by CAST, 16 million times stronger than 56-bit (infeasible
+to break with current technology)</LI>
+<LI>128-bit key - used by CAST or RC2, exhaustive key search impossible now and
+for the foreseeable future</LI>
+</UL>
+<P>
+<P>
+<H3>Public/Private Key Pair(Asymmetric Code)</H3>
+
+<P>
+<UL>
+<LI>512-bit</LI>
+<LI>768-bit</LI>
+<LI>1024-bit</LI>
+<LI>2048-bit</LI>
+</UL>
+<P>
+<P>
+<H2><A NAME="ss2.3">2.3 How PKI Works</A>
+</H2>
+
+<P>The client and the server each have a public key and a private key (the
+client's browser randomly creates a key pair for the SSL session, unless, a
+client certificate is held by the client and requested by the server).
+<P>
+<P>The sender uses their private key to encrypt a message.  This act
+authenticates the source of the message.  The resulting cipher is encrypted
+once more with the receiving party's public key.  This action provides
+confidentiality because only the receiving party is able to do the initial
+decryption of the message using their private key.  The receiver uses the
+sender's public key to further decrypt the encrypted message. Because only
+the sender has access to their private key, the receiver is assured that the
+encrypted message originated from the sender.
+<P>
+<P>A message digest is used to verify that neither party or a third party has
+tampered with or changed the message in any way.  A message digest is
+obtained by applying a hash function (part of the private key known as the
+fingerprint) to the message.  The digest (which is now known as the
+signature) is attached or appended to the message.  The signature's length
+is constant (no matter how large the file is) and depends on what type of
+message digest the private key contains (md5 - 128 bit, sha1 - 160 bit,
+etc).  Changing even one bit in the message will change the length of the
+signature and thus prove that the message has been tampered with.
+<P>
+<P>
+<H2><A NAME="ss2.4">2.4 Certificates(x509 Standard)</A>
+</H2>
+
+<P>Digital certificates make it possible to trust an entity on the Internet.  A
+digital certificate contains the user's credentials, which have been
+verified by a neutral third-party certificate authority.
+<P>
+<P>A mathematical algorithm and a value (key) are used to encrypt data into an
+unreadable form.  A second <EM>key</EM> is used to decrypt the data, using a
+complementary algorithm and a related value.  The two keys must contain a
+related value and are known as a <EM>key pair</EM>.
+<P>
+<P>Note:  ITU-T Recommendation X.509 [CCI88c] specifies the authentication
+service for X.500 directories, as well as the X.509 certificate syntax. The
+certificate is signed by the issuer to authenticate the binding between the
+subject (user's) name and the user's public key.  SSLv3 was adopted in
+1994.  The major difference between versions 2 and 3 is the addition of the
+extensions field. This field grants more flexibility as it can convey
+additional information beyond just the key and name binding. Standard
+extensions include subject and issuer attributes, certification policy
+information, and key usage restrictions.
+<P>
+<P>An X.509 certificate consists of the following fields:
+<UL>
+<LI>Version</LI>
+<LI>serial number</LI>
+<LI>signature algorithm ID</LI>
+<LI>issuer name</LI>
+<LI>validity period</LI>
+<LI>subject (user) name</LI>
+<LI>subject public key information</LI>
+<LI>issuer unique identifier (version 2 and 3 only)</LI>
+<LI>subject unique identifier (version 2 and 3 only)</LI>
+<LI>extensions (version 3 only)</LI>
+<LI>signature on the above fields</LI>
+</UL>
+<P>
+<P>
+<P>
+<H2><A NAME="ss2.5">2.5 Digital Certificate Private Key</A>
+</H2>
+
+<P>
+<P>The private key is not embedded within a digital certificate.  The private
+key does not include any server information.  It contains encryption
+information and a fingerprint.  It is generated locally on your system and
+should remain in a secure environment.  If the private key is compromised, a
+perpetrator essentially has the code to your security system.  The
+transmissions between client and server can be intercepted and decrypted.
+This type of vulnerability is why it is recommended to create a private key
+that is encrypted using triple DES technology.  The file is then encrypted
+and password protected making it all but impossible to use without the
+correct pass phrase.
+<P>
+<P>The security of a transaction is dependent on its private key. Should this
+key fall into the wrong hands then anyone can easily duplicate it and use it
+to compromise security.  A compromised key could lead to messages meant for
+the server to be intercepted and manipulated by unscrupulous hackers.  A
+fully secure system must be able to detect impostors and prevent the
+duplication of keys.
+<P>
+<P>
+<H2><A NAME="ss2.6">2.6 Digital Certificate Public Key</A>
+</H2>
+
+<P>The public key is embedded in a digital certificate, which is sent by the
+server to a client when a secure connection is requested.  This process
+identifies the server using the certificate.  The public key validates the
+integrity, authenticity, and is also used to encrypt data to create a
+private data transmission.
+<P>
+<P>
+<H2><A NAME="ss2.7">2.7 Certificate Signing Request(CSR)</A>
+</H2>
+
+<P>A CSR contains the information required by a certificate authority to create
+the certificate.  The CSR contains an encrypted version of the private key's
+complimentary algorithm, common value, and information that identifies the
+server.  This information includes, but is not limited to, country, state,
+organization, common name (domain name), and contact information.
+<P>
+<P>
+<HR>
+<A HREF="SSL-RedHat-HOWTO-3.html">Next</A>
+<A HREF="SSL-RedHat-HOWTO-1.html">Previous</A>
+<A HREF="SSL-RedHat-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>Ethernet Bridge + netfilter Howto: Set Linux up to serve</TITLE>
+ <LINK HREF="Ethernet-Bridge-netfilter-HOWTO-4.html" REL=next>
+ <LINK HREF="Ethernet-Bridge-netfilter-HOWTO-2.html" REL=previous>
+ <LINK HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-4.html">Next</A>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-2.html">Previous</A>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="SETUP_Linux_brctl"></A> <A NAME="s3">3.</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3">Set Linux up to serve</A></H2>
+
+
+
+<H2><A NAME="ss3.1">3.1</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3.1">Setting up the bridge</A>
+</H2>
+
+<P>We need Linux to know about the bridge. First tell it that we want one virtual 
+ethernet bridge interface: (this is to be executed on host <CODE>bridge</CODE>, of course. 
+See 
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-4.html#TESTING_Testing_grounds">Testing grounds</A>)
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> brctl addbr br0
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Second, we do not need the STP (Spanning Tree Protocol). I.e. we do only have 
+one single router, so a loop is highly improbable. We may then deactivate this feature. 
+(Results in less polluted networking environment, too):
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> brctl stp br0 off
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+After these preparations, we now do finally some effective commands. We add our two 
+(or even more) physical ethernet interfaces. That means, we attach them to the just 
+born logical (virtual) bridge interface <CODE>br0</CODE>. 
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> brctl addif br0 eth0
+root@bridge:~> brctl addif br0 eth1
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<A NAME="HINT_cutoff"></A> 
+<DL>
+<DT><B>Important Note:</B><DD><P>People sent me emails that it would have helped them if I stressed more 
+clearly the risk of being cut off. So listen at this point to my 
+warnings:<BR>
+If you read this, you are one (small) step before you _might_ cut 
+yourself off your box you are going to subverse to a bridging device.<BR>
+If you love living on bleeding edges, it is now the instant to prepare 
+your first aid material. You will likely need it.<BR>
+If you do not have physical access, nor does another person within your
+range: <BR>
+DO NOT PROCEED UNLESS YOUR FINGERS LEFT THE KEYBOARD IN FRONT OF YOU 
+AND YOUR EYES FIXED REFLECTIVELY SOMETHING OTHER THAN YOUR CONSOLE.<BR>
+You have been warned, now. No responsability is assumed for anything 
+at all.</P>
+</DL>
+
+Now, our two previously physical ethernet interfaces became a logical bridge port each. 
+Erm, ok, there were and will be the physical devices. They are still there, 
+go have a look ;-) But now they became part of the logical bridge device and 
+therefore need no IP configuration any longer. So release the IPs:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> ifconfig eth0 down
+root@bridge:~> ifconfig eth1 down
+root@bridge:~> ifconfig eth0 0.0.0.0 up
+root@bridge:~> ifconfig eth1 0.0.0.0 up
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Great! We now have a box w/o any IP attached. So if you were configuring your future
+fw/router via TP, go for your local console now ;-)) You have a serial console? Happy one :-)<BR>
+<DL>
+<DT><B>Optional:</B><DD><P>We tell Linux the new (logical) interface and associate one single IP with it:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> ifconfig br0 10.0.3.129 up
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+</DL>
+
+And we're done. <BR>
+Read the 
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-4.html#TESTING_Important_note">Important Note</A>!</P>
+
+<H2><A NAME="ss3.2">3.2</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3.2">Setting up the routing</A>
+</H2>
+
+<P>
+<A NAME="BRIDGE_routing"></A> 
+In case we are configuring a gateway we enable the forwarding in 
+the linux kernel.
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> echo "1" > /proc/sys/net/ipv4/ip_forward
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Our box already has an IP assigned but no default route. We
+solve this now:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> route add default gw 10.0.3.129
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Finally, we should have a working net from, to and through the gateway.</P>
+
+<H2><A NAME="reboot"></A> <A NAME="ss3.3">3.3</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3.3">Make it happen again! </A>
+</H2>
+
+<P>Aka: We need the changes to persist reboots.<BR>
+To do so, you need some sh-style script and put this in the appropriate 
+system boot-up directory: <CODE>/etc/init.d/</CODE><BR>
+Secondly, you create the link in your runlevel directory.
+The correct directory depends on your gusto and of course on your linux 
+distribution. 
+Common runlevel values on workstations are <CODE>2</CODE>, <CODE>3</CODE> and <CODE>5</CODE>.
+Examples are: <CODE>/etc/rc?.d/</CODE> (replace the ? with the right runlevel)<BR>
+Also, you need an idea as when your network interfaces are torn up.
+For now, we assume, your network interfaces are activated at system priority 
+<CODE>S</CODE> so we need not to care of.
+If you ever should feel the need to know exactly, look in <CODE>/etc/rcS.d/</CODE>.
+We just want the bridge to be up and operable as soon as possible and so chose 
+our priority to be <CODE>10</CODE>. (Make sure, no service requiring bridging devices 
+is started before, read: with priority-values less than <CODE>10</CODE>)<BR>
+For now, we assume, your runlevel is <CODE>5</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> mv -i bridge.sh /etc/init.d/
+root@bridge:~> cd /etc/rc5.d/
+root@bridge:~> ln -s ../init.d/bridge.sh S10bridge.sh
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Virtually any distribution provides you with some runlevel-checker or 
+equivalent tool that assists you in the tedious job of administering runlevel 
+links. Consult your distro-documentation on this.<BR>
+Hint: debian has update-rc.d, redhat and successors have chkconfig. 
+Finally, SuSE evidentally has also it's own tool, too (of which I don't 
+recall the name easily..).<BR>
+Wondering about the contents of bridge.sh? ;-)
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/bash
+PATH="/sbin:/usr/sbin:/usr/local/sbin";
+slaveIfs="1 2 3 4 6 7 8 9 10";
+cmd="$1";
+[ -z "$cmd" ] &amp;&amp; cmd="start";
+case "$cmd" in
+  start)
+    brctl addbr br0;
+    brctl stp br0 on;
+    brctl addif br0 eth0;
+    brctl addif br0 eth1;
+    (ifdown eth0 1>/dev/null 2>&amp;1;);
+    (ifdown eth1 1>/dev/null 2>&amp;1;);
+    ifconfig eth0 0.0.0.0 up;
+    ifconfig eth1 0.0.0.0 up;
+    ifconfig br0 10.0.3.129 broadcast 10.0.3.255 netmask 255.255.255.0 up ### Adapt to your needs.
+    route add default gw 10.0.3.129; ### Adapt to your needs.
+    for file in br0 eth0 eth1;
+    do
+      echo "1" > /proc/sys/net/ipv4/conf/${file}/proxy_arp;
+      echo "1" > /proc/sys/net/ipv4/conf/${file}/forwarding;
+    done;
+    echo "1" > /proc/sys/net/ipv4/ip_forward;
+    ;;
+  stop)
+    brctl delif br0 eth0;
+    brctl delif br0 eth1;
+    ifconfig br0 down;
+    brctl delbr br0;
+    #ifup eth0; ### Adapt to your needs.
+    #ifup eth1; ### Adapt to your needs.
+    ;;
+  restart,reload)
+    $0 stop;
+    sleep 3;
+    $0 start;
+    ;;
+esac;
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+And, yes, make it executable..
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> chmod 700 /etc/init.d/bridge.sh
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+After all, make sure your bridge survives unattended reboots. It's the 
+same story as with backups: you should test it before you need it.</P>
+
+
+
+<HR>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-4.html">Next</A>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-2.html">Previous</A>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

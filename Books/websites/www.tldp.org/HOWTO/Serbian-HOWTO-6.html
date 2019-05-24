@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Serbian HOWTO: Podesavanje stampanja</TITLE>
+ <LINK HREF="Serbian-HOWTO-7.html" REL=next>
+ <LINK HREF="Serbian-HOWTO-5.html" REL=previous>
+ <LINK HREF="Serbian-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Serbian-HOWTO-7.html">Next</A>
+<A HREF="Serbian-HOWTO-5.html">Previous</A>
+<A HREF="Serbian-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Podesavanje stampanja</A></H2>
+
+<P>Kod stampanja mozete naici na razne situacije:
+<UL>
+<LI>Stampac neposredno podrzava ISO Latin 2 raspored (idealno!)</LI>
+<LI>Stampac podrzava jedan od ostalih 8-bitnih rasporeda sa nasim slovima
+(na pr. kodni raspored 852), ali i 7-bitni raspored JUS I.B1.002 (bolje)</LI>
+<LI>Stampac razume PostScript (dobro)</LI>
+<LI>Stampac ne razume nista drugo osim ASCII znakova (lose!)</LI>
+</UL>
+        
+<H2><A NAME="ss6.1">6.1 Stampaci koji podrzavaju ISO-8859-2 kodnu stranicu</A>
+</H2>
+
+<P>Neki od novijih stampaca neposredno podrzavaju ISO-8859-2 kodni raspored.
+Medju njima su:
+<UL>
+<LI>Hewlett-Packard LaserJet 4 Plus i 4M Plus </LI>
+<LI>Hewlett-Packard LaserJet 5L </LI>
+<LI>Epson FX-2170 </LI>
+<LI>Epson LQ-870 </LI>
+<LI>Fujitsu DL700</LI>
+<LI>Fujitsu DL1150/1250 </LI>
+<LI>Fujitsu DL3700/3800 </LI>
+<LI>Fujitsu DL6400/6600</LI>
+</UL>
+        
+Sve sto treba da uradite je da stampacu naredite da koristi odgovarajucu
+kodnu stranicu. Komandna sekvenca za stampace Hewlett-Packard je:
+<BLOCKQUOTE><CODE>
+\033(@N\033(s0p12h0s0b4099T
+</CODE></BLOCKQUOTE>
+        
+gde je <CODE>\033</CODE> oktalni kod znaka <CODE>Escape</CODE>.
+<P>Jedan od nacina da pomocu datoteke <CODE>/etc/printcap</CODE> prilagodimo stampac da
+stampa po tom rasporedu opisan je u sledecem odeljku.
+<P>
+<H2><A NAME="ss6.2">6.2 Stampaci koji podrzavaju neki drugi 8-bitni kodni raspored</A>
+</H2>
+
+<P>Ako stampac podrzava neki drugi kodni raspored s nasim slovima, ipak mozemo
+pomocu njega stampati tekstove po ISO-8859-2 rasporedu, ako datoteku
+<CODE>/etc/printcap</CODE> prilagodimo na odgovarajuci nacin.
+<P>Postupak cemo objasniti na primeru stampaca marke Epson, koji ima znake po
+YUSCII rasporedu na mesto svedske abecede.
+<BLOCKQUOTE><CODE>
+<PRE>
+lp|ascii|epson|Epson LQ-850:\
+        :lp=/dev/lp1:\
+        :sd=/usr/spool/lpd/epson:\
+        :lf=/usr/spool/lpd/ERRORLOG:\
+        :mx#0:\
+        :sh:
+jus|Epson LQ-850 sa znakovima JUS I.B1.002:\
+        :lp=/dev/null:\
+        :sd=/usr/spool/lpd/jus:\
+        :if=/usr/spool/lpd/jus_filter:\
+        :lf=/usr/spool/lpd/ERRORLOG:\
+        :mx#0:\
+        :sh
+latin2|text|Epson LQ-850 sa znakovima po ISO Latin 2:\
+        :lp=/dev/null:\
+        :sd=/usr/spool/lpd/latin2:\
+        :if=/usr/spool/lpd/latin2_filter:\
+        :lf=/usr/spool/lpd/ERRORLOG:\
+        :mx#0:\
+        :sh:
+</PRE>
+</CODE></BLOCKQUOTE>
+
+U pitanju su tri reda za stampanje. Prva je americki (ASCII) izbor znakova.
+Drugi koristi <CODE>/var/spool/lpd/jus_epson</CODE>: 
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/sh
+/usr/spool/lpd/jus_epson | lpr -Pascii
+</PRE>
+</CODE></BLOCKQUOTE>
+    
+Potrebno je da datoteku filtrirate kroz filter <CODE>/var/spool/lpd/jus_epson</CODE> i da
+je postavite u prvi red za stampanje. Filter <CODE>jus_epson</CODE> ne radi nista drugo
+osim sto bira svedski kodni raspored, prepise datoteku sa ulaza na izlaz i na
+kraju opet bira americki raspored. To je jedini deo programa koji zavisi od
+vrste stampaca:
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/sh
+# Stampanje dokumenta kodiranih po JUS I.B1.002 na stampac Epson LQ
+#
+# Biramo srpski (svedski) raspored
+/bin/echo "\033R\005\c"
+# Ispisujemo dokument
+cat
+# Biramo ASCII raspored
+/bin/echo "\033R\000\c"
+</PRE>
+</CODE></BLOCKQUOTE>
+        
+Treci red (queue) je modifikacija drugog. Najpre se dokument pretvara iz
+Latin 2 u JUS kodni raspored, zatim se koristi prethodno opisani filter da
+doda na pocetku i na kraju potrebne kodove za stampac, i na kraju se datoteka
+salje u prvi red za stampanje.
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/sh
+/usr/local/bin/recode --force latin2:yu | \
+/usr/spool/lpd/jus_epson | lpr -Pascii
+</PRE>
+</CODE></BLOCKQUOTE>
+        
+Ovde pretpostavljamo da posedujemo program <CODE>recode</CODE> u <CODE>/usr/local/bin</CODE> direktorijumu.
+<P>U ovu svrhu morate u direktorijumu <CODE>/usr/spool/lpd</CODE> (ili <CODE>/var/spool/lpd</CODE>)
+kreirati poddirektorijume <CODE>/usr/spool/lpd/epson, /usr/spool/lpd/jus</CODE> i
+<CODE>/usr/spool/lpd/latin2</CODE>.
+<P>Stampanje bi trebalo da ide lako:
+<OL>
+<LI>Bez eksplicitne izbora reda, ili sa izborima <CODE>-Pepson</CODE> ili <CODE>-Pascii</CODE>, datoteka se stampa kao ASCII:
+<BLOCKQUOTE><CODE>
+lpr &lt;datoteka&gt;
+</CODE></BLOCKQUOTE>
+                </LI>
+<LI>Izborom reda <CODE>-Pjus</CODE> datoteka se stampa kao dokument po JUS I.B1.002 rasporedu:
+<BLOCKQUOTE><CODE>
+lpr -Pjus &lt;datoteka&gt;
+</CODE></BLOCKQUOTE>
+                </LI>
+<LI>Izborom reda <CODE>-Platin2</CODE> ili <CODE>-Ptext</CODE> datoteka se stampa po ISO-8859-2 rasporedu:
+<BLOCKQUOTE><CODE>
+lpr -Platin2 &lt;datoteka&gt;
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+                
+<H2><A NAME="ss6.3">6.3 PostScript stampaci</A>
+</H2>
+
+<P>Datoteku mozete lako odstampati ako koristite jedan od filtera za PostScript
+stampace koji podrzavaju ISO-8859-2 raspored. Takvi programi su, na primer,
+<CODE>a2ps</CODE> i GNU <CODE>enscript</CODE>. Poslednji podrzava ISO-8859-2 raspored, dok je podrska
+za prvi program u izradi.
+<P>Enscript za Red Hat distribucije mozete naci na 
+<A HREF="http://rufus.w3.org/linux/RPM">http://rufus.w3.org/linux/RPM</A>
+"skladistu" RPM paketa.
+<P>
+<DL>
+<DT><B>GNU enscript</B><DD><P>Ako niste instalirali GNU enscript, mozete to da ucinite po uputstvima koja
+prate program. Osim njega, potreban vam je i neki font u <CODE>Type 1</CODE> obliku koji
+sadrzi nasa slova. Dobar izbor bi bio IBM Courier, koji se distribuira uz
+X Windows sisteme ili sa programom <CODE>ghostscript</CODE>. Ako font postoji, ali ne
+znate tacno gde se nalazi, mozete ga pronaci komandom
+<BLOCKQUOTE><CODE>
+find / -name cour.pf[ab]
+</CODE></BLOCKQUOTE>
+        
+U licnu (<CODE>~/.enscriptrc</CODE>) ili sistemsku konfiguracionu datoteku
+(<CODE>/usr/local/etc/enscript.cfg</CODE> ili <CODE>/usr/loca/etc/enscriptsite.cfg</CODE>)
+dodajte put do datoteke sa fontovima. Osim toga, GNU enscript zahteva u svakom
+direktorijumu sa fontovima datoteku <CODE>font.map</CODE>, koja sadrzi preslikavanje
+izmedju fontova i datoteka u kojima se fontovi nalaze - slicno kao <CODE>fonts.dir</CODE>.
+Datoteku <CODE>font.map</CODE> mozete da kreirate naredbom <CODE>mkafmmap</CODE>.
+<P>Primer konfiguracione datoteke <CODE>enscriptsite.cfg</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+...
+#  Gde su PostScript fontovi?
+AFMPath: /usr/lib/X11/fonts/Type1:/usr/local/lib/ghostscript/fonts
+...
+# Podrazumevani nacin kodiranja:
+DefaultEncoding: latin2
+...
+# Podrazumevani format papira:
+DefaultMedia: A4
+...
+# lpd bira red za stampanje prekidacem -P...
+QueueParam: -P
+...
+# Za stampanje koristimo naredbu lpr, a ne lp
+Spooler: lp
+</PRE>
+</CODE></BLOCKQUOTE>
+        
+Posto ste sve namestili, jednostavno posaljite datoteku na stampanje komandom
+<BLOCKQUOTE><CODE>
+enscript &lt;datoteka&gt;
+</CODE></BLOCKQUOTE>
+</DL>
+<HR>
+<A HREF="Serbian-HOWTO-7.html">Next</A>
+<A HREF="Serbian-HOWTO-5.html">Previous</A>
+<A HREF="Serbian-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

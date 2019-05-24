@@ -1,0 +1,431 @@
+<HTML
+><HEAD
+><TITLE
+>Native ATM PVCs</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="ATM on Linux HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Device Setup"
+HREF="device-setup.html"><LINK
+REL="NEXT"
+TITLE="Signaling"
+HREF="signaling.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>ATM on Linux HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="device-setup.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="signaling.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="NATIVE-ATM-PVCS"
+>4. Native ATM PVCs</A
+></H1
+><P
+>PVCs can be used for machines that are either connected back to back or
+via a switch. In the latter case, the cell forwarding has to be manually
+set up at the switch.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="NATIVE-ATM-PVCS.TRAFFIC-TOOLS"
+>4.1. Traffic Tools</A
+></H2
+><P
+><SPAN
+CLASS="APPLICATION"
+>aread</SPAN
+>/<SPAN
+CLASS="APPLICATION"
+>awrite</SPAN
+> and
+<SPAN
+CLASS="APPLICATION"
+>br</SPAN
+>/<SPAN
+CLASS="APPLICATION"
+>bw</SPAN
+> are simple programs
+to access the ATM API.  <SPAN
+CLASS="APPLICATION"
+>awrite</SPAN
+> sends the text string
+passed as its second argument in an AAL5 PDU.  <SPAN
+CLASS="APPLICATION"
+>aread</SPAN
+>
+receives one AAL5 PDU and
+displays it in hex.  Both programs also display the return values of the
+corresponding system calls and the current values of
+<SPAN
+CLASS="ERRORCODE"
+>errno</SPAN
+>.</P
+><P
+><SPAN
+CLASS="APPLICATION"
+>bw</SPAN
+> either sends its standard input or a stream of
+blocks containing
+arbitrary data (if a number is passed as its fourth argument) in 8 kB
+AAL5 PDUs.  <SPAN
+CLASS="APPLICATION"
+>br</SPAN
+> receives AAL5 PDUs and writes them
+to standard output.</P
+><P
+>The first argument of <SPAN
+CLASS="APPLICATION"
+>aread</SPAN
+>,
+<SPAN
+CLASS="APPLICATION"
+>awrite</SPAN
+>, <SPAN
+CLASS="APPLICATION"
+>br</SPAN
+> and
+<SPAN
+CLASS="APPLICATION"
+>bw</SPAN
+> is always the PVC address,
+i.e. the ATM interface number, the VPI and the VCI number, with a dot
+between elements. The interface number can be omitted if it is zero.
+Example:
+
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN482"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>% awrite 1.0.42 hi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+><P
+>Note that some adapters only support VPI == 0. Also, the VCI range may be
+limited, e.g 0 to 1023.
+The interface number can be obtained from the initialization
+message the driver printed during startup. <FONT
+COLOR="RED"
+>atm0</FONT
+>
+is interface 0, <FONT
+COLOR="RED"
+>atm1</FONT
+> is interface 1, etc. If the
+system is equipped with a real
+ATM adapter (e.g. not only <SPAN
+CLASS="APPLICATION"
+>atmtcp</SPAN
+>),
+that adapter is normally at <FONT
+COLOR="RED"
+>atm0</FONT
+>.</P
+><P
+><SPAN
+CLASS="APPLICATION"
+>aping</SPAN
+> receives and sends small AAL5 PDUs on a PVC.
+It expects that
+messages it sends are either echoed back or that a similar program on the
+other side generates a stream of messages.  <SPAN
+CLASS="APPLICATION"
+>aping</SPAN
+>
+reports an error if no messages are received for too long.
+<SPAN
+CLASS="APPLICATION"
+>aping</SPAN
+> is invoked by
+specifying the PVC, like <SPAN
+CLASS="APPLICATION"
+>aread</SPAN
+>.</P
+><P
+>For "real" tests, you should use the modified version of
+<SPAN
+CLASS="APPLICATION"
+>ttcp</SPAN
+> that
+comes with this package. The original is available at
+<A
+HREF="ftp://ftp.sgi.com/sgi/src/ttcp/"
+TARGET="_top"
+>ftp://ftp.sgi.com/sgi/src/ttcp/</A
+>.
+The following options have been added:
+
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="PARAMETER"
+><I
+>-a</I
+></TT
+></DT
+><DD
+><P
+>use native ATM instead of UDP/TCP. The address must be in
+the format
+<TT
+CLASS="PARAMETER"
+><I
+>[<TT
+CLASS="REPLACEABLE"
+><I
+>itf.</I
+></TT
+>]vpi.vci</I
+></TT
+>
+for PVCs, or a
+valid ATM end system address for SVCs.</P
+></DD
+><DT
+><TT
+CLASS="PARAMETER"
+><I
+>-P</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>num</I
+></TT
+></DT
+><DD
+><P
+>use a CBR connection with a peak cell rate of
+<TT
+CLASS="REPLACEABLE"
+><I
+>num</I
+></TT
+> cells per second. Default is to use UBR.</P
+></DD
+><DT
+><TT
+CLASS="PARAMETER"
+><I
+>-C</I
+></TT
+></DT
+><DD
+><P
+>disable (UDP) checksums</P
+></DD
+></DL
+></DIV
+>
+
+Example:
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN517"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>%a ttcp_atm -r -a -s 0.90
+%b ttcp_atm -t -a -s 0.90</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="NATIVE-ATM-PVCS.DIRECT-CELL-ACCESS"
+>4.2. Direct Cell Access</A
+></H2
+><P
+>On adapters where the device driver supports access to raw cells (``AAL0''),
+individual cells can be composed and received with the
+<SPAN
+CLASS="APPLICATION"
+>atmdump</SPAN
+> program.
+
+Here is an example:
+<DIV
+CLASS="INFORMALEXAMPLE"
+><A
+NAME="AEN523"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>a% sleep 10; date | ./atmdump -t 1 -c 0.51
+b% ./atmdump 0.51
+825079645.192480: VPI=0 VCI=51, GFC=0x0, CLP=1, Data SDU 1 (PTI 1)
+   46 72 69 20 46 65 62 20 32 33 20 31 32 3a 34 37 
+   3a 32 35 20 47 4d 54 20 31 39 39 36 0a 00 00 00 
+   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="device-setup.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="signaling.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Device Setup</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Signaling</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

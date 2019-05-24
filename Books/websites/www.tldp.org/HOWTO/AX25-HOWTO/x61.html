@@ -1,0 +1,323 @@
+<HTML
+><HEAD
+><TITLE
+>The Packet Radio Protocols and Linux</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Amateur Radio AX.25 HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="x13.html"><LINK
+REL="NEXT"
+TITLE="The AX.25/NET/ROM/ROSE software components"
+HREF="x94.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Amateur Radio AX.25 HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x13.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x94.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN61"
+>2. The Packet Radio Protocols and Linux</A
+></H1
+><P
+>The <EM
+>AX.25</EM
+> protocol offers both connected and connectionless modes of
+operation, and is used either by itself for point-point links, or to carry
+other protocols such as TCP/IP and NET/ROM.</P
+><P
+>It is similar to X.25 level 2 in structure, with some extensions to make it
+more useful in the amateur radio environment.</P
+><P
+>The NET/ROM protocol is an attempt at a full network protocol and uses AX.25 at
+its lowest layer as a datalink protocol. It provides a network layer that is
+an adapted form of AX.25. The NET/ROM protocol features dynamic routing and
+node aliases.</P
+><P
+>The ROSE protocol was conceived and first implemented by Tom Moulton W2VY and
+is an implementation of the X.25 packet layer protocol and is designed to
+operate with AX.25 as its datalink layer protocol. It too provides a network
+layer. ROSE addresses take the form of 10 digit numbers. The first four digits
+are called the Data Network Identification Code (DNIC) and are taken from
+Appendix B of the CCITT X.121 recommendation. More information on the ROSE
+protocol may be obtained from the
+<A
+HREF="http://www.rats.org/"
+TARGET="_top"
+>RATS Web server</A
+>.</P
+><P
+>Alan Cox developed some early kernel based AX.25 software support for
+Linux. <A
+HREF="mailto:g4klx@g4klx.demon.co.uk"
+TARGET="_top"
+>Jonathon
+Naylor</A
+> has taken up ongoing development of the code, has added
+NET/ROM and ROSE support and is now the developer of the AX.25 related
+kernel code. DAMA support was developed by
+<A
+HREF="mailto:jreuter@poboxes.com"
+TARGET="_top"
+>Joerg</A
+>, DL1BKE. Baycom and
+Soundmodem support were added by 
+<A
+HREF="mailto:sailer@ife.ee.ethz.ch"
+TARGET="_top"
+>Thomas Sailer</A
+>.
+The AX.25 software is now maintained by a small team of developers
+on <A
+HREF="http://www.sourceforge.net"
+TARGET="_top"
+>SourceForge</A
+>.</P
+><P
+>The Linux code supports KISS and 6PACK based TNC's (Terminal Node
+Controllers), the Ottawa PI card, the Gracilis PacketTwin card and
+other Z8530 SCC based cards with the generic SCC driver, several
+parallel and serial port Baycom modems, and serial port YAM
+modems. Thomas Sailer's kernel soundmodem driver supports SoundBlaster
+and sound cards based on the Crystal chip set, and his newer user-mode
+soundmodem uses the standard kernel sound drivers, so it should work
+with any sound card supported under Linux.</P
+><P
+>The user programs contain a simple PMS (Personal Message System), a
+beacon facility, a line mode connect program,
+<TT
+CLASS="LITERAL"
+>listen</TT
+> (an example of how to capture all AX.25
+frames at raw interface level), and programs to configure the NET/ROM
+protocol. Also included are an AX.25 server style program to handle
+and dispatch incoming AX.25 connections and a NET/ROM daemon which
+does most of the hard work for NET/ROM support.</P
+><P
+>There are utility programs to support APRS, including digipeating and
+gatewaying to the Internet.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN78"
+>2.1. How it all fits together</A
+></H2
+><P
+>The Linux AX.25 implementation is a brand new implementation. While in many
+ways it may looks similar to NOS, or BPQ or other AX.25 implementations, it
+is none of these and is not identical to any of them. The Linux AX.25
+implementation is capable of being configured to behave almost identically
+to other implementations, but the configuration process is very different.</P
+><P
+>To assist you in understanding how you need to think when configuring this
+section describes some of the structural features of the AX.25 implementation
+and how it fits into the context of the overall Linux structure.</P
+><P
+><EM
+>Simplified Protocol Layering Diagram</EM
+>
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+> _____________________________________________
+|         |           |             |         |
+| AF_AX25 | AF_NETROM |  AF_INET    | AF_ROSE |
+|=========|===========|=============|=========|
+|         |           |             |         |
+|         |           |    TCP/IP   |         |
+|         |           |________     |         |
+|         |   NET/ROM          |    | ROSE    |
+|         |____________________|____|_________|
+|            AX.25                            |
+|_____________________________________________|</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>This diagram simply illustrates that NET/ROM, ROSE and TCP/IP all run directly
+on top of AX.25, but that each of these protocols is treated as a separate
+protocol at the programming interface. The `<TT
+CLASS="LITERAL"
+>_</TT
+>' names are
+simply the names given to the `<EM
+>Address Family</EM
+>' of each of these
+protocols when writing programs to use them. The important thing to note here
+is the implicit dependence on the configuration of your AX.25 devices before
+you can configure your NET/ROM, ROSE or TCP/IP devices.</P
+><P
+><EM
+>Software Module Diagram of Linux Network Implementation</EM
+>
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+> ___________________________________________________________________________
+|         |           |                       ||          |                 |
+| User    | Programs  |   call        node    ||  Daemons | ax25d  mheardd  |
+|         |           |   pms         mheard  ||          | inetd  netromd  |
+|_________|___________|_______________________||__________|_________________|
+|         | Sockets   |open(), close(), listen(), read(), write(), connect()|
+|         |           |_____________________________________________________|
+|         |           |   AF_AX25   |  AF_NETROM  |   AF_ROSE   |  AF_INET  |
+|         |___________|_____________|_____________|_____________|___________|
+|Kernel   | Protocols |   AX.25     |   NetRom    |     ROSE    | IP/TCP/UDP|
+|         |___________|_____________|_____________|_____________|___________|
+|         | Devices   |   ax0,ax1   |  nr0,nr1    | rose0,rose1 | eth0,ppp0 |
+|         |___________|_____________|_____________|_____________|___________|
+|         | Drivers   | Kiss   PI2   PacketTwin   SCC   BPQ     | slip ppp  |
+|         |           |     Soundmodem      Baycom              | ethernet  |
+|_________|___________|_________________________________________|___________|
+|Hardware | PI2 Card, PacketTwin Card, SCC card, Serial port, Ethernet Card |
+|_________|_________________________________________________________________|</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>This diagram is a little more general than the first. This diagram attempts to
+show the relationship between user applications, the kernel and the hardware.
+It also shows the relationship between the Socket application programming
+interface, the actual protocol modules, the kernel networking devices and the
+device drivers. Anything in this diagram is dependent on anything underneath
+it, and in general you must configure from the bottom of the diagram upwards.
+So for example, if you want to run the <EM
+>call</EM
+> program you must also
+configure the hardware, then ensure that the kernel has the appropriate device
+driver, that you create the appropriate network device, that the kernel
+includes the desired protocol that presents a programming interface that the
+<EM
+>call</EM
+> program can use. I have attempted to lay out this document in
+roughly that order.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x13.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x94.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The AX.25/NET/ROM/ROSE software components</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

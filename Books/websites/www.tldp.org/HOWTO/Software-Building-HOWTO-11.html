@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Building and Installing Software Packages for Linux: Third Example: Fortune</TITLE>
+ <LINK HREF="Software-Building-HOWTO-12.html" REL=next>
+ <LINK HREF="Software-Building-HOWTO-10.html" REL=previous>
+ <LINK HREF="Software-Building-HOWTO.html#toc11" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Software-Building-HOWTO-12.html">Next</A>
+<A HREF="Software-Building-HOWTO-10.html">Previous</A>
+<A HREF="Software-Building-HOWTO.html#toc11">Contents</A>
+<HR>
+<H2><A NAME="s11">11. Third Example: Fortune</A></H2>
+
+<P>This example requires some knowledge of C programming. The majority
+of UNIX/Linux software is written in C, and learning at least a little
+bit of C would certainly be an asset for anyone serious about software
+installation.
+<P>The notorious <EM>fortune</EM> program displays up a humorous saying, a
+"fortune cookie", every time Linux boots up. Unfortunately (pun intended),
+attempting to build fortune on a Red Hat distribution with a 2.0.30
+kernel generates fatal errors.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+~/fortune# make all
+
+
+gcc -O2 -Wall -fomit-frame-pointer -pipe   -c fortune.c -o
+fortune.o
+fortune.c: In function `add_dir':
+fortune.c:551: structure has no member named `d_namlen'
+fortune.c:553: structure has no member named `d_namlen'
+make[1]: *** [fortune.o] Error 1
+make[1]: Leaving directory `/home/thegrendel/for/fortune/fortune'
+make: *** [fortune-bin] Error 2
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<P>
+<P>Looking at <CODE>fortune.c</CODE>, the pertinent lines are these.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+   if (dirent->d_namlen == 0)
+            continue;
+        name = copy(dirent->d_name, dirent->d_namlen);
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>We need to find the structure <CODE>dirent</CODE>, but it is not declared in
+the <EM>fortune.c</EM> file, nor does a <B>grep dirent</B> show it in
+any of the other source files. However, at the top of
+<EM>fortune.c</EM>, there is the following line.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#include &lt;dirent.h>
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This appears to be a system library include file, therefore, the logical
+place to look for <EM>dirent.h</EM> is in <EM>/usr/include</EM>.
+Indeed, there does exist a <EM>dirent.h</EM> file in
+<EM>/usr/include</EM>, but that file does not contain the declaration of
+the <CODE>dirent</CODE> structure.  There is, however, a reference to
+another <EM>dirent.h</EM> file.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#include &lt;linux/dirent.h>
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>At last, going to <EM>/usr/include/linux/dirent.h</EM>, we find the
+structure declaration we need.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+struct dirent {
+        long            d_ino;
+        __kernel_off_t  d_off;
+        unsigned short  d_reclen;
+        char            d_name[256]; /* We must not include
+limits.h! */
+};
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Sure enough, the structure declaration contains no <EM>d_namelen</EM>,
+but there are a couple of "candidates" for its equivalent. The most
+likely of these is <EM>d_reclen</EM>, since this structure member
+probably represents the length of something and it is a short integer.
+The other possibility, <EM>d_ino</EM>, could be an inode number, judging
+by its name and type. As a matter of fact, we are probably dealing with
+a "directory entry" structure, and these elements represent attributes
+of a file, its name, inode, and length (in blocks).  This would seem to
+validate our guess.
+<P>Let us edit the file <CODE>fortune.c</CODE>, and change the two
+<EM>d_namelen</EM> references in lines 551 and 553 to <EM>d_reclen</EM>.
+Try a <EM>make all</EM> again. <B>Success.</B> It builds without
+errors. We can now get our "cheap thrills" from fortune.
+<P>
+<P>
+<HR>
+<A HREF="Software-Building-HOWTO-12.html">Next</A>
+<A HREF="Software-Building-HOWTO-10.html">Previous</A>
+<A HREF="Software-Building-HOWTO.html#toc11">Contents</A>
+</BODY>
+</HTML>

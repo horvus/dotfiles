@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>NetWare Loadable Module Programming HOWTO: First Step: Hello world</TITLE>
+ <LINK HREF="NLM-HOWTO-4.html" REL=next>
+ <LINK HREF="NLM-HOWTO-2.html" REL=previous>
+ <LINK HREF="NLM-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="NLM-HOWTO-4.html">Next</A>
+<A HREF="NLM-HOWTO-2.html">Previous</A>
+<A HREF="NLM-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3.</A> <A HREF="NLM-HOWTO.html#toc3">First Step: Hello world</A></H2>
+
+<P>As usual, we will start with the famous "Hello world" program. The source
+code for hello.nlm is available in the nlm-samples package. You can download
+it from 
+<A HREF="ftp://ftp.penguin.cz/pub/users/mhi/nlm/">ftp://ftp.penguin.cz/pub/users/mhi/nlm/</A>.</P>
+
+<H2><A NAME="ss3.1">3.1</A> <A HREF="NLM-HOWTO.html#toc3.1">hello.c - Source File</A>
+</H2>
+
+<P>
+<HR>
+<PRE>
+#define N_PLAT_NLM                                /* Define dest. platform */
+
+#include &lt;nwconio.h>                              /* ConsolePrintf */
+
+int
+main (int argc, char **argv)
+{
+  int i;
+
+  ConsolePrintf ("\rHello world!\n\n");           /* print on system console */
+
+  ConsolePrintf("Arguments:\n");                  /* all arguments */
+  for (i=0;i&lt;argc;i++)
+   ConsolePrintf("argv[%u]=\"%s\"\n",i, argv[i]);
+
+  return 0;                                       /* exit NLM */
+}
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss3.2">3.2</A> <A HREF="NLM-HOWTO.html#toc3.2">hello.def - NLM header file</A>
+</H2>
+
+<P>
+<HR>
+<PRE>
+#
+# hello.def - NLM Header definition file for nlmconv(1)
+# Copyright (c) 2000 Martin Hinner &lt;martin@hinner.info>
+#
+
+# define startup object files
+INPUT   hello.o
+INPUT   /usr/nwsdk/lib/prelude.o            # clib startup code
+
+# all imported functions and import lists
+IMPORT @/usr/nwsdk/imports/clib.imp         # Functions in CLIB.NLM
+IMPORT @/usr/nwsdk/imports/threads.imp      # Functions in THREADS.NLM
+
+# NLM header...
+OUTPUT  hello.nlm                           # output file
+TYPE 0                                      # Ordinary NLM
+VERSION 1,0,0                               # Version 1.0
+COPYRIGHT "Copyright (c) 2000 Martin Hinner &lt;martin@hinner.info>" # (c) ...
+DESCRIPTION "Simple 'Hello world' NLM module." # title of nlm
+SCREENNAME "System Console"                 # Default screen name
+
+MODULE CLIB,THREADS                         # req'd modules
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss3.3">3.3</A> <A HREF="NLM-HOWTO.html#toc3.3">Makefile</A>
+</H2>
+
+<P>
+<HR>
+<PRE>
+# makefile for "hello world" NLM
+
+CC = gcc
+CFLAGS = -Wall -O2 -g -I/usr/nwsdk/include/ -nostdinc -fno-builtin -fpack-struct
+
+hello.nlm:      hello.o hello.def
+        nlmconv --output-target=nlm32-i386 -T hello.def
+
+hello.o:        hello.c
+        $(CC) $(CFLAGS) -c hello.c
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss3.4">3.4</A> <A HREF="NLM-HOWTO.html#toc3.4">GCC problems</A>
+</H2>
+
+<P>You must pass these arguments to the gcc:</P>
+<P>
+<UL>
+<LI> <B>-fno-builtin</B>:
+GCC's fast builtin functions sometimes cause server to abend,
+so we don't want to use them.</LI>
+<LI> <B>-nostdinc</B>:
+Only include files in /usr/nwsdk/include are valid for NLMs (don't
+forget to use also -I/usr/nwsdk/include).</LI>
+<LI> <B>-fpack-struct</B>:
+GCC's struct packing method is not valid for Novell NetWare, so we
+won't use it. Thanks to Gabor Keresztvalvi for this information.</LI>
+<LI> <B>-fno-canary-all-functions</B>:
+If you have Immunix StackGuard GCC, we don't want to use
+it. StackGuard doesn't work under NetWare.</LI>
+</UL>
+ </P>
+
+<H2><A NAME="ss3.5">3.5</A> <A HREF="NLM-HOWTO.html#toc3.5">Testing the Module</A>
+</H2>
+
+<P>Copy hello.nlm to the SYS:\SYSTEM directory on your NetWare server. Then, on
+the system console, type "load hello.nlm". If everything went fine, you should
+see NLM version information, a copyright message and "Hello world".</P>
+
+<HR>
+<A HREF="NLM-HOWTO-4.html">Next</A>
+<A HREF="NLM-HOWTO-2.html">Previous</A>
+<A HREF="NLM-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

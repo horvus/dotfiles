@@ -1,0 +1,87 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Compressed TCP/IP-Sessions using SSH-like tools: Compressing Email</TITLE>
+ <LINK HREF="Compressed-TCP-4.html" REL=next>
+ <LINK HREF="Compressed-TCP-2.html" REL=previous>
+ <LINK HREF="Compressed-TCP.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Compressed-TCP-4.html">Next</A>
+<A HREF="Compressed-TCP-2.html">Previous</A>
+<A HREF="Compressed-TCP.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Compressing Email</A> </H2>
+
+<H2><A NAME="ss3.1">3.1 Incoming Emails (POP3, IMAP4)</A>
+ </H2>
+
+<P>Most people fetch their email from the mailserver via POP3. POP3 is a protocol
+with many disadvantages:
+<P>
+<OL>
+<LI>POP3 transfers password in clear text. (There are SSL-implementations of
+POP/IMAP and a challenge/response authentication, defined in RFC-2095/2195).</LI>
+<LI>POP3 causes much protocol overhead: first the client requests a message
+than the server sends the message. After that the client requests the transferred
+article to be deleted. The server confirms the deletion. After that the server
+is ready for the next transaction. So 4 transactions are needed for each email.</LI>
+<LI>POP3 transfers the mails without compression although email is highly compressible
+(factor=3.5).</LI>
+</OL>
+<P>You could compress POP3 by forwarding localhost:110 through a compressed
+connection to your ISP's POP3-socket. After that you have to tell your mail
+client to connect to localhost:110 in order to download mail. That secures
+and speeds up the connection -- but the download time still suffers from the
+POP3-inherent protocol overhead.
+<P> 
+<P>It makes sense to substitute POP3 by a more efficient protocol. The idea
+is to download the entire mailbox at once without generating protocol overhead.
+Furthermore it makes sense to compress the connections. The appropriate tool
+which offers both features is SCP. You can download your mail-file like this:
+<P> 
+<P><CODE>scp -C -l loginId:/var/spool/mail/loginid /tmp/newmail</CODE>
+<P> 
+<P>But there is a problem: what happens if a new email arrives at the server
+during the download of your mailbox? The new mail would be lost. Therefore
+it makes more sense to use the following commands:
+<P><CODE>ssh -l loginid mailserver -f mv /var/spool/mail/loginid /tmp/loginid_fetchme</CODE>
+<P><CODE>scp -C -l loginid:/tmp/my_new_mail /tmp/loginid_fetchme</CODE>
+<P>A move (mv) is a elementary operation, so you won't get into truble if
+you receive new mail during the execution of the comands. But if the mail server
+directories /tmp/ and /var/spool/mail are not on the same disc you might get
+problems. A solution is to create a lockfile on the server before you execute
+the mv: <CODE>touch /var/spool/mail/loginid.lock</CODE>. You should remove it, after that.
+A better solution is to move the file loginid in the same directory:
+<P><CODE>ssh -l loginid mailserver -f mv /var/spool/mail/loginid /var/spool/mail/loginid_fetchme</CODE>
+<P>After that you can use formail instead of procmail in order to filter /tmp/newmail
+into the right folder(s): <CODE>formail -s procmail &lt; /tmp/newmail</CODE>
+<H2><A NAME="ss3.2">3.2 Outgoing Email (SMTP)</A>
+ </H2>
+
+<P>You send email over compresses and encrypted SSH-connections, in order
+to:
+<P>
+<UL>
+<LI>Save network traffic</LI>
+<LI>Secure the connection (This does not make sense, if the mail is transported
+over untrusted networks, later.)</LI>
+<LI>Authenticate the sender.
+Many mail servers deny mail relaying in order
+to prevent abuse. If you send an email over an SSH-connection, the remote mail
+server (i.e. sendmail or MS-exchange) thinks to be connected, locally.</LI>
+</UL>
+<P>If you have SSH-access on the mail server, you need the following command:
+<P><CODE>ssh -C -l loginid mailserver -L2525:mailserver:25</CODE>
+<P>If you don't have SSH-access on the mail server but to a server that is
+allowed to use your mail server as relay, the command is:
+<P><CODE>ssh -C -l loginid other_server -L2525:mailserver:25</CODE>
+<P>After that you can configure your mail client (or mail server: see "smarthost")
+to send out mails to localhost port 2525.
+<HR>
+<A HREF="Compressed-TCP-4.html">Next</A>
+<A HREF="Compressed-TCP-2.html">Previous</A>
+<A HREF="Compressed-TCP.html#toc3">Contents</A>
+</BODY>
+</HTML>

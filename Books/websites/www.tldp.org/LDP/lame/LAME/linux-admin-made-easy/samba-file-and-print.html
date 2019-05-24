@@ -1,0 +1,480 @@
+<HTML
+><HEAD
+><TITLE
+>Windows-style File and Print Services with Samba</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Administration Made Easy"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Custom Configuration and Administration Issues"
+HREF="custom-config.html"><LINK
+REL="PREVIOUS"
+TITLE="Internet User Authentication with TACACS"
+HREF="internet-user-authentication.html"><LINK
+REL="NEXT"
+TITLE="Macintosh-style File and Print Services with Netatalk"
+HREF="netatalk-file-and-print.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Administration Made Easy</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="internet-user-authentication.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. Custom Configuration and Administration Issues</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="netatalk-file-and-print.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SAMBA-FILE-AND-PRINT"
+>7.4. Windows-style File and Print Services with Samba</A
+></H1
+><P
+>Linux can provide SMB services (eg. WfW, Win95, and NT-style network
+file &#38; printer sharing), using the Samba package.  This section will
+describe how to configure shares, and how to access them from client
+machines.</P
+><P
+>The Samba package is included with the Red Hat distribution, you can
+check if it is installed and what version you have by typing:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>rpm -q samba</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>If it isn't installed, you will need to install it using the RPM
+utility. See <A
+HREF="using-rpm.html"
+>Section 10.1</A
+> for details on how to do
+this.</P
+><P
+>The most important Samba files you should concern yourself with
+are:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>/etc/smb.conf</DT
+><DD
+><P
+>Samba configuration file where shares and other
+configuration parameters are set up (see below)</P
+></DD
+><DT
+>/var/log/samba/</DT
+><DD
+><P
+>Location of Samba log files</P
+></DD
+><DT
+>/home/samba/</DT
+><DD
+><P
+>Suggested location where file shares should be set up.
+However, you should choose a location where you have enough space on the
+file system to accomodate the files you will store.  Personally, I usually
+set up a large partition mounted on /archive/ and place my shares
+here.</P
+></DD
+></DL
+></DIV
+><P
+>The file ``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/smb.conf</TT
+></TT
+>''
+contains configuration information on file &#38; print shares.  The first
+few lines of the file contain global configuration directives, which are
+common to all shares (unless they are over-ridden on a per-share basis),
+followed by share sections.</P
+><P
+>The Samba installation includes a default smb.conf file which in
+many cases should be adequate for your needs and require only a few
+changes.</P
+><P
+>Here is an example of this file (which I have heavily customized to
+show you some of the more important and interesting options):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+># Items common to all shares (unless over-ridden on a per-share basis)
+[global]
+   # Number of minutes of inactivity before client is disconnected
+   # to avoid consuming resources.  Most clients will automatically
+   # reconnect so this is a good idea to enable.
+   dead time = 10
+
+   # Don't let users connect as <SPAN
+CLASS="QUOTE"
+>"root"</SPAN
+>, just-in-case.  :-)
+   invalid users = root
+
+   # Specify the account for guest shares (shares that don't require
+   # a password to connect to.  This username must be a valid user
+   # in the /etc/passwd file.
+   guest account = guest
+
+   # Specify where log files should be written to.  The <SPAN
+CLASS="QUOTE"
+>"%m"</SPAN
+> suffix
+   # means that log files will be created in the format
+   # log.machine-name (eg. <SPAN
+CLASS="QUOTE"
+>"log.twixel"</SPAN
+>)
+   log file = /usr/local/samba/logs/log.%m
+
+   # Maximum size of log file, in Kilobytes.
+   max log size = 1000
+
+   # Password level 3 means that case is not an issue when entering
+   # passwords.  A little less secure than level 1 or 2 would be,
+   # but seems to be a fair compromise for user convenience.
+   password level = 3
+
+   # Specify that all shares should appear in the browse list
+   # (override any you don't want on a per-share basis).
+   browseable = yes
+
+   # If this is enabled, you can see active connections using the
+   # <SPAN
+CLASS="QUOTE"
+>"smbstatus"</SPAN
+> command.
+   status = yes
+
+   # The level of debugging information that is recorded in the log
+   # files.  Higher values generate more information (which is
+   # probably not very useful, most of the time).
+   debug level = 2
+
+   # This will send any Windows-style <SPAN
+CLASS="QUOTE"
+>"POPUP"</SPAN
+> messages received on
+   # the server to the postmaster by e-mail.  Not very useful, but
+   # an interesting demonstration of what can be accomplished.
+   message command = /bin/mail -s 'Message from %f on %m' postmaster &#60; %s; rm %s &#38;
+
+   # This is a form of caching that, when enabled, may improve
+   # performance when reading files.
+   read prediction = true
+
+   # A list of services that should be added automatically to the
+   # browse-list.
+   auto services = cdrom
+
+   # The location of your <SPAN
+CLASS="QUOTE"
+>"printcap"</SPAN
+> file, a text file containing
+   # definitions for your printers.
+   printcap name = /etc/printcap
+
+   # If enabled all printers in the /etc/printcap file will be
+   # loaded into the browse-list.
+   load printers = yes
+
+   # The print command by which data is spooled to a printer under Linux.
+   print command = lpr -r -P%p %s
+
+   # The print command by which job queue information (printer status)
+   # can be obtained.
+   lpq command = lpq -P%p
+
+   # The print command by which unwanted print jobs can be deleted
+   # from the queue.
+   lprm command = lprm -P%p %j
+
+   # The level at which Samba advertises itself for browse elections.
+   # Currently set to a high value to give it an even <SPAN
+CLASS="QUOTE"
+>"foot-hold"</SPAN
+> with
+   # any swarmy NT servers on the network.  :-)
+   os level = 34
+
+# These are user's personal shares.  If the client's username matches on the
+# server, they can access their home directory (provided they enter the
+# correct password).
+[homes]
+   # The comments appear in the browse list.
+   comment = Home Directories
+
+   # This matches the username of the client to that of the share.
+   # If they do not match, no share will be displayed in the browse
+   # list, or available to connect to.
+   user = %S
+
+   # The path to the share.  For example, <SPAN
+CLASS="QUOTE"
+>"smithj"</SPAN
+> would map to
+   # <SPAN
+CLASS="QUOTE"
+>"/home/smithj"</SPAN
+>
+   path = /home/%S
+
+   # If enabled, allow read/write access to the shares.
+   writeable = yes
+
+   # Just an inverted synonym for <SPAN
+CLASS="QUOTE"
+>"writeable"</SPAN
+>.  We don't *really* need
+   # to use both.  :-)
+   read only = no
+
+   # Keep this disabled so that a password is required to access these 
+   # shares.
+   public = no
+
+   # We don't want this share (after all, it is private) to appear in
+   # the browse-list of other users.
+   browseable = no
+
+# This is a publicly available print share, called <SPAN
+CLASS="QUOTE"
+>"hp_laser"</SPAN
+>.  It appears
+# on the browse lists and can be accessed without a password by any client.
+[hp_laser]
+   # The comment that appears in the browse-list.
+   comment = Main office printer (HP Laserjet 400)
+
+   # The username that this share is accessed as (guest means all users).
+   user = guest
+
+   # All generated print files will first be created in the /tmp
+   # directory.
+   path = /tmp
+
+   # Do not allow file creation except through print spooling.
+   writeable = no
+
+   # Set permissions accordingly -- root access to print jobs only.
+   create mode = 0700
+
+   # If this is enabled a password is not required to access the share.
+   public = yes
+
+   # This should be enabled to indicate that this is a printer share.
+   printable = yes
+
+# Here is a service providing access to the CD-ROM device.
+[cdrom]
+   comment = Shared CD-ROM drive on Linux
+   user = guest
+   path = /cdrom
+   writeable = no
+   read only = true
+   browseable = yes
+   public = yes
+   guest ok = yes</PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="TIP"
+><BLOCKQUOTE
+CLASS="TIP"
+><P
+><B
+>Tip: </B
+>Tip: Recent versions of Samba, from 2.0 onwards, provide a
+very slick web-based configuration utility called
+``<EM
+>swat</EM
+>'', which makes the process much more
+user-friendly.  The utility listens on TCP port <EM
+>901</EM
+>
+of your server, so to use the utility just point your favourite web
+browser as follows:</P
+></BLOCKQUOTE
+></DIV
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>mydomain.name:901</PRE
+></TD
+></TR
+></TABLE
+><P
+>(Of course, in order to use the SWAT utility you will need to have
+a web server running, such as Apache.  See <A
+HREF="web-server-administration.html"
+>Section 7.1</A
+> for details.)</P
+><P
+>The latest Samba versions also add considerable features in comparison with
+versions prior to 2.0.  It is worth taking the time to upgrade this
+package.</P
+><P
+>A client must have a TCP/IP network stack running in order to
+connect to shares.  Further, for browsing to work, the TCP/IP protocol
+must be bound to NETBEUI.  Under Windows 95 this can be configured from
+the <SPAN
+CLASS="QUOTE"
+>"Network"</SPAN
+> icon from within the Control Panel.</P
+><P
+>Assuming the client has been configured properly, you should see the
+server shares appear in their <SPAN
+CLASS="QUOTE"
+>"Network Neighborhood"</SPAN
+> (or
+equivalent browsing scheme if you are not using Windows 95/NT).  You can
+then map network drives from the network neighborhood, or type in an
+absolute path to the share (<EM
+>eg.
+<SPAN
+CLASS="QUOTE"
+>"\\mail\cdrom"</SPAN
+></EM
+>).  If the shared service requires a
+password to be entered, you will be prompted for one.</P
+><P
+>More information on Samba can be obtained from the Samba Home Page
+at <A
+HREF="http://samba.anu.edu.au/samba/"
+TARGET="_top"
+>http://samba.anu.edu.au/samba/</A
+>.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="internet-user-authentication.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="netatalk-file-and-print.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Internet User Authentication with TACACS</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="custom-config.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Macintosh-style File and Print Services with Netatalk</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,338 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Container operations</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="EVMS User Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The LVM plug-in"
+HREF="appxlvm.html"><LINK
+REL="PREVIOUS"
+TITLE="How LVM is implemented"
+HREF="lvmimp.html"><LINK
+REL="NEXT"
+TITLE="Region operations"
+HREF="x4759.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>EVMS User Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="lvmimp.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Appendix C. The LVM plug-in</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x4759.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="containerops"
+></A
+>C.2. Container operations</H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="createlvmconts"
+></A
+>C.2.1. Creating LVM containers</H2
+><P
+>Containers are created with an initial set of objects.  In the LVM plug-in, the
+objects can be disks, segments, or regions.  LVM has two options for creating containers.
+The value of these options cannot be changed after the container has been created.  The
+options are:</P
+><P
+></P
+><DIV
+CLASS="variablelist"
+><DL
+><DT
+>name</DT
+><DD
+><P
+>The name of the new container.</P
+></DD
+><DT
+>pe_size</DT
+><DD
+><P
+>The physical extent (PE) size, which is the granularity with which regions can be created.  The default is 16 MB.  Each region must have a whole number of extents.  
+Also, each region can have only up to 65534 extents.  Thus, the PE size for the container
+limits the maximum size of a region in that container.  With the default PE size, an LVM
+region can be, at most 1 TB.  In addition, each object consumed by the container must
+be big enough to hold at least five extents.  Thus, the PE size cannot be arbitrarily large.  Choose wisely.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN4729"
+></A
+>C.2.2. Adding objects to LVM containers</H2
+><P
+>You can add objects to existing LVM containers in order to increase the pool of
+storage that is available for creating regions.  A single container can consume up to 256
+objects.  Because the name and PE size of the containers are set when the container is
+created, no options are available when you add new objects to a container.  Each object
+must be large enough to hold five physical extents.  If an object is not large enough to
+satisfy this requirement, the LVM plug-in will not allow the object to be added to the container.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN4732"
+></A
+>C.2.3. Removing objects from LVM containers</H2
+><P
+>You can remove a consumed object from its container as long as no regions
+are mapped to that object.  The LVM plug-in does not allow objects that are in use to
+be removed their their container.  If an object must be removed, you can delete or
+shrink regions, or move extents, in order to free the object from use.</P
+><P
+>No options are available for removing objects from LVM containers.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN4736"
+></A
+>C.2.4. Expanding consumed objects in LVM containers</H2
+><P
+>In addition to adding new objects to an LVM container, 
+you can also expand
+the space in a container by expanding one of the existing consumed 
+objects (PVs).
+For example, if a PV is a disk-segment with freespace immediately 
+following it on
+the disk, you can expand that segment, which will increase the 
+amount of freespace in the container.  
+Likewise, if a PV is a RAID-0 or RAID-5 region, you can expand
+that region by adding additional objects, which in turn increases the 
+freespace in the container.</P
+><P
+>When using the GUI or text-mode UIs, PV-expand is performed by expanding
+the container.  
+If any of the existing PVs are expandable, they will appear in the
+expand-points list.  
+Choose the PV to expand, and then the options for expanding
+that object.  After the PV has expanded, the container's 
+freespace will reflect the additional space available on that PV.</P
+><P
+>When using the CLI, PV-expand is performed by expanding the 
+appropriate object directly.  
+The CLI and the EVMS engine will route the necessary commands so the
+container is expanded at the same time.</P
+><P
+>The options for expanding a PV are dependent on the plug-in 
+that owns that PV object.
+Please see the appropriate plug-in's appendix for more details on 
+options for that object.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN4742"
+></A
+>C.2.5. Shrinking consumed objects in LVM containers</H2
+><P
+>&#13;In addition to removing existing objects from an LVM container, 
+you can
+also reduce the size of a container by shrinking one of the existing
+consumed objects (PVs).  
+This is only allowed if the consumed object
+has physical extents (PEs) at the end of the object that are not allocated
+to any LVM regions.  
+In this case, LVM2 will allow the object to
+shrink by the number of unused PEs at the end of that object.
+</P
+><P
+>&#13;For example, if a PV is a desk-segment, you can shrink that segment,
+which will decrease the amount of freespace in the container.  Likewise,
+if a PV is a RAID-0 or RAID-5 region, you can shrink that region by
+removing one of the objects, which in turn decreases the freespace in
+the container.
+</P
+><P
+>&#13;When using the GUI or text-mode UIs, PV-shrink is performed by shrinking
+the container.  If any of the existing PVs are shrinkable, they will
+appear in the shrink-points list.  Choose the PV to shrink, and then the
+options for shrinking that object.  After the PV has shrunk, the container's
+freespace will reflect the reduced space available on that PV.
+</P
+><P
+>&#13;When using the CLI, PV-shrink is performed by shrinking the appropriate
+object directly.  The CLI and the EVMS engine will route the necessary
+commands so the container is shrunk at the same time.
+</P
+><P
+>&#13;The options for shrinking a PV are dependent on the plug-in that owns
+that PV object.  Please see the appropriate plug-in's appendix for more
+details on options for that object.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN4749"
+></A
+>C.2.6. Deleting LVM containers</H2
+><P
+>You can delete a container as long as the container does not have any produced
+regions.  The LVM plug-in does not allow containers to be deleted if they have any
+regions.  No options are available for deleting LVM containers.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN4752"
+></A
+>C.2.7. Renaming LVM containers</H2
+><P
+>You can rename an existing LVM container.  When renaming an LVM container,
+all of the regions produced from that container will automatically have their names changed as
+well, because the region names include the container name.
+In the EVMS GUI and text-mode UIs, this is done using the 
+<B
+CLASS="command"
+>modify properties</B
+> command,
+which is available through the "Actions" menu or the context-sensitive pop-up menus.
+In the EVMS CLI, this is done using the <B
+CLASS="command"
+>set </B
+>command.</P
+><P
+>See <A
+HREF="x4759.html#renamereg"
+>Section C.3.6</A
+> for more information about the effects of renaming the regions.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="lvmimp.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x4759.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>How LVM is implemented</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="appxlvm.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Region operations</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

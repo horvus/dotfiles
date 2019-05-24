@@ -1,0 +1,539 @@
+<HTML
+><HEAD
+><TITLE
+>Introduction</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="VPN PPP-SSH Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="intro.html"><LINK
+REL="NEXT"
+TITLE="Software Installation"
+HREF="installation.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>VPN PPP-SSH Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="intro.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="installation.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INTRODUCTION"
+>2. Introduction</A
+></H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="BENEFITS"
+>2.1. PPP-SSH Benefits</A
+></H2
+><P
+>There are a number of benefits to setting up a PPP-SSH VPN.
+It's relatively simple, it uses common off-the-shelf tools,
+and it probably won't require a reboot before bringing up the link.
+Here's a more comprehensive list:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>Easy to install</DT
+><DD
+><P
+>You probably won't need to patch or recompile your kernel, run
+LILO, reboot, or perform any other perilous administration activities.
+PPP and SSH are included with most distributions, and
+most kernels come preconfigured to use them properly.
+    </P
+></DD
+><DT
+>Easy to set up</DT
+><DD
+><P
+>You should not have to edit any existing configuration files.
+You simply customize the script file provided later in this document,
+which contains all the VPN configuration info, and then execute it
+on the client machine. Any existing PPP or SSH configurations
+should continue to work just fine.
+    </P
+></DD
+><DT
+>No mucking with firewalling</DT
+><DD
+><P
+>If the SSH protocol currently traverses your firewall,
+then PPP over SSH will traverse your firewall as well.
+(If you aren't using SSH, then why not?  It is almost
+a required tool for system administrators nowadays.)
+    </P
+></DD
+><DT
+>No mucking with manual routing</DT
+><DD
+><P
+>pppd automatically sets up routing for you.
+And, if you have very complex routing needs, it's very easy
+to put the custom routing commands in the script file.
+    </P
+></DD
+><DT
+>No need for static IP addresses</DT
+><DD
+><P
+>PPP-SSH VPNs have no trouble whatsoever with dynamic IP addressess.
+The client must be able to find the server to connect to, of course,
+but dynamic DNS would work fine for that.
+Setting up a VPN over a dialup connection is no problem.
+    </P
+></DD
+><DT
+>Multiple Tunnels are Easy</DT
+><DD
+><P
+>It's easy to set up multiple tunnels to a single computer.
+You simply need to make sure that the IP address for 
+each tunnel's network interface is distinct.
+    </P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DRAWBACKS"
+>2.2. PPP-SSH Drawbacks</A
+></H2
+><P
+>This type of VPN is not without a few difficulties.
+Basically, it doesn't run unattended very well.  If you're
+looking for a production-quality VPN that you can
+set up and forget about, you will proabably find
+PPP-SSH a little disappointing.  Some alternatives
+are described in <A
+HREF="introduction.html#ALTERNATIVES"
+>Section 2.4</A
+>.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>Trying to maintain a TCP connection</DT
+><DD
+><P
+>If the SSH TCP connection is broken for any reason,
+your VPN goes down hard and takes all tunnelled TCP connections with it.
+If you have a less than reliable link --
+say it's difficult to download more than a few tens of megabytes
+at one go -- you will be re-starting the VPN a lot.
+    </P
+></DD
+><DT
+>Running IP packets over a TCP stream</DT
+><DD
+><P
+>The TCP protocol consists of streams layered on top
+of IP packets.
+When you <EM
+>then</EM
+> run IP packets
+over the TCP stream (as we're attempting to do),
+the personality conflict between the two can become very apparent.
+Mostly, this manifests itself as weird delays, dropouts, and oscillations.
+Sometimes you'll see problems at load, sometimes with next to no traffic.
+Short of changing the entire OSI model (ha ha), there's not much that can
+be done about this.
+    </P
+></DD
+><DT
+>Tends to be bursty</DT
+><DD
+><P
+>For some reason, when network load gets
+high, one tunneled TCP connection tends to get all the bandwidth
+and the others get ignored.
+This leads to timeouts and dropped connections.
+Theoretically, this is fixable.
+    </P
+></DD
+><DT
+>Can't reliably tell when link is down</DT
+><DD
+><P
+>Keepalives are small packets sent to tell the machine
+on the other end that the connection is still up.
+If the network load gets too high, keepalives
+will be delayed.  The other machine will mistakenly
+assume the connection has
+been dropped and take down its end of the link.
+    </P
+><P
+>Without keepalives, however, there's no way for either machine tell if the
+link has been dropped.  When one machine tries to bring the link back up,
+if the other machine thinks it already has it up, confusion can reign.
+Most often this will show up as multiple ppp network devices,
+duplicate routes, and tunnels that appear to be up but drop every packet.
+A liberal use of "killall -9 pppd" will usually set things back in order.
+A more intelligent start script could probably improve this.
+    </P
+></DD
+><DT
+>Too many simultaneous connections avalanches fast</DT
+><DD
+><P
+>When I use regular PPP over a 56K modem and Postfix opens 10+
+connections to deliver my outgoing mail, everything works well.
+However, when I try to run this exact traffic over a VPN tunneled
+over a much faster DSL link, it stalls out.
+Ping times skyrocket for a spell (2 minutes and beyond), traffic moves
+at a trickle for a while, then it stops completely.
+The only way to get packets moving again is to restart the tunnel.
+I'm not sure if this is a bug or an inherent
+limitation.  Reducing the number of connections that Postfix maintains
+for outgoing mail fixed this problem for me..
+    </P
+></DD
+><DT
+>It's high-overhead, high-latency</DT
+><DD
+><P
+>Ping times over my 57.6 modem connection are normally in the
+130-170 ms range.  However, ping times for a PPP-SSH VPN running 
+over the same modem connection are in the 300-330 ms range.  Turning
+on PPP compression can help a lot if you're transmitting compressible
+data.  Email is compressible, Vorbis files are not.
+    </P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN99"
+>2.3. Suggested Reading</A
+></H2
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>VPN FAQ</DT
+><DD
+><P
+>The VPN FAQ at <A
+HREF="http://kubarb.phsx.ukans.edu/~tbird/vpn/FAQ.html"
+TARGET="_top"
+>http://kubarb.phsx.ukans.edu/~tbird/vpn/FAQ.html</A
+> is a very good resource.  It's comprehensive,
+kept reasonably up-to-date,
+and not afraid to express an opinion.
+    </P
+></DD
+><DT
+>Linux Kernel HOWTO</DT
+><DD
+><P
+>If your kernel doesn't already have PPP and IP Forwarding capability
+built-in, the <A
+HREF="http://www.linuxdoc.org/HOWTO/Kernel-HOWTO.html"
+TARGET="_top"
+>Linux Kernel HOWTO</A
+> will tell you how to recompile your kernel
+to add it.  It will also tell you how to load and unload the PPP kernel
+modules.
+    </P
+></DD
+><DT
+>PPP HOWTO</DT
+><DD
+><P
+>Tells how to install and set up the PPP daemon if your distribution
+did not automatically install it for you.
+Also has an excellent section on linking two networks using PPP.  That's
+pretty much what we're doing, except that we're also encrypting it.
+You can find it at <A
+HREF="http://www.linuxdoc.org/HOWTO/PPP-HOWTO/index.html"
+TARGET="_top"
+>http://www.linuxdoc.org/HOWTO/PPP-HOWTO/index.html</A
+>.
+    </P
+></DD
+><DT
+>SSH HOWTO</DT
+><DD
+><P
+>I wish there were an SSH HOWTO!  For now, the documentation that
+comes with your distribution should be a good start.  You might
+also check the <A
+HREF="http://www.openssh.org/"
+TARGET="_top"
+>OpenSSH web site</A
+>.
+    </P
+></DD
+><DT
+>Networking Documentation</DT
+><DD
+><P
+>If you're not very familiar with networking, you'll want to scour the
+<A
+HREF="http://www.linuxdoc.org/LDP/nag2/index.html"
+TARGET="_top"
+>Linux Network Administrators Guide</A
+>.
+It's an excellent introduction to most of the concepts we'll be using here.
+You may also find the Linux Networking HOWTO at <A
+HREF="http://www.linuxdoc.org/HOWTO/Networking-Overview-HOWTO.html"
+TARGET="_top"
+>http://www.linuxdoc.org/HOWTO/Networking-Overview-HOWTO.html</A
+> to be a useful introduction, especially
+itse sections on TCP/IP, PPP, and tunneling.
+    </P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="ALTERNATIVES"
+>2.4. Alternatives</A
+></H2
+><P
+>There are a ton of VPN technologies in the world now.  If PPP-SSH
+doesn't fit all your needs, you might want to check one of the
+following packages.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>ipsec</DT
+><DD
+><P
+>ipsec describes a set of low-level protocols, 
+<A
+HREF="http://andrew2.andrew.cmu.edu/rfc/rfc2406.html"
+TARGET="_top"
+>ESP</A
+> and
+<A
+HREF="http://andrew2.andrew.cmu.edu/rfc/rfc2402.html"
+TARGET="_top"
+>AH</A
+>,
+to perform authentication and encryption
+at the packet level.  It also uses a higher-level protocol,
+<A
+HREF="http://andrew2.andrew.cmu.edu/rfc/rfc2408.html"
+TARGET="_top"
+>IKE</A
+>,
+to negotiate connection parameters and exchange encryption keys.
+    </P
+><P
+>FreeS/WAN is probably the best Linux ipsec implementation today.
+Although it can be very difficult to set up, especially for those
+who are not terribly familiar with networking,
+it is amazingly stable once it is working.
+You can find out more at the 
+<A
+HREF="http://www.freeswan.org/"
+TARGET="_top"
+>FreeS/WAN home page</A
+>.
+    </P
+><P
+>Another good, free ipsec implementation is 
+<A
+HREF="http://www.antd.nist.gov/cerberus/"
+TARGET="_top"
+>Cerberus</A
+>.
+Unfortunately, the National Institute of Standards and Technology
+only distributes Cerberus to US or Candadian citizens currently
+located in either the US or Canada. Therefore, depending on who
+you are, obtaining Cerberus ranges from moderately
+difficult to effectively impossible.
+    </P
+></DD
+><DT
+>PPTP</DT
+><DD
+><P
+>PPTP (Point-to-Point Tunnelling Protocol) is a Microsoft-developed
+VPN protocol, described in
+<A
+HREF="http://andrew2.andrew.cmu.edu/rfc/rfc2637.html"
+TARGET="_top"
+>RFC2637</A
+>.
+It is a very common and well-understood technology and has many
+mature implementations on all commonly-used computer platforms.
+However PPTP is generally considered to have 
+<A
+HREF="http://www.counterpane.com/pptp.html"
+TARGET="_top"
+>somewhat weak security</A
+>.
+    </P
+><P
+>Probably the best Linux PPTP implementation is PoPToP, found at
+<A
+HREF="http://poptop.lineo.com/"
+TARGET="_top"
+>http://poptop.lineo.com/</A
+>.
+    </P
+></DD
+><DT
+>CIPE</DT
+><DD
+><P
+>CIPE is Olaf Titz's protocol to encapsulate IP traffic over UDP packets.
+It has both a
+<A
+HREF="http://sites.inka.de/sites/bigred/devel/cipe.html"
+TARGET="_top"
+>Linux version</A
+>
+and a
+<A
+HREF="http://cipe-win32.sourceforge.net/"
+TARGET="_top"
+>Windows version</A
+>.
+I haven't used it yet, but it is in strong development and looks very
+promising.  For more information, the
+<A
+HREF="http://www.linuxdoc.org/HOWTO/mini/Cipe+Masq.html"
+TARGET="_top"
+>CIPE-MASQ
+Mini-HOWTO</A
+> is a terse but informative read.
+    </P
+></DD
+></DL
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="intro.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="installation.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Software Installation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,78 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>3. Setup of point-to-point tunnel</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="ch09.html" title="Chapter 9. Configuring IPv6-in-IPv4 tunnels"><link rel="prev" href="ch09s02.html" title="2. Displaying existing tunnels"><link rel="next" href="ch09s04.html" title="4. Setup of 6to4 tunnels"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">3. Setup of point-to-point tunnel</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch09s02.html">Prev</a> </td><th width="60%" align="center">Chapter 9. Configuring IPv6-in-IPv4 tunnels</th><td width="20%" align="right"> <a accesskey="n" href="ch09s04.html">Next</a></td></tr></table><hr></div><div class="sect1"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="conf-ipv6-in-ipv4-point-to-point-tunnels"></a>3. Setup of point-to-point tunnel</h2></div></div></div><p>There are 3 possibilities to add or remove point-to-point tunnels.</p><p>A good additional information about tunnel setup using &#8221;ip&#8221; is <a class="ulink" href="http://www.deepspace6.net/docs/iproute2tunnel-en.html" target="_top">Configuring tunnels with iproute2 (article)</a> (<a class="ulink" href="http://mirrors.bieringer.de/www.deepspace6.net/docs/iproute2tunnel-en.html" target="_top">Mirror</a>).</p><p>Note: support of such kind of tunnels is provided by kernel module &#8221;sit&#8221; (potentially not possible on Virtuozzo platforms)</p><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp50836096"></a>3.1. Add point-to-point tunnels</h3></div></div></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50836736"></a>3.1.1. Using "ip"</h4></div></div></div><p>Common method at the moment for a small amount of tunnels.</p><p>Usage for creating a tunnel device (but it's not up afterward, also a TTL must be specified because the default value is 0).</p><pre class="screen">
+# /sbin/ip tunnel add &lt;device&gt; mode sit ttl &lt;ttldefault&gt; remote
+¬ &lt;ipv4addressofforeigntunnel&gt; local &lt;ipv4addresslocal&gt;
+</pre><p>Usage (generic example for three tunnels):</p><pre class="screen">
+# /sbin/ip tunnel add sit1 mode sit ttl &lt;ttldefault&gt; remote
+¬ &lt;ipv4addressofforeigntunnel1&gt; local &lt;ipv4addresslocal&gt;
+# /sbin/ip link set dev sit1 up
+# /sbin/ip -6 route add &lt;prefixtoroute1&gt; dev sit1 metric 1
+
+# /sbin/ip tunnel add sit2 mode sit ttl &lt;ttldefault&gt;
+¬ &lt;ipv4addressofforeigntunnel2&gt; local &lt;ipv4addresslocal&gt;
+# /sbin/ip link set dev sit2 up
+# /sbin/ip -6 route add &lt;prefixtoroute2&gt; dev sit2 metric 1
+
+# /sbin/ip tunnel add sit3 mode sit ttl &lt;ttldefault&gt;
+¬ &lt;ipv4addressofforeigntunnel3&gt; local &lt;ipv4addresslocal&gt;
+# /sbin/ip link set dev sit3 up
+# /sbin/ip -6 route add &lt;prefixtoroute3&gt; dev sit3 metric 1
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50839824"></a>3.1.2. Using "ifconfig" and "route" (deprecated)</h4></div></div></div><p>This not very recommended way to add a tunnel because it's a little bit strange. No problem if adding only one, but if you setup more than one, you cannot easy shutdown the first ones and leave the others running.</p><p>Usage (generic example for three tunnels):</p><pre class="screen">
+# /sbin/ifconfig sit0 up
+
+# /sbin/ifconfig sit0 tunnel &lt;ipv4addressofforeigntunnel1&gt;
+# /sbin/ifconfig sit1 up
+# /sbin/route -A inet6 add &lt;prefixtoroute1&gt; dev sit1
+
+# /sbin/ifconfig sit0 tunnel &lt;ipv4addressofforeigntunnel2&gt;
+# /sbin/ifconfig sit2 up
+# /sbin/route -A inet6 add &lt;prefixtoroute2&gt; dev sit2
+
+# /sbin/ifconfig sit0 tunnel &lt;ipv4addressofforeigntunnel3&gt;
+# /sbin/ifconfig sit3 up
+# /sbin/route -A inet6 add &lt;prefixtoroute3&gt; dev sit3
+</pre><p>Important: DON'T USE THIS, because this setup implicit enable "automatic tunneling" from anywhere in the Internet, this is a risk, and it should not be advocated.</p></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50843552"></a>3.1.3. Using "route" only</h4></div></div></div><p>It's also possible to setup tunnels in Non Broadcast Multiple Access (NBMA) style, it's a easy way to add many tunnels at once. But none of the tunnel can be numbered (which is a not required feature).</p><p>Usage (generic example for three tunnels):</p><pre class="screen">
+# /sbin/ifconfig sit0 up
+
+# /sbin/route -A inet6 add &lt;prefixtoroute1&gt; gw
+¬ ::&lt;ipv4addressofforeigntunnel1&gt; dev sit0
+# /sbin/route -A inet6 add &lt;prefixtoroute2&gt; gw
+¬ ::&lt;ipv4addressofforeigntunnel2&gt; dev sit0
+# /sbin/route -A inet6 add &lt;prefixtoroute3&gt; gw
+¬ ::&lt;ipv4addressofforeigntunnel3&gt; dev sit0
+</pre><p>Important: DON'T USE THIS, because this setup implicit enable "automatic tunneling" from anywhere in the Internet, this is a risk, and it should not be advocated.</p></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp50846704"></a>3.2. Removing point-to-point tunnels</h3></div></div></div><p>Manually not so often needed, but used by scripts for clean shutdown or restart of IPv6 configuration.</p><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50848544"></a>3.2.1. Using "ip"</h4></div></div></div><p>Usage for removing a tunnel device:</p><pre class="screen">
+# /sbin/ip tunnel del &lt;device&gt;
+</pre><p>Usage (generic example for three tunnels):</p><pre class="screen">
+# /sbin/ip -6 route del &lt;prefixtoroute1&gt; dev sit1
+# /sbin/ip link set sit1 down
+# /sbin/ip tunnel del sit1
+
+# /sbin/ip -6 route del &lt;prefixtoroute2&gt; dev sit2
+# /sbin/ip link set sit2 down
+# /sbin/ip tunnel del sit2
+
+# /sbin/ip -6 route del &lt;prefixtoroute3&gt; dev sit3
+# /sbin/ip link set sit3 down
+# /sbin/ip tunnel del sit3
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50850688"></a>3.2.2. Using "ifconfig" and "route" (deprecated because not very funny)</h4></div></div></div><p>Not only the creation is strange, the shutdown also...you have to remove the tunnels in backorder, means the latest created must be removed first.</p><p>Usage (generic example for three tunnels):</p><pre class="screen">
+# /sbin/route -A inet6 del &lt;prefixtoroute3&gt; dev sit3
+# /sbin/ifconfig sit3 down
+
+# /sbin/route -A inet6 del &lt;prefixtoroute2&gt; dev sit2
+# /sbin/ifconfig sit2 down
+
+# /sbin/route -A inet6 add &lt;prefixtoroute1&gt; dev sit1
+# /sbin/ifconfig sit1 down
+
+# /sbin/ifconfig sit0 down
+
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50853408"></a>3.2.3. Using "route"</h4></div></div></div><p>This is like removing normal IPv6 routes.
+</p><p>Usage (generic example for three tunnels):</p><pre class="screen">
+# /sbin/route -A inet6 del &lt;prefixtoroute1&gt; gw
+¬ ::&lt;ipv4addressofforeigntunnel1&gt; dev sit0
+# /sbin/route -A inet6 del &lt;prefixtoroute2&gt; gw
+¬ ::&lt;ipv4addressofforeigntunnel2&gt; dev sit0
+# /sbin/route -A inet6 del &lt;prefixtoroute3&gt; gw
+¬ ::&lt;ipv4addressofforeigntunnel3&gt; dev sit0
+
+# /sbin/ifconfig sit0 down
+</pre></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp50855776"></a>3.3. Numbered point-to-point tunnels</h3></div></div></div><p>Sometimes it's needed to configure a point-to-point tunnel with IPv6 addresses like in IPv4 today. This is only possible with the first (ifconfig+route - deprecated) and third (ip+route) tunnel setup. In such cases, you can add the IPv6 address to the tunnel interface like shown on interface configuration. </p></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch09s02.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ch09.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch09s04.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">2. Displaying existing tunnels </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 4. Setup of 6to4 tunnels</td></tr></table></div></body></html>

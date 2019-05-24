@@ -1,0 +1,82 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Multicast over TCP/IP HOWTO: Kernel requirements and configuration.</TITLE>
+ <LINK HREF="Multicast-HOWTO-4.html" REL=next>
+ <LINK HREF="Multicast-HOWTO-2.html" REL=previous>
+ <LINK HREF="Multicast-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Multicast-HOWTO-4.html">Next</A>
+<A HREF="Multicast-HOWTO-2.html">Previous</A>
+<A HREF="Multicast-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Kernel requirements and configuration.</A></H2>
+
+<P>Linux is, of course (you doubted it?), full Level-2 Multicast-Compliant.
+It meets all requirements to send, receive and act as a router (mrouter)
+for multicast datagrams.
+<P>If you want just to send and receive, you must say yes to "<EM>IP: multicasting</EM>"
+when configuring your kernel. If you also want your Linux box to act as a
+multicast router (mrouter) you also need to enable multicast routing in the 
+kernel by selecting "<EM>IP: forwarding/gatewaying</EM>", "<EM>IP: multicast routing</EM>" 
+and "<EM>IP: tunneling</EM>", the latter because new versions of <CODE>mrouted</CODE> 
+relay on IP tunneling to send multicast datagrams encapsulated into unicast 
+ones. This is necessary when establishing tunnels 
+between multicast hosts separated by unicast-only networks and routers.
+(The <CODE>mrouted</CODE> is a daemon that implements the multicast routing algorithm
+-the routing policy- and instructs the kernel on how to route multicast 
+datagrams).
+<P>Some kernel versions label multicast routing as "<EM>EXPERIMENTAL</EM>", so you 
+should enable "<EM>Prompt for development and/or incomplete code/drivers</EM>" 
+in the "<EM>Code maturity level options</EM>" section.
+<P>If, when running the <CODE>mrouted</CODE>, traffic generated in the same network your
+Linux box is connected to is correctly forwarded to the other network, but
+you can't see the other's network traffic on your local network, check
+whether you are receiving ICMP protocol error messages. Almost sure
+you forgot to turn on IP tunneling in your Linux router. It's a kind of
+stupid error when you know it but, believe me, its quite time-consuming
+when you don't, and there is no apparent reason that explains what is going
+wrong. A sniffer proves to be quite useful in these situations!
+<P>(You can see more on multicast routing on section 
+<A HREF="Multicast-HOWTO-8.html#sect-routing">Routing Policies and Forwarding Techniques</A>; <CODE>mrouted</CODE> and 
+tunnels are also explained in sections 
+<A HREF="Multicast-HOWTO-4.html#sect-mbone">The MBone</A> and 
+<A HREF="Multicast-HOWTO-5.html#sect-applications">Multicast applications</A>).
+<P>Once you have compiled and installed your new kernel, you should provide
+a default route for multicast traffic. The goal is to add a route to the
+network 224.0.0.0. 
+<P>The problem most people seem to face in this stage of the configuration
+is with the value of the mask to supply. If you have read Terry Dawson's
+excellent NET-3-HOWTO, it should not be difficult to guess the correct
+value, though. As explained there, the netmask is a 32 bit number
+filled with all-1s in the network part of your IP address, and with
+all-0s in the host part. Recall from section 2.1 that a class D multicast
+address has no netwok/host sections. Instead it has a 28-bit group 
+identifier and a 4-bit class D identifier. Well, this 4 bits are the
+network part and the remaining 28 the host part. So the netmask needed
+is 11110000000000000000000000000000 or, easier to read: 240.0.0.0.
+Then, the full command should be:
+<BLOCKQUOTE><CODE>
+<PRE>
+route add 224.0.0.0 netmask 240.0.0.0 dev eth0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Depending on how old your <CODE>route</CODE> program is, you might need to add
+the <CODE>-net</CODE> flag after the <CODE>add</CODE>.
+<P>Here we supposed that <CODE>eth0</CODE> was multicast-capable and that, when not
+otherwise specified, we wanted multicast traffic to be output there.
+If this is not your case, change the <CODE>dev</CODE> parameter as appropriate.
+<P>The <CODE>/proc</CODE> filesystem proves here to be useful once again: you 
+can check <CODE>/proc/net/igmp</CODE> to see the groups your host is 
+currently subscribed to.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Multicast-HOWTO-4.html">Next</A>
+<A HREF="Multicast-HOWTO-2.html">Previous</A>
+<A HREF="Multicast-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

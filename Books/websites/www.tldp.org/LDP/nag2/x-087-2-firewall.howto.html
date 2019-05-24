@@ -1,0 +1,430 @@
+<HTML
+><HEAD
+><TITLE
+>Setting Up Linux for Firewalling</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="TCP/IP Firewall"
+HREF="x-087-2-firewall.html"><LINK
+REL="PREVIOUS"
+TITLE="What Is IP Filtering?"
+HREF="x-087-2-firewall.filtering.html"><LINK
+REL="NEXT"
+TITLE="Three Ways We Can Do Filtering"
+HREF="x-087-2-firewall.filteringmethods.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.filtering.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. TCP/IP Firewall</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.filteringmethods.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-FIREWALL.HOWTO"
+>9.4. Setting Up Linux for Firewalling</A
+></H1
+><P
+>&#13;
+To build a Linux IP firewall, it is necessary to have a kernel built
+with IP firewall support and the appropriate configuration utility. In
+all production kernels prior to the 2.2 series, you would use the
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> utility. The 2.2.x kernels marked the
+release of the third generation of IP firewall for Linux called
+<I
+CLASS="EMPHASIS"
+>IP Chains</I
+>.  IP chains use a program similar to
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> called <B
+CLASS="COMMAND"
+>ipchains</B
+>. Linux
+kernels 2.3.15 and later support the fourth generation of Linux IP
+firewall called <I
+CLASS="EMPHASIS"
+>netfilter</I
+>. The
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> code is the result of a large redesign
+of the packet handling flow in Linux. The
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> is a multifaceted creature, providing
+direct backward-compatible support for both <B
+CLASS="COMMAND"
+>ipfwadm</B
+>
+and <B
+CLASS="COMMAND"
+>ipchains</B
+> as well as a new alternative command
+called <B
+CLASS="COMMAND"
+>iptables</B
+>. We'll talk about the differences
+between the three in the next few sections.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.HOWTO.KERNEL"
+>9.4.1. Kernel Configured with IP Firewall</A
+></H2
+><P
+>The Linux kernel must be configured to support IP firewalling. There
+isn't much more to it than selecting the appropriate options when
+performing a <TT
+CLASS="LITERAL"
+>make menuconfig</TT
+> of your
+kernel.<A
+NAME="X-087-2-FW-FN02"
+HREF="#FTN.X-087-2-FW-FN02"
+>[1]</A
+>
+We described how to do this is in
+<A
+HREF="x-087-2-hardware.html"
+>Chapter 3</A
+>&#8221;.
+In 2.2 kernels you should select the following options:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Networking options  ---&#62;
+	[*] Network firewalls
+	[*] TCP/IP networking
+	[*] IP: firewalling
+	[*] IP: firewall packet logging</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>In kernels 2.4.0 and later you should select this option instead:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  Networking options  ---&#62;
+     [*] Network packet filtering (replaces ipchains)
+         IP: Netfilter Configuration  ---&#62;
+              .
+             &#60;M&#62; Userspace queueing via NETLINK (EXPERIMENTAL)
+             &#60;M&#62; IP tables support (required for filtering/masq/NAT)
+             &#60;M&#62;   limit match support
+             &#60;M&#62;   MAC address match support
+             &#60;M&#62;   netfilter MARK match support
+             &#60;M&#62;   Multiple port match support
+             &#60;M&#62;   TOS match support
+             &#60;M&#62;   Connection state match support
+             &#60;M&#62;   Unclean match support (EXPERIMENTAL)
+             &#60;M&#62;   Owner match support (EXPERIMENTAL)
+             &#60;M&#62;   Packet filtering
+             &#60;M&#62;     REJECT target support
+             &#60;M&#62;     MIRROR target support (EXPERIMENTAL)
+              .
+             &#60;M&#62;   Packet mangling
+             &#60;M&#62;     TOS target support
+             &#60;M&#62;     MARK target support
+             &#60;M&#62;   LOG target support
+             &#60;M&#62; ipchains (2.2-style) support
+             &#60;M&#62; ipfwadm (2.0-style) support
+  </PRE
+></TD
+></TR
+></TABLE
+>
+  </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.HOWTO.IPFWADM"
+>9.4.2. The ipfwadm Utility</A
+></H2
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>ipfwadm</B
+> (IP Firewall Administration) utility is the
+tool used to build the firewall rules for all kernels prior to 2.2.0. Its
+command syntax can be very confusing because it can do such a complicated
+range of things, but we'll provide some common examples that will illustrate
+the most important variations of these.</P
+><P
+>The <B
+CLASS="COMMAND"
+>ipfwadm</B
+> utility is included in most
+modern Linux distributions, but perhaps not by default. There may be a
+specific software package for it that you have to install. If your
+distribution does not include it, you can obtain the source package from
+<SPAN
+CLASS="SYSTEMITEM"
+>ftp.xos.nl</SPAN
+> in the
+<TT
+CLASS="FILENAME"
+>/pub/linux/ipfwadm/</TT
+> directory, and compile it yourself.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.HOWTO.IPCHAINS"
+>9.4.3. The ipchains Utility</A
+></H2
+><P
+>&#13;Just as for the <B
+CLASS="COMMAND"
+>ipfwadm</B
+> utility, the
+<B
+CLASS="COMMAND"
+>ipchains</B
+> utility can be somewhat baffling to use at first.
+It provides all of the flexibility of <B
+CLASS="COMMAND"
+>ipfwadm</B
+> with a
+simplified command syntax, and additionally provides a &#8220;chaining&#8221; mechanism that allows you to manage multiple
+rulesets and link them together. We'll cover rule chaining in a separate
+section near the end of the chapter, because for most situations it is an
+advanced concept.</P
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>ipchains</B
+> command appears in most Linux
+distributions based on the 2.2 kernels. If you want to compile it
+yourself, you can find the source package from its developer's site at
+<I
+CLASS="EMPHASIS"
+>http://www.rustcorp.com/linux/ipchains/</I
+>.
+Included in the source package is a wrapper script called
+<B
+CLASS="COMMAND"
+>ipfwadm-wrapper</B
+> that mimics the
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> command, but actually invokes the
+<B
+CLASS="COMMAND"
+>ipchains</B
+> command. Migration of an existing firewall
+configuration is much more painless with this addition.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.HOWTO.IPTABLES"
+>9.4.4. The iptables Utility</A
+></H2
+><P
+>&#13;The syntax of the <B
+CLASS="COMMAND"
+>iptables</B
+> utility is quite similar to that
+of the <B
+CLASS="COMMAND"
+>ipchains</B
+> syntax. The changes are improvements and a
+result of the tool being redesigned to be extensible through shared libraries.
+Just as for <B
+CLASS="COMMAND"
+>ipchains</B
+>, we'll present
+<B
+CLASS="COMMAND"
+>iptables</B
+> equivalents of the examples so you can compare
+and contrast its syntax with the others.</P
+><P
+>The <B
+CLASS="COMMAND"
+>iptables</B
+> utility is included in the
+<I
+CLASS="EMPHASIS"
+>netfilter</I
+> source package available at
+<I
+CLASS="EMPHASIS"
+>http://www.samba.org/netfilter/</I
+>. It will
+also be included in any Linux distribution based on the 2.4 series kernels.</P
+><P
+>We'll talk a bit about <I
+CLASS="EMPHASIS"
+>netfilter</I
+>'s huge step forward in a section of its own later in this chapter.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FW-FN02"
+HREF="x-087-2-firewall.howto.html#X-087-2-FW-FN02"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> Firewall packet logging
+is a special feature that writes a line of information about each
+datagram that matches a particular firewall rule out to a special
+device so you can see them.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.filtering.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.filteringmethods.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>What Is IP Filtering?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Three Ways We Can Do Filtering</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

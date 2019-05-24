@@ -1,0 +1,1013 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Parallel Processing HOWTO: SMP Linux</TITLE>
+ <LINK HREF="Parallel-Processing-HOWTO-3.html" REL=next>
+ <LINK HREF="Parallel-Processing-HOWTO-1.html" REL=previous>
+ <LINK HREF="Parallel-Processing-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Parallel-Processing-HOWTO-3.html">Next</A>
+<A HREF="Parallel-Processing-HOWTO-1.html">Previous</A>
+<A HREF="Parallel-Processing-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. SMP Linux</A></H2>
+
+<P>
+<P>This document gives a brief overview of how to use 
+<A HREF="http://www.linux.org.uk/SMP/title.html">SMP Linux</A> systems
+for parallel processing.  The most up-to-date information on SMP Linux
+is probably available via the SMP Linux project mailing list; send
+email to 
+<A HREF="mailto:majordomo@vger.rutgers.edu">majordomo@vger.rutgers.edu</A> with the text <CODE>subscribe
+linux-smp</CODE> to join the list.
+<P>Does SMP Linux really work?  In June 1996, I purchased a brand new
+(well, new off-brand ;-) two-processor 100MHz Pentium system.  The
+fully assembled system, including both processors, Asus motherboard,
+256K cache, 32M RAM, 1.6G disk, 6X CDROM, Stealth 64, and 15" Acer
+monitor, cost a total of $1,800.  This was just a few hundred
+dollars more than a comparable uniprocessor system.  Getting SMP Linux
+running was simply a matter of installing the "stock" uniprocessor
+Linux, recompiling the kernel with the <CODE>SMP=1</CODE> line in the
+makefile uncommented (although I find setting <CODE>SMP</CODE> to
+<CODE>1</CODE> a bit ironic ;-), and informing <CODE>lilo</CODE> about the new
+kernel.  This system performs well enough, and has been stable enough,
+to serve as my primary workstation ever since.  In summary, SMP Linux
+really does work.
+<P>The next question is how much high-level support is available for
+writing and executing shared memory parallel programs under SMP Linux.
+Through early 1996, there wasn't much.  Things have changed.  For
+example, there is now a very complete POSIX threads library.
+<P>Although performance may be lower than for native shared-memory
+mechanisms, an SMP Linux system also can use most parallel processing
+software that was originally developed for a workstation cluster using
+socket communication.  Sockets (see section 3.3) work within an SMP
+Linux system, and even for multiple SMPs networked as a cluster.
+However, sockets imply a lot of unnecessary overhead for an SMP.  Much
+of that overhead is within the kernel or interrupt handlers; this
+worsens the problem because SMP Linux generally allows only one
+processor to be in the kernel at a time and the interrupt controller
+is set so that only the boot processor can process interrupts.
+Despite this, typical SMP communication hardware is so much better
+than most cluster networks that cluster software will often run better
+on an SMP than on the cluster for which it was designed.
+<P>The remainder of this section discusses SMP hardware, reviews the
+basic Linux mechanisms for sharing memory across the processes of a
+parallel program, makes a few observations about atomicity, volatility,
+locks, and cache lines, and finally gives some pointers to other
+shared memory parallel processing resources.
+<P>
+<H2><A NAME="ss2.1">2.1 SMP Hardware</A>
+</H2>
+
+<P>
+<P>Although SMP systems have been around for many years, until very
+recently, each such machine tended to implement basic functions
+differently enough so that operating system support was not portable.
+The thing that has changed this situation is Intel's Multiprocessor
+Specification, often referred to as simply <B>MPS</B>.  The MPS 1.4
+specification is currently available as a PDF file at 
+<A HREF="http://www.intel.com/design/pro/datashts/242016.htm">http://www.intel.com/design/pro/datashts/242016.htm</A>, and there
+is a brief overview of MPS 1.1 at 
+<A HREF="http://support.intel.com/oem_developer/ial/support/9300.HTM">http://support.intel.com/oem_developer/ial/support/9300.HTM</A>,
+but be aware that Intel does re-arrange their WWW site often.  A wide
+range of 
+<A HREF="http://www.uruk.org/~erich/mps-hw.html">vendors</A> are building MPS-compliant systems supporting up to
+four processors, but MPS theoretically allows many more processors.
+<P>The only non-MPS, non-IA32, systems supported by SMP Linux are Sun4m
+multiprocessor SPARC machines.  SMP Linux supports most Intel MPS
+version 1.1 or 1.4 compliant machines with up to sixteen 486DX,
+Pentium, Pentium MMX, Pentium Pro, or Pentium II processors.
+Unsupported IA32 processors include the Intel 386, Intel 486SX/SLC
+processors (the lack of floating point hardware interferes with the
+SMP mechanisms), and AMD &amp; Cyrix processors (they require
+different SMP support chips that do not seem to be available at this
+writing).
+<P>It is important to understand that the performance of MPS-compliant
+systems can vary widely.  As expected, one cause for performance
+differences is processor speed:  faster clock speeds tend to yield
+faster systems, and a Pentium Pro processor is faster than a Pentium.
+However, MPS does not really specify how hardware implements shared
+memory, but only how that implementation must function from a software
+point of view; this means that performance is also a function of how
+the shared memory implementation interacts with the characteristics of
+SMP Linux and your particular programs.
+<P>The primary way in which systems that comply with MPS differ is in how
+they implement access to physically shared memory.
+<P>
+<H3>Does each processor have its own L2 cache?</H3>
+
+<P>
+<P>Some MPS Pentium systems, and all MPS Pentium Pro and Pentium II
+systems, have independent L2 caches.  (The L2 cache is packaged within
+the Pentium Pro or Pentium II modules.)  Separate L2 caches are
+generally viewed as maximizing compute performance, but things are not
+quite so obvious under Linux.  The primary complication is that the
+current SMP Linux scheduler does not attempt to keep each process on
+the same processor, a concept known as <B>processor affinity</B>.
+This may change soon; there has recently been some discussion about
+this in the SMP Linux development community under the title "processor
+binding."  Without processor affinity, having separate L2 caches may
+introduce significant overhead when a process is given a timeslice on
+a processor other than the one that was executing it last.
+<P>Many relatively inexpensive systems are organized so that two Pentium
+processors share a single L2 cache.  The bad news is that this causes
+contention for the cache, seriously degrading performance when running
+multiple independent sequential programs.  The good news is that many
+parallel programs might actually benefit from the shared cache because
+if both processors will want to access the same line from shared
+memory, only one had to fetch it into cache and contention for the bus
+is averted.  The lack of processor affinity also causes less damage
+with a shared L2 cache.  Thus, for parallel programs, it isn't really
+clear that sharing L2 cache is as harmful as one might expect.
+<P>Experience with our dual Pentium shared 256K cache system shows quite
+a wide range of performance depending on the level of kernel activity
+required.  At worst, we see only about 1.2x speedup.  However, we also
+have seen up to 2.1x speedup, which suggests that compute-intensive
+SPMD-style code really does profit from the "shared fetch" effect.
+<P>
+<H3>Bus configuration?</H3>
+
+<P>
+<P>The first thing to say is that most modern systems connect the
+processors to one or more PCI buses that in turn are "bridged" to one
+or more ISA/EISA buses.  These bridges add latency, and both EISA and
+ISA generally offer lower bandwidth than PCI (ISA being the lowest), so
+disk drives, video cards, and other high-performance devices generally
+should be connected via a PCI bus interface.
+<P>Although an MPS system can achieve good speed-up for many
+compute-intensive parallel programs even if there is only one PCI bus,
+I/O operations occur at no better than uniprocessor performance...
+and probably a little worse due to bus contention from the
+processors.  Thus, if you are looking to speed-up I/O, make sure that
+you get an MPS system with multiple independent PCI busses and I/O
+controllers (e.g., multiple SCSI chains).  You will need to be careful
+to make sure SMP Linux supports what you get.  Also keep in mind that
+the current SMP Linux essentially allows only one processor in the
+kernel at any time, so you should choose your I/O controllers
+carefully to pick ones that minimize the kernel time required for each
+I/O operation.  For really high performance, you might even consider
+doing raw device I/O directly from user processes, without a system
+call...  this isn't necessarily as hard as it sounds, and need not
+compromise security (see section 3.3 for a description of the basic
+techniques).
+<P>It is important to note that the relationship between bus speed and
+processor clock rate has become very fuzzy over the past few years.
+Although most systems now use the same PCI clock rate, it is not
+uncommon to find a faster processor clock paired with a slower bus
+clock.  The classic example of this was that the Pentium 133 generally
+used a faster bus than a Pentium 150, with appropriately
+strange-looking performance on various benchmarks.  These effects are
+amplified in SMP systems; it is even more important to have a faster
+bus clock.
+<P>
+<H3>Memory interleaving and DRAM technologies?</H3>
+
+<P>
+<P>Memory interleaving actually has nothing whatsoever to do with MPS,
+but you will often see it mentioned for MPS systems because these
+systems are typically more demanding of memory bandwidth.  Basically,
+two-way or four-way interleaving organizes RAM so that a block access
+is accomplished using multiple banks of RAM rather than just one.
+This provides higher memory access bandwidth, particularly for cache
+line loads and stores.
+<P>The waters are a bit muddied about this, however, because EDO DRAM and
+various other memory technologies tend to improve similar kinds of
+operations.  An excellent overview of DRAM technologies is given in
+<A HREF="http://www.pcguide.com/ref/ram/tech.htm">http://www.pcguide.com/ref/ram/tech.htm</A>.
+<P>So, for example, is it better to have 2-way interleaved EDO DRAM or
+non-interleaved SDRAM?  That is a very good question with no simple
+answer, because both interleaving and exotic DRAM technologies tend to
+be expensive.  The same dollar investment in more ordinary memory
+configurations generally will give you a significantly larger main
+memory.  Even the slowest DRAM is still a heck of a lot faster than
+using disk-based virtual memory....
+<P>
+<H2><A NAME="ss2.2">2.2 Introduction To Shared Memory Programming</A>
+</H2>
+
+<P>
+<P>Ok, so you have decided that parallel processing on an SMP is a great
+thing to do...  how do you get started?  Well, the first step is to
+learn a little bit about how shared memory communication really works.
+<P>It sounds like you simply have one processor store a value into memory
+and another processor load it; unfortunately, it isn't quite that
+simple.  For example, the relationship between processes and
+processors is very blurry; however, if we have no more active
+processes than there are processors, the terms are roughly
+interchangeable.  The remainder of this section briefly summarizes the
+key issues that could cause serious problems, if you were not aware of
+them:  the two different models used to determine what is shared,
+atomicity issues, the concept of volatility, hardware lock
+instructions, cache line effects, and Linux scheduler issues.
+<P>
+<H3>Shared Everything Vs. Shared Something</H3>
+
+<P>
+<P>There are two fundamentally different models commonly used for shared
+memory programming:  <B>shared everything</B> and <B>shared
+something</B>.  Both of these models allow processors to communicate
+by loads and stores from/into shared memory; the distinction comes in
+the fact that shared everything places all data structures in shared
+memory, while shared something requires the user to explicitly
+indicate which data structures are potentially shared and which are
+<B>private</B> to a single processor.
+<P>Which shared memory model should you use?  That is mostly a question of
+religion.  A lot of people like the shared everything model because
+they do not really need to identify which data structures should be
+shared at the time they are declared...  you simply put locks around
+potentially-conflicting accesses to shared objects to ensure that only
+one process(or) has access at any moment.  Then again, that really
+isn't all that simple...  so many people prefer the relative safety of
+shared something.
+<P>
+<H3>Shared Everything</H3>
+
+<P>
+<P>The nice thing about sharing everything is that you can easily take an
+existing sequential program and incrementally convert it into a shared
+everything parallel program.  You do not have to first determine which
+data need to be accessible by other processors.
+<P>Put simply, the primary problem with sharing everything is that any
+action taken by one processor could affect the other processors.  This
+problem surfaces in two ways:
+<P>
+<UL>
+<LI>Many libraries use data structures that simply are not
+sharable.  For example, the UNIX convention is that most functions can
+return an error code in a variable called <CODE>errno</CODE>; if two shared
+everything processes perform various calls, they would interfere with
+each other because they share the same <CODE>errno</CODE>.  Although there
+is now a library version that fixes the <CODE>errno</CODE> problem,
+similar problems still exist in most libraries.  For example, unless
+special precautions are taken, the X library will not work if calls
+are made from multiple shared everything processes.
+</LI>
+<LI>Normally, the worst-case behavior for a program with a bad
+pointer or array subscript is that the process that contains the
+offending code dies.  It might even generate a <CODE>core</CODE> file that
+clues you in to what happened.  In shared everything parallel
+processing, it is very likely that the stray accesses will bring the
+demise of <EM>a process other than the one at fault</EM>, making it
+nearly impossible to localize and correct the error.</LI>
+</UL>
+<P>Neither of these types of problems is common when shared something is
+used, because only the explicitly-marked data structures are shared.
+It also is fairly obvious that shared everything only works if all
+processors are executing the exact same memory image; you cannot use
+shared everything across multiple different code images (i.e., can use
+only SPMD, not general MIMD).
+<P>The most common type of shared everything programming support is a
+<B>threads library</B>.  
+<A HREF="http://liinwww.ira.uka.de/bibliography/Os/threads.html">Threads</A> are essentially "light-weight" processes that might
+not be scheduled in the same way as regular UNIX processes and, most
+importantly, share access to a single memory map.  The POSIX 
+<A HREF="http://www.humanfactor.com/pthreads/mit-pthreads.html">Pthreads</A> package has been the focus of a number of porting
+efforts; the big question is whether any of these ports actually run
+the threads of a program in parallel under SMP Linux (ideally, with a
+processor for each thread).  The POSIX API doesn't require it, and
+versions like 
+<A HREF="http://www.aa.net/~mtp/PCthreads.html">http://www.aa.net/~mtp/PCthreads.html</A>
+apparently do not implement parallel thread execution - all the threads
+of a program are kept within a single Linux process.
+<P>The first threads library that supported SMP Linux parallelism was the
+now somewhat obsolete bb_threads library, 
+<A HREF="ftp://caliban.physics.utoronto.ca/pub/linux/">ftp://caliban.physics.utoronto.ca/pub/linux/</A>, a very small
+library that used the Linux <CODE>clone()</CODE> call to fork new,
+independently scheduled, Linux processes all sharing a single address
+space.  SMP Linux machines can run multiple of these "threads" in
+parallel because each "thread" is a full Linux process; the trade-off
+is that you do not get the same "light-weight" scheduling control
+provided by some thread libraries under other operating systems.  The
+library used a bit of C-wrapped assembly code to install a new chunk
+of memory as each thread's stack and to provide atomic access
+functions for an array of locks (mutex objects).  Documentation
+consisted of a <CODE>README</CODE> and a short sample program.
+<P>More recently, a version of POSIX threads using <CODE>clone()</CODE> has
+been developed.  This library, 
+<A HREF="http://pauillac.inria.fr/~xleroy/linuxthreads/">LinuxThreads</A>, is clearly the preferred shared everything
+library for use under SMP Linux.  POSIX threads are well documented,
+and the 
+<A HREF="http://pauillac.inria.fr/~xleroy/linuxthreads/README">LinuxThreads README</A> and 
+<A HREF="http://pauillac.inria.fr/~xleroy/linuxthreads/faq.html">LinuxThreads FAQ</A> are very well done.  The primary problem now
+is simply that POSIX threads have a lot of details to get right and
+LinuxThreads is still a work in progress.  There is also the problem
+that the POSIX thread standard has evolved through the standardization
+process, so you need to be a bit careful not to program for obsolete
+early versions of the standard.
+<P>
+<H3>Shared Something</H3>
+
+<P>
+<P>Shared something is really "only share what needs to be shared."  This
+approach can work for general MIMD (not just SPMD) provided that care
+is taken for the shared objects to be allocated at the same places in
+each processor's memory map.  More importantly, shared something makes
+it easier to predict and tune performance, debug code, etc.  The only
+problems are:
+<P>
+<UL>
+<LI>It can be hard to know beforehand what really needs to be shared.
+</LI>
+<LI>The actual allocation of objects in shared memory may be awkward,
+especially for what would have been stack-allocated objects.  For
+example, it may be necessary to explicitly allocate shared objects in
+a separate memory segment, requiring separate memory allocation
+routines and introducing extra pointer indirections in each reference.</LI>
+</UL>
+<P>Currently, there are two very similar mechanisms that allow groups of
+Linux processes to have independent memory spaces, all sharing only a
+relatively small memory segment.  Assuming that you didn't foolishly
+exclude "System V IPC" when you configured your Linux system, Linux
+supports a very portable mechanism that has generally become known as
+"System V Shared Memory."  The other alternative is a memory mapping
+facility whose implementation varies widely across different UNIX
+systems:  the <CODE>mmap()</CODE> system call.  You can, and should, learn
+about these calls from the manual pages...  but a brief overview of
+each is given in sections 2.5 and 2.6 to help get you started.
+<P>
+<H3>Atomicity And Ordering</H3>
+
+<P>
+<P>No matter which of the above two models you use, the result is pretty
+much the same:  you get a pointer to a chunk of read/write memory that
+is accessible by all processes within your parallel program.  Does
+that mean I can just have my parallel program access shared memory
+objects as though they were in ordinary local memory?  Well, not
+quite....
+<P><B>Atomicity</B> refers to the concept that an operation on an
+object is accomplished as an indivisible, uninterruptible, sequence.
+Unfortunately, sharing memory access does not imply that all
+operations on data in shared memory occur atomically.  Unless special
+precautions are taken, only simple load or store operations that occur
+within a single bus transaction (i.e., aligned 8, 16, or 32-bit
+operations, but not misaligned nor 64-bit operations) are atomic.
+Worse still, "smart" compilers like GCC will often perform
+optimizations that could eliminate the memory operations needed to
+ensure that other processors can see what this processor has done.
+Fortunately, both these problems can be remedied...  leaving only the
+relationship between access efficiency and cache line size for us to
+worry about.
+<P>However, before discussing these issues, it is useful to point-out
+that all of this assumes that memory references for each processor
+happen in the order in which they were coded.  The Pentium does this,
+but also notes that future Intel processors might not.  So, for future
+processors, keep in mind that it may be necessary to surround some
+shared memory accesses with instructions that cause all pending memory
+accesses to complete, thus providing memory access ordering.  The
+<CODE>CPUID</CODE> instruction apparently is reserved to have this
+side-effect.
+<P>
+<H3>Volatility</H3>
+
+<P>
+<P>To prevent GCC's optimizer from buffering values of shared memory
+objects in registers, all objects in shared memory should be declared
+as having types with the <CODE>volatile</CODE> attribute.  If this is
+done, all shared object reads and writes that require just one word
+access will occur atomically.  For example, suppose that <EM>p</EM>
+is a pointer to an integer, where both the pointer and the integer it
+will point at are in shared memory; the ANSI C declaration might be:
+<P>
+<HR>
+<PRE>
+volatile int * volatile p;
+</PRE>
+<HR>
+<P>In this code, the first <CODE>volatile</CODE> refers to the <CODE>int</CODE>
+that <CODE>p</CODE> will eventually point at; the second <CODE>volatile</CODE>
+refers to the pointer itself.  Yes, it is annoying, but it is the
+price one pays for enabling GCC to perform some very powerful
+optimizations.  At least in theory, the <CODE>-traditional</CODE> option
+to GCC might suffice to produce correct code at the expense of some
+optimization, because pre-ANSI K&amp;R C essentially claimed that all
+variables were volatile unless explicitly declared as
+<CODE>register</CODE>.  Still, if your typical GCC compile looks like
+<CODE>cc -O6 <EM>...</EM></CODE>, you really will want to explicitly mark
+things as volatile only where necessary.
+<P>There has been a rumor to the effect that using assembly-language
+locks that are marked as modifying all processor registers will cause
+GCC to appropriately flush all variables, thus avoiding the
+"inefficient" compiled code associated with things declared as
+<CODE>volatile</CODE>.  This hack appears to work for statically allocated
+global variables using version 2.7.0 of GCC...  however, that behavior
+is <EM>not</EM> required by the ANSI C standard.  Still worse, other
+processes that are making only read accesses can buffer the values in
+registers forever, thus <EM>never</EM> noticing that the shared memory
+value has actually changed.  In summary, do what you want, but only
+variables accessed through <CODE>volatile</CODE> are <EM>guaranteed</EM>
+to work correctly.
+<P>Note that you can cause a volatile access to an ordinary variable by
+using a type cast that imposes the <CODE>volatile</CODE> attribute.  For
+example, the ordinary <CODE>int i;</CODE> can be referenced as a volatile
+by <CODE>*((volatile int *) &amp;i)</CODE>; thus, you can explicitly
+invoke the "overhead" of volatility only where it is critical.
+<P>
+<H3>Locks</H3>
+
+<P>
+<P>If you thought that <CODE>++i;</CODE> would always work to add one to a
+variable <CODE>i</CODE> in shared memory, you've got a nasty little
+surprise coming:  even if coded as a single instruction, the load and
+store of the result are separate memory transactions, and other
+processors could access <CODE>i</CODE> between these two transactions.
+For example, having two processes both perform <CODE>++i;</CODE> might
+only increment <CODE>i</CODE> by one, rather than by two.  According to
+the Intel Pentium "Architecture and Programming Manual," the
+<CODE>LOCK</CODE> prefix can be used to ensure that any of the following
+instructions is atomic relative to the data memory location it
+accesses:
+<P>
+<HR>
+<PRE>
+BTS, BTR, BTC                     mem, reg/imm
+XCHG                              reg, mem
+XCHG                              mem, reg
+ADD, OR, ADC, SBB, AND, SUB, XOR  mem, reg/imm
+NOT, NEG, INC, DEC                mem
+CMPXCHG, XADD
+</PRE>
+<HR>
+<P>However, it probably is not a good idea to use all these operations.
+For example, <CODE>XADD</CODE> did not even exist for the 386, so coding
+it may cause portability problems.
+<P>The <CODE>XCHG</CODE> instruction <EM>always</EM> asserts a lock, even
+without the <CODE>LOCK</CODE> prefix, and thus is clearly the preferred
+atomic operation from which to build higher-level atomic constructs
+such as semaphores and shared queues.  Of course, you can't get GCC to
+generate this instruction just by writing C code...  instead, you must
+use a bit of in-line assembly code.  Given a word-size volatile object
+<EM>obj</EM> and a word-size register value <EM>reg</EM>, the GCC
+in-line assembly code is:
+<P>
+<HR>
+<PRE>
+__asm__ __volatile__ ("xchgl %1,%0"
+                      :"=r" (reg), "=m" (obj)
+                      :"r" (reg), "m" (obj));
+</PRE>
+<HR>
+<P>Examples of GCC in-line assembly code using bit operations for locking
+are given in the source code for the 
+<A HREF="ftp://caliban.physics.utoronto.ca/pub/linux/">bb_threads library</A>.
+<P>It is important to remember, however, that there is a cost associated
+with making memory transactions atomic.  A locking operation carries a
+fair amount of overhead and may delay memory activity from other
+processors, whereas ordinary references may use local cache.  The best
+performance results when locking operations are used as infrequently
+as possible.  Further, these IA32 atomic instructions obviously are not
+portable to other systems.
+<P>There are many alternative approaches that allow ordinary instructions
+to be used to implement various synchronizations, including <B>mutual
+exclusion</B> - ensuring that at most one processor is updating a
+given shared object at any moment.  Most OS textbooks discuss at least
+one of these techniques.  There is a fairly good discussion in the
+Fourth Edition of <EM>Operating System Concepts</EM>, by Abraham
+Silberschatz and Peter B. Galvin, ISBN 0-201-50480-4.
+<P>
+<H3>Cache Line Size</H3>
+
+<P>
+<P>One more fundamental atomicity concern can have a dramatic impact on
+SMP performance:  cache line size.  Although the MPS standard requires
+references to be coherent no matter what caching is used, the fact is
+that when one processor writes to a particular line of memory, every
+cached copy of the old line must be invalidated or updated.  This
+implies that if two or more processors are both writing data to
+different portions of the same line a lot of cache and bus traffic may
+result, effectively to pass the line from cache to cache.  This problem
+is known as <B>false sharing</B>.  The solution is simply to try to
+<EM>organize data so that what is accessed in parallel tends to come
+from a different cache line for each process</EM>.
+<P>You might be thinking that false sharing is not a problem using a
+system with a shared L2 cache, but remember that there are still
+separate L1 caches.  Cache organization and number of separate levels
+can both vary, but the Pentium L1 cache line size is 32 bytes and
+typical external cache line sizes are around 256 bytes.  Suppose that
+the addresses (physical or virtual) of two items are <EM>a</EM> and
+<EM>b</EM> and that the largest per-processor cache line size is
+<EM>c</EM>, which we assume to be a power of two.  To be very precise,
+if <CODE>((int) <EM>a</EM>) &amp; ~(<EM>c</EM> - 1)</CODE> is equal to
+<CODE>((int) <EM>b</EM>) &amp; ~(<EM>c</EM> - 1)</CODE>, then both
+references are in the same cache line.  A simpler rule is that if
+shared objects being referenced in parallel are at least <EM>c</EM>
+bytes apart, they should map to different cache lines.
+<P>
+<H3>Linux Scheduler Issues</H3>
+
+<P>
+<P>Although the whole point of using shared memory for parallel
+processing is to avoid OS overhead, OS overhead can come from things
+other than communication per se.  We have already said that the number
+of processes that should be constructed is less than or equal to the
+number of processors in the machine.  But how do you decide exactly
+how many processes to make?
+<P>For best performance, <EM>the number of processes in your parallel
+program should be equal to the expected number of your program's
+processes that simultaneously can be running on different
+processors</EM>.  For example, if a four-processor SMP typically has
+one process actively running for some other purpose (e.g., a WWW
+server), then your parallel program should use only three processes.
+You can get a rough idea of how many other processes are active on
+your system by looking at the "load average" quoted by the
+<CODE>uptime</CODE> command.
+<P>Alternatively, you could boost the priority of the processes in your
+parallel program using, for example, the <CODE>renice</CODE> command or
+<CODE>nice()</CODE> system call.  You must be privileged to increase
+priority.  The idea is simply to force the other processes out of
+processors so that your program can run simultaneously across all
+processors.  This can be accomplished somewhat more explicitly using
+the prototype version of SMP Linux at 
+<A HREF="http://luz.cs.nmt.edu/~rtlinux/">http://luz.cs.nmt.edu/~rtlinux/</A>, which offers real-time
+schedulers.
+<P>If you are not the only user treating your SMP system as a parallel
+machine, you may also have conflicts between the two or more parallel
+programs trying to execute simultaneously.  This standard solution is
+<B>gang scheduling</B> - i.e., manipulating scheduling priority so
+that at any given moment, only the processes of a single parallel
+program are running.  It is useful to recall, however, that using more
+parallelism tends to have diminishing returns and scheduler activity
+adds overhead.  Thus, for example, it is probably better for a
+four-processor machine to run two programs with two processes each
+rather than gang scheduling between two programs with four processes
+each.
+<P>There is one more twist to this.  Suppose that you are developing a
+program on a machine that is heavily used all day, but will be fully
+available for parallel execution at night.  You need to write and test
+your code for correctness with the full number of processes, even
+though you know that your daytime test runs will be slow.  Well, they
+will be <EM>very</EM> slow if you have processes <B>busy waiting</B>
+for shared memory values to be changed by other processes that are not
+currently running (on other processors).  The same problem occurs if
+you develop and test your code on a single-processor system.
+<P>The solution is to embed calls in your code, wherever it may loop
+awaiting an action from another processor, so that Linux will give
+another process a chance to run.  I use a C macro, call it
+<CODE>IDLE_ME</CODE>, to do this:  for a test run, compile with
+<CODE>cc -DIDLE_ME=usleep(1); ...</CODE>; for a "production" run,
+compile with <CODE>cc -DIDLE_ME={} ...</CODE>.  The
+<CODE>usleep(1)</CODE> call requests a 1 microsecond sleep, which has the
+effect of allowing the Linux scheduler to select a different process
+to run on that processor.  If the number of processes is more than
+twice the number of processors available, it is not unusual for codes
+to run ten times faster with <CODE>usleep(1)</CODE> calls than without
+them.
+<P>
+<H2><A NAME="ss2.3">2.3 bb_threads</A>
+</H2>
+
+<P>
+<P>The bb_threads ("Bare Bones" threads) library, 
+<A HREF="ftp://caliban.physics.utoronto.ca/pub/linux/">ftp://caliban.physics.utoronto.ca/pub/linux/</A>, is a remarkably
+simple library that demonstrates use of the Linux <CODE>clone()</CODE>
+call.  The <CODE>gzip tar</CODE> file is only 7K bytes!  Although this
+library is essentially made obsolete by the LinuxThreads library
+discussed in section 2.4, bb_threads is still usable, and it is
+small and simple enough to serve well as an introduction to use of
+Linux thread support.  Certainly, it is far less daunting to read this
+source code than to browse the source code for LinuxThreads.  In
+summary, the bb_threads library is a good starting point, but
+is not really suitable for coding large projects.
+<P>The basic program structure for using the bb_threads library is:
+<P>
+<OL>
+<LI>Start the program running as a single process.
+</LI>
+<LI>You will need to estimate the maximum stack space that will be
+required for each thread.  Guessing large is relatively harmless (that
+is what virtual memory is for ;-), but remember that <EM>all</EM> the
+stacks are coming from a single virtual address space, so guessing
+huge is not a great idea.  The demo suggests 64K.  This size is set to
+<EM>b</EM> bytes by
+<CODE>bb_threads_stacksize(<EM>b</EM>)</CODE>.
+</LI>
+<LI>The next step is to initialize any locks that you will need.
+The lock mechanism built-into this library numbers locks from 0 to
+<CODE>MAX_MUTEXES</CODE>, and initializes lock <EM>i</EM> by
+<CODE>bb_threads_mutexcreate(<EM>i</EM>)</CODE>.
+</LI>
+<LI>Spawning a new thread is done by calling a library routine that
+takes arguments specifying what function the new thread should execute
+and what arguments should be transmitted to it.  To start a new thread
+executing the <CODE>void</CODE>-returning function <EM>f</EM> with the
+single argument <EM>arg</EM>, you do something like
+<CODE>bb_threads_newthread(<EM>f</EM>, &amp;arg)</CODE>,
+where <EM>f</EM> should be declared something like <CODE>void
+<EM>f</EM>(void *arg, size_t dummy)</CODE>.  If you need to pass
+more than one argument, pass a pointer to a structure initialized to
+hold the argument values.
+</LI>
+<LI>Run parallel code, being careful to use
+<CODE>bb_threads_lock(<EM>n</EM>)</CODE> and
+<CODE>bb_threads_unlock(<EM>n</EM>)</CODE> where <EM>n</EM>
+is an integer identifying which lock to use.  Note that the lock and
+unlock operations in this library are very basic spin locks using
+atomic bus-locking instructions, which can cause excessive
+memory-reference interference and do not make any attempt to ensure
+fairness.
+
+The demo program packaged with bb_threads did not correctly use
+locks to prevent <CODE>printf()</CODE> from being executed simultaneously
+from within the functions <CODE>fnn</CODE> and <CODE>main</CODE>...  and
+because of this, the demo does not always work.  I'm not saying this
+to knock the demo, but rather to emphasize that this stuff is <EM>very
+tricky</EM>; also, it is only slightly easier using LinuxThreads.
+</LI>
+<LI>When a thread executes a <CODE>return</CODE>, it actually destroys
+the process...  but the local stack memory is not automatically
+deallocated.  To be precise, Linux doesn't support deallocation, but
+the memory space is not automatically added back to the
+<CODE>malloc()</CODE> free list.  Thus, the parent process should reclaim
+the space for each dead child by
+<CODE>bb_threads_cleanup(wait(NULL))</CODE>.</LI>
+</OL>
+<P>
+<P>The following C program uses the algorithm discussed in section 1.3 to
+compute the approximate value of Pi using two bb_threads
+threads.
+<P>
+<HR>
+<PRE>
+#include &lt;stdio.h>
+#include &lt;stdlib.h>
+#include &lt;unistd.h>
+#include &lt;sys/types.h>
+#include &lt;sys/wait.h>
+#include "bb_threads.h"
+
+volatile double pi = 0.0;
+volatile int intervals;
+volatile int pids[2];      /* Unix PIDs of threads */
+
+void
+do_pi(void *data, size_t len)
+{
+  register double width, localsum;
+  register int i;
+  register int iproc = (getpid() != pids[0]);
+
+  /* set width */
+  width = 1.0 / intervals;
+
+  /* do the local computations */
+  localsum = 0;
+  for (i=iproc; i&lt;intervals; i+=2) {
+    register double x = (i + 0.5) * width;
+    localsum += 4.0 / (1.0 + x * x);
+  }
+  localsum *= width;
+
+  /* get permission, update pi, and unlock */
+  bb_threads_lock(0);
+  pi += localsum;
+  bb_threads_unlock(0);
+}
+
+int
+main(int argc, char **argv)
+{
+  /* get the number of intervals */
+  intervals = atoi(argv[1]);
+
+  /* set stack size and create lock... */
+  bb_threads_stacksize(65536);
+  bb_threads_mutexcreate(0);
+
+  /* make two threads... */
+  pids[0] = bb_threads_newthread(do_pi, NULL);
+  pids[1] = bb_threads_newthread(do_pi, NULL);
+
+  /* cleanup after two threads (really a barrier sync) */
+  bb_threads_cleanup(wait(NULL));
+  bb_threads_cleanup(wait(NULL));
+
+  /* print the result */
+  printf("Estimation of pi is %f\n", pi);
+
+  /* check-out */
+  exit(0);
+}
+</PRE>
+<HR>
+<P>
+<H2><A NAME="ss2.4">2.4 LinuxThreads</A>
+</H2>
+
+<P>
+<P>LinuxThreads 
+<A HREF="http://pauillac.inria.fr/~xleroy/linuxthreads/">http://pauillac.inria.fr/~xleroy/linuxthreads/</A> is a fairly
+complete and solid implementation of "shared everything" as per the
+POSIX 1003.1c threads standard.  Unlike other POSIX threads ports,
+LinuxThreads uses the same Linux kernel threads facility
+(<CODE>clone()</CODE>) that is used by bb_threads.  POSIX
+compatibility means that it is relatively easy to port quite a few
+threaded applications from other systems and various tutorial
+materials are available.  In short, this is definitely the threads
+package to use under Linux for developing large-scale threaded
+programs.
+<P>The basic program structure for using the LinuxThreads library is:
+<P>
+<OL>
+<LI>Start the program running as a single process.
+</LI>
+<LI>The next step is to initialize any locks that you will need.
+Unlike bb_threads locks, which are identified by numbers, POSIX
+locks are declared as variables of type
+<CODE>pthread_mutex_t lock</CODE>.  Use
+<CODE>pthread_mutex_init(&amp;lock,val)</CODE> to initialize
+each one you will need to use.
+</LI>
+<LI>As with bb_threads, spawning a new thread is done by
+calling a library routine that takes arguments specifying what
+function the new thread should execute and what arguments should be
+transmitted to it.  However, POSIX requires the user to declare a
+variable of type <CODE>pthread_t</CODE> to identify each thread.  To
+create a thread <CODE>pthread_t thread</CODE> running <CODE>f()</CODE>,
+one calls <CODE>pthread_create(&amp;thread,NULL,f,&amp;arg)</CODE>.
+</LI>
+<LI>Run parallel code, being careful to use
+<CODE>pthread_mutex_lock(&amp;lock)</CODE> and
+<CODE>pthread_mutex_unlock(&amp;lock)</CODE> as appropriate.
+</LI>
+<LI>Use <CODE>pthread_join(thread,&amp;retval)</CODE> to clean-up
+after each thread.
+</LI>
+<LI>Use <CODE>-D_REENTRANT</CODE> when compiling your C code.</LI>
+</OL>
+<P>An example parallel computation of Pi using LinuxThreads follows.  The
+algorithm of section 1.3 is used and, as for the bb_threads
+example, two threads execute in parallel.
+<P>
+<HR>
+<PRE>
+#include &lt;stdio.h>
+#include &lt;stdlib.h>
+#include "pthread.h"
+
+volatile double pi = 0.0;  /* Approximation to pi (shared) */
+pthread_mutex_t pi_lock;   /* Lock for above */
+volatile double intervals; /* How many intervals? */
+
+void *
+process(void *arg)
+{
+  register double width, localsum;
+  register int i;
+  register int iproc = (*((char *) arg) - '0');
+
+  /* Set width */
+  width = 1.0 / intervals;
+
+  /* Do the local computations */
+  localsum = 0;
+  for (i=iproc; i&lt;intervals; i+=2) {
+    register double x = (i + 0.5) * width;
+    localsum += 4.0 / (1.0 + x * x);
+  }
+  localsum *= width;
+
+  /* Lock pi for update, update it, and unlock */
+  pthread_mutex_lock(&amp;pi_lock);
+  pi += localsum;
+  pthread_mutex_unlock(&amp;pi_lock);
+
+  return(NULL);
+}
+
+int
+main(int argc, char **argv)
+{
+  pthread_t thread0, thread1;
+  void * retval;
+
+  /* Get the number of intervals */
+  intervals = atoi(argv[1]);
+
+  /* Initialize the lock on pi */
+  pthread_mutex_init(&amp;pi_lock, NULL);
+
+  /* Make the two threads */
+  if (pthread_create(&amp;thread0, NULL, process, "0") ||
+      pthread_create(&amp;thread1, NULL, process, "1")) {
+    fprintf(stderr, "%s: cannot make thread\n", argv[0]);
+    exit(1);
+  }
+
+  /* Join (collapse) the two threads */
+  if (pthread_join(thread0, &amp;retval) ||
+      pthread_join(thread1, &amp;retval)) {
+    fprintf(stderr, "%s: thread join failed\n", argv[0]);
+    exit(1);
+  }
+
+  /* Print the result */
+  printf("Estimation of pi is %f\n", pi);
+
+  /* Check-out */
+  exit(0);
+}
+</PRE>
+<HR>
+<P>
+<H2><A NAME="ss2.5">2.5 System V Shared Memory</A>
+</H2>
+
+<P>
+<P>The System V IPC (Inter-Process Communication) support consists of a
+number of system calls providing message queues, semaphores, and a
+shared memory mechanism.  Of course, these mechanisms were originally
+intended to be used for multiple processes to communicate within a
+uniprocessor system.  However, that implies that it also should work
+to communicate between processes under SMP Linux, no matter which
+processors they run on.
+<P>Before going into how these calls are used, it is important to
+understand that although System V IPC calls exist for things like
+semaphores and message transmission, you probably should not use
+them.  Why not?  These functions are generally slow and serialized
+under SMP Linux.  Enough said.
+<P>The basic procedure for creating a group of processes sharing access
+to a shared memory segment is:
+<P>
+<OL>
+<LI>Start the program running as a single process.
+</LI>
+<LI>Typically, you will want each run of a parallel program to have
+its own shared memory segment, so you will need to call
+<CODE>shmget()</CODE> to create a new segment of the desired size.
+Alternatively, this call can be used to get the ID of a pre-existing
+shared memory segment.  In either case, the return value is either the
+shared memory segment ID or -1 for error.  For example, to create a
+shared memory segment of <EM>b</EM> bytes, the call might be <CODE>shmid
+= shmget(IPC_PRIVATE, <EM>b</EM>, (IPC_CREAT | 0666))</CODE>.
+</LI>
+<LI>The next step is to attach this shared memory segment to this
+process, literally adding it to the virtual memory map of this process.
+Although the <CODE>shmat()</CODE> call allows the programmer to specify
+the virtual address at which the segment should appear, the address
+selected must be aligned on a page boundary (i.e., be a multiple of
+the page size returned by <CODE>getpagesize()</CODE>, which is usually
+4096 bytes), and will override the mapping of any memory formerly at
+that address.  Thus, we instead prefer to let the system pick the
+address.  In either case, the return value is a pointer to the base
+virtual address of the segment just mapped.  The code is <CODE>shmptr =
+shmat(shmid, 0, 0)</CODE>.
+
+Notice that you can allocate all your static shared variables into
+this shared memory segment by simply declaring all shared variables as
+members of a <CODE>struct</CODE> type, and declaring <EM>shmptr</EM> to be
+a pointer to that type.  Using this technique, shared variable
+<EM>x</EM> would be accessed as
+<EM>shmptr</EM><CODE>-&gt;</CODE><EM>x</EM>.
+</LI>
+<LI>Since this shared memory segment should be destroyed when the
+last process with access to it terminates or detaches from it, we need
+to call <CODE>shmctl()</CODE> to set-up this default action.  The code is
+something like <CODE>shmctl(shmid, IPC_RMID, 0)</CODE>.
+</LI>
+<LI>Use the standard Linux <CODE>fork()</CODE> call to make the desired
+number of processes...  each will inherit the shared memory segment.
+</LI>
+<LI>When a process is done using a shared memory segment, it really
+should detach from that shared memory segment.  This is done by
+<CODE>shmdt(shmptr)</CODE>.</LI>
+</OL>
+<P>
+<P>Although the above set-up does require a few system calls, once the
+shared memory segment has been established, any change made by one
+processor to a value in that memory will automatically be visible to
+all processes.  Most importantly, each communication operation will
+occur without the overhead of a system call.
+<P>An example C program using System V shared memory segments follows.
+It computes Pi, using the same algorithm given in section 1.3.
+<P>
+<HR>
+<PRE>
+#include &lt;stdio.h>
+#include &lt;stdlib.h>
+#include &lt;unistd.h>
+#include &lt;sys/types.h>
+#include &lt;sys/stat.h>
+#include &lt;fcntl.h>
+#include &lt;sys/ipc.h>
+#include &lt;sys/shm.h>
+
+volatile struct shared { double pi; int lock; } *shared;
+
+inline extern int xchg(register int reg,
+volatile int * volatile obj)
+{
+  /* Atomic exchange instruction */
+__asm__ __volatile__ ("xchgl %1,%0"
+                      :"=r" (reg), "=m" (*obj)
+                      :"r" (reg), "m" (*obj));
+  return(reg);
+}
+
+main(int argc, char **argv)
+{
+  register double width, localsum;
+  register int intervals, i;
+  register int shmid;
+  register int iproc = 0;;
+
+  /* Allocate System V shared memory */
+  shmid = shmget(IPC_PRIVATE,
+                 sizeof(struct shared),
+                 (IPC_CREAT | 0600));
+  shared = ((volatile struct shared *) shmat(shmid, 0, 0));
+  shmctl(shmid, IPC_RMID, 0);
+
+  /* Initialize... */
+  shared->pi = 0.0;
+  shared->lock = 0;
+
+  /* Fork a child */
+  if (!fork()) ++iproc;
+
+  /* get the number of intervals */
+  intervals = atoi(argv[1]);
+  width = 1.0 / intervals;
+
+  /* do the local computations */
+  localsum = 0;
+  for (i=iproc; i&lt;intervals; i+=2) {
+    register double x = (i + 0.5) * width;
+    localsum += 4.0 / (1.0 + x * x);
+  }
+  localsum *= width;
+
+  /* Atomic spin lock, add, unlock... */
+  while (xchg((iproc + 1), &amp;(shared->lock))) ;      
+  shared->pi += localsum;
+  shared->lock = 0;
+
+  /* Terminate child (barrier sync) */
+  if (iproc == 0) {
+    wait(NULL);
+    printf("Estimation of pi is %f\n", shared->pi);
+  }
+
+  /* Check out */
+  return(0);
+}
+</PRE>
+<HR>
+<P>In this example, I have used the IA32 atomic exchange instruction to
+implement locking.  For better performance and portability, substitute
+a synchronization technique that avoids atomic bus-locking
+instructions (discussed in section 2.2).
+<P>When debugging your code, it is useful to remember that the
+<CODE>ipcs</CODE> command will report the status of the System V IPC
+facilities currently in use.
+<P>
+<H2><A NAME="ss2.6">2.6 Memory Map Call</A>
+</H2>
+
+<P>
+<P>Using system calls for file I/O can be very expensive; in fact, that is
+why there is a user-buffered file I/O library (<CODE>getchar()</CODE>,
+<CODE>fwrite()</CODE>, etc.).  But user buffers don't work if multiple
+processes are accessing the same writeable file, and the user buffer
+management overhead is significant.  The BSD UNIX fix for this was the
+addition of a system call that allows a portion of a file to be mapped
+into user memory, essentially using virtual memory paging mechanisms to
+cause updates.  This same mechanism also has been used in systems from
+Sequent for many years as the basis for their shared memory parallel
+processing support.  Despite some very negative comments in the (quite
+old) man page, Linux seems to correctly perform at least some of the
+basic functions, and it supports the degenerate use of this system
+call to map an anonymous segment of memory that can be shared across
+multiple processes.
+<P>In essence, the Linux implementation of <CODE>mmap()</CODE> is a plug-in
+replacement for steps 2, 3, and 4 in the System V shared memory scheme
+outlined in section 2.5.  To create an anonymous shared memory segment:
+<P>
+<HR>
+<PRE>
+shmptr =
+    mmap(0,                        /* system assigns address */
+         b,                        /* size of shared memory segment */
+         (PROT_READ | PROT_WRITE), /* access rights, can be rwx */
+         (MAP_ANON | MAP_SHARED),  /* anonymous, shared */
+         0,                        /* file descriptor (not used) */
+         0);                       /* file offset (not used) */
+</PRE>
+<HR>
+<P>The equivalent to the System V shared memory <CODE>shmdt()</CODE>
+call is <CODE>munmap()</CODE>:
+<P>
+<HR>
+<PRE>
+munmap(shmptr, b);
+</PRE>
+<HR>
+<P>In my opinion, there is no real benefit in using <CODE>mmap()</CODE>
+instead of the System V shared memory support.
+<P>
+<HR>
+<A HREF="Parallel-Processing-HOWTO-3.html">Next</A>
+<A HREF="Parallel-Processing-HOWTO-1.html">Previous</A>
+<A HREF="Parallel-Processing-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

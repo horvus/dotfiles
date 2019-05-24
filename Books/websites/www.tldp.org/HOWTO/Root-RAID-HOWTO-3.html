@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Root RAID HOWTO cookbook: Quick Start for ROOT RAID</TITLE>
+ <LINK HREF="Root-RAID-HOWTO-4.html" REL=next>
+ <LINK HREF="Root-RAID-HOWTO-2.html" REL=previous>
+ <LINK HREF="Root-RAID-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Root-RAID-HOWTO-4.html">Next</A>
+<A HREF="Root-RAID-HOWTO-2.html">Previous</A>
+<A HREF="Root-RAID-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Quick Start for ROOT RAID</A></H2>
+
+<P>If you use <B>RedHat</B>, see the 
+<A HREF="Root-RAID-HOWTO-15.html#RedHat">Howto set up RedHat</A>
+section in Appendix H. I have not tried this. If you use it successfully,
+please let me know so I can update this document.
+<P>If you don't want to try and build and debug the rescue system, you can get
+a generic one created from Slackware-3.4 from:
+<BLOCKQUOTE>
+<A HREF="ftp://ftp.bizsystems.com/pub/raid/">ftp.bizsystems.com/pub/raid/raidboot-0.01.tar.gz</A></BLOCKQUOTE>
+
+Perform the following steps:
+<UL>
+<LI>Compile the raid enabled kernel with 
+built in support for your disk subsystem</LI>
+<LI>Test that the raid array will configure and mount correctly</LI>
+<LI>Build your OS on the raid system</LI>
+<LI>Correct the entries in <B>fstab</B> to show <B>/dev/md0</B> as the
+root device. Make sure that the partition(s) you use for booting are included in
+<B>fstab</B>. </LI>
+<LI>Modify your shutdown halt and reboot script(s) (mine is /etc/rc.d/rc.6) as shown in 
+<A HREF="Root-RAID-HOWTO-4.html#modify_shutdown">Modifying the rc-scripts for SHUTDOWN</A></LI>
+<LI>Copy the following from you development filesystem
+to the rescue system AND the new raid system
+
+<PRE>
+        cd /root/raidboot
+        mkdir mnt
+        gzip -d rescue.clean
+        losetup /dev/loop0  rescue.clean
+        mount /dev/loop0    mnt
+
+copy these files
+
+        cp -p /etc/*         mnt/etc
+        cp -p /etc/rc.d/*    mnt/etc/rc.d 
+                {or as appropriate for your system}
+        cp -a /lib/modules/* mnt/lib/modules 
+</PRE>
+
+Some Linux distributions include a test for the <B>ro/rw</B> status of the
+root file system. The <B>rc startup</B> files need to
+have this test removed for the initrd rescue system. See the instructions in
+the section on 
+<A HREF="Root-RAID-HOWTO-4.html#corrections">Correctons for Rescue System</A>.</LI>
+</UL>
+
+Correct the entries in <B>fstab</B> to show <B>/dev/md0</B> as the root
+device. Make sure that the partition(s) you use for booting is included in
+<B>fstab</B>.
+<P>
+<A NAME="raidboot-conf"></A> 
+Create <B>/etc/raidboot.conf</B> which describes the raid boot
+configuration. This file may <B>NOT</B> contain comments in the first three
+lines, after that it doesn't matter.
+<P>raidboot.conf
+<PRE>
+        /dev/sda1 /dev/sda2
+        raidboot
+        raid5.conf
+# comments may only be placed 'after' the three
+# configuration lines.
+#
+# This is '/etc/raidboot.conf'
+#
+# line one, the partition(s) containing the 'initrd' raid-rescue system
+#       It is not necessary to boot from these partitions, however,
+#       since the rescue system will not fit on floppy, it is necessary
+#       to know which partitions are to be used to load the rescue system
+#
+# line two, the path to the raidboot config information
+#       Where the shutdown status, etc... is located at boot time
+#       It does NOT include the mount point information, only 'path'
+#       /mntpoint/'path'
+#
+# line -3-, name of the raid configuration file
+#       Current raid configuration file i.e. raid1.conf, raid5.conf
+</PRE>
+
+A few more things to do and the raid systems is ready to boot.
+<P>Create 
+<A HREF="Root-RAID-HOWTO-13.html#Appendix-F">rc.raidown</A>, as described in Appendix F,
+and copy it to /etc/rc.d on the rescue, development, and raid system.
+Unmount the rescue system and zip it.
+<PRE>
+        umount mnt
+        losetup -d /dev/loop0
+        mv rescue.clean rescue
+        gzip rescue
+</PRE>
+
+Copy the rescue file to the raidboot partitions.
+<PRE>
+        cp rescue.gz /mnt_point(1)/raidboot
+        cp rescue.gz /mnt_point(2)/raidboot
+</PRE>
+
+Activate the raid array.
+<PRE>
+        mdadd -ar
+</PRE>
+
+Save the <B>good</B> reference status to the raidboot partition
+<PRE>
+        cat /proc/mdstat | grep md0 > /mnt_point(1)/raidboot/raidgood.ref
+        cat /proc/mdstat | grep md0 > /mnt_point(1)/raidboot/raidgood.ref
+</PRE>
+
+Lastly, configure the boot program as outlined in 
+<A HREF="Root-RAID-HOWTO-4.html#raidboot-conf">Boot Time Configuration Parameters</A> and reboot your system onto the
+raid array.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Root-RAID-HOWTO-4.html">Next</A>
+<A HREF="Root-RAID-HOWTO-2.html">Previous</A>
+<A HREF="Root-RAID-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

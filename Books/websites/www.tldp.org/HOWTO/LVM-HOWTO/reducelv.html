@@ -1,0 +1,319 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Reducing a logical volume</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Common Tasks"
+HREF="commontask.html"><LINK
+REL="PREVIOUS"
+TITLE="Extending a logical volume"
+HREF="extendlv.html"><LINK
+REL="NEXT"
+TITLE="Migrating data off of a physical volume"
+HREF="migrateoffpv.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="extendlv.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. Common Tasks</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="migrateoffpv.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="reducelv"
+></A
+>11.10. Reducing a logical volume</H1
+><P
+>&#13;        Logical volumes can be reduced in size as well as increased.
+        However, it is <EM
+>very</EM
+> important to remember to
+        reduce the size of the file system or whatever is residing in the
+        volume before shrinking the volume itself, otherwise you risk
+        losing data.
+      </P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;            <STRONG
+>&#13;              ext2
+            </STRONG
+>
+          </P
+><P
+>&#13;            If you are using LVM 1 with ext2 as the file system
+            then you can use the e2fsadm command mentioned
+            earlier to take care of both the file system and
+            volume resizing as follows:
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># umount /home
+# e2fsadm -L-1G /dev/myvg/homevol
+# mount /home</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+            <DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>LVM 2 Caveat</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;                There is currently no e2fsadm equivalent for
+                LVM 2 and the e2fsadm that ships with LVM 1
+                does not work with LVM 2.
+              </P
+></TD
+></TR
+></TABLE
+></DIV
+>
+            
+          </P
+><P
+>&#13;            If you prefer to do this manually you must know the new size
+            of the volume in blocks and use the following commands:
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># umount /home
+# resize2fs /dev/myvg/homevol 524288
+# lvreduce -L-1G /dev/myvg/homevol
+# mount /home</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+></LI
+><LI
+><P
+>&#13;            <STRONG
+>&#13;              reiserfs
+            </STRONG
+>
+          </P
+><P
+>&#13;            Reiserfs seems to prefer to be unmounted when shrinking
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># umount /home
+# resize_reiserfs -s-1G /dev/myvg/homevol
+# lvreduce -L-1G /dev/myvg/homevol
+# mount -treiserfs /dev/myvg/homevol /home</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+></LI
+><LI
+><P
+>&#13;            <STRONG
+>&#13;              xfs
+            </STRONG
+>
+          </P
+><P
+>&#13;            There is no way to shrink XFS file systems.
+          </P
+></LI
+><LI
+><P
+>&#13;            <STRONG
+>&#13;              jfs
+            </STRONG
+>
+          </P
+><P
+>&#13;            There is no way to shrink JFS file systems.
+          </P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="extendlv.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="migrateoffpv.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Extending a logical volume</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="commontask.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Migrating data off of a physical volume</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

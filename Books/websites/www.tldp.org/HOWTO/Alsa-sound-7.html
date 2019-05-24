@@ -1,0 +1,304 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Alsa-sound-mini-HOWTO: Tips and Troubleshooting</TITLE>
+ <LINK HREF="Alsa-sound-6.html" REL=previous>
+ <LINK HREF="Alsa-sound.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+Next
+<A HREF="Alsa-sound-6.html">Previous</A>
+<A HREF="Alsa-sound.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Tips and Troubleshooting</A></H2>
+
+<P>Please take a look at the FAQ file in the sound driver directory. This section is still under construction. 
+<H2><A NAME="ss7.1">7.1 Compiling the driver</A>
+</H2>
+
+<P>
+<H3>Linux kernel sourcetree</H3>
+
+<P>If your ALSA drivers do not compile correctly and tell you things about ``version.h'' or other
+header-files that cannot be found, this can mean that you do not have the kernel header files.
+Take a look at the kernel-HOWTO, unpack a recent kernel in /usr/src and issue a <CODE>make config</CODE>.
+<P>
+<H3>Cannot create executables</H3>
+
+<P>The utils also contain code written in c++. Most of us have a c++ compiler
+either from gcc or egcs but make sure you also have the libstdc++-devel
+package installed, else when you run the configure script for the utils,
+your system will stump you with an error message saying your ``c++ compiler
+cannot create executables''.
+<P>
+<H2><A NAME="ss7.2">7.2 Loading the driver</A>
+</H2>
+
+<P>Please check the following items.
+<P>
+<H3>Sound devices</H3>
+
+<P>ALSA uses special devices in the /dev-tree. Make sure you have run the ./snddevices script in the
+alsa-drivers source directory.
+<P>
+<H3>Sound card compatibility</H3>
+
+<P>Are you 100% sure that your sound card IS supported ? Do check it again. 
+Sometimes an X123 is not exactly an X123b and you might be wasting time. 
+On the other hand, even a supported card can give you troubles - it took me two hours to
+figure out the installation of a CS4237B which was, after all, just a fine example
+of RTFM.
+<P>
+<H3>``Device busy'' or ``unresolved symbols''</H3>
+
+<P>You might have a 2.0.x kernel with sound support compiled in, or the OSS/Lite (kernel) sound driver
+could be loaded (check with <CODE>cat /proc/modules</CODE>). Remove the driver or recompile
+the kernel (have a look at the Kernel-HOWTO). 
+<P>The sound module in the 2.0 series kernel is called ``sound.o'' and should <B>not</B> be active. 
+(The ALSA driver ``snd.o'' is OK, though).
+<P>If you have a 2.2.x series kernel without sound driver compiled in, the ALSA drivers will not work, too. 
+<P>
+<H3>2.0 kernels</H3>
+
+<P>I know it this is confusing, so let me try to explain it one more time. If you have a 
+<B>2.0.x series kernel</B> (the command ``uname -a'' tells you something like 
+``Linux penguin 2.0.35 #6 Wed Sep 23 10:19:16 CEST 1998 i686 unknown'') then 
+you need to <B>leave out</B> sound drivers in the kernel. <B>ALSA 0.4.x and later do not work with the
+2.0 series kernel</B>
+<P>
+<H3>2.2 kernels</H3>
+
+<P>If you have a <B>2.2.x series kernel</B> you do <B>need the sound drivers</B>. A 2.2 series kernel should 
+be compiled <B>with sound support, but without any sound card driver</B>. So you select sound support but
+make sure that no specific sound card driver will be compiled.
+<P>
+<H3>References to other drivers</H3>
+
+<P>Another reason why the driver complains that the device is busy could be that the file /etc/conf.modules still
+has references to the soundcard drivers. You should delete these and leave only the references to the ALSA-driver.
+(If there are other non-sound-related drivers there, then you can probably leave these as-is).
+<P>
+<H3>Unresolved symbols revisited</H3>
+
+<P>Another source of ``unresolved symbols'' messages could be a new kernel with older drivers. Please 
+recompile the ALSA drivers after you recompile a new kernel. This will make sure that the drivers
+match your new kernel.
+<P>
+<H3>Check the PnP setup</H3>
+
+<P>Are you sure that your card is active? Take another look at the PnP-HOWTO and check if
+you activated your sound card correctly.
+<P>
+<H3>Are your parameters right ?</H3>
+
+<P>Check, doublecheck your sound card parameters. Please note: 534 is not 543,
+nor is 0x534 the same as 534.
+<P>Also, some sound cards must be loaded by a different name than might be expected. Take a break,
+a beer or whatever, and look again at your ``modprobe'' command. For example the Crystal 4232
+driver should be inserted by modprobe snd-card-cs4232, not ``snd-cs4231'', and the SoundBlaster
+PCI 64 should be loaded with ``snd-card-audiopci'', not snd-es1370. (It's all in the docs, and even
+though I wrote the HOWTO, I once spent an evening trying to persuade snd-cs4231 
+to make sound).
+<P>
+<H2><A NAME="ss7.3">7.3 Driver loaded... but no (or hardly any) sound</A>
+</H2>
+
+<P>
+<P>
+<H3>Unmuting</H3>
+
+<P>The ALSA drivers can use the ``muting'' facilities that most soundcards have. If you 
+loaded the sound drivers and everything is fine but you get nothing but silence, then you probably
+forgot to unmute your card. You need ``amixer'' or ``alsamixer'' for this, both from the ALSA-util package.
+Just typing 
+<BLOCKQUOTE><CODE>
+<PRE>
+amixer set -c 1 Master 70 unmute
+amixer set -c 1 PCM 70 unmute
+amixer set -c 1 CD 70 unmute
+</PRE>
+</CODE></BLOCKQUOTE>
+
+should do for most applications. Please note that for the older amixer command you need to leave out the
+``set'' in the command line.
+<P>
+<H3>Gain</H3>
+
+<P>Most sound cards have a separate mixer part for extra input or output boosting. This entry is most likely called
+the ``gain'', ``in-gain'' for input and ``out-gain'' for output. Setting this gain to an appropriate level will
+greatly help you getting the maximum volume out of your speakers (think about your parents/neighbours/ears
+though).
+So a command like
+<BLOCKQUOTE><CODE>
+<PRE>
+amixer set out-gain 100 unmute
+</PRE>
+</CODE></BLOCKQUOTE>
+
+will probably help.
+<P>
+<H3>OSS/Linux compatibility</H3>
+
+<P>If this is the first time you use the ALSA drivers and you used the built-in sound drivers before, you
+probably want to have backwards compatible sound (i.e. use the /dev/pcmX devices). You need to load the
+``OSS compatibility driver'' for this. Do a <CODE>modprobe snd-pcm1-oss &amp;&amp; modprobe snd-mixer-oss</CODE>. (See the end of the
+section about loading the driver). Please note: snd-pcm1-oss is not equal to snd-pcm1, you <B>need</B>
+snd-pcm1-oss for old-fashioned sound support and snd-mixer-oss for (you guessed it) the mixer.
+<P>
+<H3>Cannot open mixer</H3>
+
+<P>If you have tried to install a couple of different ALSA versions, then sometimes the mixer
+cannot be opened anymore. This happens if you have tried 0.3.2 and want to downgrade to 0.3.0-pre4 (IIRC). You should
+delete all libasound files and links from /usr/lib and then recompile libraries and utils:
+<BLOCKQUOTE><CODE>
+<PRE>
+rm /usr/lib/libasound.*
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Just to be safe, remove all ALSA sound drivers afterwards, then recompile and install and reload the drivers.
+<P>
+<H2><A NAME="ss7.4">7.4 General suggestions</A>
+</H2>
+
+<P>
+<P>
+<H3>Try using ``insmod''</H3>
+
+<P>It can always be useful to start with "insmod" instead of kerneld. Maybe you 
+actually see the error on screen.
+<P>
+<H3>Read the INSTALL file.</H3>
+
+<P>A lot of information can be found in the INSTALL file in the drivers directory. If your driver
+won't work check if there is additional information available.
+<P>
+<H3>Debug messages</H3>
+
+<P>As a last resort, you can rebuild the driver and tell it to send debug information
+to /var/log/messages. Go to the driver-directory with <CODE>cd /usr/src/alsa-driver-....</CODE>
+and type:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+./configure --with-debug=detect; make clean; make
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Remove the driver (as far as it is active, see below for a general remove statement).
+Then use the "modprobe" statement you used before to insert the newly compiled driver.
+Look in /var/log/messages if there are any messages.
+<P>
+<H3>If all else fails...</H3>
+
+<P>If these messages doesn't help you, send a message to the ALSA users mailing list, 
+<A HREF="mailto:alsa-user@alsa-project.org">alsa-user@alsa-project.org</A>.
+<P>Include the following information:
+<UL>
+<LI>soundcard name + chip names present on your soundcard</LI>
+<LI>relevant sections in your isapnp.conf if you have ISA PnP soundcard</LI>
+<LI>your conf.modules or line which you activate ALSA driver</LI>
+<LI>all messages from /var/log/messages which should be relevant to the
+ALSA driver</LI>
+</UL>
+<P>
+<H2><A NAME="ss7.5">7.5 Bug reports</A>
+</H2>
+
+<P>If you found a bug, the ALSA developers would like to know the following things
+(at minimum)
+<OL>
+<LI> driver + kernel version: 'cat /proc/asound/version'</LI>
+<LI>soundcard info
+<UL>
+<LI>soundcard name provided by manufacture</LI>
+<LI>list of chips which soundcard have onboard</LI>
+<LI>contents of 'cat /proc/asound/cards'</LI>
+</UL>
+</LI>
+<LI>all messages from /var/log/messages which should be relevant to ALSA driver</LI>
+<LI>problem description</LI>
+</OL>
+<P>
+<H2><A NAME="ss7.6">7.6 Tip: playing CD's</A>
+</H2>
+
+<P>If you use kmod/kerneld and the ALSA drivers to play CD's, then kmod/kerneld probably do not
+load the drivers as expected. This is due to the fact that a command line CD player only tells
+the CD player to start playing without using any of the devices that tell kmod/kerneld that
+there is sound to occur. Using modprobe may be your only solution to this problem.
+<P>
+<H2><A NAME="ss7.7">7.7 Tip: installing the MIDI serial driver</A>
+</H2>
+
+<P>Normally, the IO port of the serial device is owned by the standard
+serial device driver. So before you can do ``modprobe snd-serial'' we have to tell
+the driver to release the serial device.
+<P>Here is the procedure. 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+setserial /dev/ttyS0 uart none
+modprobe snd-serial
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>(Replace /dev/ttyS0 with the appropriate /dev/ttySx device if your MIDI device uses a different serial device).
+<P>
+<H2><A NAME="ss7.8">7.8 Tip: new kernel? New modules!</A>
+</H2>
+
+<P>After you upgrade your kernel, you probably need to recompile the ALSA drivers. If they are still
+in the original /usr/src directory, then please do not forget to issue a <CODE>make clean</CODE> before
+you do the ./configure, make, make install thing.
+<P>Oh, and then there is this anomaly in kernel numbering: a ``2.2.0ac1'' kernel that is ``not a number''
+- says the configure script. I think this was resolved in newer scripts, otherwise you should maybe 
+change the kernel version in the source.
+<P>
+<H2><A NAME="ss7.9">7.9 Tip: KDE and ALSA drivers</A>
+</H2>
+
+<P>Suppose you have KDE up and running but you cannot get system sounds to work,
+like for opening windows, changing desktops, etc. Sound works in general.
+If your cd player and mp3 player and mixer all do work, then it's probably
+just "kwmsound" that's lacking.
+<P>So: make sure "kwmsound" is in your startscript ($KDEDIR/bin/startkde)
+<P>
+<H2><A NAME="ss7.10">7.10 Tip: use the ALSA devices</A>
+</H2>
+
+<P>If you had sound support in your Linux before, then your applications will probably all point
+to /dev/pcm0, /dev/audio and /dev/mixer. This is fine, if you use OSS compatibility with the
+snd-pcm1-oss module. It might be better, however, to use the real ALSA devices, those found
+in /dev/snd/.
+<P>
+<H2><A NAME="ss7.11">7.11 Tip: removing all modules</A>
+</H2>
+
+<P>Removing 10+ modules one by one is not the way to go. Luckily, 
+all modules start with the "snd-" prefix, so a little command line programming will do.
+You can easily remove ALSA sound by issuing a command like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cat /proc/modules|gawk '/^snd-/{print $1}'|xargs -i rmmod {}
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Juergen Kahrs wrote: ``I have a script that also removes soundcore and soundlow and sound if 
+present and if they are not in use. This script processes /proc/modules three times so 
+there should not be too many modules left after processing''. His solution is
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+awk '/^snd/||/^sound/&amp;&amp;($3==0){system("rmmod " $1)}' /proc/modules /proc/modules /proc/modules
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Please note: if some module is dependent on another module you cannot just remove the "higher" one.
+This means that you might need to issue a second removal statement. (I never encountered this
+situation though, it seems that you can remove the ALSA modules in the order they appear in /proc/modules).
+<P>
+<HR>
+Next
+<A HREF="Alsa-sound-6.html">Previous</A>
+<A HREF="Alsa-sound.html#toc7">Contents</A>
+</BODY>
+</HTML>

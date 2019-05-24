@@ -1,0 +1,123 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>NetWare Loadable Module Programming HOWTO</TITLE>
+ <LINK HREF="NLM-HOWTO-1.html" REL=next>
+
+
+</HEAD>
+<BODY>
+<A HREF="NLM-HOWTO-1.html">Next</A>
+Previous
+Contents
+<HR>
+<H1>NetWare Loadable Module Programming HOWTO</H1>
+
+<H2>Martin Hinner, &lt;
+<A HREF="mailto:martin@hinner.info">martin@hinner.info</A>&gt;</H2>Version 0.3, 04 January 2007
+<HR>
+<EM>This document describes how to develop NetWare Loadable Modules under Linux,
+using GNU CC and nlmconv(1) from GNU binutils. This is not an official Novell
+document; I wrote it without any help or cooperation from 
+<A HREF="http://www.novell.com/">Novell, Inc.</A>. Please note that
+Novell Netware is becoming quite obsolete nowadays. In fact I have not updated
+this howto for more than five years till now (2007).</EM>
+<HR>
+<P>
+<H2><A NAME="toc1">1.</A> <A HREF="NLM-HOWTO-1.html">Introduction</A></H2>
+
+<UL>
+<LI><A NAME="toc1.1">1.1</A> <A HREF="NLM-HOWTO-1.html#ss1.1">C++ Development</A>
+<LI><A NAME="toc1.2">1.2</A> <A HREF="NLM-HOWTO-1.html#ss1.2">Related Documentation</A>
+<LI><A NAME="toc1.3">1.3</A> <A HREF="NLM-HOWTO-1.html#ss1.3">Copying</A>
+<LI><A NAME="toc1.4">1.4</A> <A HREF="NLM-HOWTO-1.html#ss1.4">Contacting the author</A>
+</UL>
+<P>
+<H2><A NAME="toc2">2.</A> <A HREF="NLM-HOWTO-2.html">Setting Up Your Linux Box and NetWare Server</A></H2>
+
+<UL>
+<LI><A NAME="toc2.1">2.1</A> <A HREF="NLM-HOWTO-2.html#ss2.1">Novell NetWare Server</A>
+<LI><A NAME="toc2.2">2.2</A> <A HREF="NLM-HOWTO-2.html#ss2.2">Linux Box With IPX/NCPFS</A>
+<LI><A NAME="toc2.3">2.3</A> <A HREF="NLM-HOWTO-2.html#ss2.3">GNU C Compiler</A>
+<LI><A NAME="toc2.4">2.4</A> <A HREF="NLM-HOWTO-2.html#ss2.4">nlmconv(1) from GNU binutils</A>
+<LI><A NAME="toc2.5">2.5</A> <A HREF="NLM-HOWTO-2.html#ss2.5">The nlm-kit Package</A>
+<LI><A NAME="toc2.6">2.6</A> <A HREF="NLM-HOWTO-2.html#ss2.6">Include Files and Documentation from the NDK</A>
+<LI><A NAME="toc2.7">2.7</A> <A HREF="NLM-HOWTO-2.html#ss2.7">Access to the NetWare Server (Xconsole or rconsole)</A>
+</UL>
+<P>
+<H2><A NAME="toc3">3.</A> <A HREF="NLM-HOWTO-3.html">First Step: Hello world</A></H2>
+
+<UL>
+<LI><A NAME="toc3.1">3.1</A> <A HREF="NLM-HOWTO-3.html#ss3.1">hello.c - Source File</A>
+<LI><A NAME="toc3.2">3.2</A> <A HREF="NLM-HOWTO-3.html#ss3.2">hello.def - NLM header file</A>
+<LI><A NAME="toc3.3">3.3</A> <A HREF="NLM-HOWTO-3.html#ss3.3">Makefile</A>
+<LI><A NAME="toc3.4">3.4</A> <A HREF="NLM-HOWTO-3.html#ss3.4">GCC problems</A>
+<LI><A NAME="toc3.5">3.5</A> <A HREF="NLM-HOWTO-3.html#ss3.5">Testing the Module</A>
+</UL>
+<P>
+<H2><A NAME="toc4">4.</A> <A HREF="NLM-HOWTO-4.html">NLM Header file</A></H2>
+
+<UL>
+<LI><A NAME="toc4.1">4.1</A> <A HREF="NLM-HOWTO-4.html#ss4.1">AUTOUNLOAD</A>
+<LI><A NAME="toc4.2">4.2</A> <A HREF="NLM-HOWTO-4.html#ss4.2">CHECK</A>
+<LI><A NAME="toc4.3">4.3</A> <A HREF="NLM-HOWTO-4.html#ss4.3">CODESTART</A>
+<LI><A NAME="toc4.4">4.4</A> <A HREF="NLM-HOWTO-4.html#ss4.4">COPYRIGHT</A>
+<LI><A NAME="toc4.5">4.5</A> <A HREF="NLM-HOWTO-4.html#ss4.5">CUSTOM</A>
+<LI><A NAME="toc4.6">4.6</A> <A HREF="NLM-HOWTO-4.html#ss4.6">DATASTART</A>
+<LI><A NAME="toc4.7">4.7</A> <A HREF="NLM-HOWTO-4.html#ss4.7">DATE</A>
+<LI><A NAME="toc4.8">4.8</A> <A HREF="NLM-HOWTO-4.html#ss4.8">DEBUG</A>
+<LI><A NAME="toc4.9">4.9</A> <A HREF="NLM-HOWTO-4.html#ss4.9">DESCRIPTION</A>
+<LI><A NAME="toc4.10">4.10</A> <A HREF="NLM-HOWTO-4.html#ss4.10">EXIT</A>
+<LI><A NAME="toc4.11">4.11</A> <A HREF="NLM-HOWTO-4.html#ss4.11">EXPORT</A>
+<LI><A NAME="toc4.12">4.12</A> <A HREF="NLM-HOWTO-4.html#ss4.12">FLAG_OFF</A>
+<LI><A NAME="toc4.13">4.13</A> <A HREF="NLM-HOWTO-4.html#ss4.13">FLAG_ON</A>
+<LI><A NAME="toc4.14">4.14</A> <A HREF="NLM-HOWTO-4.html#ss4.14">HELP</A>
+<LI><A NAME="toc4.15">4.15</A> <A HREF="NLM-HOWTO-4.html#ss4.15">IMPORT</A>
+<LI><A NAME="toc4.16">4.16</A> <A HREF="NLM-HOWTO-4.html#ss4.16">INPUT</A>
+<LI><A NAME="toc4.17">4.17</A> <A HREF="NLM-HOWTO-4.html#ss4.17">MAP</A>
+<LI><A NAME="toc4.18">4.18</A> <A HREF="NLM-HOWTO-4.html#ss4.18">MESSAGES</A>
+<LI><A NAME="toc4.19">4.19</A> <A HREF="NLM-HOWTO-4.html#ss4.19">MODULE</A>
+<LI><A NAME="toc4.20">4.20</A> <A HREF="NLM-HOWTO-4.html#ss4.20">MULTIPLE</A>
+<LI><A NAME="toc4.21">4.21</A> <A HREF="NLM-HOWTO-4.html#ss4.21">NAMELEN</A>
+<LI><A NAME="toc4.22">4.22</A> <A HREF="NLM-HOWTO-4.html#ss4.22">OS_DOMAIN</A>
+<LI><A NAME="toc4.23">4.23</A> <A HREF="NLM-HOWTO-4.html#ss4.23">OUTPUT</A>
+<LI><A NAME="toc4.24">4.24</A> <A HREF="NLM-HOWTO-4.html#ss4.24">PATH</A>
+<LI><A NAME="toc4.25">4.25</A> <A HREF="NLM-HOWTO-4.html#ss4.25">PSEUDOPREEMPTION</A>
+<LI><A NAME="toc4.26">4.26</A> <A HREF="NLM-HOWTO-4.html#ss4.26">REENTRANT</A>
+<LI><A NAME="toc4.27">4.27</A> <A HREF="NLM-HOWTO-4.html#ss4.27">SCREENNAME</A>
+<LI><A NAME="toc4.28">4.28</A> <A HREF="NLM-HOWTO-4.html#ss4.28">SHARELIB</A>
+<LI><A NAME="toc4.29">4.29</A> <A HREF="NLM-HOWTO-4.html#ss4.29">STACK</A>
+<LI><A NAME="toc4.30">4.30</A> <A HREF="NLM-HOWTO-4.html#ss4.30">STACKSIZE</A>
+<LI><A NAME="toc4.31">4.31</A> <A HREF="NLM-HOWTO-4.html#ss4.31">STAMPEDDATA</A>
+<LI><A NAME="toc4.32">4.32</A> <A HREF="NLM-HOWTO-4.html#ss4.32">START</A>
+<LI><A NAME="toc4.33">4.33</A> <A HREF="NLM-HOWTO-4.html#ss4.33">SYNCHRONIZE</A>
+<LI><A NAME="toc4.34">4.34</A> <A HREF="NLM-HOWTO-4.html#ss4.34">THREADNAME</A>
+<LI><A NAME="toc4.35">4.35</A> <A HREF="NLM-HOWTO-4.html#ss4.35">TYPE</A>
+<LI><A NAME="toc4.36">4.36</A> <A HREF="NLM-HOWTO-4.html#ss4.36">VERSION</A>
+<LI><A NAME="toc4.37">4.37</A> <A HREF="NLM-HOWTO-4.html#ss4.37">XDCDATA</A>
+</UL>
+<P>
+<H2><A NAME="toc5">5.</A> <A HREF="NLM-HOWTO-5.html">Message files</A></H2>
+
+<P>
+<H2><A NAME="toc6">6.</A> <A HREF="NLM-HOWTO-6.html">Help Files</A></H2>
+
+<P>
+<H2><A NAME="toc7">7.</A> <A HREF="NLM-HOWTO-7.html">XDC Data Files</A></H2>
+
+<P>
+<H2><A NAME="toc8">8.</A> <A HREF="NLM-HOWTO-8.html">Header Files (.h)</A></H2>
+
+<P>
+<H2><A NAME="toc9">9.</A> <A HREF="NLM-HOWTO-9.html">Import Files (.imp)</A></H2>
+
+<UL>
+<LI><A NAME="toc9.1">9.1</A> <A HREF="NLM-HOWTO-9.html#ss9.1">Generating Import Files Using nlmimp(1)</A>
+</UL>
+<HR>
+<A HREF="NLM-HOWTO-1.html">Next</A>
+Previous
+Contents
+</BODY>
+</HTML>

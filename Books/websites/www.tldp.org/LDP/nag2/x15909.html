@@ -1,0 +1,363 @@
+<HTML
+><HEAD
+><TITLE
+>Running Exim</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Getting EximUp and Running"
+HREF="x-087-2-exim.html"><LINK
+REL="PREVIOUS"
+TITLE="Getting EximUp and Running"
+HREF="x-087-2-exim.html"><LINK
+REL="NEXT"
+TITLE="If Your Mail Doesn't Get Through"
+HREF="x15964.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-exim.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 19. Getting EximUp and Running</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x15964.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN15909"
+>19.1. Running Exim</A
+></H1
+><P
+>&#13;To run Exim, you must first decide whether you want it to handle incoming SMTP
+messages by running as a separate daemon, or whether to have
+<B
+CLASS="COMMAND"
+>inetd</B
+> manage the SMTP port and invoke Exim only whenever an
+SMTP connection is requested from a client. Usually, you will prefer daemon
+operation on the mail server because it loads the machine far less than
+spawning Exim over and over again for each connection. As the mail server also
+delivers most incoming mail directly to the users, you should choose
+<B
+CLASS="COMMAND"
+>inetd</B
+> operation on most other hosts.</P
+><P
+>&#13; 
+Whatever mode of operation you choose for each individual host, you
+have to make sure you have the following entry in your
+<TT
+CLASS="FILENAME"
+>/etc/services</TT
+> file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>smtp            25/tcp          # Simple Mail Transfer Protocol</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This defines the TCP port number that is used for SMTP conversations.
+Port number 25 is the standard defined by the &#8220;Assigned Numbers&#8221;
+RFC (RFC-1700).</P
+><P
+>When run in daemon mode, Exim puts itself in the background and waits for
+connections on the SMTP port. When a connection occurs, it forks, and the
+child process conducts an SMTP conversation with the peer process on the
+calling host.  The Exim daemon is usually started by invoking it from the
+<TT
+CLASS="FILENAME"
+>rc</TT
+> script at boot time using the following command:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/usr/sbin/exim -bd -q15m</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <TT
+CLASS="OPTION"
+>&#8211;bd</TT
+> flag turns on daemon mode, and
+<TT
+CLASS="OPTION"
+>&#8211;q15m</TT
+> makes it process whatever messages have
+accumulated in the message queue every 15 minutes.</P
+><P
+>&#13; 
+If you want to use <B
+CLASS="COMMAND"
+>inetd</B
+> instead, your
+<TT
+CLASS="FILENAME"
+>/etc/inetd.conf</TT
+> file should contain a line like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>smtp    stream  tcp nowait  root  /usr/sbin/exim  in.exim -bs</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Remember you have to make <B
+CLASS="COMMAND"
+>inetd</B
+> re-read
+<TT
+CLASS="FILENAME"
+>inetd.conf</TT
+> by sending it an
+<SPAN
+CLASS="SYSTEMITEM"
+>HUP</SPAN
+> signal after
+making any changes.<A
+NAME="X-087-2-FNEX04"
+HREF="#FTN.X-087-2-FNEX04"
+>[1]</A
+></P
+><P
+>Daemon and <B
+CLASS="COMMAND"
+>inetd</B
+> modes are mutually exclusive. If
+you run Exim in daemon mode, you should make sure to comment out any line in
+<TT
+CLASS="FILENAME"
+>inetd.conf</TT
+> for the
+<SPAN
+CLASS="SYSTEMITEM"
+>smtp</SPAN
+> service. Equivalently, when
+having <B
+CLASS="COMMAND"
+>inetd</B
+> manage Exim, make sure that no
+<TT
+CLASS="FILENAME"
+>rc</TT
+> script starts the Exim daemon.</P
+><P
+>You can check that Exim is correctly set up for receiving incoming SMTP
+messages by telnetting to the SMTP port on your machine. This is what a
+successful connect to the SMTP server looks like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>telnet localhost smtp</B
+></TT
+>
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+220 richard.vbrew.com ESMTP Exim 3.13 #1 Sun, 30 Jan 2000 16:23:55 +0600
+<TT
+CLASS="USERINPUT"
+><B
+>quit</B
+></TT
+>
+221 richard.brew.com closing connection
+Connection closed by foreign host.</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>If this test doesn't produce the SMTP banner (the line starting with the
+220 code), check that you are either running an Exim daemon process or 
+have <B
+CLASS="COMMAND"
+>inetd</B
+> correctly configured. If that doesn't reveal 
+the problem, look in the Exim log files (described next) in case 
+there is an error in Exim's configuration file.</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNEX04"
+HREF="x15909.html#X-087-2-FNEX04"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Use <TT
+CLASS="LITERAL"
+>kill HUP</TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>pid,</I
+></TT
+> for which <TT
+CLASS="REPLACEABLE"
+><I
+>pid</I
+></TT
+> is the process ID of the <B
+CLASS="COMMAND"
+>inetd</B
+> process retrieved from a 
+<B
+CLASS="COMMAND"
+>ps</B
+> listing.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-exim.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x15964.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Getting EximUp and Running</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-exim.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>If Your Mail Doesn't Get Through</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

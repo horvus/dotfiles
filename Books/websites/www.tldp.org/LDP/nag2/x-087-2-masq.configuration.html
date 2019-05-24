@@ -1,0 +1,616 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring IP Masquerade</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="IP Masquerade and Network Address Translation"
+HREF="x-087-2-ipmasq.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring the Kernel for IP Masquerade"
+HREF="x-087-2-masq.kernel.config.html"><LINK
+REL="NEXT"
+TITLE="Handling Name Server Lookups"
+HREF="x-087-2-masq.namelookups.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-masq.kernel.config.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. IP Masquerade and Network Address Translation</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-masq.namelookups.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-MASQ.CONFIGURATION"
+>11.3. Configuring IP Masquerade</A
+></H1
+><P
+>&#13;
+
+
+
+If you've already read the firewall and accounting chapters, it
+probably comes as no surprise that the <B
+CLASS="COMMAND"
+>ipfwadm</B
+>,
+<B
+CLASS="COMMAND"
+>ipchains</B
+>, and <B
+CLASS="COMMAND"
+>iptables</B
+> commands
+are used to configure the IP masquerade rules as well.</P
+><P
+>Masquerade rules are a special class of filtering rule. You can
+masquerade only datagrams that are received on one interface that will
+be routed to another interface. To configure a masquerade rule you
+construct a rule very similar to a firewall forwarding rule, but with
+special options that tell the kernel to masquerade the datagram. The
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> command uses the <I
+CLASS="EMPHASIS"
+>-m</I
+>
+option, <B
+CLASS="COMMAND"
+>ipchains</B
+> uses <TT
+CLASS="LITERAL"
+>-j MASQ</TT
+>, and <B
+CLASS="COMMAND"
+>iptables</B
+> uses
+<TT
+CLASS="LITERAL"
+>-j MASQUERADE</TT
+> to
+indicate that datagrams matching the rule specification should be
+masqueraded.</P
+><P
+>Let's look at an example.
+A computing science student at Groucho Marx University has a number of
+computers at home internetworked onto a small Ethernet-based local area
+network. She has chosen to use one of the reserved private Internet network
+addresses for her network. She shares her accomodation with other students,
+all of whom have an interest in using the Internet. Because student living 
+conditions are very frugal, they cannot afford to use a permanent Internet 
+connection, so instead they use a simple dial-up PPP Internet connection. 
+They would all like to be able
+to share the connection to chat on IRC, surf 
+the Web, and retrieve files by FTP directly to each of their computers&#8212;IP 
+masquerade is the answer.</P
+><P
+>The student first configures a Linux machine to support the dial-up link and to
+act as a router for the LAN. The IP address she is assigned when she dials up
+isn't important. She configures the Linux router with IP masquerade and uses 
+one of the private network addresses for her LAN: 
+<TT
+CLASS="LITERAL"
+>192.168.1.0</TT
+>. She ensures that each of the hosts on the 
+LAN has a default route pointing at the Linux router.</P
+><P
+>The following <B
+CLASS="COMMAND"
+>ipfwadm</B
+> commands are all that are required to
+make masquerading work in her configuration:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -p deny</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -a accept -m -S 192.168.1.0/24 -D 0/0</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or with <B
+CLASS="COMMAND"
+>ipchains</B
+>:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipchains -P forward -j deny</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ipchains -A forward -s 192.168.1.0/24 -d 0/0 -j MASQ</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+or with <B
+CLASS="COMMAND"
+>iptables</B
+>:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>iptables -t nat -P POSTROUTING DROP</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE</B
+></TT
+> </PRE
+></TD
+></TR
+></TABLE
+>
+
+Now whenever any of the LAN hosts try to connect to a service on a
+remote host, their datagrams will be automatically masqueraded by the
+Linux masquerade router. The first rule in each example prevents the
+Linux machine from routing any other datagrams and also adds some
+security.</P
+><P
+>&#13;To list the masquerade rules you have created, use the <TT
+CLASS="LITERAL"
+>-l</TT
+> 
+argument to the <B
+CLASS="COMMAND"
+>ipfwadm</B
+>
+command, as we described in earlier while discussing firewalls.</P
+><P
+>To list the rule we created earlier we use:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -l -e</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+which should display something like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -l -e</B
+></TT
+>
+IP firewall forward rules, default policy: accept
+ pkts bytes type  prot opt  tosa tosx ifname  ifaddress  &#8230;
+    0     0 acc/m all  ---- 0xFF 0x00 any     any        &#8230;</PRE
+></TD
+></TR
+></TABLE
+>
+
+The &#8220;<TT
+CLASS="LITERAL"
+>/m</TT
+>&#8221; in the output indicates this is a
+masquerade rule.</P
+><P
+>To list the masquerade rules with the <B
+CLASS="COMMAND"
+>ipchains</B
+> command, 
+use the <B
+CLASS="COMMAND"
+>-L</B
+> argument. If we list the rule
+we created earlier with <B
+CLASS="COMMAND"
+>ipchains</B
+>, the output will look like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+># ipchains -L</B
+></TT
+>
+Chain input (policy ACCEPT):
+Chain forward (policy ACCEPT):
+target     prot opt     source                destination           ports
+MASQ       all  ------  192.168.1.0/24        anywhere              n/a
+
+Chain output (policy ACCEPT):</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Any rules with a target of <TT
+CLASS="LITERAL"
+>MASQ</TT
+> are masquerade rules.</P
+><P
+>Finally, to list the rules using <B
+CLASS="COMMAND"
+>iptables</B
+> you need to use:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>iptables -t nat -L</B
+></TT
+>
+Chain PREROUTING (policy ACCEPT)
+target     prot opt source               destination         
+
+Chain POSTROUTING (policy DROP)
+target     prot opt source               destination         
+MASQUERADE  all  --  anywhere             anywhere           MASQUERADE 
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination         </PRE
+></TD
+></TR
+></TABLE
+>
+
+Again, masquerade rules appear with a target of <TT
+CLASS="LITERAL"
+>MASQUERADE</TT
+>.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-MASQ.SETTING.TIMING"
+>11.3.1. Setting Timing Parameters for IP Masquerade</A
+></H2
+><P
+>&#13;When each new connection is established, the IP masquerade software
+creates an association in memory between each of the hosts involved in
+the connection.  You can view these associations at any time by
+looking at the <TT
+CLASS="FILENAME"
+>/proc/net/ip_masquerade</TT
+> file.
+These associations will timeout after a period of inactivity, though.</P
+><P
+>&#13;You can set the timeout values using the <B
+CLASS="COMMAND"
+>ipfwadm</B
+> command.
+The general syntax for this is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ipfwadm -M -s &#60;<TT
+CLASS="REPLACEABLE"
+><I
+>tcp</I
+></TT
+>&#62; &#60;<TT
+CLASS="REPLACEABLE"
+><I
+>tcpfin</I
+></TT
+>&#62; &#60;<TT
+CLASS="REPLACEABLE"
+><I
+>udp</I
+></TT
+>&#62;</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;and for the <B
+CLASS="COMMAND"
+>ipchains</B
+> command it is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ipchains -M -S &#60;<TT
+CLASS="REPLACEABLE"
+><I
+>tcp</I
+></TT
+>&#62; &#60;<TT
+CLASS="REPLACEABLE"
+><I
+>tcpfin</I
+></TT
+>&#62; &#60;<TT
+CLASS="REPLACEABLE"
+><I
+>udp</I
+></TT
+>&#62;</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <I
+CLASS="EMPHASIS"
+>iptables</I
+> implementation uses much longer default
+timers and does not allow you to set them.</P
+><P
+>Each of these values represents a timer used by the IP masquerade software and
+are in units of seconds. The following table summarizes the timers and their
+meanings:</P
+><DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN9773"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Name</TH
+><TH
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>tcp</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	TCP session timeout. How long a TCP connection may remain idle before the
+	association for it is removed.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>tcpfin</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>        
+	TCP timeout after FIN. How long an association will remain
+	after a TCP connection has been disconnected.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>udp</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	UDP session timeout. How long a UDP connection may remain idle before the
+	association for it is removed.
+	</P
+></TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-masq.kernel.config.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-masq.namelookups.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring the Kernel for IP Masquerade</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ipmasq.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Handling Name Server Lookups</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

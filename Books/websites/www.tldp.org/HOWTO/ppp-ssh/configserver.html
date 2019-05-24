@@ -1,0 +1,482 @@
+<HTML
+><HEAD
+><TITLE
+>Configure the Server</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="VPN PPP-SSH Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Software Installation"
+HREF="installation.html"><LINK
+REL="NEXT"
+TITLE="Configure the Client"
+HREF="configclient.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>VPN PPP-SSH Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="installation.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="configclient.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="CONFIGSERVER"
+>4. Configure the Server</A
+></H1
+><P
+>We need to set up the server to respond to the client's request
+to bring up the tunnel.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN237"
+>4.1. Create a VPN User</A
+></H2
+><P
+>The incoming SSH VPN requests must be directed to a particular user
+on the server.  For security and accountability, I recommend you
+use a dedicated user to field VPN requests.  The following steps will
+set up a system user named "vpn" to do just that.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>First, we create the user's account.  Accounts come in two ranges:
+the system range (typically 100-999) and the regular user range (1000+).
+"--system" tells adduser to add the user in the system range and
+to give him /bin/false for the login shell.  "--group"
+tells adduser to also create a group of the same name as the user,
+and to add the user to the group.
+    </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>server# adduser --sytem --group vpn</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Since the vpn user needs to log in via ssh, change vpn's shell from
+/bin/false to /bin/bash in the /etc/passwd file.  You can simply
+edit /etc/passwd using vi or any other decent text editor.</P
+></LI
+><LI
+><P
+>Create a password for the vpn user.  It can (and should) be very
+complex, since you'll only type it a few times while setting up the
+VPN.  After that, you'll never type it again.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>server# passwd vpn
+Enter new UNIX password: 
+Retype new UNIX password: 
+passwd: password updated successfully</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Now, try connecting to the server to ensure that you've created the account properly.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>client% ssh eldivino.domain.com -l vpn
+vpn@eldivino's password: 
+Linux eldivino 2.2.19 #6 Mon Jun 4 10:32:19 PDT 2001 i686 unknown
+No mail.
+vpn@eldivino:~$</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>It may take a while for ssh to connect if
+you don't have reverse DNS set up properly.  You can fix that whenever
+you want.   It will only delay bringing up the VPN -- it won't prevent it
+from working.</P
+><P
+>If it just stalls, then the ssh protocol is probably
+being dropped by a firewall between the two machines.
+Have a look at section <A
+HREF="installation.html#SSHFIREWALL"
+>Section 3.5</A
+> again.</P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN255"
+>4.2. Set up Authenticated Login</A
+></H2
+><P
+>It would be terrible to have to type in a password every time you
+wanted to bring the VPN link up, so we'll set up SSH's RSA
+authentication.  Skip this section if you truly don't mind
+typing a password every time.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Ensure that the root account on the client machine has a public
+key in root's home directory (~/root/.ssh/identity.pub). If this
+file doesn't exist, then you must create it.  As root, run ssh-keygen:
+    </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># ssh-keygen
+Generating public/private rsa1 key pair.
+Enter file in which to save the key (/root/.ssh/identity): 
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /root/.ssh/identity.
+Your public key has been saved in /root/.ssh/identity.pub.
+The key fingerprint is:
+15:61:57:7e:5c:26:91:09:5c:e6:10:b7:a1:74:bd:25 root@paradis</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Now, copy identity.pub to the vpn account's authorized_keys file
+on the server.
+You will almost certainly have to create this.  As
+root, perform the following commands on the server:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>server# cd ~vpn
+server# mkdir .ssh
+server# chown root.vpn .ssh
+server# chmod 755 .ssh
+server# cd .ssh</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now, copy th the client's /root/.ssh/identity.pub file
+(it's only one line) to
+the server's ~vpn/.ssh/authorized_keys file.
+You can add more lines to authorized_keys, one for each client,
+if you want to allow multiple clients to connect.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>server# chown root.vpn authorized_keys
+server# chmod 644 authorized_keys</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Now, become root on the client, and try SSHing to the server.
+You may or may not need to use the -P option, depending on how your
+client's firewall is set up.  If port 22 is blocked on your client
+(not a bad idea if it's not running an SSH server),
+then -P tells ssh to use an unprivileged port even though it's
+running as a priveleged user.
+    </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>client# ssh -P eldivino.domain.com -l vpn
+Linux eldivino 2.2.19 #6 Mon Jun 4 11:03:22 PDT 2001 i686 unknown
+No mail.
+vpn@eldivino:~$</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>There, we were just RSA-authenticated.  Keep your private key 
+(the client's ~root/.ssh/identity file) private!  Anyone who
+has access to this file can log into the VPN account on the
+server.</P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN271"
+>4.3. Set Up sudo</A
+></H2
+><P
+>pppd needs to run as root.  However, on the server, we're running
+everything as the "vpn" user.  How can the vpn user run pppd?</P
+><P
+>There are a number of ways of solving this problem.  One is to use
+the suid bit, and arrange permissions by groups.  However, this can get
+confusing and difficult to administer pretty fast, leading to unintentional
+security holes.  Personally,
+I find the sudo utility to be a much better solution.</P
+><P
+>sudo gives ordinary users superuser powers,
+but only for a very limited set of commands.
+The system administrator gets to decide what commands are allowed
+and how much logging to perform. In this case, we want to
+allow the user "vpn" to run pppd with superuser privilege, but
+not be allowed to do anything else.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>We need to edit sudo's configuration file, /etc/sudoers.
+To use proper locking, hopefully preventing accidents and race conditions,
+use the visudo command to edit /etc/sudoers.
+If you're not faimiliar with vi, see the <A
+HREF="http://www.linuxdoc.org/HOWTO/Vim-HOWTO.html"
+TARGET="_top"
+>VIM HOWTO</A
+>.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>server# visudo</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Add these two lines to the bottom of the file:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>Cmnd_Alias VPN=/usr/sbin/pppd
+vpn ALL=NOPASSWD: VPN</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Now, verify that sudo is set up correctly.  As the "vpn" user on the
+server, try running pppd using sudo:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>server# su - vpn
+server$ sudo /usr/sbin/pppd noauth
+~9}#ÀZ}!}!} }9}"}k} }r} }'}%}zt2-·}'}"}</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>If you get a whole bunch of PPP garbage to the screen
+(like the last line above), this is
+good.  It means that the vpn user is allowed to run pppd.  You can
+now switch to another terminal to kill it off, or you can just
+let pppd finish on its own.  It should give up trying to connect
+after 30 seconds or so.</P
+><P
+>However, if you get "bash: /usr/sbin/pppd: Permission denied"
+or some other sort of error,
+or it asks for a password, then sudo is probably not working.
+You'll need to try figure out what is going wrong.  Verify
+that pppd is in /usr/sbin, and that you set up the sudoers
+file correctly.</P
+></LI
+></OL
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="installation.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="configclient.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Software Installation</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Configure the Client</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

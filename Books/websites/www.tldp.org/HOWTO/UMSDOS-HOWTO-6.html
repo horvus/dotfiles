@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>UMSDOS HOW-TO: Basic principle</TITLE>
+ <LINK HREF="UMSDOS-HOWTO-7.html" REL=next>
+ <LINK HREF="UMSDOS-HOWTO-5.html" REL=previous>
+ <LINK HREF="UMSDOS-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="UMSDOS-HOWTO-7.html">Next</A>
+<A HREF="UMSDOS-HOWTO-5.html">Previous</A>
+<A HREF="UMSDOS-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Basic principle</A></H2>
+
+<P>
+<P>
+<H2><A NAME="ss6.1">6.1 Introduction</A>
+</H2>
+
+<P>
+<P><EM>Umsdos</EM> map <EM>Linux</EM> files directly to <EM>Ms-DOS</EM> files.
+This is a one for one translation. File content is not manipulated
+at all. <EM>Umsdos</EM> only works on names. For special files (links
+and devices for example), it introduces special management.
+<P>For each directory, there is a file named <CODE>--linux-.---</CODE>.
+<P>
+<H2><A NAME="ss6.2">6.2 <EM>Umsdos</EM> can replace the <EM>Ms-DOS</EM> file-system.</A>
+</H2>
+
+<P>
+<P><EM>Umsdos</EM> can be thought as a general purpose superset
+of the <EM>Ms-DOS</EM> file system of linux. In fact this
+capability or flexibility yields much confusion about
+<EM>Umsdos</EM>. Here is why. Try to mount a newly formatted
+<EM>DOS</EM> floppy like this.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        mount -t umsdos /dev/fd0 /mnt
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>And do this,
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        ls / >/mnt/LONGFILENAME
+        ls -l /mnt
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You will get the following result
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        -rwxr-xr-x   1 root     root          302 Apr 14 23:25 longfile
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>So far, it seems that the <EM>Umsdos</EM> file system does not do
+much more (in fact nothing at all) than the normal <EM>Ms-DOS</EM>
+file system of <EM>Linux</EM>.
+<P><EM>???</EM>
+<P>
+<H2><A NAME="ss6.3">6.3 Directory promotion</A>
+</H2>
+
+<P>
+<P>Pretty unimpressive so far. Here is the trick. Unless promoted
+a <EM>DOS</EM> directory will be managed the same way with <EM>Umsdos</EM>
+than the <EM>Ms-DOS</EM> file-system will. <EM>Umsdos</EM> use a special
+file in each subdirectory to achieve the translation between
+the extended capabilities (long name, ownership, etc...) of
+<EM>Umsdos</EM> and the limitation of the <EM>DOS</EM> file-system.
+This file is invisible to <EM>Umsdos</EM> users, but visible when
+you boot <EM>DOS</EM>. To avoid cluttering the <EM>DOS</EM> partition
+with those file (<CODE>--linux-.---</CODE>) uselessly, the file is now
+optional. If absent, <EM>Umsdos</EM> behave like <EM>Ms-DOS</EM>.
+<P>When a directory is promoted, any subsequent operation will be
+done with the full semantic normally available to <EM>Unix</EM> and
+<EM>Linux</EM> users. And all subdirectory created afterward will
+be silently promoted.
+<P>This feature allows you to logically organize your <EM>DOS</EM> partition
+into <EM>DOS</EM> stuff and <EM>Linux</EM> stuff. It is important to
+understand that those <CODE>--linux-.---</CODE> file do take some place
+(generally 2k per directory). <EM>DOS</EM> generally use large
+cluster (as big as 16k for a 500meg partition), so avoiding
+putting <CODE>--linux-.---</CODE> everywhere can save your day.
+<P>
+<H2><A NAME="ss6.4">6.4 How to promote: <CODE>/sbin/umssync</CODE></A>
+</H2>
+
+<P>
+<P>A directory can be promoted any time using <CODE>/sbin/umssync</CODE>.
+It can be used at any time. Promoting a directory do the
+following operation
+<P>
+<UL>
+<LI>Create a <CODE>--linux-.---</CODE>.</LI>
+<LI>Establish a one to one relation between the <CODE>--linux-.---</CODE>
+and the current content of the directory.</LI>
+</UL>
+<P><CODE>/sbin/umssync</CODE> maintain an existing <CODE>--linux-.---</CODE> file.
+It does not create it from scratch all the time. It simply add
+missing entries in it (Files created during a <EM>DOS</EM> session).
+It will also removed files which do not exist anymore in the
+<EM>DOS</EM> directory from the <EM>--linux-.---</EM>. <CODE>umssync</CODE> gets
+its name from that. It put <EM>--linux-.---</EM> in sync with
+the underlying <EM>DOS</EM> directory.
+<P>
+<H2><A NAME="ss6.5">6.5 Using <CODE>/sbin/umssync</CODE> at boot time</A>
+</H2>
+
+<P>It is a good idea to place a call to <CODE>/sbin/umssync</CODE>
+at the end of your /etc/rc.d/rc.S if it's not there. The following
+command is adequate for most system:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        /sbin/umssync -r99 -c -i+ /
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The <CODE>-c</CODE> option prevent <CODE>umssync</CODE> from promoting
+directories. It will only update existing <CODE>--linux-.---</CODE>.
+<P>This command is useful if you access <EM>Linux</EM> directory during
+a <EM>DOS</EM> session. <EM>Linux</EM> has no efficient way to tell that
+a directory has been modified by <EM>DOS</EM> so <EM>Umsdos</EM> can't
+do a <EM>umssync</EM> operation as needed.
+<P>
+<H2><A NAME="ss6.6">6.6 How to UN-promote</A>
+</H2>
+
+<P>
+<P>Remove the <CODE>--linux-.---</CODE> file using <EM>DOS</EM>. You will
+be sorry.
+<P>
+<H2><A NAME="ss6.7">6.7 What about files created during a <EM>DOS</EM> session ?</A>
+</H2>
+
+<P>
+<P>Unless you use <CODE>umssync</CODE> on a directory where files have
+been added or removed by <EM>DOS</EM>, you will notice some problems:
+<P>
+<UL>
+<LI>It won't crash the system nor it won't cause major
+problems, only annoyance :-)</LI>
+<LI>Files created by <EM>DOS</EM>.
+<UL>
+<LI>They will be invisible in <EM>Linux</EM>.</LI>
+<LI>When trying to create a file with the same name,
+you will get an error message stating that the
+file already exist.</LI>
+<LI>This creates more confusion that real problem. It
+does not harm the file system.</LI>
+</UL>
+</LI>
+<LI>Files deleted by <EM>DOS</EM> won't cause problem. <EM>Umsdos</EM>
+will notice the absence at the first access. A message
+will be output (and generally written into
+<CODE>/var/adm/syslog</CODE>).</LI>
+</UL>
+<P>
+<HR>
+<A HREF="UMSDOS-HOWTO-7.html">Next</A>
+<A HREF="UMSDOS-HOWTO-5.html">Previous</A>
+<A HREF="UMSDOS-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

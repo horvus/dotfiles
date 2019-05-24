@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>LILO mini-HOWTO: Accessing Huge Disks When the BIOS Can't </TITLE>
+ <LINK HREF="LILO-8.html" REL=next>
+ <LINK HREF="LILO-6.html" REL=previous>
+ <LINK HREF="LILO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="LILO-8.html">Next</A>
+<A HREF="LILO-6.html">Previous</A>
+<A HREF="LILO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7.</A> <A HREF="LILO.html#toc7">Accessing Huge Disks When the BIOS Can't </A></H2>
+
+<P><EM>Notice: 1GB is "Huge"? Well, once upon a time...</EM></P>
+
+<P>The system in my office has a 1GB IDE drive.  The BIOS can only see
+the first 504 MB of the IDE.  (Where MB means 2**10 bytes, not 10**6
+bytes.)  So I have MS-DOS on a 350 MB partition <CODE>/dev/hda1</CODE> and
+my Linux root on a 120 MB partition <CODE>/dev/hda2</CODE>.</P>
+
+<P><EM>Hauke Laging (hauke@laging.de) and Bob Hall (bhall@hallfire.org)
+have noticed a small mistake above, so they've suggested a MB to be
+2**20 bytes rather than 2**10 bytes. Thanks for correction. In
+addition, Hauke would like to learn more about what he called,
+"character codes on LILO startup, when LILO dies with LI, LI-, LIL-
+or whatever". I'd appreciate a contribution related to this issue or 
+a valid web link to that.</EM></P>
+
+<P>Here it is (a contribution by Zohar Stolar, zohar@numericable.fr):</P>
+<P><B>B. LILO boot error codes</B></P>
+<P>
+<A HREF="http://www.tldp.org/HOWTO/Bootdisk-HOWTO/a1483.html">http://www.tldp.org/HOWTO/Bootdisk-HOWTO/a1483.html</A></P>
+
+
+<P>Thanks for link. </P>
+
+<P>MS-DOS was unable to install itself correctly when the drive was
+fresh.  Novell DOS 7 had the same problem.  Luckily for me, "Options
+by IBM" forgot to put the "OnTrack" diskette in the box with the
+drive.  The drive was supposed to come with a product called "OnTrack
+Disk Manager."  If you only have MSDOS, I guess you have to use it.</P>
+
+<P>So I made a partition table with Linux' fdisk.  MSDOS-6.2 refused to
+install itself in <CODE>/dev/hda1</CODE>.  It said something like ``this
+release of MS-DOS is for new installations.  Your computer already has
+MS-DOS so you need to get an upgrade release from your dealer.''
+Actually, the disk was brand new.</P>
+
+<P>What a crock!  So I ran Linux' fdisk again and deleted partition 1
+from the table.  This satisfied MS-DOS 6.2 which proceeded to create
+the exact same partition 1 I had just deleted and installed itself.
+MS-DOS 6.2 wrote its Master Boot Record on the drive, but it couldn't
+boot.</P>
+
+<P>Luckily I had a Slackware kernel on floppy (made by the Slackware
+installation program "setup"), so I booted Linux and wrote Lilo over
+MS-DOS' broken MBR.  This works.  Here is the <CODE>/etc/lilo.conf</CODE>
+file I used:</P>
+<P>
+<PRE>
+boot = /dev/hda
+map = /lilo-map
+delay = 100
+ramdisk = 0             # Turns off ramdisk in Slackware kernel
+timeout = 100
+prompt
+disk = /dev/hda         # BIOS only sees first 500 MB.
+   bios = 0x80          # specifies the first IDE.
+   sectors = 63         # get the numbers from your drive's docs.
+   heads = 16
+   cylinders = 2100
+image = /vmlinuz
+  append = "hd=2100,16,63"
+  root = /dev/hda2
+  label = linux
+  read-only
+  vga = extended
+other = /dev/hda1
+  label = msdos
+  table = /dev/hda
+  loader = /boot/chain.b
+</PRE>
+</P>
+
+<P>After I installed these systems, I verified that the partition
+containing the zImage, boot.b, map, chain.b, and message files can use
+an msdos file system, as long as it is not "stackered" or
+"doublespaced."  So I could have made the DOS partition on
+<CODE>/dev/hda1</CODE> 500 MB.</P>
+
+<P>I have also learned that "OnTrack" would have written a partition
+table starting a few dozen bytes into the drive, instead of at the
+beginning, and it is possible to hack the Linux IDE driver to work
+around this problem.  But installing would have been impossible with
+the precompiled Slackware kernel.  Eventually, IBM sent me an
+"OnTrack" diskette.  I called OnTrack's technical support.  They told
+me Linux is broken because Linux doesn't use BIOS.  I gave their
+diskette away.</P>
+
+
+<HR>
+<A HREF="LILO-8.html">Next</A>
+<A HREF="LILO-6.html">Previous</A>
+<A HREF="LILO.html#toc7">Contents</A>
+</BODY>
+</HTML>

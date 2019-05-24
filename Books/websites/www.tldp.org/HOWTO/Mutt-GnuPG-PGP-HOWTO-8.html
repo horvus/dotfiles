@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Mutt-i, GnuPG and PGP Howto: Procmail notes and tips</TITLE>
+ <LINK HREF="Mutt-GnuPG-PGP-HOWTO-9.html" REL=next>
+ <LINK HREF="Mutt-GnuPG-PGP-HOWTO-7.html" REL=previous>
+ <LINK HREF="Mutt-GnuPG-PGP-HOWTO.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Mutt-GnuPG-PGP-HOWTO-9.html">Next</A>
+<A HREF="Mutt-GnuPG-PGP-HOWTO-7.html">Previous</A>
+<A HREF="Mutt-GnuPG-PGP-HOWTO.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. Procmail notes and tips</A></H2>
+
+<H2><A NAME="sec-procmail.1"></A> <A NAME="ss8.1">8.1 Configuring Procmail to send automatically your public keys</A>
+ </H2>
+
+<P>As this is not the objetive of this Howto, we will comment that the
+securest way to get the public key from anybody is that he gives it to us
+directly by hand.
+<P>As many times this is not an easy method (how long they are) the people
+can send the public key by electronic mail, or searching it in a key
+server, but none of those methods assure that the obtained key is really
+from whom it seems to be. If you use other communication media considered
+&quot;secure&quot; (searching the owner in the phone listing and asking
+him to read his key "fingerprint" to contrast with the fingerprint from
+the key we have obtained from the non-secure path).
+<P>What we are going to see is a "tip" to put into the <CODE>.procmailrc</CODE>
+from the Procmail mail processor to get back automatically your publick
+key to the remitent when you get a message with a determined text in the
+<CODE>Subject</CODE> line:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+:0 h
+* ^Subject:[    ]+\/(|send)[    ]+key pub\>.*
+| mutt -s "Re: $MATCH" `formail -rtzxTo:` &lt;/clau/mykey.asc
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>What it is said in the previous paragraph is: we have a copy in ASCII of
+our public key, in any directory (in this case the <CODE>/clau</CODE>
+directory) in a file named <CODE>mykey.asc</CODE>; when procmail gets a
+message that include "send key pub" in the <CODE>Subject:</CODE> line, send
+the file to the remitent.
+<P>IMPORTANT: what you have between the brackets is <B>an space</B> and
+<B>a tab</B>.
+<P>
+<H2><A NAME="sec-procmail.2"></A> <A NAME="ss8.2">8.2 Verify and decrypt automatically messages without PGP/MIME</A>
+ </H2>
+
+<P>When you receive a signed message that uses PGP/MIME and you open it with
+your preferred MUA (Mutt, isn't it?), it recognizes the message as
+PGP/MIME and checks the signature if you have the remitent public key.
+These messages are the ones that have the "S" in the first part of the
+message line in Mutt:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+36  S  05/09 Andres Seco Her ( 12K) Al fin
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>while the encrypted messages have the "P":
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+12  P  03/24 Andres Seco Her (6,3K) Re: FW: Re: Mutt - pgp/gnupg
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>But if the message is signed and has the &quot;application/pgp&quot;
+MIME type, when you open it Mutt doesn't check its sign, and this sign is
+into the message body, as here:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+-----BEGIN PGP SIGNED MESSAGE-----
+
+Date: Tue, 25 May 1999 13:04:26 +0200
+From: La Corporación &lt;bill@reboot.com>
+Subject: Actualización S.O.
+To: Sufrido Usuario &lt;pepe@casa.es>
+
+
+Sufrido usuario:
+
+le comunicamos que puede usted adquirir la última actualización del
+programa O.E. con la adquisición de nuestro sistema operativo reboot99
+por el módico precio de ... etc.
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: 2.6.3ia
+Charset: noconv
+
+iKBGNpUBX0235VapRBUy1KklAQGl9wQA3SBMio0bbbajHAnyKMOlx3tcgNG7/UVC
+AbqXcUnyGGOo13Nbas95G34Fee3wsXIFo1obEfgiRzqPzZPLWoZdAnyTlZyTwCHe
+6ifVpLTuaXvcn9/76rXoI6u9svN2cqHCgHuNASKHaK9034uq81PSdW4QdGLgLoeB
+vnGmxE+tGg32=
+=Xidf
+-----END PGP SIGNATURE-----
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>To verify it, you must save it and use the command line. But, it is
+possible to convert this MIME messages type with <EM>Procmail</EM> to allow
+<EM>Mutt</EM> to recognize it as <EM>PGP/MIME</EM>. You only need to add this
+to <CODE>.procmailrc</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+:0
+* !^Content-Type: message/
+* !^Content-Type: multipart/
+* !^Content-Type: application/pgp
+{
+    :0 fBw
+    * ^-----BEGIN PGP MESSAGE-----
+    * ^-----END PGP MESSAGE-----
+    | formail \
+        -i "Content-Type: application/pgp; format=text; x-action=encrypt"
+
+    :0 fBw
+    * ^-----BEGIN PGP SIGNED MESSAGE-----
+    * ^-----BEGIN PGP SIGNATURE-----
+    * ^-----END PGP SIGNATURE-----
+    | formail \
+        -i "Content-Type: application/pgp; format=text; x-action=sign"
+}
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>As you can see, this is valid to signed messages and to encrypted messages
+with application/pgp.
+<P>
+<H2><A NAME="ss8.3">8.3 Change MIME type for messages with keys inside without PGP/MIME</A>
+</H2>
+
+<P>When you receive a public key block from a non <EM>PGP/MIME</EM> compliant
+MUA, you must save the message body in your disk and then insert it into
+your public key ring, but, including this lines into your <CODE>.procmailrc</CODE>
+file, you can include it directly from mutt.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+    :0 fBw
+    * ^-----BEGIN PGP PUBLIC KEY BLOCK-----
+    * ^-----END PGP PUBLIC KEY BLOCK-----
+    | formail -i "Content-Type: application/pgp-keys; format=text;"
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Thanks to Denis Alan for this procmail note.
+<P>
+<HR>
+<A HREF="Mutt-GnuPG-PGP-HOWTO-9.html">Next</A>
+<A HREF="Mutt-GnuPG-PGP-HOWTO-7.html">Previous</A>
+<A HREF="Mutt-GnuPG-PGP-HOWTO.html#toc8">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,408 @@
+<HTML
+><HEAD
+><TITLE
+>The NetworkFile System</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Using NIS with Shadow Support"
+HREF="x-087-2-nis.shadow.html"><LINK
+REL="NEXT"
+TITLE="Preparing NFS"
+HREF="x-087-2-nfs.nfsd.html"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.shadow.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nfs.nfsd.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="X-087-2-NFS"
+>Chapter 14. The NetworkFile System</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>14.1. <A
+HREF="x-087-2-nfs.nfsd.html"
+>Preparing NFS</A
+></DT
+><DT
+>14.2. <A
+HREF="x-087-2-nfs.mountd.html"
+>Mounting an NFS Volume</A
+></DT
+><DT
+>14.3. <A
+HREF="x-087-2-nfs.daemons.html"
+>The NFS Daemons</A
+></DT
+><DT
+>14.4. <A
+HREF="x-087-2-nfs.exports.html"
+>The exports File</A
+></DT
+><DT
+>14.5. <A
+HREF="x-087-2-nfs.kernelv2.html"
+>Kernel-Based NFSv2 Server Support</A
+></DT
+><DT
+>14.6. <A
+HREF="x-087-2-nfs.kernelv3.html"
+>Kernel-Based NFSv3 Server Support</A
+></DT
+></DL
+></DIV
+><P
+>The Network File System (NFS) is probably the most prominent network
+service using RPC. It allows you to access files on remote hosts in
+exactly the same way you would access local files. A mixture of kernel
+support and user-space daemons on the client side, along with an NFS
+server on the server side, makes this possible. This file access is
+completely transparent to the client and works across a variety of
+server and host architectures.</P
+><P
+>NFS offers a number of useful features:
+
+<P
+></P
+><UL
+><LI
+><P
+>Data accessed by all users can be kept on a central host, with clients
+mounting this directory at boot time. For example, you can keep all user
+accounts on one host and have all hosts on your network mount
+<TT
+CLASS="FILENAME"
+>/home</TT
+> from that host. If NFS is installed beside
+NIS, users can log into any system and still work on one set of files.</P
+></LI
+><LI
+><P
+>Data consuming large amounts of disk space can be kept on a single host. For
+example, all files and programs relating to LaTeX and METAFONT can be kept
+and maintained in one place.</P
+></LI
+><LI
+><P
+>Administrative data can be kept on a single host. There is no need to use
+<B
+CLASS="COMMAND"
+>rcp</B
+> to install the same stupid file on 20 different
+machines.</P
+></LI
+></UL
+></P
+><P
+>It's not too hard to set up basic NFS operation on both the client and
+server; this chapter tells you how.</P
+><P
+>Linux NFS is largely the work of
+Rick Sladkey, who wrote the NFS kernel code and large parts of the NFS server.<A
+NAME="X-087-2-FNNF01"
+HREF="#FTN.X-087-2-FNNF01"
+>[1]</A
+> The latter is derived from the <I
+CLASS="EMPHASIS"
+>unfsd</I
+> user space NFS server, originally written by Mark Shand, and the <I
+CLASS="EMPHASIS"
+>hnfs</I
+> Harris NFS server, written by Donald Becker.
+&#13;</P
+><P
+>&#13;Let's have a look at how NFS works. First, a client tries to mount a
+directory from a remote host on a local directory just the same way it
+does a physical device.  However, the syntax used to specify the
+remote directory is different. For example, to mount
+<TT
+CLASS="FILENAME"
+>/home</TT
+> from host <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> to <TT
+CLASS="FILENAME"
+>/users</TT
+> on
+<SPAN
+CLASS="SYSTEMITEM"
+>vale</SPAN
+>, the administrator
+issues the following command on <SPAN
+CLASS="SYSTEMITEM"
+>vale</SPAN
+>:<A
+NAME="X-087-2-FNNF02"
+HREF="#FTN.X-087-2-FNNF02"
+>[2]</A
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>mount -t nfs vlager:/home /users</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+> 
+<B
+CLASS="COMMAND"
+>mount</B
+> will try to connect to the
+<B
+CLASS="COMMAND"
+>rpc.mountd</B
+> mount daemon on
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+> via RPC. The
+server will check if <SPAN
+CLASS="SYSTEMITEM"
+>vale</SPAN
+> is
+permitted to mount the directory in question, and if so, return it a
+file handle. This file handle will be used in all subsequent requests to
+files below <TT
+CLASS="FILENAME"
+>/users</TT
+>.</P
+><P
+>&#13;
+
+
+When someone accesses a file over NFS, the kernel places an RPC call
+to <B
+CLASS="COMMAND"
+>rpc.nfsd</B
+> (the NFS daemon) on the server
+machine. This call takes the file handle, the name of the file to be
+accessed, and the user and group IDs of the user as parameters. These
+are used in determining access rights to the specified file. In order
+to prevent unauthorized users from reading or modifying files, user
+and group IDs must be the same on both hosts.</P
+><P
+>On most Unix implementations, the NFS functionality of both client and
+server is implemented as kernel-level daemons that are started from
+user space at system boot. These are the <I
+CLASS="EMPHASIS"
+>NFS Daemon</I
+> 
+(<B
+CLASS="COMMAND"
+>rpc.nfsd</B
+>&#8201;) on the server host, and the
+<I
+CLASS="EMPHASIS"
+>Block I/O Daemon</I
+>
+(<B
+CLASS="COMMAND"
+>biod</B
+>&#8201;) on the client host. To improve
+throughput, <B
+CLASS="COMMAND"
+>biod</B
+> performs asynchronous I/O using
+read-ahead and write-behind; also, several <B
+CLASS="COMMAND"
+>rpc.nfsd</B
+>
+daemons are usually run concurrently.</P
+><P
+>&#13;
+The current NFS implementation of Linux is a little different from the
+classic NFS in that the server code runs entirely in user space, so
+running multiple copies simultaneously is more complicated. The
+current <B
+CLASS="COMMAND"
+>rpc.nfsd</B
+> implementation offers an
+experimental feature that allows limited support for multiple
+servers. Olaf Kirch developed kernel-based NFS server support 
+featured in 2.2 Version Linux kernels. Its performance is
+significantly better than the existing userspace implementation. We'll
+describe it later in this chapter.</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNF01"
+HREF="x-087-2-nfs.html#X-087-2-FNNF01"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Rick can be reached at
+<SPAN
+CLASS="SYSTEMITEM"
+>jrs@world.std.com</SPAN
+>.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNF02"
+HREF="x-087-2-nfs.html#X-087-2-FNNF02"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Actually, you can omit the <TT
+CLASS="LITERAL"
+>&#8211;t nfs</TT
+> argument
+because <B
+CLASS="COMMAND"
+>mount</B
+> sees from the colon that this
+specifies an NFS volume.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.shadow.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nfs.nfsd.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Using NIS with Shadow Support</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Preparing NFS</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

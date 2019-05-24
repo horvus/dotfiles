@@ -1,0 +1,496 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Creating a user</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Managing user accounts"
+HREF="managing-users.html"><LINK
+REL="PREVIOUS"
+TITLE="What's an account?"
+HREF="account.html"><LINK
+REL="NEXT"
+TITLE="Changing user properties"
+HREF="user-properties.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="account.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. Managing user accounts</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="user-properties.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="ADDUSER"
+></A
+>11.2. Creating a user</H1
+><P
+> The Linux kernel itself treats users are mere numbers.
+	Each user is identified by a unique integer, the <I
+CLASS="GLOSSTERM"
+>user
+	id</I
+> or <I
+CLASS="GLOSSTERM"
+>uid</I
+>, because numbers are
+	faster and easier for a computer to process than textual names.
+	A separate database outside the kernel assigns a textual name,
+	the <I
+CLASS="GLOSSTERM"
+>username</I
+>, to each user id.  The database
+	contains additional information as well.  </P
+><P
+> To create a user, you need to add information about
+	the user to the user database, and create a home directory for
+	him. It may also be necessary to educate the user, and set up
+	a suitable initial environment for him.  </P
+><P
+> Most Linux distributions come with a program for
+	creating accounts. There are several such programs available.
+	Two command line alternatives are <B
+CLASS="COMMAND"
+>adduser</B
+>
+	and <B
+CLASS="COMMAND"
+>useradd</B
+>; there may be a GUI tool as well.
+	Whatever the program, the result is that there is little if
+	any manual work to be done. Even if the details are many and
+	intricate, these programs make everything seem trivial.  However,
+	<A
+HREF="adduser.html#MANUAL-ADDUSER"
+>Section 11.2.4</A
+> describes how to do it by hand.
+	</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="ETC-PASSWD"
+></A
+>11.2.1. <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> and other informative 
+files</H2
+><P
+> The basic user database in a Unix system is the text file,
+	<TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> (called the <I
+CLASS="GLOSSTERM"
+>password
+	file</I
+>), which lists all valid usernames and their
+	associated information. The file has one line per username,
+	and is divided into seven colon-delimited fields:
+
+	<P
+></P
+><UL
+><LI
+><P
+>Username.</P
+></LI
+><LI
+><P
+>Previously this was where the user's password was stored.
+		</P
+></LI
+><LI
+><P
+>Numeric user id.</P
+></LI
+><LI
+><P
+>Numeric group id.</P
+></LI
+><LI
+><P
+>Full name or other description of 
+		account.</P
+></LI
+><LI
+><P
+>Home directory.</P
+></LI
+><LI
+><P
+>Login shell (program to run at 
+		login).</P
+></LI
+></UL
+>
+
+	The format is explained in more detail on the
+	<TT
+CLASS="FILENAME"
+>passwd</TT
+> manual page.  </P
+><P
+>	Most Linux systems use <I
+CLASS="GLOSSTERM"
+>shadow passwords</I
+>. 
+	As mentioned, previously passwords were stored in the 
+	<TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> file.  This newer method
+	of storing the password: the encrypted
+	password is stored in a separate file, 
+	<TT
+CLASS="FILENAME"
+>/etc/shadow</TT
+>,
+	which only root can read. The <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>
+	file only contains a special marker in the second field.
+	Any program that needs to verify a user is setuid, and
+	can therefore access the shadow password file. Normal
+	programs, which only use the other fields in the password
+	file, can't get at the password.
+	</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="UID-GID"
+></A
+>11.2.2. Picking numeric user and group ids</H2
+><P
+> On most systems it doesn't matter what the numeric user
+	and group ids are, but if you use the Network filesystem (NFS),
+	you need to have the same uid and gid on all systems. This
+	is because NFS also identifies users with the numeric uids.
+	If you aren't using NFS, you can let your account creation tool
+	pick them automatically.  </P
+><P
+> If you are using NFS, you'll have to be invent a mechanism
+	for synchronizing account information. One alternative is to
+	the NIS system (see XXX network-admin-guide).  </P
+><P
+> However, you should try to avoid re-using numeric uids
+	(and textual usernames), because the new owner of the uid (or
+	username) may get access to the old owner's files (or mail,
+	or whatever).  </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="ETC-SKEL"
+></A
+>11.2.3. Initial environment: <TT
+CLASS="FILENAME"
+>/etc/skel</TT
+></H2
+><P
+> When the home directory for a new user is created, it is
+	initialized with files from the <TT
+CLASS="FILENAME"
+>/etc/skel</TT
+>
+	directory.  The system administrator can create files in
+	<TT
+CLASS="FILENAME"
+>/etc/skel</TT
+> that will provide a nice
+	default environment for users.	For example, he might create a
+	<TT
+CLASS="FILENAME"
+>/etc/skel/.profile</TT
+> that sets the EDITOR
+	environment variable to some editor that is friendly towards
+	new users.  </P
+><P
+> However, it is usually best to try to keep
+	<TT
+CLASS="FILENAME"
+>/etc/skel</TT
+> as small as possible, since it
+	will be next to impossible to update existing users' files. For
+	example, if the name of the friendly editor changes, all existing
+	users would have to edit their <TT
+CLASS="FILENAME"
+>.profile</TT
+>. The
+	system administrator could try to do it automatically, with a
+	script, but that is almost certain going to break someone's file.
+	</P
+><P
+> Whenever possible, it is better to put global configuration
+	into global files, such as <TT
+CLASS="FILENAME"
+>/etc/profile</TT
+>. This
+	way it is possible to update it without breaking users'
+	own setups.  </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MANUAL-ADDUSER"
+></A
+>11.2.4. Creating a user by hand</H2
+><P
+> To create a new account manually, follow these steps:
+
+
+	<P
+></P
+><UL
+><LI
+><P
+> Edit <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> with
+	<B
+CLASS="COMMAND"
+>vipw</B
+> and add a new line for the new account. Be
+	careful with the syntax. <EM
+>Do not edit directly with an
+	editor!</EM
+> <B
+CLASS="COMMAND"
+>vipw</B
+> locks the file, so
+	that other commands won't try to update it at the same time. You
+	should make the password field be `<TT
+CLASS="LITERAL"
+>*</TT
+>', so
+	that it is impossible to log in.  </P
+></LI
+><LI
+><P
+> Similarly, edit <TT
+CLASS="FILENAME"
+>/etc/group</TT
+>
+	with <B
+CLASS="COMMAND"
+>vigr</B
+>, if you need to create a new group
+	as well.  </P
+></LI
+><LI
+><P
+> Create the home directory of the user with
+	<B
+CLASS="COMMAND"
+>mkdir</B
+>.  </P
+></LI
+><LI
+><P
+> Copy the files from
+	<TT
+CLASS="FILENAME"
+>/etc/skel</TT
+> to the new home directory.
+	</P
+></LI
+><LI
+><P
+> Fix ownerships and permissions with
+	<B
+CLASS="COMMAND"
+>chown</B
+> and <B
+CLASS="COMMAND"
+>chmod</B
+>. The
+	<TT
+CLASS="OPTION"
+>-R</TT
+> option is most useful.  The correct
+	permissions vary a little from one site to another, but usually
+	the following commands do the right thing:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>cd /home/newusername
+chown -R username.group .
+chmod -R go=u,go-w .
+chmod go= .</B
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	</P
+></LI
+><LI
+><P
+> Set the password with <B
+CLASS="COMMAND"
+>passwd</B
+>.
+	</P
+></LI
+></UL
+>
+	</P
+><P
+> After you set the password in the last step, the account
+	will work. You shouldn't set it until everything else has been
+	done, otherwise the user may inadvertently log in while you're
+	still copying the files.  </P
+><P
+>	It is sometimes necessary to create dummy
+	accounts
+	that are not used by people. For example, to set up an anonymous
+	FTP server (so that anyone can download files from it, without
+	having to get an account first), you need to create an account
+	called ftp. In such cases, it is usually not necessary to set
+	the password (last step above).  Indeed, it is better not to, so
+	that no-one can use the account, unless they first become root,
+	since root can become any user.  </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="account.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="user-properties.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>What's an account?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="managing-users.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Changing user properties</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

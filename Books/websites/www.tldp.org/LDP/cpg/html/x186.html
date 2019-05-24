@@ -1,0 +1,224 @@
+<HTML
+><HEAD
+><TITLE
+>Debugging with print_str()</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Custom Linux: A Porting Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Booting In The Dark"
+HREF="c184.html"><LINK
+REL="PREVIOUS"
+TITLE="Booting In The Dark"
+HREF="c184.html"><LINK
+REL="NEXT"
+TITLE="Modifying code using compiler flags"
+HREF="x197.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Custom Linux: A Porting Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="c184.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. Booting In The Dark</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x197.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN186"
+></A
+>3.1. Debugging with print_str()</H1
+><P
+>As stated in the previous chapter, the machine starts to boot, but nothing happens. At least, nothing
+that we can see. The screen is blank and no kernel messages appear. At this point, you have to ask yourself,
+is it really booting?</P
+><P
+>Since the console wouldn't start, and ICE died real fast, we had no choice. We had to debug somehow,
+and the oldest way is good here - printing to the screen. Obviously, we couldn't use <TT
+CLASS="function"
+>printk()</TT
+>, so we wrote a short function which pushes characters straight into the serial port. We used the boot process <SPAN
+CLASS="QUOTE"
+>"map"</SPAN
+> shown in the previous section, and inserted some prints along the way. This helped us to know at what stage we are completing and where we're dying. The following piece of code prints a single character to the serial port, by polling it and waiting for it to be free.
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;                                 /* tx holding reg empty or tx    */
+#define LSR_THREMPTY 0x20        /* fifo is empty (in fifo mode ) */
+#define THR_REG      0x00        /* Transmit holding reg */
+#define LSR_REG      0x05        /* Line status reg */
+#define COM1_ADDRESS 0xFF600300  /* == replace with your UART address */
+
+void print_char (char ch) {
+	volatile  unsigned char status = 0;
+	/* wait until txempty */
+	while ((status &#38; LSR_THREMPTY ) == 0)
+		status = *((volatile unsigned char *)(COM1_ADDRESS + LSR_REG));
+
+	*((volatile unsigned char *)(COM1_ADDRESS + THR_REG)) = ch;
+}
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+<DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>There's a better code for printing directly to the serial port, however, it's a bit
+more complicated. You can find it in arch/ppc/boot/common/misc-common.c, using <TT
+CLASS="function"
+>puts()</TT
+> or 
+<TT
+CLASS="function"
+>putc()</TT
+>.</P
+></TD
+></TR
+></TABLE
+></DIV
+>
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="c184.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x197.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Booting In The Dark</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c184.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Modifying code using compiler flags</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

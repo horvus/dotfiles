@@ -1,0 +1,535 @@
+<HTML
+><HEAD
+><TITLE
+>Testing Your Configuration</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Sendmail"
+HREF="x-087-2-sendmail.html"><LINK
+REL="PREVIOUS"
+TITLE="Some Useful sendmail Configurations"
+HREF="x15291.html"><LINK
+REL="NEXT"
+TITLE="Running sendmail"
+HREF="x15649.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x15291.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 18. Sendmail</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x15649.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN15583"
+>18.9. Testing Your Configuration</A
+></H1
+><P
+>&#13;
+The <B
+CLASS="COMMAND"
+>m4</B
+> command processes the macro definition files
+according to its own syntax rules without understanding anything about correct
+<B
+CLASS="COMMAND"
+>sendmail</B
+> syntax; so there won't be any error messages if
+you've gotten anything wrong in your macro definition file. For this reason,
+it is very important that you thoroughly test your configuration. Fortunately,
+<B
+CLASS="COMMAND"
+>sendmail</B
+> provides a relatively easy way of doing this.</P
+><P
+><B
+CLASS="COMMAND"
+>sendmail</B
+> supports an &#8220;address test&#8221; mode that 
+allows us to test our configuration and identify any errors. In this mode
+of operation, we invoke <B
+CLASS="COMMAND"
+>sendmail</B
+> from the command line,
+and it prompts us for a ruleset specification and a destination mail address.
+<B
+CLASS="COMMAND"
+>sendmail</B
+> then processes that destination address using
+the rules specified, displaying the output of each rewrite rule as it proceeds.
+To place <B
+CLASS="COMMAND"
+>sendmail</B
+> into this mode, we invoke it with the
+<TT
+CLASS="LITERAL"
+>&#8211;bt</TT
+> argument: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/sendmail -bt</B
+></TT
+>
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &#60;ruleset&#62; &#60;address&#62;
+&#62;</PRE
+></TD
+></TR
+></TABLE
+><P
+>The default configuration file used is the
+<TT
+CLASS="FILENAME"
+>/etc/mail/sendmail.cf</TT
+> file; you can specify an alternate
+configuration file using the <TT
+CLASS="LITERAL"
+>&#8211;C</TT
+> argument. To test our configuration, we need to select a number of addresses to process
+that will tell us that each of our mail-handing requirements are met. To
+illustrate this, we'll work through a test of our more complicated UUCP
+configuration shown in <A
+HREF="x14661.html#X-087-2-SENDMAIL.MC.UUCPSMTP"
+>Example 18-2</A
+>.</P
+><P
+>First we'll test that <B
+CLASS="COMMAND"
+>sendmail</B
+> is able to deliver mail to
+local users on the system. In these tests we expect all addresses to be
+rewritten to the <I
+CLASS="EMPHASIS"
+>local</I
+> mailer on this machine:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/sendmail -bt</B
+></TT
+>
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &#60;ruleset&#62; &#60;address&#62;
+&#62; <TT
+CLASS="USERINPUT"
+><B
+>3,0 isaac</B
+></TT
+>
+rewrite: ruleset   3   input: isaac
+rewrite: ruleset  96   input: isaac
+rewrite: ruleset  96 returns: isaac
+rewrite: ruleset   3 returns: isaac
+rewrite: ruleset   0   input: isaac
+rewrite: ruleset 199   input: isaac
+rewrite: ruleset 199 returns: isaac
+rewrite: ruleset  98   input: isaac
+rewrite: ruleset  98 returns: isaac
+rewrite: ruleset 198   input: isaac
+rewrite: ruleset 198 returns: $# local $: isaac
+rewrite: ruleset   0 returns: $# local $: isaac</PRE
+></TD
+></TR
+></TABLE
+><P
+>This output shows us how <B
+CLASS="COMMAND"
+>sendmail</B
+> processes mail addressed
+to <I
+CLASS="EMPHASIS"
+>isaac</I
+> on this system. Each line shows us what information
+has been supplied to a ruleset or the result obtained from processing by a
+ruleset. We told <B
+CLASS="COMMAND"
+>sendmail</B
+> we wished to use rulesets 3 and
+0 to process the address. Ruleset 0 is what is normally invoked and we forced
+ruleset 3 because it is not tested by default. The last line shows us that
+the result of ruleset 0 does indeed direct mail to <I
+CLASS="EMPHASIS"
+>isaac</I
+> to the
+<I
+CLASS="EMPHASIS"
+>local</I
+> mailer.</P
+><P
+>Next we'll test mail addressed to our SMTP address: <I
+CLASS="EMPHASIS"
+>isaac@vstout.vbrew.com</I
+>. We should be able
+to produce the same end result as our last example:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/sendmail -bt</B
+></TT
+>
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &#60;ruleset&#62; &#60;address&#62;
+&#62; 3,0 isaac@vstout.vbrew.com
+rewrite: ruleset   3   input: isaac @ vstout . vbrew . com
+rewrite: ruleset  96   input: isaac &#60; @ vstout . vbrew . com &#62;
+rewrite: ruleset  96 returns: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset   3 returns: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset   0   input: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset 199   input: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset 199 returns: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset  98   input: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset  98 returns: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset 198   input: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset 198 returns: $# local $: isaac
+rewrite: ruleset   0 returns: $# local $: isaac</PRE
+></TD
+></TR
+></TABLE
+><P
+>Again, this test passed. Next we'll test mail to our UUCP style address:
+<I
+CLASS="EMPHASIS"
+>vstout!isaac</I
+>.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/sendmail -bt</B
+></TT
+>
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &#60;ruleset&#62; &#60;address&#62;
+&#62; 3,0 vstout!isaac
+rewrite: ruleset   3   input: vstout ! isaac
+rewrite: ruleset  96   input: isaac &#60; @ vstout . UUCP &#62;
+rewrite: ruleset  96 returns: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset   3 returns: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset   0   input: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset 199   input: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset 199 returns: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset  98   input: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset  98 returns: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset 198   input: isaac &#60; @ vstout . vbrew . com . &#62;
+rewrite: ruleset 198 returns: $# local $: isaac
+rewrite: ruleset   0 returns: $# local $: isaac</PRE
+></TD
+></TR
+></TABLE
+><P
+>This test has also passed. These tests confirm that any mail received
+for local users on this machine will be properly delivered irrespective of
+how the address is formatted. If you've defined any aliases for your machine, such as virtual hosts, you should repeat these tests for each of the
+alternate names by which this host is known to ensure they also work correctly.</P
+><P
+>Next we will test that mail addressed to other hosts in the
+<I
+CLASS="EMPHASIS"
+>vbrew.com</I
+> domain is delivered
+directly to that host using the SMTP mailer:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/sendmail -bt</B
+></TT
+>
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &#60;ruleset&#62; &#60;address&#62;
+&#62; 3,0 isaac@vale.vbrew.com
+rewrite: ruleset   3   input: isaac @ vale . vbrew . com
+rewrite: ruleset  96   input: isaac &#60; @ vale . vbrew . com &#62;
+rewrite: ruleset  96 returns: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset   3 returns: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset   0   input: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset 199   input: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset 199 returns: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset  98   input: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset  98 returns: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset 198   input: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset 198 returns: $# smtp $@ vale . vbrew . com . /
+    $: isaac &#60; @ vale . vbrew . com . &#62;
+rewrite: ruleset   0 returns: $# smtp $@ vale . vbrew . com . /
+    $: isaac &#60; @ vale . vbrew . com . &#62;</PRE
+></TD
+></TR
+></TABLE
+><P
+>We can see that this test has directed the message to the SMTP mailer
+to be forwarded directly to the <I
+CLASS="EMPHASIS"
+>vale.vbrew.com</I
+> host and
+specifies the user <I
+CLASS="EMPHASIS"
+>isaac</I
+>. This test confirms that our
+<TT
+CLASS="LITERAL"
+>LOCAL_NET_CONFIG</TT
+> definition works correctly. For
+this test to succeed, the destination hostname must be able to be
+resolved correctly, so it must either have an entry in our
+<TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+> file, or in our local DNS. We can see
+what happens if the destination hostname isn't able to be resolved by
+intentionally specifying an unknown host:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/sendmail -bt</B
+></TT
+>
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &#60;ruleset&#62; &#60;address&#62;
+&#62; 3,0 isaac@vXXXX.vbrew.com
+rewrite: ruleset   3   input: isaac @ vXXXX . vbrew . com
+rewrite: ruleset  96   input: isaac &#60; @ vXXXX . vbrew . com &#62;
+vXXXX.vbrew.com: Name server timeout
+rewrite: ruleset  96 returns: isaac &#60; @ vXXXX . vbrew . com &#62;
+rewrite: ruleset   3 returns: isaac &#60; @ vXXXX . vbrew . com &#62;
+== Ruleset 3,0 (3) status 75
+rewrite: ruleset   0   input: isaac &#60; @ vXXXX . vbrew . com &#62;
+rewrite: ruleset 199   input: isaac &#60; @ vXXXX . vbrew . com &#62;
+rewrite: ruleset 199 returns: isaac &#60; @ vXXXX . vbrew . com &#62;
+rewrite: ruleset  98   input: isaac &#60; @ vXXXX . vbrew . com &#62;
+rewrite: ruleset  98 returns: isaac &#60; @ vXXXX . vbrew . com &#62;
+rewrite: ruleset 198   input: isaac &#60; @ vXXXX . vbrew . com &#62;
+rewrite: ruleset  95   input: &#60; uucp-new : moria &#62; isaac &#60;/
+    @ vXXXX . vbrew . com &#62;
+rewrite: ruleset  95 returns: $# uucp-new $@ moria $: isaac &#60;/
+    @ vXXXX . vbrew . com &#62;
+rewrite: ruleset 198 returns: $# uucp-new $@ moria $: isaac &#60;/
+    @ vXXXX . vbrew . com &#62;
+rewrite: ruleset   0 returns: $# uucp-new $@ moria $: isaac &#60;/
+    @ vXXXX . vbrew . com &#62;</PRE
+></TD
+></TR
+></TABLE
+><P
+>This result is very different. First, ruleset 3
+returned an error message indicating the hostname could not be resolved.
+Second, we deal with this situation by relying
+on the other key feature of our configuration, the smart host. The smart host
+will is to handle any mail that is otherwise undeliverable. The hostname
+we specified in this test was unable to be resolved and the rulesets determined
+that the mail should be forwarded to our smart host 
+<I
+CLASS="EMPHASIS"
+>moria</I
+> using
+the <I
+CLASS="EMPHASIS"
+>uucp-new</I
+> mailer. Our smart host might be better connected 
+and know what to do with the address.</P
+><P
+>Our final test ensures that any mail addressed to a host not within our
+domain is delivered to our smart host. This should produce a result similar
+to our previous example:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/sendmail -bt</B
+></TT
+>
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &#60;ruleset&#62; &#60;address&#62;
+&#62; 3,0 isaac@linux.org.au
+rewrite: ruleset   3   input: isaac @ linux . org . au
+rewrite: ruleset  96   input: isaac &#60; @ linux . org . au &#62;
+rewrite: ruleset  96 returns: isaac &#60; @ linux . org . au . &#62;
+rewrite: ruleset   3 returns: isaac &#60; @ linux . org . au . &#62;
+rewrite: ruleset   0   input: isaac &#60; @ linux . org . au . &#62;
+rewrite: ruleset 199   input: isaac &#60; @ linux . org . au . &#62;
+rewrite: ruleset 199 returns: isaac &#60; @ linux . org . au . &#62;
+rewrite: ruleset  98   input: isaac &#60; @ linux . org . au . &#62;
+rewrite: ruleset  98 returns: isaac &#60; @ linux . org . au . &#62;
+rewrite: ruleset 198   input: isaac &#60; @ linux . org . au . &#62;
+rewrite: ruleset  95   input: &#60; uucp-new : moria &#62; isaac &#60;/
+    @ linux . org . au . &#62;
+rewrite: ruleset  95 returns: $# uucp-new $@ moria $: isaac &#60;/
+    @ linux . org . au . &#62;
+rewrite: ruleset 198 returns: $# uucp-new $@ moria $: isaac &#60;/
+    @ linux . org . au . &#62;
+rewrite: ruleset   0 returns: $# uucp-new $@ moria $: isaac &#60;/
+    @ linux . org . au . &#62;</PRE
+></TD
+></TR
+></TABLE
+><P
+>The results of this test indicate that the hostname was resolved, and that the
+message would still have been routed to our smart host. This proves that our
+<TT
+CLASS="LITERAL"
+>LOCAL_NET_CONFIG</TT
+> definition works correctly and it handled
+both cases correctly. This test was also successful, so we can happily assume
+our configuration is correct and use it.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x15291.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x15649.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Some Useful sendmail Configurations</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-sendmail.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Running sendmail</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

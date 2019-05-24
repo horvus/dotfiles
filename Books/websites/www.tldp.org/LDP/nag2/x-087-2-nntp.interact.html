@@ -1,0 +1,313 @@
+<HTML
+><HEAD
+><TITLE
+>nntpd Interaction with C News</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="NNTP and thenntpd Daemon"
+HREF="x-087-2-nntp.html"><LINK
+REL="PREVIOUS"
+TITLE="NNTP Authorization"
+HREF="x-087-2-nntp.authorize.html"><LINK
+REL="NEXT"
+TITLE="Internet News"
+HREF="x-087-2-inn.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nntp.authorize.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 22. NNTP and thenntpd Daemon</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-inn.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NNTP.INTERACT"
+>22.5. nntpd Interaction with C News</A
+></H1
+><P
+>&#13;
+When <B
+CLASS="COMMAND"
+>nntpd</B
+> receives an article, it has to deliver
+it to the news subsystem. Depending on whether it was received as a
+result of an <B
+CLASS="COMMAND"
+>IHAVE</B
+> or <B
+CLASS="COMMAND"
+>POST</B
+> command, the article is handed to
+<B
+CLASS="COMMAND"
+>rnews</B
+> or <B
+CLASS="COMMAND"
+>inews</B
+>,
+respectively. Instead of invoking <B
+CLASS="COMMAND"
+>rnews</B
+>, you may
+also configure it (at compile time), to batch the incoming articles
+and move the resulting batches to
+<TT
+CLASS="FILENAME"
+>/var/spool/news/in.coming</TT
+>, where they are left
+for <B
+CLASS="COMMAND"
+>relaynews</B
+> to pick them up at the next queue
+run.</P
+><P
+>&#13;
+<B
+CLASS="COMMAND"
+>nntpd</B
+> has to have access to the
+<TT
+CLASS="FILENAME"
+>history</TT
+> file to be able to properly perform the 
+ihave/sendme protocol. At compile time, you have to
+make sure the path to that file is set correctly.  If you use C News, make 
+sure that C News and <B
+CLASS="COMMAND"
+>nntpd</B
+> agree on the format of your 
+history file. C News uses <TT
+CLASS="FILENAME"
+>dbm</TT
+> hashing functions to 
+access it; however, there are quite a number of different and slightly 
+incompatible implementations of the <TT
+CLASS="FILENAME"
+>dbm</TT
+> library.  If 
+C News has been linked with a different <TT
+CLASS="FILENAME"
+>dbm</TT
+> library 
+than you have in your standard <TT
+CLASS="FILENAME"
+>libc</TT
+>, you have to 
+link <B
+CLASS="COMMAND"
+>nntpd</B
+> with this library, too.</P
+><P
+>&#13;<B
+CLASS="COMMAND"
+>nntpd</B
+> and C news disagreement sometimes produces error 
+messages in the system log that <B
+CLASS="COMMAND"
+>nntpd</B
+> can not open it 
+properly, or you might see duplicate articles being received via NNTP.  A 
+good test of a malfunctioning news transfer is to pick an article from your
+spool area, telnet to the <I
+CLASS="EMPHASIS"
+>nntp</I
+> port, 
+and offer it to <B
+CLASS="COMMAND"
+>nntpd</B
+> as shown in the next example. Of 
+course, you have to replace <TT
+CLASS="REPLACEABLE"
+><I
+>msg@id</I
+></TT
+> with the
+message ID of the article you want to feed to <B
+CLASS="COMMAND"
+>nntpd</B
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>telnet localhost nntp</B
+></TT
+>
+Trying 127.0.0.1...
+Connected to localhost
+Escape characters is '^ ]'.
+201 vstout NNTP[auth] server version 1.5.11t (16 November 1991) ready at
+Sun Feb 6 16:02:32 1194 (no posting)
+<TT
+CLASS="USERINPUT"
+><B
+>IHAVE</B
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>msg@id</I
+></TT
+>
+435 Got it.
+<TT
+CLASS="USERINPUT"
+><B
+>QUIT</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>This conversation shows <B
+CLASS="COMMAND"
+>nntpd</B
+>'s proper reaction;
+the message <TT
+CLASS="LITERAL"
+>Got it</TT
+> tells you that it already
+has this article. If you get a message of
+<B
+CLASS="COMMAND"
+>335 Ok</B
+> instead, the lookup in the history
+file failed for some reason. Terminate the conversation by typing Ctrl-D.
+You can check what has gone wrong by checking the system log;
+<B
+CLASS="COMMAND"
+>nntpd</B
+> logs all kinds of messages to the
+<SPAN
+CLASS="SYSTEMITEM"
+>daemon</SPAN
+> facility of
+<B
+CLASS="COMMAND"
+>syslog</B
+>. An incompatible <TT
+CLASS="FILENAME"
+>dbm</TT
+> library
+usually manifests itself in a message complaining that
+<TT
+CLASS="FUNCTION"
+>dbminit</TT
+> failed.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nntp.authorize.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-inn.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>NNTP Authorization</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-nntp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Internet News</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

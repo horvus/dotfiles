@@ -1,0 +1,221 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Software-RAID HOWTO: Modifying an Existing Installation</TITLE>
+ <LINK HREF="Software-RAID-0.4x-HOWTO-8.html" REL=next>
+ <LINK HREF="Software-RAID-0.4x-HOWTO-6.html" REL=previous>
+ <LINK HREF="Software-RAID-0.4x-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Software-RAID-0.4x-HOWTO-8.html">Next</A>
+<A HREF="Software-RAID-0.4x-HOWTO-6.html">Previous</A>
+<A HREF="Software-RAID-0.4x-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Modifying an Existing Installation</A></H2>
+
+<P>
+<OL>
+<LI><B>Q</B>:
+Are linear MD's expandable?
+Can a new hard-drive/partition be added,
+and the size of the existing file system expanded?
+
+<BLOCKQUOTE>
+<B>A</B>:
+Miguel de Icaza
+&lt;
+<A HREF="mailto:miguel@luthien.nuclecu.unam.mx">miguel@luthien.nuclecu.unam.mx</A>&gt;
+writes:
+<BLOCKQUOTE>
+I changed the ext2fs code to be aware of multiple-devices
+instead of the regular one device per file system assumption.
+
+<P>So, when you want to extend a file system,
+you run a utility program that makes the appropriate changes
+on the new device (your extra partition) and then you just tell
+the system to extend the fs using the specified device.
+<P>
+<P>You can extend a file system with new devices at system operation
+time, no need to bring the system down
+(and whenever I get some extra time, you will be able to remove
+devices from the ext2 volume set, again without even having
+to go to single-user mode or any hack like that).
+<P>
+<P>You can get the patch for 2.1.x kernel from my web page:
+<BLOCKQUOTE><CODE>
+<A HREF="http://www.nuclecu.unam.mx/~miguel/ext2-volume">http://www.nuclecu.unam.mx/~miguel/ext2-volume</A></CODE></BLOCKQUOTE>
+</BLOCKQUOTE>
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+Can I add disks to a RAID-5 array?
+
+<BLOCKQUOTE>
+<B>A</B>:
+Currently, (September 1997) no, not without erasing all
+data. A conversion utility to allow this does not yet exist.  
+The problem is that the actual structure and layout 
+of a RAID-5 array depends on the number of disks in the array.
+
+Of course, one can add drives by backing up the array to tape, 
+deleting all data, creating a new array, and restoring from 
+tape.
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+What would happen to my RAID1/RAID0 sets if I shift one
+of the drives from being <CODE>/dev/hdb</CODE> to <CODE>/dev/hdc</CODE>?
+
+Because of cabling/case size/stupidity issues, I had to 
+make my RAID sets on the same IDE controller (<CODE>/dev/hda</CODE>
+and <CODE>/dev/hdb</CODE>). Now that I've fixed some stuff, I want 
+to move <CODE>/dev/hdb</CODE> to <CODE>/dev/hdc</CODE>.
+
+What would happen if I just change the <CODE>/etc/mdtab</CODE> and 
+<CODE>/etc/raid1.conf</CODE> files to reflect the new location? 
+<BLOCKQUOTE>
+<B>A</B>:
+For RAID-0/linear, one must be careful to specify the
+drives in exactly the same order. Thus, in the above
+example, if the original config is
+<BLOCKQUOTE><CODE>
+<PRE>
+mdadd /dev/md0 /dev/hda /dev/hdb
+            
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Then the new config *must* be
+<BLOCKQUOTE><CODE>
+<PRE>
+mdadd /dev/md0 /dev/hda /dev/hdc
+            
+</PRE>
+</CODE></BLOCKQUOTE>
+
+
+For RAID-1/4/5, the drive's ''RAID number'' is stored in
+its RAID superblock, and therefore the order in which the
+disks are specified is not important.
+
+RAID-0/linear does not have a superblock due to it's older
+design, and the desire to maintain backwards compatibility
+with this older design.
+</BLOCKQUOTE>
+
+</LI>
+<LI><B>Q</B>:
+Can I convert a two-disk RAID-1 mirror to a three-disk RAID-5 array?
+
+<BLOCKQUOTE>
+<B>A</B>:
+Yes.  Michael at BizSystems has come up with a clever, 
+sneaky way of doing this.  However, like virtually all
+manipulations of RAID arrays once they have data on 
+them, it is dangerous and prone to human error.  
+<B>Make a backup before you start</B>.
+<PRE>
+
+I will make the following assumptions:
+---------------------------------------------
+disks 
+original: hda - hdc
+raid1 partitions hda3 - hdc3
+array name /dev/md0
+
+new hda - hdc - hdd
+raid5 partitions hda3 - hdc3 - hdd3
+array name: /dev/md1
+
+You must substitute the appropriate disk and partition numbers for 
+you system configuration. This will hold true for all config file 
+examples.
+--------------------------------------------
+DO A BACKUP BEFORE YOU DO ANYTHING
+1) recompile kernel to include both raid1 and raid5
+2) install new kernel and verify that raid personalities are present
+3) disable the redundant partition on the raid 1 array. If this is a
+ root mounted partition (mine was) you must be more careful.
+
+ Reboot the kernel without starting raid devices or boot from rescue 
+ system ( raid tools must be available )
+
+ start non-redundant raid1
+mdadd -r -p1 /dev/md0 /dev/hda3
+
+4) configure raid5 but with 'funny' config file, note that there is 
+  no hda3 entry and hdc3 is repeated. This is needed since the
+  raid tools don't want you to do this.
+-------------------------------
+# raid-5 configuration
+raiddev                 /dev/md1
+raid-level              5
+nr-raid-disks           3
+chunk-size              32
+
+# Parity placement algorithm
+parity-algorithm        left-symmetric
+
+# Spare disks for hot reconstruction
+nr-spare-disks          0
+
+device                  /dev/hdc3
+raid-disk               0
+
+device                  /dev/hdc3
+raid-disk               1
+
+device                  /dev/hdd3
+raid-disk               2
+---------------------------------------
+ mkraid /etc/raid5.conf
+5) activate the raid5 array in non-redundant mode
+
+mdadd -r -p5 -c32k /dev/md1 /dev/hdc3 /dev/hdd3
+
+6) make a file system on the array
+
+mke2fs -b {blocksize} /dev/md1
+
+recommended blocksize by some is 4096 rather than the default 1024.
+this improves the memory utilization for the kernel raid routines and 
+matches the blocksize to the page size. I compromised and used 2048 
+since I have a relatively high number of small files on my system.
+
+7) mount the two raid devices somewhere
+
+mount -t ext2 /dev/md0 mnt0
+mount -t ext2 /dev/md1 mnt1
+
+8) move the data
+
+cp -a mnt0 mnt1
+
+9) verify that the data sets are identical
+10) stop both arrays
+11) correct the information for the raid5.conf file
+  change /dev/md1 to /dev/md0
+  change the first disk to read /dev/hda3
+
+12) upgrade the new array to full redundant status
+ (THIS DESTROYS REMAINING raid1 INFORMATION)
+
+ckraid --fix /etc/raid5.conf
+
+            
+</PRE>
+
+            
+</BLOCKQUOTE>
+
+</LI>
+</OL>
+<HR>
+<A HREF="Software-RAID-0.4x-HOWTO-8.html">Next</A>
+<A HREF="Software-RAID-0.4x-HOWTO-6.html">Previous</A>
+<A HREF="Software-RAID-0.4x-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

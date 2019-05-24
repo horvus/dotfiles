@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The Elite's K7s5a mainboard HOWTO: The integrated sound board</TITLE>
+ <LINK HREF="K7s5a-HOWTO-3.html" REL=next>
+ <LINK HREF="K7s5a-HOWTO-1.html" REL=previous>
+ <LINK HREF="K7s5a-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="K7s5a-HOWTO-3.html">Next</A>
+<A HREF="K7s5a-HOWTO-1.html">Previous</A>
+<A HREF="K7s5a-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. The integrated sound board</A></H2>
+
+<P>
+<H2><A NAME="ss2.1">2.1 ALSA versus the AC'97 Driver</A>
+</H2>
+
+<P>I have used both solutions successfully. However I noticed while working on a speech synthesis system (I was involved in a small accessibility project), that the kernel driver does not seem to be able to re-sample, whereas Alsa does it perfectly.
+<P>
+<H2><A NAME="ss2.2">2.2 Alsa</A>
+</H2>
+
+<H3>Getting the ALSA drivers</H3>
+
+<P>So we will be compiling the latest sources from ALSA, which should work for all other distributions as well... only the kernel sources will change because mandrake uses specific patches.
+<P>You may get your kernel sources from your distribution or from 
+<A HREF="http://www.kernel.org/pub/linux/kernel/">http://www.kernel.org</A><P>Here can be found Mandrake sources for the kernel used in 8.0:
+<P>
+<A HREF="ftp://ftp.univ-savoie.fr/pub/Linux/Mandrake/8.0/i586/Mandrake/RPMS/kernel- source-2.4.3-20mdk.i586.rpm">ftp://ftp.univ-savoie.fr/pub/Linux/Mandrake/8.0/i586/Mandrake/RPMS/kernel -source-2.4.3-20mdk.i586.rpm</A><P>(link seems to be broken, I wish I had made a copy if someone needed but here is the problem with that distribution, mirrors are not kept long enough)
+<P>and grab the tarball from ALSA:
+<P>
+<A HREF="ftp://ftp.alsa-project.org/pub/driver/alsa-driver-0.9.0beta10.tar.bz2">ftp://ftp.alsa-project.org/pub/driver/alsa-driver-0.9.0beta10.tar.bz2</A><P>
+<H3>Installation</H3>
+
+<P>Install your kernel sources, in my case:
+<P><EM>rpm -ivh kernel-source-2.4.3-20mdk.i586.rpm</EM>
+<P>Then decompress alsa drivers:
+<P><EM>bzip2 -d alsa-driver-0.9.0beta10.tar.bz2 &amp;&amp; tar -xvf
+alsa-driver-0.9.0beta10.tar</EM>
+<P>Make them and install them and create the devices files:
+<P><EM>cd alsa-driver-0.9.0beta10 &amp;&amp; make install &amp;&amp; ./snddevices</EM>
+<P>Edit <CODE>/etc/modules.conf</CODE> to set everything, and add to it the following
+lines:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+alias char-major-116 snd
+alias char-major-14 soundcore
+alias sound-slot-0 snd-card-0
+alias sound-service-0-0 snd-mixer-oss
+alias sound-service-0-1 snd-seq-oss
+alias sound-service-0-3 snd-pcm-oss
+alias sound-service-0-8 snd-seq-oss
+alias sound-service-0-12 snd-pcm-oss
+alias snd-card-0 snd-card-intel8x0
+</PRE>
+</CODE></BLOCKQUOTE>
+
+warning: Christian Cardinale rf.libertysurf@elanidrac.naitsirhc reports that he had to change 'snd-card-intel8x0' for 'snd-intel8x0', which corresponds to what I have for my Debian system, I no longer remember, but I think this one is the mandrake name, if it doesn't work, just use to the other, ok?
+<P>
+<H2><A NAME="ss2.3">2.3 Alsa the Debian way</A>
+</H2>
+
+<P>I've switched to Debian some time after writing this howto and wanted to give some instructions about it:
+Things may change a little depending on which version you're using, I use Debian sarge, currently the testing version.
+<P>
+<H3>Using a Debian package with a precompiled kernel</H3>
+
+<P>First of all, you can directly download the appropriate precompiled alsa modules:
+find out which kernel you're using
+<P><EM>uname -r</EM>
+<P>2.4.20-3-k7  (should be 2.4.18-k7 or something like that for a woody/stable)
+<P><EM>apt-get install alsa-modules-2.4.20-3-k7</EM>
+<P>the card is the "intel8x0 (PCI: Intel i810/i820/i830/i840/MX440 integrated audio)"
+<P>you should also install the recommended package alsa-utils
+<P><EM>apt-get install alsa-utils</EM>
+<P>now, check the file /etc/alsa/modutils/0.9 against the one given further on this howto.
+It may also be necessary to run update-modules as root to ensure that these lines get into /etc/modules.conf, although the package installation probably does it itself.
+<P>
+<H3>Using a Debian kernel source package</H3>
+
+<P>I was forced to recompile my kernel when I got an usb adsl modem. (make-kpkg binary --initrd is something you want to look at someday, but it's off topic)
+<P>I'm assuming, you've done at least the following steps:
+<P>install the alsa sources and two useful packages:
+<EM>apt-get install alsa-source alsa-utils alsa-base</EM>
+debconf will ask you the following questions:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Say Yes if you want to build ALSA driver with ISA PnP version.
+If your computer doesn't support ISA PnP, you may say No. 
+Build ALSA driver with ISA PnP?
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You can safely select 'no'
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Say Yes if you want to build ALSA driver with debugging code.
+Build ALSA driver with debugging code?
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>We don't need that either, so select 'no'
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+You can choose cards to be built by selecting cards you want.
+Each selection is a same name to a option of configure script '--with-cards'.
+The following list are short descriptions of the options to show what they mean.
+Select cards to be built.
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Select card intel8x0 (PCI: Intel i810/i820/i830/i840/MX440 integrated audio)
+and exit.
+<P><EM>cd /usr/src</EM>
+<P><EM>tar xzvf alsa-driver.tar.gz</EM>
+<P><EM>cd modules/alsa-driver</EM>
+<P><EM>./configure</EM>
+<P><EM>make &amp;&amp; make install</EM>
+<P>now, check the file /etc/alsa/modutils/0.9 against this following one.
+<P>
+<H3>/etc/alsa/modutils/0.9</H3>
+
+<P>I only remember changing the cards_limit from 4 to 1, to prevent warnings,
+any modification of it should be followed by running update-modules in order to regenerate /etc/modules.conf
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+### DEBCONF MAGIC
+# This file was automatically generated by alsa-base's debconf stuff
+
+alias char-major-116 snd
+alias char-major-14 soundcore
+alias snd-card-0 snd-intel8x0
+alias sound-slot-0 snd-card-0 
+options snd major=116 cards_limit=1 device_mode=0660 device_gid=29 device_uid=0
+
+alias sound-service-0-0 snd-mixer-oss
+alias sound-service-0-1 snd-seq-oss
+alias sound-service-0-3 snd-pcm-oss
+alias sound-service-0-8 snd-seq-oss
+alias sound-service-0-12 snd-pcm-oss
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.4">2.4 Kernel Approach: The AC'97 Driver</A>
+</H2>
+
+<P>If you are using a 2.4 or later kernel you can use the 
+<A HREF="http://developer.intel.com/ial/scalableplatforms/audio/">Audio Codec  '97 (AC'97)</A> sound driver, as the integrated sound card is AC'97 complaint.
+<P>You may enable your soundcard with a kernel module, as a matter of fact,
+you should be able to just use the module without even recompiling
+your kernel, because most GNU/Linux distributions have it already,
+just type:
+<P><EM>modprobe i810_audio</EM>
+<P>and you should see something like this in your syslog:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+  Intel 810 + AC97 Audio, version 0.21, 21:31:04 Apr 15 2002
+  i810: SiS 7012 found at IO 0xd800 and 0xdc00, IRQ 11
+  i810_audio: Audio Controller supports 2 channels.
+  ac97_codec: AC97 Audio codec, id: 0x414c:0x4710 (ALC200/200P)
+  i810_audio: AC'97 codec 0 supports AMAP, total channels = 2
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>or type
+<P><EM>dmesg | less</EM> and scroll to see the kernel messages.
+<P>If everything went fine, you may add <CODE>i810_audio</CODE> to
+<CODE>/etc/modules</CODE> so it will autoload everytime you boot:
+<P><EM>echo "i810_audio" >> /etc/modules</EM>
+<P>
+<P>or you like monolitic kernels (no modules), follow the step above to install
+the kernel sources
+and say Y to <CODE>Sound card support</CODE> and Y to <CODE>Intel ICH (i8xx) audio
+support</CODE>
+compile your kernel, install, reboot and now your integrated soundcard is
+working.
+<P>If you don't know how to compile a kernel, read the 
+<A HREF="http://www.tldp.org/HOWTO/Kernel-HOWTO.html">Kernel HOWTO</A>,
+it's easy and you'll get a optimized kernel for you system, also you'll learn a
+bit about that talk of using the source code (yes you are already taking
+advantage of it :-)
+<P>
+<HR>
+<A HREF="K7s5a-HOWTO-3.html">Next</A>
+<A HREF="K7s5a-HOWTO-1.html">Previous</A>
+<A HREF="K7s5a-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

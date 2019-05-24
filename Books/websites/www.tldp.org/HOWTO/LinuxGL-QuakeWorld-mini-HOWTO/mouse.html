@@ -1,0 +1,427 @@
+<HTML
+><HEAD
+><TITLE
+>Fix the mouse grabbing</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Modify the Makefile"
+HREF="makefile.html"><LINK
+REL="NEXT"
+TITLE="Compile!"
+HREF="compile.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+></TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="makefile.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="compile.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="MOUSE"
+>5. Fix the mouse grabbing</A
+></H1
+><P
+>   	Fix the mouse hide problem.
+    </P
+><P
+>	The quake code, as it is, does not hide the mouse when you use it.
+	The pointer would remain visible and jitter around a fixed point in
+	the middle of the screen - very annoying.  I found the following simple fix in
+	a mail archive about glx development at:
+	<A
+HREF="http://lists.openprojects.net/pipermail/glx-dev/1999-October/000994.html"
+TARGET="_top"
+>http://lists.openprojects.net/pipermail/glx-dev/1999-October/000994.html</A
+>
+    </P
+><P
+>    See the patch listing and the link to download it below, or you can make the changes yourself.
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>	cd q1src/QW/client
+	edit the file: gl_vidlinuxglx.c
+        </PRE
+></TD
+></TR
+></TABLE
+>
+     </P
+><P
+>	At the top of the function called install_grabs(void) (Line 234), add the
+	following code:
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>&#13;	static void install_grabs(void)
+	{
+		/* vars to make blank cursor */
+		Pixmap blank;
+		XColor dummy;
+		char data[1] = {0};
+		Cursor cursor;
+
+		/* make a blank cursor */
+		blank = XCreateBitmapFromData (dpy, win, data, 1, 1);
+		if(blank == None) fprintf(stderr, "error: out of memory.\n");
+		cursor = XCreatePixmapCursor(dpy, blank, blank, &#38;dummy, &#38;dummy, 0, 0);
+		XFreePixmap (dpy, blank);
+		Con_Printf("Cursor blanked.\n");
+        </PRE
+></TD
+></TR
+></TABLE
+>
+     </P
+><P
+>	The 8th parameter to XGrabPointer should be changed from
+	"None" to "cursor" to use the blank cursor:
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>&#13;	XGrabPointer(dpy, win,
+			 True,
+			 0,
+			 GrabModeAsync, GrabModeAsync,
+			 win,
+			 cursor,
+			 CurrentTime);
+        </PRE
+></TD
+></TR
+></TABLE
+>
+	(see: man XGrabPointer)
+     </P
+><P
+>	This fix might work for the other client builds if you make
+	similar changes in the appropriate *vid*.c file.  As it is,
+	this creates a memory leak as it allocates another Cursor
+	object everytime through and doesn't call XFreeCursor() but
+	this is probably not a problem since I don't think a 1x1
+	cursor is using much memory.  If you want, you can apply the
+	following patch against <TT
+CLASS="FILENAME"
+>q1src/QW/client/gl_vidlinuxglx.c</TT
+>
+	(<B
+CLASS="COMMAND"
+>patch gl_vidlinuxglx.c patchfile</B
+>).  Just cut and paste the
+	contents between the begin/end patchfile lines into a file
+	called gl_vidlinuxglx.c.patch (or whatever you want to call it).  Save
+	patchfile in the <TT
+CLASS="FILENAME"
+>q1src/QW/client</TT
+> directory where
+	gl_vidlinuxglx.c is.  Then run the command:
+
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>&#13;	<B
+CLASS="COMMAND"
+>patch gl_vidlinuxglx.c gl_vidlinuxglx.c.patch</B
+>
+        </PRE
+></TD
+></TR
+></TABLE
+>
+     </P
+><P
+>	This patch file will make gl_vidlinuxglx.c such that it doesn't have any
+	memory leak.  You can download this patch file at:
+        <A
+HREF="http://www.comptechnews.com/~reaster/mini-HOWTO/LinuxGL-QuakeWorld-mini-HOWTO/gl_vidlinuxglx.c.patch"
+TARGET="_top"
+>http://www.comptechnews.com/~reaster/mini-HOWTO/LinuxGL-QuakeWorld-mini-HOWTO/gl_vidlinuxglx.c.patch</A
+>.
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>*************************** begin patchfile ************************************
+*** q1src-p/QW/client/gl_vidlinuxglx.c	Tue Dec 21 18:45:54 1999
+--- gl_vidlinuxglx.c	Sat Aug 19 20:47:42 2000
+***************
+*** 1,22 ****
+! /*
+! Copyright (C) 1996-1997 Id Software, Inc.
+!
+! This program is free software; you can redistribute it and/or
+! modify it under the terms of the GNU General Public License
+! as published by the Free Software Foundation; either version 2
+! of the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+!
+! See the GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License
+! along with this program; if not, write to the Free Software
+! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+!
+! */
+  #include &#60;termios.h&#62;
+  #include &#60;sys/ioctl.h&#62;
+  #include &#60;sys/stat.h&#62;
+--- 1,22 ----
+! /*
+! Copyright (C) 1996-1997 Id Software, Inc.
+!
+! This program is free software; you can redistribute it and/or
+! modify it under the terms of the GNU General Public License
+! as published by the Free Software Foundation; either version 2
+! of the License, or (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+!
+! See the GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License
+! along with this program; if not, write to the Free Software
+! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+!
+! */
+  #include &#60;termios.h&#62;
+  #include &#60;sys/ioctl.h&#62;
+  #include &#60;sys/stat.h&#62;
+***************
+*** 66,71 ****
+--- 66,74 ----
+
+  static int scr_width, scr_height;
+
++ /* blank cursor - gets initialized in VID_Init, freed in VID_Shutdown */
++ Cursor cursor;
++
+  /*-----------------------------------------------------------------------*/
+
+  //int		texture_mode = GL_NEAREST;
+***************
+*** 236,243 ****
+  				 0,
+  				 GrabModeAsync, GrabModeAsync,
+  				 win,
+! 				 None,
+  				 CurrentTime);
+
+  #ifdef USE_DGA
+  	XF86DGADirectVideo(dpy, DefaultScreen(dpy), XF86DGADirectMouse);
+--- 239,247 ----
+  				 0,
+  				 GrabModeAsync, GrabModeAsync,
+  				 win,
+! 				 cursor,
+  				 CurrentTime);
++ 	Con_Printf("Cursor blanked.\n");
+
+  #ifdef USE_DGA
+  	XF86DGADirectVideo(dpy, DefaultScreen(dpy), XF86DGADirectMouse);
+***************
+*** 350,355 ****
+--- 354,360 ----
+  	if (!ctx)
+  		return;
+
++ 	XFreeCursor(dpy, cursor);
+  	glXDestroyContext(dpy, ctx);
+  }
+
+***************
+*** 602,608 ****
+  	unsigned long mask;
+  	Window root;
+  	XVisualInfo *visinfo;
+!
+  	S_Init();
+
+  	Cvar_RegisterVariable (&#38;vid_mode);
+--- 607,617 ----
+  	unsigned long mask;
+  	Window root;
+  	XVisualInfo *visinfo;
+! 	/* vars to make blank cursor */
+! 	Pixmap blank;
+! 	XColor dummy;
+! 	char data[1] = {0};
+!
+  	S_Init();
+
+  	Cvar_RegisterVariable (&#38;vid_mode);
+***************
+*** 701,706 ****
+--- 710,720 ----
+  	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
+
+  	vid.recalc_refdef = 1;				// force a surface cache flush
++
++ 	blank = XCreateBitmapFromData(dpy, win, data, 1, 1);
++ 	if(blank == None) fprintf(stderr, "error: out of memory.\n");
++ 	cursor = XCreatePixmapCursor(dpy, blank, blank, &#38;dummy, &#38;dummy, 0, 0);
++ 	XFreePixmap(dpy, blank);
+  }
+
+  void Sys_SendKeyEvents(void)
+
+*************************** end patchfile   ************************************
+        </PRE
+></TD
+></TR
+></TABLE
+>
+     </P
+><P
+>	It is handy to bind some keys at the quake console to toggle mouse
+	grabbing:
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>	bind q "_windowed_mouse 0"
+	bind w "_windowed_mouse 1"
+        </PRE
+></TD
+></TR
+></TABLE
+>
+     </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="makefile.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="compile.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Modify the Makefile</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Compile!</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

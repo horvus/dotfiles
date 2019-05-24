@@ -1,0 +1,208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE> PLIP Install HOWTO: PLIP on the Source side</TITLE>
+ <LINK HREF="PLIP-Install-HOWTO-11.html" REL=next>
+ <LINK HREF="PLIP-Install-HOWTO-9.html" REL=previous>
+ <LINK HREF="PLIP-Install-HOWTO.html#toc10" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="PLIP-Install-HOWTO-11.html">Next</A>
+<A HREF="PLIP-Install-HOWTO-9.html">Previous</A>
+<A HREF="PLIP-Install-HOWTO.html#toc10">Contents</A>
+<HR>
+<H2><A NAME="s10">10. PLIP on the Source side</A>   </H2>
+
+<P>
+<P>This section describes how to set up the <CODE>plip</CODE> interface in
+the <B>source</B> server.  If you run into trouble, I suggest that
+you read the 
+<A HREF="http://www.linuxdoc.org/HOWTO/mini/PLIP.html">PLIP     MINI-HOWTO</A>.
+<P>
+<P>Check that your <CODE>lp</CODE> device is not set. You should
+<B>not</B> have this entry:
+<P>
+<PRE>
+     $ cat /proc/devices 
+     Character devices:
+     ...
+     6 lp
+     ...
+    
+</PRE>
+<P>If you do have it, kill the <CODE>lpd</CODE> daemon and remove the
+<CODE>lp</CODE> module:
+<P>
+<PRE>
+     $ /etc/rc.d/init.d/lpd.init stop
+     Shutting down lpd: lpd
+
+     $ rmmod lp
+    
+</PRE>
+<P>If you can't remove the <CODE>lp</CODE> module then you have to
+recompile the <B>kernel</B> with <CODE>lp</CODE> service as a module.
+<P>Now, the "<CODE>6 lp</CODE>" line has disappeared from the
+<CODE>/proc/devices</CODE> file, which is a reflection of the kernel
+capabilities.
+<P>You are not obliged to eliminate the lp device : the scheme may work
+with lp. Without guarantee (it works for me). Check it yourself.
+<P>
+<P>Check that your parallel port is handled:
+<P>
+<PRE>
+     $ ls /proc/parport/
+     0/
+     
+     $ cat /proc/parport/0/hardware 
+     base:   0x378
+     irq:    7
+     dma:    none
+     modes:  SPP,ECP,ECPEPP,ECPPS2
+    
+</PRE>
+<P>If you don't have any directory under <CODE>/proc/parport/</CODE> then
+you have to load the <CODE>parport</CODE> and <CODE>parport_pc
+modules</CODE>:
+<P>
+<PRE>
+     $ insmod parport
+     $ insmod parport_pc
+    
+</PRE>
+<P>You should see this new entry in
+<B><CODE>/var/log/messages</CODE></B>:
+<P>
+<PRE>
+     Oct  9 20:50:47 louloutte kernel:
+     parport0: PC-style at 0x378 [SPP,ECP,ECPEPP,ECPPS2]
+
+     Oct  9 20:50:47 louloutte kernel: 
+     parport0: detected irq 7; 
+     use procfs to enable interrupt-driven operation.
+    
+</PRE>
+<P>I repeat the message "detected <CODE>irq 7</CODE>, use procfs to enable
+interrupt-driven operation", so:
+<P>
+<PRE>
+     $ echo 7 >  /proc/parport/0/irq
+    
+</PRE>
+<P>Using a kernel 2.4 the last command is no longer available. Use instead:
+<PRE>
+        $ insmod parport
+        $ insmod parport_pc io=0x378 irq=7
+</PRE>
+<P>
+<P>Check that <CODE>plip</CODE> module is loaded:
+<P>
+<PRE>
+     $ lsmod |grep plip
+    
+</PRE>
+<P>If <CODE>plip</CODE> module is not loaded, then load it:
+<P>
+<PRE>
+     $ insmod plip
+    
+</PRE>
+<P>You should see something like this in
+<B><CODE>/var/log/messages</CODE></B>
+<P>
+<PRE>
+     ==> /var/log/messages &lt;==
+     Oct  8 16:34:12 louloutte kernel:
+     NET3 PLIP version 2.3-parport gniibe@mri.co.jp
+    
+     Oct  8 16:34:12 louloutte kernel: 
+     plip0: Parallel port at 0x378, using IRQ 7
+     
+</PRE>
+<P>If you can't load the <CODE>plip</CODE> module then you have to
+recompile the <B>kernel</B> with <CODE>plip</CODE> service as a
+module.
+<P>The syslog message says the module is loaded on the <CODE>plip0</CODE>
+interface. Configure the <CODE>plip0</CODE> interface:
+<P>
+<PRE>
+     $ ifconfig plip0 source pointopoint target netmask 255.255.255.255 up
+    
+</PRE>
+<P>Check that everything is okay.
+<P>
+<PRE>
+     $ ifconfig plip0
+     plip0     Link encap:10Mbps Ethernet  HWaddr FC:FC:C0:A8:00:02
+          inet addr:192.168.0.2  P-t-P:192.168.0.1  Mask:255.255.255.255
+          UP POINTOPOINT RUNNING NOARP  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0
+          TX packets:0 errors:0 dropped:0 overruns:0
+          Interrupt:7 Base address:0x378 
+    
+</PRE>
+<P>
+<P>Now you can <CODE>ping</CODE> locally the <B>source</B> server:
+<P>
+<PRE>
+     $ ping source
+     PING source (192.168.0.2): 56 data bytes
+     64 bytes from 192.168.0.2: icmp_seq=0 ttl=255 time=0.3 ms
+     64 bytes from 192.168.0.2: icmp_seq=1 ttl=255 time=0.2 ms
+     
+     --- source ping statistics ---
+     2 packets transmitted, 2 packets received, 0% packet loss
+     round-trip min/avg/max = 0.2/0.2/0.3 ms
+    
+</PRE>
+<P>Verify that the route to <B>target</B> exists:
+<P>
+<PRE>
+     $ route
+     Kernel IP routing table
+     Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+     target          *               255.255.255.255 UH    0      0        0 plip0
+    
+</PRE>
+<P>If the route doesn't exist, add it:
+<P>
+<PRE>
+     $ route add -host  192.168.0.1  dev plip0
+    
+</PRE>
+<P>
+<P>When the <B>target</B> <EM>is</EM> configured you will be able to
+do a ping test:
+<P>
+<PRE>
+     $ ping target
+     PING 192.168.0.1 (192.168.0.1): 56 data bytes
+     64 bytes from 192.168.0.1: icmp_seq=0 ttl=64 time=4.5 ms
+     64 bytes from 192.168.0.1: icmp_seq=1 ttl=64 time=4.3 ms
+     
+     --- 192.168.0.1 ping statistics ---
+     2 packets transmitted, 2 packets received, 0% packet loss
+     round-trip min/avg/max = 4.3/4.4/4.5 ms
+    
+</PRE>
+<P>But if you try it now you should have:
+<P>
+<PRE>
+     $ ping target
+     PING target (192.168.0.1): 56 data bytes
+     
+     --- target ping statistics ---
+     5 packets transmitted, 0 packets received, 100% packet loss
+    
+</PRE>
+<P>Now, the server network is ready to work.
+Congratulations.
+<P>
+<P>
+<HR>
+<A HREF="PLIP-Install-HOWTO-11.html">Next</A>
+<A HREF="PLIP-Install-HOWTO-9.html">Previous</A>
+<A HREF="PLIP-Install-HOWTO.html#toc10">Contents</A>
+</BODY>
+</HTML>

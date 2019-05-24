@@ -1,0 +1,346 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Do I need a modified X server?</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="XFree Local Multi-User HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Setting up the X servers"
+HREF="x_servers.html"><LINK
+REL="PREVIOUS"
+TITLE="Setting up the X servers"
+HREF="x_servers.html"><LINK
+REL="NEXT"
+TITLE="Installing and Configuring XFree-PrefBusID"
+HREF="mod_xserver_prefbusid.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>XFree Local Multi-User HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x_servers.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Setting up the X servers</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="mod_xserver_prefbusid.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="mod_x_server"
+></A
+>4.1. Do I need a modified X server?</H1
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>For some video cards you can skip this part.  Before installing the modified X server check the Video Compatibility list to determine whether you need one. Currently there are reports for working configurations without using a modified X server for Voodoo Graphics as primary and Voodoo3 or Nvidia TNT2 as secondary.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+><SPAN
+CLASS="QUOTE"
+>"Why should a modified X server be used?"</SPAN
+> - The reason is that XFree is designed to serve a single user and this design requires a single X server to drive all available graphic cards. So when an unmodified X server starts, it disables access to graphic cards for other X servers.  Hence we have to modify XFree to make it possible more then one X server to run at the same time.</P
+><P
+></P
+><UL
+><LI
+><P
+>"The experimental way": you can use the "hackvideo"(ignoring pci_disable XFree commands) feature of the Backstreet Ruby kernel. This will allow you to use the XFree server that came with your distribution (no need for installing modified XFree server).</P
+><P
+>Q: "Why experimental?" </P
+><P
+>A: Well, you have to find out whether it works with your combination of graphic cards. There are some combination that works flawlessly, but the majority of tested combinations have problems with this setup.</P
+><P
+>              </P
+></LI
+><LI
+><P
+>"The surer way": you have to install XFree server modified with the Prefered Bus ID patch.</P
+><P
+>Q: "Why surer?" </P
+><P
+>A: Because it works with all "supported graphic cards", solves a lot of stability problems and makes it possible to use VGA console on the primary graphic card.</P
+><P
+>              </P
+></LI
+></UL
+><P
+>If you decide first to try without installing a modified X server, follow these steps:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>To enable this feature you have to add this to your XFree configuration file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>Section "ServerFlags"
+...
+Option "PciOsConfig" "1"
+...
+EndSection</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>              </P
+></LI
+><LI
+><P
+> and to inform the kernel to filter unnecessary PCI commands:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>[root@mc contrib]#echo  "1"&#62; /proc/bus/pci/hackvideo</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>              </P
+></LI
+><LI
+><P
+> If you want this to be done automatically on every boot you have to add :  </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>if [ -x /proc/bus/pci/hackvideo ];then
+      /bin/echo "1"&#62; /proc/bus/pci/hackvideo
+fi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>to your init scripts, preferably somewhere at the end of /etc/rc.d/rc.sysinit (so the command is executed before X is started)  </P
+><P
+>              </P
+></LI
+><LI
+><P
+> If you want to disable this functionality you have to:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>[root@mc contrib]# echo "0"&#62; /proc/bus/pci/hackvideo</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>              </P
+></LI
+></OL
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This functionality exists in the Backstreet Ruby kernel since 15. May 2003 and in Ruby-2.6 since 29. Sep 2003 , but will never be added to the official linux kernel as it is a small hack to spare you installing modified X server. </P
+><P
+>It is still recommended to install modified X server.</P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x_servers.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="mod_xserver_prefbusid.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Setting up the X servers</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x_servers.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Installing and Configuring XFree-PrefBusID</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

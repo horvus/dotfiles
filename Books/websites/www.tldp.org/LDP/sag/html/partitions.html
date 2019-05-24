@@ -1,0 +1,560 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Partitions</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Using Disks and Other Storage Media"
+HREF="disk-usage.html"><LINK
+REL="PREVIOUS"
+TITLE="Formatting"
+HREF="formatting.html"><LINK
+REL="NEXT"
+TITLE="Filesystems"
+HREF="filesystems.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="formatting.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Using Disks and Other Storage Media</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="filesystems.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="PARTITIONS"
+></A
+>5.9. Partitions</H1
+><P
+>A hard disk can be divided into several
+	<I
+CLASS="GLOSSTERM"
+>partitions</I
+>.  Each partition functions as if
+	it were a separate hard disk.  The idea is that if you have one hard
+	disk, and want to have, say, two operating systems on it, you can
+	divide the disk into two partitions.  Each operating system uses its
+	partition as it wishes and doesn't touch the other ones.  This way
+	the two operating systems can co-exist peacefully on the same hard
+	disk. Without partitions one would have to buy a hard disk for each 
+	operating system.</P
+><P
+>Floppies are not usually partitioned. There is no technical reason
+	against this, but since they're so small, partitions would be useful
+	only very rarely.  CD-ROMs are usually also not partitioned, since
+	it's easier to use them as one big disk, and there is seldom a need
+	to have several operating systems on one.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MBR"
+></A
+>5.9.1. The MBR, boot sectors and partition table</H2
+><P
+>The information about how a hard disk has been partitioned
+	is stored in its first sector (that is, the first sector of the
+	first track on the first disk surface).  The first sector is the
+	<I
+CLASS="GLOSSTERM"
+>master boot record</I
+> (MBR) of the disk; this is
+	the sector that the BIOS reads in and starts when the machine is
+	first booted.  The master boot record contains a small program that
+	reads the partition table, checks which partition is active (that
+	is, marked bootable), and reads the first sector of that partition,
+	the partition's <I
+CLASS="GLOSSTERM"
+>boot sector</I
+> (the MBR is also
+	a boot sector, but it has a special status and therefore a special
+	name).  This boot sector contains another small program that reads
+	the first part of the operating system stored on that partition
+	(assuming it is bootable), and then starts it.</P
+><P
+>The partitioning scheme is not built into the hardware, or
+	even into the BIOS.  It is only a convention that many operating
+	systems follow.  Not all operating systems do follow it, but they
+	are the exceptions.  Some operating systems support partitions, but
+	they occupy one partition on the hard disk, and use their internal
+	partitioning method within that partition.  The latter type exists
+	peacefully with other operating systems (including Linux), and does
+	not require any special measures, but an operating system that
+	doesn't support partitions cannot co-exist on the same disk with any 
+	other operating system.</P
+><P
+>As a safety precaution, it is a good idea to write down the
+	partition table on a piece of paper, so that if it ever corrupts you
+	don't have to lose all your files.  (A bad partition table can be
+	fixed with <B
+CLASS="COMMAND"
+>fdisk</B
+>).  
+	The relevant information is
+	given by the <B
+CLASS="COMMAND"
+>fdisk -l</B
+> command:
+
+        <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>	<TT
+CLASS="PROMPT"
+>$</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>fdisk -l /dev/hda</B
+></TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+></TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>Disk /dev/hda: 15 heads, 57 sectors, 790 cylinders</TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>Units = cylinders of 855 * 512 bytes</TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+></TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>   Device Boot  Begin   Start     End  Blocks   Id  System</TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>/dev/hda1           1       1      24   10231+  82  Linux swap</TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>/dev/hda2          25      25      48   10260   83  Linux native</TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>/dev/hda3          49      49     408  153900   83  Linux native</TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>/dev/hda4         409     409     790  163305    5  Extended</TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>/dev/hda5         409     409     744  143611+  83  Linux native</TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>/dev/hda6         745     745     790   19636+  83  Linux native</TT
+>
+	<TT
+CLASS="PROMPT"
+>$</TT
+>
+	</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="EXTENDED-LOGICAL-PART"
+></A
+>5.9.2. Extended and logical partitions</H2
+><P
+>The original partitioning scheme for PC hard disks allowed
+	only four partitions.  This quickly turned out to be too little in
+	real life, partly because some people want more than four operating
+	systems (Linux, MS-DOS, OS/2, Minix, FreeBSD, NetBSD, or Windows/NT,
+	to name a few), but primarily because sometimes it is a good idea to
+	have several partitions for one operating system.  For example, swap
+	space is usually best put in its own partition for Linux instead of
+	in the main Linux partition for reasons of speed (see below).</P
+><P
+>To overcome this design problem, <I
+CLASS="GLOSSTERM"
+>extended 
+	partitions</I
+> were invented.  This trick allows
+	partitioning a <I
+CLASS="GLOSSTERM"
+>primary partition</I
+>
+	 into
+	sub-partitions.  The primary partition thus subdivided is the
+	<I
+CLASS="GLOSSTERM"
+>extended partition</I
+>; the sub-partitions are
+	<I
+CLASS="GLOSSTERM"
+>logical partitions</I
+>.  They behave like primary
+	partitions, but are created differently.  There is no speed
+	difference between them.  By using an extended partition you can now 
+	have up to 15 partitions per disk.</P
+><P
+>The partition structure of a hard disk might look like that
+	in <A
+HREF="partitions.html#HARD-DISK-LAYOUT"
+>Figure 5-2</A
+>.  The disk is divided into
+	three primary partitions, the second of which is divided into two
+	logical partitions.  Part of the disk is not partitioned at all.
+	The disk as a whole and each primary partition has a boot sector.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="HARD-DISK-LAYOUT"
+></A
+><P
+><B
+>Figure 5-2. A sample hard disk partitioning.</B
+></P
+><P
+><IMG
+SRC="hd-layout.png"></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PART-TYPES"
+></A
+>5.9.3. Partition types</H2
+><P
+>The partition tables (the one in the MBR, and the ones for
+	extended partitions) contain one byte per partition that identifies
+	the type of that partition.  This attempts to identify the operating
+	system that uses the partition, or what it uses it for.  The purpose
+	is to make it possible to avoid having two operating systems
+	accidentally using the same partition.  However, in reality,
+	operating systems do not really care about the partition type byte;
+	e.g., Linux doesn't care at all what it is.  Worse, some of them use
+	it incorrectly; e.g., at least some versions of DR-DOS ignore the
+	most significant bit of the byte, while others don't.</P
+><P
+>There is no standardization agency to specify what each byte
+	value means, but as far as Linux is concerned, here is a list of partition 
+	types as per the <B
+CLASS="COMMAND"
+>fdisk</B
+> program.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+> 0  Empty           1c  Hidden Win95 FA 70  DiskSecure Mult bb  Boot Wizard hid
+ 1  FAT12           1e  Hidden Win95 FA 75  PC/IX           be  Solaris boot
+ 2  XENIX root      24  NEC DOS         80  Old Minix       c1  DRDOS/sec (FAT-
+ 3  XENIX usr       39  Plan 9          81  Minix / old Lin c4  DRDOS/sec (FAT-
+ 4  FAT16 &#60;32M      3c  PartitionMagic  82  Linux swap      c6  DRDOS/sec (FAT-
+ 5  Extended        40  Venix 80286     83  Linux           c7  Syrinx
+ 6  FAT16           41  PPC PReP Boot   84  OS/2 hidden C:  da  Non-FS data
+ 7  HPFS/NTFS       42  SFS             85  Linux extended  db  CP/M / CTOS / .
+ 8  AIX             4d  QNX4.x          86  NTFS volume set de  Dell Utility
+ 9  AIX bootable    4e  QNX4.x 2nd part 87  NTFS volume set df  BootIt
+ a  OS/2 Boot Manag 4f  QNX4.x 3rd part 8e  Linux LVM       e1  DOS access
+ b  Win95 FAT32     50  OnTrack DM      93  Amoeba          e3  DOS R/O
+ c  Win95 FAT32 (LB 51  OnTrack DM6 Aux 94  Amoeba BBT      e4  SpeedStor
+ e  Win95 FAT16 (LB 52  CP/M            9f  BSD/OS          eb  BeOS fs
+ f  Win95 Ext'd (LB 53  OnTrack DM6 Aux a0  IBM Thinkpad hi ee  EFI GPT
+10  OPUS            54  OnTrackDM6      a5  FreeBSD         ef  EFI (FAT-12/16/
+11  Hidden FAT12    55  EZ-Drive        a6  OpenBSD         f0  Linux/PA-RISC b
+12  Compaq diagnost 56  Golden Bow      a7  NeXTSTEP        f1  SpeedStor
+14  Hidden FAT16 &#60;3 5c  Priam Edisk     a8  Darwin UFS      f4  SpeedStor
+16  Hidden FAT16    61  SpeedStor       a9  NetBSD          f2  DOS secondary
+17  Hidden HPFS/NTF 63  GNU HURD or Sys ab  Darwin boot     fd  Linux raid auto
+18  AST SmartSleep  64  Novell Netware  b7  BSDI fs         fe  LANstep
+1b  Hidden Win95 FA 65  Novell Netware  b8  BSDI swap       ff  BBT</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PART-HD"
+></A
+>5.9.4. Partitioning a hard disk</H2
+><P
+>There are many programs for creating and removing
+	partitions.  Most operating systems have their own, and it can be a
+	good idea to use each operating system's own, just in case it does
+	something unusual that the others can't. Many of the programs are
+	called <B
+CLASS="COMMAND"
+>fdisk</B
+>, including the Linux one, or
+	variations thereof.  Details on using the Linux
+	<B
+CLASS="COMMAND"
+>fdisk</B
+> given on its man page.  The
+	<B
+CLASS="COMMAND"
+>cfdisk</B
+> command is similar to
+	<B
+CLASS="COMMAND"
+>fdisk</B
+>, but has a nicer (full screen) user 
+	interface.</P
+><P
+>When using IDE disks, 
+	the boot partition (the partition
+	with the bootable kernel image files) must be completely within the
+	first 1024 cylinders.  This is because the disk is used via the BIOS
+	during boot (before the system goes into protected mode), and BIOS
+	can't handle more than 1024 cylinders. It is sometimes possible to
+	use a boot partition that is only partly within the first 1024
+	cylinders.  This works as long as all the files that are read with
+	the BIOS are within the first 1024 cylinders.  Since this is
+	difficult to arrange, it is <EM
+>a very bad idea</EM
+> to
+	do it; you never know when a kernel update or disk defragmentation
+	will result in an unbootable system.  Therefore, make sure your boot
+	partition is completely within the first 1024 cylinders.</P
+><P
+>However, this may no longer be true with newer versions of 
+	LILO
+	 that support LBA (Logical Block Addressing).  Consult the
+	documentation for your distribution to see if it has a version
+	of LILO where LBA is supported.</P
+><P
+>Some newer versions of the BIOS and IDE disks can, in fact,
+	handle disks with more than 1024 cylinders.  If you have such a
+	system, you can forget about the problem; if you aren't quite
+	sure of it, put it within the first 1024 cylinders.</P
+><P
+>Each partition should have an even number of sectors,
+	since the Linux filesystems use a 1 kilobyte block size, i.e., two
+	sectors.  An odd number of sectors will result in the last sector
+	being unused.  This won't result in any problems, but it is ugly,
+	and some versions of <B
+CLASS="COMMAND"
+>fdisk</B
+> will warn about it.</P
+><P
+>Changing a partition's size usually requires first backing up
+	everything you want to save from that partition (preferably the
+	whole disk, just in case), deleting the partition, creating new
+	partition, then restoring everything to the new partition. If the
+	partition is growing, you may need to adjust the sizes (and backup and 
+	restore) of the adjoining partitions as well.</P
+><P
+>Since changing partition sizes is painful, it is preferable to
+	get the partitions right the first time, or have an effective and
+	easy to use backup system.  If you're installing from a media that
+	does not require much human intervention (say, from CD-ROM, as
+	opposed to floppies), it is often easy to play with different
+	configuration at first. Since you don't already have data to back
+	up, it is not so painful to modify partition sizes several times.</P
+><P
+>There is a program for MS-DOS, called <B
+CLASS="COMMAND"
+>fips</B
+>
+	,
+	which resizes an MS-DOS partition without requiring the backup and
+        restore, but for other filesystems it is still necessary.</P
+><P
+>The <B
+CLASS="COMMAND"
+>fips</B
+> program is included in most Linux
+	distributions.  The commercial partition manager ``Partition Magic'' 
+	also has a similar facility but with a nicer interface.  Please do 
+	remember that partitioning is dangerous.  Make
+	<EM
+>sure</EM
+> you have a recent backup of any important 
+	data before you try changing partition sizes ``on the fly''.  The 
+	program <B
+CLASS="COMMAND"
+>parted</B
+> can resize other types of partitions
+	as well as MS-DOS, but sometimes in a limited manner.  Consult the 
+	<B
+CLASS="COMMAND"
+>parted</B
+> documentation before using it, better safe
+	than sorry.
+	</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DEV-FILES-PARTS"
+></A
+>5.9.5. Device files and partitions</H2
+><P
+>Each partition and extended partition has its own
+	device file.  The naming convention for these files is that a
+	partition's number is appended after the name of the whole disk,
+	with the convention that 1-4 are primary partitions (regardless of
+	how many primary partitions there are) and number greater than 5 are
+	logical partitions (regardless of within which primary partition
+	they reside).  For example, <TT
+CLASS="FILENAME"
+>/dev/hda1</TT
+> is the
+	first primary partition on the first IDE hard disk, and
+	<TT
+CLASS="FILENAME"
+>/dev/sdb7</TT
+> is the third extended partition on
+	the second SCSI hard disk.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="formatting.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="filesystems.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Formatting</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="disk-usage.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Filesystems</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

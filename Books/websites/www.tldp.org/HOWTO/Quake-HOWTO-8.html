@@ -1,0 +1,438 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>Linux Quake HOWTO: Trouble-shooting </TITLE>
+ <LINK HREF="Quake-HOWTO-9.html" REL=next>
+ <LINK HREF="Quake-HOWTO-7.html" REL=previous>
+ <LINK HREF="Quake-HOWTO.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Quake-HOWTO-9.html">Next</A>
+<A HREF="Quake-HOWTO-7.html">Previous</A>
+<A HREF="Quake-HOWTO.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="troubleshooting_"></A> <A NAME="s8">8.</A> <A HREF="Quake-HOWTO.html#toc8">Trouble-shooting </A> </H2>
+
+
+<P><EM> Other trouble-shooting resources can be found at:
+The 
+<A HREF="http://www.icculus.org/lgfaq">Linux Gamers FAQ</A>,
+<A HREF="http://mfcn.ilo.de/glxquake">Jörgen's GLQuake Site</A>, and
+the 
+<A HREF="Quake-HOWTO-10.html#other_">old version</A> of this how-to.</EM></P>
+<P>Often, using an alternative game engine such as 
+<A HREF="Quake-HOWTO-3.html#quakespasm_">QuakeSpasm</A> or
+<A HREF="Quake-HOWTO-3.html#darkplaces_">Darkplaces</A> will fix mouse and sound related problems.</P>
+
+<H2><A NAME="ss8.1">8.1</A> <A HREF="Quake-HOWTO.html#toc8.1">Bash Won't Start the Program </A>
+</H2>
+
+
+<P><B>"bash: ./glquake.glx: Permission denied"</B></P>
+<P>
+<UL>
+<LI> The binary may not have the executable bit set.
+Type <B>chmod +x glquake.glx</B> to fix this.<BR><BR></LI>
+<LI> If the program is located on a windows partition, it is possible it has 
+been mounted with the <B>noexec</B> option.<BR>
+Type (as root): <B>mount -o remount,exec /mnt/windows</B>
+</LI>
+</UL>
+</P>
+<P><B>"bash: glquake.glx: command not found"</B></P>
+<P>
+<UL>
+<LI> Bash may not be including the current directory in it's path.  Type:
+"<B>export PATH=$PATH:.</B>"</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss8.2">8.2</A> <A HREF="Quake-HOWTO.html#toc8.2">Program Dies at Startup </A>
+</H2>
+
+
+<P>This is not good, but some simple options to try are:</P>
+<P>
+<UL>
+<LI> - use <B>-nosound</B>   to test if sound is the problem.<BR>
+Sound issues are covered in detail below.
+<BR><BR>
+</LI>
+<LI> - use <B>-noudp</B>     if network is unconfigured.
+<BR><BR>
+</LI>
+<LI> - use <B>-nocdaudio</B> if cdrom is absent.
+<BR><BR>
+</LI>
+<LI> - use <B>-height</B>, <B>-width</B> and
+<B>-fullscreen</B> command line options to select a screen
+mode you know is properly configured.<BR>
+e.g.  <B>glquake.glx -width 800 -height 600 -fullscreen -nosound</B><BR>
+ <BR>
+</LI>
+</UL>
+</P>
+<P>
+<A NAME="lowercase_"></A> <B>Files not lowercased</B> or <B>Data files missing</B>.</P>
+<P>Linux Quake requires (most) filenames to be in lowercase.  If you get an error
+similar to "<B>Error: W_LoadWadFile: couldn't load gfx.wad</B>" it means the game
+can't find the data files, possibly because they are not all lowercase.</P>
+<P>
+<UL>
+<LI> Make sure you have the subdirectory "id1" (not "ID1")
+containing the files "pak0.pak" and "pak1.pak".<BR><BR></LI>
+<LI> For a comprehensive lowercase utility, download
+<A HREF="http://prdownloads.sourceforge.net/uhexen2/lowercase?download">this utility</A> or visit
+<A HREF="http://filerenameutils.sourceforge.net">http://filerenameutils.sourceforge.net</A>.
+</LI>
+</UL>
+</P>
+<P><B>Missing libraries: "error while loading shared libraries: libGL.so.1: cannot open shared object file"</B></P>
+<P>A message like this means the program cannot run because it can't find a system file it needs.
+Perhaps:
+<UL>
+<LI> File is not installed - Just check with your package manager and install the correct package.<BR><BR></LI>
+<LI> Links aren't properly set-up. If you have (say) /usr/lib/libGL.so.1.2, but get the above message, you should be able to remedy this with <B>ln -s /usr/lib/libGL.so.1.2 /usr/lib/libGL.so.1</B></LI>
+</UL>
+</P>
+<P>Dynamic libraries (or DLLs as they are known to Windows users) can be quite
+complex.  For more information try the <B>ldd</B> and <B>ldconfig</B> man
+pages.</P>
+<P>
+<A NAME="Sys_Printf_"></A> 
+"<B>Memory overwrite in Sys_Printf</B>"</P>
+<P>
+<UL>
+<LI> This error means you need to edit file <B>sys_linux.c</B>,
+procedure <B>Sys_Printf</B>, and change <B>text[1024]</B> to
+<B>text[4096]</B> and recompile.<BR><BR>
+Many versions of Quake have what appear to be two versions of this
+procedure, but one is always commented out.  Obviously you'll need to change
+the value in the correct procedure.
+</LI>
+</UL>
+</P>
+<P><B>Problems with GCC 4</B></P>
+<P>
+<UL>
+<LI>If you're experiencing core dumps and are using version 4.0 of the GNU
+compiler, see 
+<A HREF="#compissues_">Compilation Issues</A> below.</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss8.3">8.3</A> <A HREF="Quake-HOWTO.html#toc8.3">Program Dies Loading Level </A>
+</H2>
+
+
+<P>
+<UL>
+<LI> Many mods require extra memory. Use the <B>-mem 64</B> option
+to allocate 64 meg of memory for the heap.
+<BR>
+ <BR>
+</LI>
+<LI> In some cases, this problem can be sound related. Try some of the tips
+in the sound section.
+<BR>
+ <BR>
+</LI>
+<LI> A few newer mods just won't work with standard GLQuake, and need an
+enhanced 
+<A HREF="Quake-HOWTO-3.html#engine_">game engine</A>.  
+<A HREF="Quake-HOWTO-3.html#darkplaces_">Darkplaces</A> has the best large map support under Linux, but some
+are even too big for it, and are unsupported under Linux.
+</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss8.4">8.4</A> <A HREF="Quake-HOWTO.html#toc8.4">Game Runs Slowly</A>
+</H2>
+
+
+<P>Most Quake games rely on OpenGL (libGL.so) for their graphical features.
+Setting up OpenGL is beyond the scope of this document. Very slow performance
+means you're probably using Mesa GL instead of proper hardware GL
+acceleration.</P>
+<P>Performance gains can also be made by disabling fancy effects such as <B>light
+bloom</B>, and by slowing sound mixing with the 
+<A HREF="Quake-HOWTO-2.html#console_">console command</A> "<B>_snd_mixahead .4</B>"</P>
+<P>Minor game slowdown's with Nvidia hardware can also be
+attributed to the use of conflicting AGP drivers. For more info about this see 
+<A HREF="Quake-HOWTO-9.html#nvagp_">Nvidia AGP Issues</A></P>
+
+<H2><A NAME="ss8.5">8.5</A> <A HREF="Quake-HOWTO.html#toc8.5">Sound Problems </A>
+</H2>
+
+
+<P><EM>For more information see the 
+<A HREF="#sound_">drivers</A> section.</EM></P>
+<P>An error such as: "<B>/dev/dsp: Device or resource busy</B>" indicates some program is
+already using your sound card, and you will have to halt this program to get
+Quake sound effects.</P>
+<P>
+<UL>
+<LI> From the Linux command line, type <B>killall artsd</B>
+or <B>pulseaudio -k</B> to terminate either of these popular sound daemons.
+<BR>
+ <BR>
+</LI>
+<LI> Alternatively, to run Quake through the KDE sound daemon, type
+<B>artsdsp glquake.glx ...</B>
+</LI>
+</UL>
+</P>
+<P>"Quake engine games exit, and I see an error about <B>mmap</B>!"</P>
+<P>
+<UL>
+<LI> The 
+<A HREF="http://www.icculus.org/lgfaq">Linux Gamers FAQ</A>
+recommends "Your sound card/driver doesn't support this needed feature.
+However, if you use KDE/arts you may be able to bypass this with the -m switch
+to the artsdsp wrapper".<BR><BR>
+Make sure the <B>artsd</B> program is running 
+by typing <B>ps -A | grep artsd</B> and checking that this command returns
+at least one non-empty line. Then type <B>artsdsp -m glquake.glx</B>.
+<BR><BR>
+</LI>
+<LI> Try alternative sound drivers as outlined in the
+<A HREF="#sound_">Sound Drivers</A> section.
+</LI>
+</UL>
+</P>
+<P>Sound stutters or is not very good.</P>
+<P>
+<UL>
+<LI> See the sound note in 
+<A HREF="#compissues_">Compilation Issues</A>.
+<BR><BR>
+</LI>
+<LI> Try using the <B>-sndspeed</B> or <B>-sndbits</B> option(s), or
+swapping sound drivers.
+</LI>
+</UL>
+</P>
+<P>SDL provides a simple way of changing the sound driver using the
+SDL_AUDIODRIVER environment variable. Run the game using a command line like:<BR>
+<B>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SDL_AUDIODRIVER=xxx darkplaces-sdl</B><BR>
+Valid values on linux are: dsp (uses OSS), alsa (uses
+ALSA), esd (uses the ESD daemon), and maybe arts (uses
+the aRTs daemon)</P>
+<P>
+<A NAME="compissues_"></A> </P>
+
+<H2><A NAME="ss8.6">8.6</A> <A HREF="Quake-HOWTO.html#toc8.6">Compilation Issues </A>
+</H2>
+
+
+<P>The dynamic nature of GNU/Linux means compiling old software is often hard
+work, and even small hurdles are impossible for people not experienced in C
+programming. Below are a few relevant issues.</P>
+
+<H3>GCC-4.x </H3>
+
+
+<P>
+<DL>
+<P>The GNU C compiler has recently had a major revision, and
+most modern distributions now include GCC-4.1. (To find out which
+version you are using, type <B>gcc --version</B>).
+The author generally uses GCC-3.2.2 , and people using  GCC-4.x may find
+extra problems when compiling programs:</P>
+
+<DT><B>Warnings</B><DD><P>GCC-4.x issues many more compilation warnings than 3.x. These are small errors that can
+generally be ignored, but when the compiler is given the "-Werror" flag,
+warnings will bring everything to a halt. To fix this you can safely remove the "-Werror"
+from the program's Makefile.</P>
+
+<DT><B>Slurred Sound</B><DD><P>Yet another sound issue. This common problem is fixed by altering snd_mix.c thus:
+<PRE>
+-           snd_scaletable[i][j] = ((signed char)j) * i * 8;
++           snd_scaletable[i][j] = ((j &lt; 128) ? j : j - 0xff) * i * 8;
+</PRE>
+</P>
+
+<DT><B>Optimizations</B><DD><P>GCC-4.0 in particular had a problem with "-O" flags breaking some variable
+type-casting. If you are able to compile the program , but it segfaults,
+try disabling these optimizations by removing the "-O" options from
+any makefiles.</P>
+
+</DL>
+</P>
+<P>If you are having troubles compiling with GCC-4 which weren't there previously, it's
+possible to install GCC-3.x alongside 4.x. Most people will want to look for
+precompiled packages from their Linux distribution.</P>
+<P>Once GCC-3.x is installed, the program must then be told to compile with this
+version rather than the default 4.x.  Projects that come with configuration
+scripts will often have options for defining which compiler to use (type
+<B>./configure --help</B> and look for hints), and other times you be able
+to use <B>export CC=gcc32</B> or edit the Makefile and replace occurrences of
+"gcc" with "gcc32" (or "gcc-3.2.2", etc) manually.</P>
+
+<H3>64 Bit CPUs </H3>
+
+
+<P>Most of these legacy programs will probably not work as 64 bit binaries.
+<A HREF="Quake-HOWTO-3.html#quakespasm_">QuakeSpasm</A> is an exception.</P>
+<P>It is still possible, however, to compile 32 bit binaries on a 64 bit operating system. To do so, edit Makefiles and add "<B>-m32</B>" to the load and
+compile flags (LDFLAGS, CFLAGS). This tells GCC to build and link a 32 bit
+program (if the 32 bit SDL and OpenGL libraries are also installed). You may
+also have to disable the use of x86 assembly.</P>
+<P>If you are having trouble running 32 bit apps, try using the linux32
+command. For example: <B>linux32 tyr-glquake</B>.</P>
+
+<H2><A NAME="ss8.7">8.7</A> <A HREF="Quake-HOWTO.html#toc8.7">Other Issues </A>
+</H2>
+
+
+<P>
+<DL>
+
+<DT><B>Game is too dark</B><DD><P>If changing the brightness setting in the options menu
+doesn't work, you can use the <B>xgamma</B> program to brighten the whole display.</P>
+<P>
+<UL>
+<LI> Type <B>xgamma -gamma VALUE</B> before running the game, where VALUE is a number larger than 1.
+When you've finished, use <B>xgamma -gamma 1</B> to restore the brightness.</LI>
+</UL>
+
+This tip will not work with poorly supported hardware. For Voodoo 1/2 users, visit
+<A HREF="http://sourceforge.net/docman/display_doc.php?docid=28982&amp;group_id=124987">here</A> for more information.<BR>
+ <BR></P>
+<DT><B>Mouse look</B><DD><P>"This game won't let me look around properly. %$!$@"</P>
+<P>
+<UL>
+<LI> Bring down the game console with the "~" key and enter <B>+mlook</B>.
+</LI>
+</UL>
+</P>
+
+<DT><B>Mouse doesn't work properly</B><DD><P>Try the following -</P>
+<P>
+<UL>
+<LI> Start the game in fullscreen mode by using the <B>-fullscreen</B> option.
+<BR><BR>
+</LI>
+<LI> From the game console, type <B>_windowed_mouse 1</B>
+<BR><BR>
+</LI>
+<LI> If still without success, try the
+<A HREF="Quake-HOWTO-3.html#quakespasm_">QuakeSpasm</A> or 
+<A HREF="Quake-HOWTO-3.html#darkplaces_">Darkplaces</A>
+SDL clients.
+Typing <B>export SDL_VIDEO_X11_DGAMOUSE=0</B> before starting
+the game will disable hardware dga mouse.
+<BR><BR>
+</LI>
+</UL>
+</P>
+
+<DT><B>Game saves fail / Options not remembered</B><DD><P>If you are running Quake
+as a normal user and experiencing these problems it's probably due to 
+having insufficient privileges to write to the game directories. Solutions
+include:</P>
+<P>
+<UL>
+<LI> Run the game as super user: Type <B>su</B> and enter root's
+password before typing <B>glquake.glx ...</B> to start the game.
+<BR><BR>
+</LI>
+<LI> Change the game file permissions. Unix operating systems have
+strong security preventing unauthorized or accidental file changes.
+The simplest way to overcome this in a single user environment is to become
+super user and change ownership of the quake directory with (as root):
+<B>chown -R USERNAME /usr/local/games/quake</B>. However it is
+recommended users read the <B>chmod</B> and <B>chown</B> man
+and info pages to better understand Unix file permissions.
+<BR><BR>
+</LI>
+<LI> In full multi-user environments it is recommended using the
+<A HREF="Quake-HOWTO-3.html#darkplaces_">Darkplaces</A>,
+<A HREF="Quake-HOWTO-3.html#tyrquake_">TyrQuake >= 0.56</A> or
+<A HREF="Quake-HOWTO-3.html#quakeforge_">QuakeForge</A> game engines, which correctly
+place per-user data in their home directory.
+</LI>
+</UL>
+</P>
+<P>Quake uses a confusing method of saving and restoring game options, 
+especially when playing add-ons, and game options sometimes have to be
+reinitialized even though file permissions are not an issue.
+In such cases, the author can offer no simple advice %-/.</P>
+
+<DT><B>Crazy polygons</B><DD><P>Some mission-packs/mods for Quake can cause existing player/monster models to
+be drawn with lines all over the place. To fix this, delete the directory
+"quake/id1/glquake".  When you next run the game, it will remake this directory
+and everything should be fine.</P>
+
+<DT><B>Lines on screen</B><DD><P>A common problem with 3Dfx cards is a shower of flickering lines on the screen.</P>
+<P>
+<UL>
+<LI> From the game console, type <B>gl_ztrick 0</B>.
+</LI>
+</UL>
+</P>
+
+<DT><B>White textures and other graphical anomalies</B><DD><P>Some Quake engines use an OpenGL speed-up known as multitexturing.
+This normally works fine, but if you are experiencing glitches
+you can disable this feature with the <B>-nomtex</B> option.</P>
+<P>Older video cards may occasionally draw single models in white.
+See the PlanetQuake 
+<A HREF="http://www.planetquake.com/console/commands/quake.html">command list</A> for in-game GL variables to fine tune performance.</P>
+
+<DT><B>Glibc Problems</B><DD><P>Some Linux software come as a Loki Installer shell archive with a ".run" suffix. The following tip
+is from the Icculus Gamers Faq:
+<PRE>
+Q: I'm using {random loki_setup based installer}, and it's telling me the "installation doesn't support glibc-2.1" or something
+
+A: Just type the following before running setup.sh [or the installer]: export SETUP_LIBC=glibc-2.1. 
+</PRE>
+</P>
+
+
+</DL>
+</P>
+<P>
+<DL>
+
+<DT><B>Links</B><DD><P>
+<A HREF="http://www.x.org">http://www.x.org</A></P>
+<P>
+<A HREF="http://www.linux-gamers.net/modules/wfsection/article.php?articleid=22">Linux Gamers ATI How-To</A></P>
+<P>
+<A HREF="http://www.linux-gamers.net/modules/wfsection/article.php?articleid=31">Linux Gamers Nvidia How-To</A></P>
+
+</DL>
+</P>
+
+<H2><A NAME="sound_"></A> <A NAME="ss8.8">8.8</A> <A HREF="Quake-HOWTO.html#toc8.8">Sound Drivers </A>
+ </H2>
+
+
+<P>There are two major Linux sound systems -
+Open Sound System and ALSA.  If you are experiencing sound problems and
+the trouble-shooting section hasn't helped, you
+may consider changing the sound driver. This can be hard work, and is only
+for experienced users.</P>
+<P>To ascertain which driver you are currently using,
+type <B>lsmod</B> to list currently loaded kernel modules. The ALSA sound
+modules have verbose names starting with "snd_", while the OSS modules have
+more terse names. For example, the ALSA Sound Blaster Live module is
+"snd_emu10k1", while the OSS module is "emu10k1". Since Linux kernel 2.6, ALSA
+has been the standard sound system, while 2.4 and earlier were more likely to
+come with OSS sound.</P>
+<P>Information about ALSA can be found at the
+<A HREF="http://www.alsa-project.org">Alsa Homepage</A>
+and Linux Journal's
+<A HREF="http://www.linuxjournal.com/node/8234/print">Guide to ALSA</A>.</P>
+<P>For those already with ALSA wishing to try the OSS modules, a 
+<A HREF="http://www.tldp.org/HOWTO/Kernel-HOWTO/">kernel recompile</A>
+is probably necessary.</P>
+
+
+<HR>
+<A HREF="Quake-HOWTO-9.html">Next</A>
+<A HREF="Quake-HOWTO-7.html">Previous</A>
+<A HREF="Quake-HOWTO.html#toc8">Contents</A>
+</BODY>
+</HTML>

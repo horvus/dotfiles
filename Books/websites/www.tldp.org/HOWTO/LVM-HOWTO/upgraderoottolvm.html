@@ -1,0 +1,1003 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Converting a root filesystem to
+        LVM 1</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Recipes"
+HREF="recipes.html"><LINK
+REL="PREVIOUS"
+TITLE="Splitting a volume group"
+HREF="recipesplitvg.html"><LINK
+REL="NEXT"
+TITLE="Recover physical volume metadata"
+HREF="recovermetadata.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="recipesplitvg.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. Recipes</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="recovermetadata.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="UpgradeRootToLVM"
+></A
+>13.8. Converting a root filesystem to
+        LVM 1</H1
+><DIV
+CLASS="caution"
+><P
+></P
+><TABLE
+CLASS="caution"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/caution.gif"
+HSPACE="5"
+ALT="Caution"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Backup Your System</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          It is strongly recommended that you take a full backup of your
+          system before attempting to convert to root on LVM 1.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Upgrade Complications</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          Having your root filesystem on LVM 1 can significantly complicate
+          upgrade procedures (depending on your distribution) so it should
+          not be attempted lightly.  Particularly, you must consider how
+          you will insure that the LVM 1 kernel module (if you do not have
+          LVM 1 compiled into the kernel) as well as the vgscan/vgchange
+          tools are available before, during, and after the upgrade.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Recovery Complications</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          Having your root filesystem on LVM 1 can significantly complicate
+          recovery of damaged filesystems.  If you lose your initrd, it
+          will be very difficult to boot your system.  You will need to
+          have a recover disk that contains the kernel, LVM 1 module, and
+          LVM 1 tools, as well as any tools necessary to recover a
+          damaged filesystem.
+          Be sure to make regular backups and have an up-to-date
+          alternative boot method that allows for recovery of LVM 1. 
+          
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;        In this example the whole system was installed in a single root
+        partition with the exception of /boot. The system had a 2 gig disk
+        partitioned as:
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;/dev/hda1  /boot 
+/dev/hda2  swap
+/dev/hda3  /
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+      </P
+><P
+>&#13;        The / partition covered all of the disk not used by /boot and swap.
+        An important prerequisite of this procedure is that the root
+        partition is less that half full (so that a copy of it can be
+        created in a logical volume).  If this is not the case then a
+        second disk drive should be used. The procedure in that case is
+        similar but there is no need to shrink the existing root partition
+        and /dev/hda4 should be replaced with (eg) /dev/hdb1 in the
+        examples.
+      </P
+><P
+>&#13;        To do this it is easiest to use GNU parted. This software allows
+        you to grow and shrink partitions that contain filesystems. It is
+        possible to use resize2fs and fdisk to do this but GNU parted makes
+        it much less prone to error.  It may be included in your
+        distribution, if not you can download it from
+        <A
+HREF="ftp://ftp.gnu.org/pub/gnu/parted"
+TARGET="_top"
+>ftp://ftp.gnu.org/pub/gnu/parted</A
+>.
+      </P
+><P
+>&#13;        Once you have parted on your system AND YOU HAVE BACKED THE SYSTEM
+        UP:
+      </P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1436"
+></A
+>13.8.1. Boot single user</H2
+><P
+>&#13;          Boot into single user mode (type <B
+CLASS="command"
+>linux S</B
+> at
+          the LILO prompt) This is important. Booting single-user ensures
+          that the root filesystem is mounted read-only and no programs
+          are accessing the disk.
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1440"
+></A
+>13.8.2. Run Parted</H2
+><P
+>&#13;          Run parted to shrink the root partition Do this so there is room
+          on the disk for a complete copy of it in a logical volume. In
+          this example a 1.8 gig partition is shrunk to 1 gigabyte
+          This displays the sizes and names of the partitions on the disk
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># parted /dev/hda</B
+>
+<TT
+CLASS="prompt"
+>(parted)</TT
+> p
+.
+.
+.
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+><P
+>&#13;          Now resize the partition:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>(parted)</TT
+> resize 3 145 999
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          The first number here the partition number (hda3), the second is
+          the same starting position that hda3 currently has. Do not
+          change this.  The last number should make the partition around
+          half the size it currently is.
+        </P
+><P
+>&#13;          Create a new partition
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>(parted)</TT
+> mkpart primary ext2 1000 1999
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          This makes a new partition to hold the initial LVM 1 data. It
+          should start just beyond the newly shrunk hda3 and finish at the
+          end of the disk.
+        </P
+><P
+>&#13;          Quit parted
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>(parted)</TT
+> q
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1455"
+></A
+>13.8.3. Reboot</H2
+><P
+>&#13;          Reboot the system
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1458"
+></A
+>13.8.4. Verify kernel config options</H2
+><P
+>&#13;          Make sure that the kernel you are currently running works with
+          LVM 1 and has CONFIG_BLK_DEV_RAM and CONFIG_BLK_DEV_INITRD set in
+          the config file.
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1461"
+></A
+>13.8.5. Adjust partition type</H2
+><P
+>&#13;          Change the partition type on the newly created partition from
+          Linux to LVM (8e).  Parted doesn't understand LVM 1 partitions so
+          this has to be done using fdisk.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># fdisk /dev/hda</B
+>
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>t
+<TT
+CLASS="prompt"
+>Partition number (1-4): </TT
+>4
+<TT
+CLASS="prompt"
+>Hex code (type L to list codes): </TT
+>8e
+<TT
+CLASS="computeroutput"
+>Changed system type of partition 4 to 8e (Unknown)</TT
+>
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>w
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1471"
+></A
+>13.8.6. Set up LVM 1 for the new scheme</H2
+><P
+></P
+><UL
+><LI
+><P
+>&#13;              Initialize LVM 1 (vgscan)
+              <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgscan</B
+>
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            </P
+></LI
+><LI
+><P
+>&#13;              Make the new partition into a PV
+              <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvcreate /dev/hda4</B
+>
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            </P
+></LI
+><LI
+><P
+>&#13;              create a new volume group
+              <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgcreate vg /dev/hda4</B
+>
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            </P
+></LI
+><LI
+><P
+>   
+              Create a logical volume to hold the new root.
+              <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># lvcreate -L250M -n root vg</B
+>
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            </P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1490"
+></A
+>13.8.7. Create the Filesystem</H2
+><P
+>&#13;          Make a filesystem in the logical volume and copy the root files
+          onto it.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># mke2fs /dev/vg/root
+# mount /dev/vg/root /mnt/
+# find / -xdev | cpio -pvmd /mnt</B
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1495"
+></A
+>13.8.8. Update /etc/fstab</H2
+><P
+>&#13;          Edit /mnt/etc/fstab on the new root so that / is mounted on
+          /dev/vg/root. For example:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;  /dev/hda3       /    ext2       defaults 1 1
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          becomes:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;  /dev/vg/root    /    ext2       defaults 1 1
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1500"
+></A
+>13.8.9. Create an LVM 1 initial RAM disk</H2
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># lvmcreate_initrd</B
+>
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;          Make sure you note the name that lvmcreate_initrd calls the
+          initrd image.  It should be in /boot.
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1505"
+></A
+>13.8.10. Update /etc/lilo.conf</H2
+><P
+>&#13;          Add an entry in /etc/lilo.conf for LVM 1.
+          This should look similar to the following:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;  image   = /boot/KERNEL_IMAGE_NAME
+  label   = lvm
+  root    = /dev/vg/root
+  initrd  = /boot/INITRD_IMAGE_NAME
+  ramdisk = 8192
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          Where KERNEL_IMAGE_NAME is the name of your LVM 1 enabled kernel,
+          and INITRD_IMAGE_NAME is the name of the initrd image created by
+          lvmcreate_initrd. The ramdisk line may need to be increased if
+          you have a large LVM 1 configuration, but 8192 should suffice for
+          most users. The default ramdisk size is 4096. If in doubt check
+          the output from the lvmcreate_initrd command, the line that
+          says:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;lvmcreate_initrd -- making loopback file (6189 kB)
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          and make the ramdisk the size given in brackets.
+        </P
+><P
+>&#13;          You should copy this new lilo.conf onto /etc in the new root fs
+          as well.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># cp /etc/lilo.conf /mnt/etc/</B
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1513"
+></A
+>13.8.11. Run LILO to write the new boot sector</H2
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># lilo</B
+>
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1517"
+></A
+>13.8.12. Reboot to lvm</H2
+><P
+> 
+          Reboot - at the LILO prompt type "lvm"
+          The system should reboot into Linux using the newly created
+          Logical Volume.
+        </P
+><P
+>&#13;          If that worked then you should make lvm the default LILO boot
+          destination by adding the line
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;default=lvm
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          in the first section of /etc/lilo.conf
+        </P
+><P
+>&#13;          If it did not work then reboot normally and try to diagnose the
+          problem. It could be a typing error in lilo.conf or LVM 1 not
+          being available in the initial RAM disk or its kernel. Examine
+          the message produced at boot time carefully.
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1523"
+></A
+>13.8.13. Add remainder of disk</H2
+><P
+>   
+          Add the rest of the disk into LVM 1. When you are happy with this
+          setup you can then add the old root partition to LVM 1 and spread
+          out over the disk.
+        </P
+><P
+>&#13;          First set the partition type to 8e(LVM)
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># fdisk /dev/hda</B
+>
+
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>t
+<TT
+CLASS="prompt"
+>Partition number (1-4): </TT
+>3
+<TT
+CLASS="prompt"
+>Hex code (type L to list codes): </TT
+>8e
+<TT
+CLASS="computeroutput"
+>Changed system type of partition 3 to 8e (Unknown)</TT
+>
+<TT
+CLASS="prompt"
+>Command (m for help): </TT
+>w
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+><P
+>&#13;          Convert it into a PV and add it to the volume group:
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvcreate /dev/hda3
+# vgextend vg /dev/hda3</B
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="recipesplitvg.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="recovermetadata.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Splitting a volume group</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="recipes.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Recover physical volume metadata</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

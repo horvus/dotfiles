@@ -1,0 +1,302 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring the ROSE Uplink and Downlink commands</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Amateur Radio AX.25 HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring the user_call programs"
+HREF="x1958.html"><LINK
+REL="NEXT"
+TITLE="Associating AX.25 callsigns with Linux users"
+HREF="x2028.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Amateur Radio AX.25 HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1958.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x2028.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN1990"
+>17. Configuring the ROSE Uplink and Downlink commands</A
+></H1
+><P
+>If you are familiar with the ROM based ROSE implementation you will be
+familiar with the method by which AX.25 users make calls across a ROSE
+network. If a users local ROSE node has the callsign <TT
+CLASS="LITERAL"
+>VK2KTJ-5</TT
+> and
+the AX.25 user wants to connect to <TT
+CLASS="LITERAL"
+>VK5XXX</TT
+> at remote ROSE node
+<TT
+CLASS="LITERAL"
+>5050882960</TT
+> then they would issue the command:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>c vk5xxx v vk2ktj-5 5050 882960</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>At the remote node, <TT
+CLASS="LITERAL"
+>VK5XXX</TT
+> would see an incoming connection with the
+local AX.25 users callsign and being digipeated via the remote ROSE nodes
+callsign.</P
+><P
+>The Linux ROSE implementation does not support this capability in the
+kernel, but there are two application programs called
+<EM
+>rsuplnk</EM
+> and <EM
+>rsdwnlnk</EM
+> which
+perform this function.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2003"
+>17.1. Configuring a ROSE downlink</A
+></H2
+><P
+>To configure your Linux machine to accept a ROSE connection and establish an
+AX.25 connection to any destination callsign that is not being listened for
+on your machine you need to add an entry to your <TT
+CLASS="LITERAL"
+>/etc/ax25/ax25d.conf</TT
+>
+file. Normally you would configure this entry to be the default behaviour for
+incoming ROSE connections. For example you might have ROSE listeners operating
+for destinations like <TT
+CLASS="LITERAL"
+>NODE-0</TT
+> or <TT
+CLASS="LITERAL"
+>HEARD-0</TT
+> that you wish to handle
+locally, but for all other destination calls you may want to pass them to
+the <EM
+>rsdwnlink</EM
+> command and assume they are AX.25 users.</P
+><P
+>A typical configuration would look like:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#
+{* via rose}
+NOCALL   * * * * * *  L
+default  * * * * * *  - root  /usr/sbin/rsdwnlnk rsdwnlnk 4800 vk2ktj-5
+#</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>With this configuration any user who established a ROSE connection to your
+Linux nodes address with a destination call of something that you were not
+specifically listening for would be converted into an AX.25 connection on the
+AX.25 port named <TT
+CLASS="LITERAL"
+>4800</TT
+> with a digipeater path of <TT
+CLASS="LITERAL"
+>VK2KTJ-5</TT
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2016"
+>17.2. Configuring a ROSE uplink</A
+></H2
+><P
+>To configure your Linux machine to accept AX.25 connections in the same way
+that a ROM ROSE node would you must add an entry into your
+<TT
+CLASS="LITERAL"
+>/etc/ax25/ax25d.conf</TT
+> file that looks similar to the following:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#
+[VK2KTJ-5* via 4800]
+NOCALL   * * * * * *  L
+default  * * * * * *  - root  /usr/sbin/rsuplnk rsuplnk rose
+#</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Note the special syntax for the local callsign. The `<TT
+CLASS="LITERAL"
+>*</TT
+>' character
+indicates that the application should be invoked if the callsign is heard in
+the digipeater path of a connection.</P
+><P
+>This configuration would allow an AX.25 user to establish ROSE calls
+using the example connect sequence presented in the
+introduction. Anybody attempting to digipeat via
+<TT
+CLASS="LITERAL"
+>VK2KTJ-5</TT
+> on the AX.25 port named
+<TT
+CLASS="LITERAL"
+>4800</TT
+> would be handled by the
+<EM
+>rsuplnk</EM
+> command.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1958.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x2028.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring the <EM
+>user_call</EM
+> programs</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Associating AX.25 callsigns with Linux users</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

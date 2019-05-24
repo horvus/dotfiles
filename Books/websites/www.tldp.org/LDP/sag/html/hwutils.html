@@ -1,0 +1,450 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Hardware Utilities </TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Hardware, Devices, and Tools"
+HREF="device-list.html"><LINK
+REL="PREVIOUS"
+TITLE="Hardware, Devices, and Tools"
+HREF="device-list.html"><LINK
+REL="NEXT"
+TITLE="Kernel Modules"
+HREF="x1926.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="device-list.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Hardware, Devices, and Tools</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1926.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="HWUTILS"
+></A
+>4.1. Hardware Utilities</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MAKEDEV"
+></A
+>4.1.1. The <B
+CLASS="COMMAND"
+>MAKEDEV</B
+> Script</H2
+><P
+>Most device files will already be created and will be there
+	ready to use after you install your Linux system.  If by some chance
+	you need to create one which is not provided then you should first
+	try to use the <B
+CLASS="COMMAND"
+>MAKEDEV</B
+> script.  This script is
+	usually located in <TT
+CLASS="FILENAME"
+>/dev/MAKEDEV</TT
+> but might also
+	have a copy (or a symbolic link) in
+	<TT
+CLASS="FILENAME"
+>/sbin/MAKEDEV</TT
+>.  If it turns out not to be in
+	your path then you will need to specify the path to it
+	explicitly.</P
+><P
+>In general the command is used as:
+	
+	<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>	<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>/dev/MAKEDEV -v ttyS0</B
+></TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>create ttyS0   c 4 64 root:dialout 0660</TT
+>
+	</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	This will create the device file <TT
+CLASS="FILENAME"
+>/dev/ttyS0</TT
+>
+	
+	with major node 4 and minor node 64 as a character device with
+	access permissions 0660 with owner root and group dialout.</P
+><P
+><TT
+CLASS="FILENAME"
+>ttyS0</TT
+> is a serial port.  The major and
+	minor node numbers are numbers understood by the kernel.  The kernel
+	refers to hardware devices as numbers, this would be very difficult
+	for us to remember, so we use filenames.  Access permissions of 0660
+	means read and write permission for the owner (root in this case)
+	and read and write permission for members of the group (dialout in 
+	this case) with no access for anyone else.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MKNOD"
+></A
+>4.1.2. The <B
+CLASS="COMMAND"
+>mknod</B
+> command</H2
+><P
+><B
+CLASS="COMMAND"
+>MAKEDEV</B
+> is the preferred way of creating
+	device files which are not present.  However sometimes the
+	<B
+CLASS="COMMAND"
+>MAKEDEV</B
+> script will not know about the device
+	file you wish to create.  This is where the <B
+CLASS="COMMAND"
+>mknod</B
+>
+	command comes in.  In order to use <B
+CLASS="COMMAND"
+>mknod</B
+> you need
+	to know the major and minor node numbers for the device you wish to
+	create.  The <TT
+CLASS="FILENAME"
+>devices.txt</TT
+> file in the kernel
+	source documentation is the canonical source of this
+	information.</P
+><P
+>To take an example, let us suppose that our version of the
+	<B
+CLASS="COMMAND"
+>MAKEDEV</B
+> script does not know how to create the
+	<TT
+CLASS="FILENAME"
+>/dev/ttyS0</TT
+> device file.  We need 
+	to use <B
+CLASS="COMMAND"
+>mknod</B
+> to create it.  We know from looking at the
+	<TT
+CLASS="FILENAME"
+>devices.txt</TT
+> that it should be a character
+	device with major number 4 and minor number 64.  So we now know all
+	we need to create the file.
+
+        <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>	<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>mknod /dev/ttyS0 c 4 64</B
+></TT
+>
+	<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>chown root.dialout /dev/ttyS0</B
+></TT
+>
+	<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>chmod 0644 /dev/ttyS0</B
+></TT
+>
+	<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ls -l /dev/ttyS0</B
+></TT
+>
+	<TT
+CLASS="COMPUTEROUTPUT"
+>	crw-rw----   1 root dialout    4,   64 Oct 23 18:23 /dev/ttyS0
+	</TT
+> 
+	</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	As you can see, many more steps are required to create the file.  In
+	this example you can see the process required however.  It is
+	unlikely in the extreme that the ttyS0 file would not be provided by
+	the <B
+CLASS="COMMAND"
+>MAKEDEV</B
+> script, but it suffices to illustrate
+	the point.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="LSPCI"
+></A
+>4.1.3. The <B
+CLASS="COMMAND"
+>lspci</B
+>  command</H2
+><P
+>lspci</P
+><P
+>TO BE ADDED</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="LSDEV"
+></A
+>4.1.4. The <B
+CLASS="COMMAND"
+>lsdev</B
+>  command</H2
+><P
+>lsdev</P
+><P
+>TO BE ADDED</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="LSUSB"
+></A
+>4.1.5. The <B
+CLASS="COMMAND"
+>lsusb</B
+>  command</H2
+><P
+>lsusb</P
+><P
+>TO BE ADDED</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="LSRAID"
+></A
+>4.1.6. The <B
+CLASS="COMMAND"
+>lsraid</B
+>  command</H2
+><P
+>lsraid</P
+><P
+>TO BE ADDED</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="HDPARM"
+></A
+>4.1.7. The <B
+CLASS="COMMAND"
+>hdparm</B
+>  command</H2
+><P
+>hdparm</P
+><P
+>TO BE ADDED</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MORE-HWRESOURCES"
+></A
+>4.1.8. More Hardware Resources</H2
+><P
+>More information on what hardware resources the kernel is using
+	can be found in the <TT
+CLASS="FILENAME"
+>/proc</TT
+> directory.  Refer to 
+	<A
+HREF="proc-fs.html"
+>Section 3.7</A
+> in chapter 3.
+	</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="device-list.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1926.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Hardware, Devices, and Tools</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="device-list.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Kernel Modules</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

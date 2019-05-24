@@ -1,0 +1,204 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Ftape-HOWTO: Backing up and restoring data</TITLE>
+ <LINK HREF="Ftape-HOWTO-8.html" REL=next>
+ <LINK HREF="Ftape-HOWTO-6.html" REL=previous>
+ <LINK HREF="Ftape-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Ftape-HOWTO-8.html">Next</A>
+<A HREF="Ftape-HOWTO-6.html">Previous</A>
+<A HREF="Ftape-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Backing up and restoring data</A></H2>
+
+<P>
+<P>This section describes some simple uses of <CODE>tar</CODE> and <CODE>mt</CODE>. Other
+examples can be found in the <CODE>ftape-manual</CODE> of the <CODE>ftape-doc</CODE>
+package. The <CODE>ftape-tools</CODE> contains some simple automated
+<CODE>DejaGnu</CODE>
+<BLOCKQUOTE>Package for writing automated tests.</BLOCKQUOTE>
+
+test-suites. See section 
+<A HREF="Ftape-HOWTO-4.html#getting">Getting ftape</A> for
+informations about where to download those additional packages from.
+<P>
+<H2><A NAME="write-backup"></A> <A NAME="ss7.1">7.1 Writing an archive to a tape</A>
+</H2>
+
+<P>
+<P>You can use `<CODE>tar</CODE>', `<CODE>dd</CODE>', `<CODE>cpio</CODE>', and `<CODE>afio</CODE>'. You
+will need to use `<CODE>mt</CODE>' to get the full potential of your tapes and
+the <CODE>ftape</CODE> driver.  For a start I'd recommend using `<CODE>tar</CODE>', as
+it can archive lots of directories and let you pick out separate files
+from an archive.  <CODE>cpio</CODE> creates smaller archives and is more
+generally more flexible than <CODE>tar</CODE>, but is missing some features
+like volume labels.  `<CODE>afio</CODE>' creates backups where each file is
+compressed individually and then concatenated.  This will allow you to
+access the files ``after'' the point of the error.  If you use
+<CODE>gzip</CODE>ped <CODE>tar</CODE> files, all data after the point of the error is
+lost! (to me, this is a pretty good reason for NOT using compression
+on backups).  The choice of which is most appropriate depends on the
+situation and the features and malfeatures of each of the packages.  I
+recommend taking a look at each package at reviewing the options that
+each provides.  It's possible that this HOWTO may provide more detail
+on this subject at some point in the future.
+<P>There are more links pointing to backup software at
+<A HREF="http://www-math.math.rwth-aachen.de/~LBFM/claus/ftape/">http://www-math.math.rwth-aachen.de/~LBFM/claus/ftape/</A> in the
+<CODE>software</CODE> section of that page.
+<P>To make a backup of your kernel source tree using <CODE>tar</CODE>, do this
+(assuming you have the sources in <CODE>/usr/src/linux</CODE>):
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        # cd /usr/src
+        # tar cf /dev/ftape linux
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This will not compress the files, but gives you a smoother tape run.
+If you want the compression (and you've got <CODE>tar</CODE> 1.11.2), you
+just include the <CODE>-z</CODE> flag(*), eg: `<CODE>tar czf /dev/ftape
+linux</CODE>'
+<P>For further instructions on how to use <CODE>tar</CODE>, <CODE>dd</CODE> and
+<CODE>mt</CODE> look at the man pages and the texinfo files that comes
+with the respective distributions.
+<P>(*) <CODE>tar</CODE> assumes that the first argument is options, so the
+`<CODE>-</CODE>' is not necessary, i.e. these two commands are the same:
+`<CODE>tar xzf /dev/ftape</CODE>' and `<CODE>tar -xzf /dev/ftape</CODE>'
+<P>
+<P>
+<H2><A NAME="ss7.2">7.2 Restoring an archive</A>
+</H2>
+
+<P>
+<P>OK, let us restore the backup of the kernel source you made in section
+<A HREF="#write-backup">Writing an archive to a tape</A> above.  To
+do this you simply say
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        tar xf /dev/ftape
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>If you used compression, you will have to say
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        tar xzf /dev/ftape
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>When you use compression, <CODE>gzip</CODE> will complain about trailing
+garbage after the very end of the archive (and this will lead to a
+`broken pipe' message).  This can be safely ignored.
+<P>For the other utilities, please read the man page.
+<P>
+<P>
+<H2><A NAME="ss7.3">7.3 Testing the archive</A>
+</H2>
+
+<P>
+<P>tar has an option (<CODE>-d</CODE>) for detecting differences between two
+archives. To test your backup of the kernel source say
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        tar df /dev/ftape
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>If you do not have the man page for <CODE>tar</CODE>, you are not lost (yet);
+tar has a built-in option list: try `<CODE>tar --help 2>&amp;1 | less</CODE>'
+<P>
+<H2><A NAME="ss7.4">7.4 Putting more than one backup on a tape</A>
+</H2>
+
+<P>
+<P>
+<P>To put more than one backup on a tape you must have the <CODE>mt</CODE>
+utility. You will probably have it already, if you got one of the
+mainline distributions (eg. Slackware or Debian).
+<P>Programs like <CODE>tar</CODE> and <CODE>cpio</CODE> generate a single Tape ARchive
+and know nothing about multiple files or positioning of a tape, it
+just reads or writes from/to a device. <CODE>mt</CODE> knows everything about
+moving the tape back and forth, but nothing about reading the data off
+the tape.  As you might have guessed, combining <CODE>tar</CODE> or <CODE>cpio</CODE>
+with <CODE>mt</CODE> does the trick.
+<P>By using the <CODE>nqft[0-3]</CODE> (<CODE>nftape</CODE>) device, you can use
+`<CODE>mt</CODE>' to position the tape the correct place (`<CODE>mt -f
+/dev/nqft0 fsf 2</CODE>' means step over two ``file marks'', i.e.
+<CODE>tar</CODE> files) and then use <CODE>tar</CODE> or <CODE>cpio</CODE> to read or write
+the relevant data.
+<P>The most common use of the non-rewinding device is to append another
+backup to an existing tape.  Here are the specific steps with a little
+explanation thrown in for good measure.
+<P>
+<UL>
+<LI> Insert a tape into the drive.  On some devices this may cause
+the tape to be rewound.
+</LI>
+<LI> Issue an End-of-Tape command to the NON-rewinding device.
+
+<BLOCKQUOTE><CODE>
+<PRE>
+        mt -f /dev/n???? eof
+</PRE>
+</CODE></BLOCKQUOTE>
+
+
+The tape should now be positioned at the End-of-Data (<B>EOD</B>). The
+tape won't move unless a program opens the device, closes the rewinding
+device, removes the device driver from kernel memory (rmmod) or ejects
+the tape.  Using `<CODE>mt eof</CODE>' may be faster on QIC tapes.
+</LI>
+<LI> The next tape operation will start at the EOD mark.  If you
+perform a write, it will append a new `file'.  If you perform a read it
+will fail with EOF.  The EOD mark on most tape formats is actually two
+consecutive EOF marks, however, since version 3.xx <CODE>ftape </CODE> uses the
+volume table as specified in the <CODE>QIC-113</CODE> standard to emulate file
+marks, thus there aren't two consecutive file marks at EOD. Writing the
+EOF marks is handled by either the device driver or the hardware when a
+close() is performed.
+</LI>
+<LI> Here's where you write the actual data to the tape.
+</LI>
+<LI> Here's the important part. <B>Now rewind the tape</B>.  Both
+<CODE>ftape</CODE> caches some information that belongs in the header segments
+on the tape and update those header segments <B>only when the tape is
+rewound</B>.  This caching is necessary because rewinding the tape and
+updating the header segments takes a conspicuous amount of time.  The
+drawback of this caching is that you will lose information if you have
+written to the tape and not rewound the device.
+</LI>
+</UL>
+<P>
+<P>
+<H2><A NAME="ss7.5">7.5 Appending files to an archive</A>
+</H2>
+
+<P>
+<P>``Is there a way to extend an archive -- put a file on the tape, then
+later, add more to the tape?''
+<P>No. The <CODE>tar</CODE> documentation will tell you to use `<CODE>tar -Ar</CODE>',
+but it does not work.  This is a limitation of the current <CODE>ftape</CODE>
+driver.
+<P>
+<P>
+<H2><A NAME="ss7.6">7.6 Mount/unmounting tapes</A>
+</H2>
+
+<P>
+<P>Since a tape does not have a ``filesystem'' on it, you do not mount /
+unmount the tape.  To backup, you just insert the tape and run your
+`<CODE>tar</CODE>' command (or whatever you use to access the tape with).
+<P>
+<P>
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Ftape-HOWTO-8.html">Next</A>
+<A HREF="Ftape-HOWTO-6.html">Previous</A>
+<A HREF="Ftape-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

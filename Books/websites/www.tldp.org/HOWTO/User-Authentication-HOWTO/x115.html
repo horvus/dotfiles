@@ -1,0 +1,637 @@
+<HTML
+><HEAD
+><TITLE
+>  PAM (Pluggable Authentication Modules)
+ </TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="  User Authentication HOWTO
+ "
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="  How User Information is Stored on Your System
+ "
+HREF="x71.html"><LINK
+REL="NEXT"
+TITLE="Securing User Authentication"
+HREF="x263.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>User Authentication HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x71.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x263.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN115"
+></A
+>3. PAM (Pluggable Authentication Modules)</H1
+><P
+>  Pluggable authentication modules are at the core of user authentication in any modern linux distribution.
+ </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN118"
+></A
+>3.1. Why</H2
+><P
+>   Back in the good old days of linux, if a program, such as <SPAN
+CLASS="APPLICATION"
+>su</SPAN
+>, <SPAN
+CLASS="APPLICATION"
+>passwd</SPAN
+>, <SPAN
+CLASS="APPLICATION"
+>login</SPAN
+>, or <SPAN
+CLASS="APPLICATION"
+>xlock</SPAN
+>, needed to authenticate a user, it would simply read the necessary information from <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>. If it needed to change the users' password, it would simply edit <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>. This simple but clumsy method presented numerous problems for system administrators and application developers. As MD5 and shadow passwords became increasingly popular, each program requiring user authentication had to know how to get the proper information when dealing with a number of different schemes. If you wanted to change your user authentication scheme, all these programs had to be recompiled. PAM eliminates this mess by enabling programs to transparently authenticate users, regardless of how user information is stored.
+  </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN127"
+></A
+>3.2. What</H2
+><P
+>   Quoting from the <A
+HREF="http://www.kernel.org/pub/linux/libs/pam/Linux-PAM-html/pam.html"
+TARGET="_top"
+>Linux-PAM System Administrator's Guide</A
+>: "It is the purpose of the Linux-PAM project to separate the development of privilege granting software from the development of secure and appropriate authentication schemes. This is accomplished by providing a library of functions that an application may use to request that a user be authenticated." With PAM, it doesn't matter whether your password is stored in /etc/passwd or on a server in Hong Kong. When a program needs to authenticate a user, PAM provides a library containing the functions for the proper authentication scheme. Because this library is loaded dynamically, changing authentication schemes can be done by simply editing a configuration file.
+  </P
+><P
+>   Flexibility is one of PAM's greatest strengths. PAM can be configured to deny certain programs the right to authenticate users, to only allow certain users to be authenticated, to warn when certain programs attempt to authenticate, or even to deprive all users of login privileges. PAM's modular design gives you complete control over how users are authenticated.
+  </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN132"
+></A
+>3.2.1. Distributions that support pam.</H3
+><P
+>  Nearly all popular distributions have supported PAM for some time. Here's an incomplete list of distributions that support PAM:
+  </P
+><P
+></P
+><UL
+><LI
+><P
+>Redhat since version 5.0</P
+></LI
+><LI
+><P
+>Mandrake since 5.2</P
+></LI
+><LI
+><P
+>Debian since version 2.1 (partial support in 2.1 -- complete support in 2.2)</P
+></LI
+><LI
+><P
+>Caldera since version 1.3</P
+></LI
+><LI
+><P
+>Turbolinux since version 3.6</P
+></LI
+><LI
+><P
+>SuSE since version 6.2</P
+></LI
+></UL
+><P
+>   This list is certainly incomplete and possibly inaccurate. I'd appreciate it if you sent any corrections or additions to this list to <TT
+CLASS="EMAIL"
+>&#60;<A
+HREF="mailto:petehern@yahoo.com"
+>petehern@yahoo.com</A
+>&#62;</TT
+>.
+  </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN150"
+></A
+>3.2.2. Installing PAM</H3
+><P
+>   Installing PAM from scratch is long process, beyond the scope of this HOWTO. If PAM isn't installed on your system, you're probably running such an old version of your distribution that there are many other reasons to upgrade. If you really want to do it yourself, then you're certainly not the sort of person who needs any help from me. For all these reasons, I'm going to assume that you already have PAM installed.
+  </P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN153"
+></A
+>3.3. How</H2
+><P
+>   Enough talk, let's dig in.
+  </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN156"
+></A
+>3.3.1. PAM configuration files</H3
+><P
+>   PAM configuration files are stored in the <TT
+CLASS="FILENAME"
+>/etc/pam.d/</TT
+> directory. (If you don't have <TT
+CLASS="FILENAME"
+>/etc/pam.d/</TT
+> directory, don't worry, I'll cover that in the next section)  Let's go over there and take a look.
+  </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>  <TT
+CLASS="PROMPT"
+>~$ </TT
+><TT
+CLASS="USERINPUT"
+><B
+>cd /etc/pam.d</B
+></TT
+>
+  <TT
+CLASS="PROMPT"
+>/etc/pam.d/$ </TT
+><TT
+CLASS="USERINPUT"
+><B
+>ls</B
+></TT
+>
+  chfn	chsh	login	other	passwd	su	xlock
+  <TT
+CLASS="PROMPT"
+>/etc/pam.d/$ </TT
+>
+  </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>  Your system may have a few more or a few less files in this directory, depending on what's installed on your system. Whatever the details, you probably saw a file for each of the programs on your system that authenticate users. As you probably already guessed, each file contains the PAM authentication configuration for the program it's named after (except for the <TT
+CLASS="FILENAME"
+>other</TT
+> file, which we'll talk about in a little bit). Let's take a look the PAM configuration file for login (I've condensed the file for the sake of simplicity):
+  </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>  <TT
+CLASS="PROMPT"
+>/etc/pam.d/$ </TT
+><TT
+CLASS="USERINPUT"
+><B
+>cat login</B
+></TT
+>
+  # PAM configuration for login
+  auth       requisite  pam_securetty.so
+  auth       required   pam_nologin.so
+  auth       required   pam_env.so
+  auth       required   pam_unix.so nullok
+  account    required   pam_unix.so
+  session    required   pam_unix.so
+  session    optional   pam_lastlog.so
+  password   required   pam_unix.so nullok obscure min=4 max=8
+  </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>   Before I dig into this file, I must mention a little something.
+  </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN173"
+></A
+>3.3.2. A little something</H3
+><P
+>   A small percentage of the readers are probably thinking, "Oh no! I don't have a /etc/pam.d directory! Your list of distributions says that my distribution includes PAM, but I can't find that directory. Without PAM, my life is empty and meaningless! What can I do?" Don't worry, all is not lost. If you know that your distribution includes PAM, but you have no <TT
+CLASS="FILENAME"
+>/etc/pam.d/</TT
+> directory, then your PAM configuration is stored in <TT
+CLASS="FILENAME"
+>/etc/pam.conf</TT
+>. Rather than being spread across several files, all your PAM configuration is stored in a single file. This adds a little twist to PAM  configuration, but the proper adjustments are pointed out in section 3.3.4.
+  </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN178"
+></A
+>3.3.3. Configuration syntax</H3
+><P
+>   PAM configuration files have the following syntax:
+  </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>  type  control  module-path  module-arguments
+  </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>   Using the login configuration file (see above) as an example let's take a look a the syntax for PAM configuration files:
+  </P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><P
+><B
+>PAM configuration tokens</B
+></P
+><DL
+><DT
+><SPAN
+CLASS="TOKEN"
+>type</SPAN
+></DT
+><DD
+><P
+>     The type token tells PAM what type of authentication is to be used for this module. Modules of the same type can be "stacked", requiring a user to meet multiple requirements to be authenticated. PAM recognizes four types:
+    </P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>account</DT
+><DD
+><P
+>        Determines whether the user is allowed to access the service, whether their passwords has expired, etc.
+       </P
+></DD
+><DT
+>auth</DT
+><DD
+><P
+>        Determines whether the user is who they claim to be, usually by a password, but perhaps by a more sophistcated means, such as biometrics.
+       </P
+></DD
+><DT
+>password</DT
+><DD
+><P
+>        Provides a mechanism for the user to change their authentication. Again, this usually their password.
+       </P
+></DD
+><DT
+>session</DT
+><DD
+><P
+>        Things that should be done before and/or after the user is authenticed. This might included things such as mounting/unmounting the user home directory, logging their login/logout, and restricting/unrestricting the services available to the user.
+       </P
+></DD
+></DL
+></DIV
+><P
+>      In the login config file, we see at least one entry for each type. Since this the program that allows user to login (hence the name :), it's understandable that it needs to access all of the different types of authentication.
+     </P
+></DD
+><DT
+><SPAN
+CLASS="TOKEN"
+>control</SPAN
+></DT
+><DD
+><P
+>     The control token tells PAM what should be done in if authentication by this module fails. PAM recognizes four control types:
+    </P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>requisite</DT
+><DD
+><P
+>       Failure to authenticate via this module results in immediate denial of authentication.
+      </P
+></DD
+><DT
+>required</DT
+><DD
+><P
+>       Failure also results in denial of authentication, although PAM will still call all the other modules listed for this service before denying authentication.
+      </P
+></DD
+><DT
+>sufficient</DT
+><DD
+><P
+>       If authentication by this module is successful, PAM will grant authentication, even if a previous required module failed.
+      </P
+></DD
+><DT
+>optional</DT
+><DD
+><P
+>        Whether this module succeeds or fails is only significant if it is the only module of its type for this service.
+       </P
+></DD
+></DL
+></DIV
+><P
+>       In the configuration file for login, we see nearly all of the different control types. Most of the required modules <TT
+CLASS="FILENAME"
+>are pam_unix.so</TT
+> (the main authentication module), the single requisite module is <TT
+CLASS="FILENAME"
+>pam_securetty.so</TT
+> (which makes sure the user is logging in on a secure console), and the only optional module is <TT
+CLASS="FILENAME"
+>pam_lastlog.so</TT
+> (the module that retrieves information on the user's most recent login).
+      </P
+></DD
+><DT
+><SPAN
+CLASS="TOKEN"
+>module-path</SPAN
+></DT
+><DD
+><P
+>      The module-path tells PAM which module to use and (optionally) where to find it. Most configurations only contain the module's name, as is the case in our login configuration file. When this is the case, PAM looks for the modules in the default PAM module directory, normally <TT
+CLASS="FILENAME"
+>/usr/lib/security</TT
+>. However, if your linux distribution conforms to the Filesystem Hierarchy Standard (FHS), PAM modules can be found in <TT
+CLASS="FILENAME"
+>/lib/security</TT
+>.
+     </P
+></DD
+><DT
+><SPAN
+CLASS="TOKEN"
+>module-arguments</SPAN
+></DT
+><DD
+><P
+>      The module-arguments are arguments to be passed to the module. Each module has its own arguments. For example, in our login configuration, the "nulok" ("null ok", argument being passed to pam_unix.so module, indicating the a blank ("null") password is acceptable ("ok").
+     </P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN246"
+></A
+>3.3.4. <TT
+CLASS="FILENAME"
+>pam.conf</TT
+> configuration</H3
+><P
+>    If your PAM configuration is stored in <TT
+CLASS="FILENAME"
+>/etc/pam.conf</TT
+> rather than <TT
+CLASS="FILENAME"
+>/etc/pam.d/</TT
+>, PAM configuration lines are a bit different. Rather than each service having its own configuration file, all configurations are stored in <TT
+CLASS="FILENAME"
+>/etc/pam.conf</TT
+> with the service name as the first token in a configuration line. For example, the following line in <TT
+CLASS="FILENAME"
+>/etc/pam.d/login</TT
+>:
+    </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>    auth       required   pam_unix.so nulok
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>     would become the following line in <TT
+CLASS="FILENAME"
+>/etc/pam.conf</TT
+>:
+    </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>    login	auth       required   pam_unix.so nulok
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>     Except for this minor difference, all the rest of the configuration PAM syntax applies.
+    </P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN259"
+></A
+>3.4. Getting more information</H2
+><P
+>    For more information on configuring PAM and complete PAM module reference, consult the <A
+HREF="http://www.kernel.org/pub/linux/libs/pam/Linux-PAM-html/pam.html"
+TARGET="_top"
+>Linux-PAM System Administrator's Guide</A
+>. This guide serves as a thorough and up-to-date reference on PAM configuration.
+   </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x71.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x263.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>How User Information is Stored on Your System</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Securing User Authentication</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

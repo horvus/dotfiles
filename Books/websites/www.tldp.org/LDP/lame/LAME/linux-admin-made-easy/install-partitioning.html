@@ -1,0 +1,540 @@
+<HTML
+><HEAD
+><TITLE
+>Partitioning Hard Drive(s)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Administration Made Easy"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Installation and Hardware Configuration"
+HREF="install-config.html"><LINK
+REL="PREVIOUS"
+TITLE="Booting Linux Installation Program"
+HREF="booting-install.html"><LINK
+REL="NEXT"
+TITLE="Setting up Swap Space"
+HREF="install-swap.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Administration Made Easy</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="booting-install.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Installation and Hardware Configuration</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="install-swap.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INSTALL-PARTITIONING"
+>4.3. Partitioning Hard Drive(s)</A
+></H1
+><P
+>Why partition, anyway?  Well, although it is possible to get a
+perfectly functioning Linux system running on a single-partition system,
+and, in fact, is a bit easier to configure this way, there are a number of
+benefits from partitioning one or more of your storage devices into
+multiple partitions.</P
+><P
+>While it is true that Linux will operate just fine on a disk with
+only one large partition defined, there are several advantages to
+partitioning your disk for at least the four main file systems (root,
+usr, home, and swap).  These include:</P
+><P
+>First, it may reduce the time required to perform file system checks
+(both upon bootup and when doing a manual fsck), because these checks can
+be done in parallel.  (By the way, <EM
+>NEVER</EM
+> run an fsck
+on a mounted file system!!!  You will almost certainly regret what happens
+to it.  The exception to this is if the file system is mounted read-only,
+in which case it is safe to do so.)  Also, file system checks are a lot
+easier to do on a system with multiple partitions.  For example, if I knew
+my /home partition had problems, I could simply unmount it, perform a file
+system check, and then remount the repaired file system (as opposed to
+booting my system with a rescue diskette into single-user mode and doing
+the repairs).</P
+><P
+>Second, with multiple partitions, you can, if you wish, mount one or
+more of your partitions as read-only.  For example, if you decide that
+everything in /usr will not be touched even by root, you can mount the
+/usr partition as read-only.</P
+><P
+>Finally, the most important benefit that partitioning provides is
+protection of your file systems.  If something should happen to a file
+system (either through user error or system failure), on a partitioned
+system you would probably only lose files on a single file system.  On a
+non-partitioned system, you would probably lose them on all file
+systems.</P
+><P
+>This little fact can be a big plus.  For example, if your root
+partition is so corrupted you can't boot, you can basically boot from the
+rescue diskette set, mount your root partition, and copy what you can (or
+restore from backup; see <A
+HREF="backup-and-restore.html"
+>Chapter 8</A
+> for
+details on how files can be backed up and restored), to another partition
+such as home, and then reboot once again using the emergency boot disk,
+typing <SPAN
+CLASS="QUOTE"
+>"<TT
+CLASS="LITERAL"
+>mount root=/dev/hda3</TT
+>"</SPAN
+> (assuming the
+partition containing your temporary root file system is on the third
+partition of hda) and boot your fully functional Linux box.  Then you can
+run an fsck on your unmounted corrupt root partition.</P
+><P
+>I <EM
+>have</EM
+> had personal experience in file system
+catastrophies, and I was very grateful for having had the damage limited
+due to the use of multiple partitions.</P
+><P
+>Finally, since Linux allows you to set up other operating system(s)
+(such as Windows 95/98/NT, BeOS, or what-have-you), and then dual- (or
+triple-, ...)  boot your system, you might wish to set up additional
+partitions to take advantage of this.  Typically, you would want to set up
+at least one separate partition for each operating system.  Linux includes
+a decent boot loader (called LILO on Intel-based systems, although much
+the same thing is available as MILO on Alpha, and SILO on Sparc) which
+allows you to specify which operating system you want to boot at power on,
+with a time-out default boot of your favorite operating system (probably
+Linux, right?)</P
+><P
+>You should partition a disk (or disks) according to your needs.  In
+my experience on Intel, Alpha, and Sparc platforms, for a fairly loaded
+system (feature-wise), doing a fair amount of tasks (as a desktop system
+at home, or as an Internet server at work), I have found the following
+approximation of space works pretty effectively for determining a
+partition size.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Given:
+
+A given disk of X Mb/Gb          (eg. 2 Gb)
+(Or, more than one disk with a combined total of X Mb/Gb)
+
+Calculate:
+
+(swap) about double main RAM     (eg. 64 Mb system gets 128 Mb swap)
+/ (root)  about 10% of available (eg. 200 Mb)
+/home about 20% of available     (eg. 400 Mb)
+/usr any remaining space         (eg. 1272 Mb)
+
+/var (optional -- see below)
+/boot (optional -- see below)
+/archive (optional -- see below)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Of course, the above amounts are approximate guidelines only.  
+Obviously you are going to want to juggle those percentages around a bit
+depending on what you are going to use your Linux system for.  If you are
+going to be doing stuff like adding lots of bulky applications such as
+WordPerfect or Netscape, or perhaps adding Japanese character support, you
+would probably benefit from a bit more /usr space.</P
+><P
+>I <EM
+>always</EM
+> seem to have a lot of space available
+on /home, so if your users aren't doing much (or you have imposed strict
+quota sizes), or you aren't offering shell accounts and personal web
+pages, etc., you probably could lower /home space and raise /usr.</P
+><P
+>Here is a description of the various mount points and file system
+information, which may give you a better idea of how to best define your
+partition sizes for your own needs:</P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: Bullet"
+><P
+><EM
+>/ (root)</EM
+> - used to store things like
+temporary files, the Linux kernel and boot image, important binary files
+(things that are needed before Linux can mount the /usr partition), and
+more importantly log files, spool areas for print jobs and outgoing
+e-mail, and user's incoming e-mail.  It is also used for temporary space
+when performing certain operations, such as building RPM packages from
+source RPM files.  Therefore, if you have a lot of users with a lot of
+e-mail, or think you will need plenty of temporary space, you might want
+more space available.  The partition type should be left as the default of
+83 (Linux native).  In addition, you'll probably toggle the bootable flag
+on this partition to allow boot information to be stored
+here.</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+><EM
+>/usr/</EM
+> - should be the largest
+partition, because most of the binary files required by Linux, as well as
+any locally installed software, web pages, Squid proxy cache, Samba share
+services, some locally-installed software log files, etc. are stored here.  
+The partition type should be left as the default of 83 (Linux
+native).</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+><EM
+>/home/</EM
+> - typically if you aren't
+providing shell accounts to your users, you don't need to make this
+partition very big.  The exception is if you are providing user home pages
+(such as school web pages), in which case you might benefit from making
+this partition larger.  Again, the partition type should be left as the
+default of 83 (Linux native).</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+><EM
+>(swap)</EM
+> - Linux provides something
+called <SPAN
+CLASS="QUOTE"
+>"virtual memory"</SPAN
+> to make a larger amount of memory
+available than the physical RAM installed in your system.  The swap
+partition is used with main RAM by Linux to accomplish this.  As a rule of
+thumb, your swap partition should be at least double the amount of
+physical RAM installed in your system.</P
+><P
+>If you have more than one physical hard drive in your system, you
+can create multiple swap partitions.  This can improve the performance of
+swapping by taking advantage of parallel disk access.  For example, on a
+256 Mb system with four drives, I would probably create four 128 Mb swap
+partitions, for a total of 256 Mb RAM, 512 Mb swap (for a combined total
+of 768 Mb available as virtual memory).  The partition type needs to be
+changed to 82 (Linux swap).</P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>Note: It is a common misconception that Linux has a 128 Mb
+swap size limit.  This was true in the past, but in modern Linux
+distributions, the size depends on your architecture (for example, Intel
+systems can have swap sizes as large as 2 Gb).  Type ``<TT
+CLASS="LITERAL"
+>man
+mkswap</TT
+>'' for more information.</P
+></BLOCKQUOTE
+></DIV
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+><EM
+>/var/</EM
+> (optional) - You may wish to
+consider splitting up your / (root) partition a bit further.  The /var
+directory is used for a great deal of runtime storage, including mail
+spools (both ingoing and outgoing), print jobs, process locks, etc.  
+Having this directory mounted under / (root) may be a bit dangerous
+because a large amount of incoming e-mail (for example), may suddenly fill
+up the partition.  Since bad things can happen (eg. system crash?) when
+the / (root) partition fills up, having /var on its own partition may
+avoid such problems.  I've had success in taking whatever space I've
+allocated to / (root), perhaps doubling it, and then creating separate
+partitions for / (root) and for /var.  The partition type should be left
+as the default of 83 (Linux native).</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+><EM
+>/boot/</EM
+> (optional) - In some
+circumstances (such as a system set up in a software RAID configuration)
+it may be necessary to have a separate partition from which to boot the
+Linux system.  This partition would allow booting and then loading of
+whatever drivers are required to read the other file systems.  The size of
+this partition can be as small as a couple Mb; I recommend approximately
+10 Mb (which should give you plenty of room to store the kernel, initial
+RAMdisk image, and perhaps a backup kernel or two).  The partition type
+should be left as the default of 83 (Linux native).</P
+></LI
+><LI
+STYLE="list-style-type: Bullet"
+><P
+><EM
+>/archive/</EM
+> (optional) - If you have
+any extra space lying around, perhaps you would benefit from a partition
+for a directory called, for example, /archive. You can then use the
+/archive directory to store backup material, large or infrequently
+accessed files, samba file services, or whatever else you can find a use
+for it.  The partition type can be left as the default of 83 (Linux
+native), or if you want to access it from both Linux as well as from
+another operating system, you could change it to a different ID, such as 6
+(DOS 16-bit &#62;=32M).</P
+></LI
+></UL
+><P
+>As extra drive(s) are added, further partitions can be added to the
+new drives, mounted at various mount-points as required -- this means a
+Linux system never needs to worry about running out of space.  As an
+example, if in the future it is clear that sda6 is starting to get filled
+up, we could add another drive, set a nicely sized partition with a
+mount-point at /usr/local -- and then transfer all the information from
+/usr/local over to the new drive.  But no system or application component
+would <SPAN
+CLASS="QUOTE"
+>"break"</SPAN
+> because Linux would see /usr/local no matter
+where it was located.</P
+><P
+>To give you an example of how one might set up partitions, I have used
+the following partitioning scheme on an Intel system (dual boot, Windows 95
+and Linux):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>   Device Boot   Begin    Start      End   Blocks   Id  System
+/dev/hda1  *         1        1      254  1024096+   6  DOS 16-bit &#62;=32M
+/dev/hda2          255      255      782  2128896    5  Extended
+/dev/hda5          255      255      331   310432+  83  Linux native
+/dev/hda6          332      332      636  1229728+  83  Linux native
+/dev/hda7          637      637      749   455584+  83  Linux native
+/dev/hda8          750      750      782   133024+  82  Linux swap</PRE
+></TD
+></TR
+></TABLE
+><P
+>The first partition, <EM
+>/dev/hda1</EM
+>, is a
+DOS-formatted file system used to store the alternative operating system
+(Windows 95).  This gives me 1 Gb of space for that operating
+system.</P
+><P
+>The second partition, <EM
+>/dev/hda2</EM
+>, is a physical
+partition (called <SPAN
+CLASS="QUOTE"
+>"extended"</SPAN
+>)  that encompasses the remaining
+space on the drive.  It is used only to encapsulate the remaining logical
+partitions (there can only be 4 physical partitions on a disk; in my case
+I required more than 4 partitions, therefore I had to use a logical
+partitioning scheme for the others).</P
+><P
+>The third through fifth partitions, <EM
+>/dev/hda5</EM
+>,
+<EM
+>/dev/hda6</EM
+>, and <EM
+>/dev/hda7</EM
+>, are
+all e2fs-formatted file systems used for the / (root), /usr, and the /home
+partitions, respectively.</P
+><P
+>Finally, the sixth partition, <EM
+>/dev/hda8</EM
+>, is
+used for the swap partition.</P
+><P
+>For yet another example, this time an Alpha box with two hard drives
+(sole boot, Linux only), I have chosen the following partitioning
+scheme:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>   Device Boot   Begin    Start      End   Blocks   Id  System
+/dev/sda1            1        1        1     2046    4  DOS 16-bit &#60;32M
+/dev/sda2            2        2      168   346859   83  Linux native
+/dev/sda3          169      169      231   130851   82  Linux swap
+/dev/sda4          232      232     1009  1615906    5  Extended
+/dev/sda5          232      232      398   346828   83  Linux native
+/dev/sda6          399      399     1009  1269016   83  Linux native
+/dev/sdb1            1        1      509  2114355   83  Linux native
+/dev/sdb2          510      510     1019  2118540   83  Linux native</PRE
+></TD
+></TR
+></TABLE
+><P
+>The first partition, <EM
+>/dev/sda1</EM
+>, is a
+DOS-formatted file system used to store the MILO boot loader.  The Alpha
+platform has a slightly different method of booting than an Intel system
+does, therefore Linux stores its boot information in a FAT partition.  
+This partition only needs to be as large as the smallest possible
+partition allowed -- in this case, 2Mb.</P
+><P
+>The second partition, <EM
+>/dev/sda2</EM
+>, is an
+e2fs-formatted file system used for the / (root) partition.</P
+><P
+>The third partition, <EM
+>/dev/sda3</EM
+>, is used for the
+swap partition.</P
+><P
+>The fourth partition, <EM
+>/dev/sda4</EM
+>, is an
+<SPAN
+CLASS="QUOTE"
+>"extended"</SPAN
+> partition (see previous example for
+details).</P
+><P
+>The fifth and sixth partitions, <EM
+>/dev/sda5</EM
+>, and
+<EM
+>/dev/sda6</EM
+>, are e2fs-formatted file systems used for
+the /home and /usr partitions, respectively.</P
+><P
+>The seventh partition, <EM
+>/dev/sdb1</EM
+>, is an
+e2fs-formatted file system used for the /archive partition.</P
+><P
+>The eighth and final partition, <EM
+>/dev/sdb2</EM
+>, is
+an e2fs-formatted file system used for the /archive2 partition.</P
+><P
+>After you finish setting up your partition information, you'll need
+to write the new partition to disk.  After this, the Red Hat installation
+program reloads the partition table into memory, so you can continue on to
+the next step of the installation process.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="booting-install.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="install-swap.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Booting Linux Installation Program</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="install-config.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Setting up Swap Space</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

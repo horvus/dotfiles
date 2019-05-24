@@ -1,0 +1,307 @@
+<HTML
+><HEAD
+><TITLE
+>Troubleshooting: Questions and Answers</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.60"><LINK
+REL="HOME"
+TITLE="Setting up IP Aliasing on A Linux Machine Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Commands"
+HREF="commands.html"><LINK
+REL="NEXT"
+TITLE="Acknowledgements"
+HREF="acknowledgements.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Setting up IP Aliasing on A Linux Machine Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="commands.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="acknowledgements.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="TROUBLESHOOTING"
+>3. Troubleshooting: Questions and Answers</A
+></H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="KEEPSETTINGS"
+>3.1. Question: How can I keep the settings through a reboot?</A
+></H2
+><P
+>Answer: Whether you are using BSD-style or SysV-style (Redhat&#8482; for example)
+						<B
+CLASS="COMMAND"
+>init</B
+>, you can always include it in <TT
+CLASS="FILENAME"
+>/etc/rc.d/rc.local</TT
+>. Here's what I have
+						on my SysV init system (Redhat&#8482; 3.0.3 and 4.0):</P
+><P
+>My <TT
+CLASS="FILENAME"
+>/etc/rc.d/rc.local</TT
+>: (edited to show the relevant portions)</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#setting up IP alias interfaces
+echo "Setting 172.16.3.1, 172.16.3.10, 172.16.3.100 IP Aliases ..."
+/sbin/ifconfig lo 127.0.0.1
+/sbin/ifconfig eth0 up
+/sbin/ifconfig eth0 172.16.3.1
+/sbin/ifconfig eth0:0 172.16.3.10
+/sbin/ifconfig eth0:1 172.16.3.100
+#setting up the routes
+echo "Setting IP routes ..."
+/sbin/route add -net 127.0.0.0
+/sbin/route add -net 172.16.3.0 dev eth0
+/sbin/route add -host 172.16.3.1 eth0
+/sbin/route add -host 172.16.3.10 eth0:0
+/sbin/route add -host 172.16.3.100 eth0:1
+/sbin/route add default gw 172.16.3.200
+# </PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SETTINGUPMAIL"
+>3.2. Question: How do I set up the IP aliased machine to receive e-mail on the
+					various aliased IP addresses (on a machine using sendmail)?</A
+></H2
+><P
+>Answer: Create (if it doesn't already exist) a file called, 
+			     <TT
+CLASS="FILENAME"
+>/etc/mynames.cw</TT
+>,for example. The file does not have to be this exact name nor in the
+			     <TT
+CLASS="FILENAME"
+>/etc directory</TT
+>.</P
+><P
+>In that file, place the official domain names of the aliased IP addresses. If
+			     these aliased IP addresses do not have a domain name, then you can place the
+			     IP address itself.</P
+><P
+> The <TT
+CLASS="FILENAME"
+>/etc/mynames.cw</TT
+> might look like this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+># /etc/mynames.cw - include all aliases for your machine here; # is a comment
+domain.one.net
+domain.two.com
+domain.three.org
+4.5.6.7 </PRE
+></TD
+></TR
+></TABLE
+><P
+>In your <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file, where it defines a file class macro Fw, add
+     					the following:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>     
+##################
+#   local info   #
+##################
+				     
+				     
+# file containing names of hosts for which we receive email
+Fw/etc/mynames.cw
+				 </PRE
+></TD
+></TR
+></TABLE
+><P
+>That should do it. Test out the new setting by invoking sendmail in
+     					test mode. The following is an example:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ganymede$ /usr/lib/sendmail -bt
+ADDRESS TEST MODE (ruleset 3 NOT automatically invoked)
+Enter &#60; ruleset&#62; &#60; address&#62;
+&#62; 0 me@4.5.6.7
+rewrite: ruleset  0   input: me @ 4 . 5 . 6 . 7
+rewrite: ruleset 98   input: me @ 4 . 5 . 6 . 7
+rewrite: ruleset 98 returns: me @ 4 . 5 . 6 . 7
+rewrite: ruleset 97   input: me @ 4 . 5 . 6 . 7
+rewrite: ruleset  3   input: me @ 4 . 5 . 6 . 7
+rewrite: ruleset 96   input: me &#60; @ 4 . 5 . 6 . 7 &#62;
+rewrite: ruleset 96 returns: me &#60; @ 4 . 5 . 6 . 7 . &#62;
+rewrite: ruleset  3 returns: me &#60; @ 4 . 5 . 6 . 7 . &#62;
+rewrite: ruleset  0   input: me &#60; @ 4 . 5 . 6 . 7 . &#62;
+rewrite: ruleset 98   input: me &#60; @ 4 . 5 . 6 . 7 . &#62;
+rewrite: ruleset 98 returns: me &#60; @ 4 . 5 . 6 . 7 . &#62;
+rewrite: ruleset  0 returns: $# local $: me
+rewrite: ruleset 97 returns: $# local $: me
+rewrite: ruleset  0 returns: $# local $: me
+&#62; 0 me@4.5.6.8
+rewrite: ruleset  0   input: me @ 4 . 5 . 6 . 8
+rewrite: ruleset 98   input: me @ 4 . 5 . 6 . 8
+rewrite: ruleset 98 returns: me @ 4 . 5 . 6 . 8
+rewrite: ruleset 97   input: me @ 4 . 5 . 6 . 8
+rewrite: ruleset  3   input: me @ 4 . 5 . 6 . 8
+rewrite: ruleset 96   input: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset 96 returns: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset  3 returns: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset  0   input: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset 98   input: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset 98 returns: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset 95   input: &#60; &#62; me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset 95 returns: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset  0 returns: $# smtp $@ 4 . 5 . 6 . 8 $: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset 97 returns: $# smtp $@ 4 . 5 . 6 . 8 $: me &#60; @ 4 . 5 . 6 . 8 &#62;
+rewrite: ruleset  0 returns: $# smtp $@ 4 . 5 . 6 . 8 $: me &#60; @ 4 . 5 . 6 . 8 &#62;
+&#62;</PRE
+></TD
+></TR
+></TABLE
+><P
+>Notice when I tested me@4.5.6.7, it delivered the mail to the local
+			     machine, while me@4.5.6.8 was handed off to the smtp mailer.
+			     That is the correct response.</P
+><P
+>You are all set now.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="commands.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="acknowledgements.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Commands</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Acknowledgements</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

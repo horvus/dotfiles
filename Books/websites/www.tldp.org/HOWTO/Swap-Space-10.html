@@ -1,0 +1,66 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Swap Space Mini-HOWTO: The swaphalt.sh script </TITLE>
+ <LINK HREF="Swap-Space-11.html" REL=next>
+ <LINK HREF="Swap-Space-9.html" REL=previous>
+ <LINK HREF="Swap-Space.html#toc10" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Swap-Space-11.html">Next</A>
+<A HREF="Swap-Space-9.html">Previous</A>
+<A HREF="Swap-Space.html#toc10">Contents</A>
+<HR>
+<H2><A NAME="swaphalt"></A> <A NAME="s10">10. The swaphalt.sh script </A></H2>
+
+<P>This script first checks the Linux swap signature and then restores the 
+Windows file system on it. 
+<P>(Adapted from the original Swap-Space-HOWTO by H. Peter Anvin) 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ 
+#!/bin/sh 
+# 
+# swaphalt.sh   This file is executed through the /etc/rc.d/init.d/halt 
+#               script after swapping and accounting has been turned off. 
+# 
+# Author:       Rahul U. Joshi 
+# 
+ 
+# check swap partition signature and restore Windows swap info 
+ 
+loopcount=0 
+ 
+# flag to indicate whether the swap info has been restored or not 
+restored=0 
+ 
+# check for swap signature 3 times before giving up 
+while [ $loopcount -lt 3 ] 
+  do 
+ 
+  if [ "`/bin/dd 2>/dev/null if=/dev/winswap bs=1 count=10 skip=4086`" = 'SWAP-SPACE' ]; then 
+    echo "Restoring DOS/Windows swap info , iteration $loopcount"  
+    /bin/zcat /etc/winswap.gz  >  /dev/winswap 
+    restored=1 
+    break 
+  else 
+    loopcount=loopcount+1 
+  fi 
+ 
+  done 
+ 
+if [ $restored -ne 1 ] ; then 
+   echo "Swap signature not found after $loopcount tries" 
+   echo "Skipping restoring" 
+fi 
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+<HR>
+<A HREF="Swap-Space-11.html">Next</A>
+<A HREF="Swap-Space-9.html">Previous</A>
+<A HREF="Swap-Space.html#toc10">Contents</A>
+</BODY>
+</HTML>

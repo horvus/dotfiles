@@ -1,0 +1,185 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Building a Secure RedHat Apache Server HOWTO: Working with Certificates</TITLE>
+ <LINK HREF="SSL-RedHat-HOWTO-4.html" REL=next>
+ <LINK HREF="SSL-RedHat-HOWTO-2.html" REL=previous>
+ <LINK HREF="SSL-RedHat-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="SSL-RedHat-HOWTO-4.html">Next</A>
+<A HREF="SSL-RedHat-HOWTO-2.html">Previous</A>
+<A HREF="SSL-RedHat-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Working with Certificates</A></H2>
+
+<P>The following section covers the steps involved in creating the private key
+file, certificate signing request, and a self-signed certificate.  If you
+plan to obtain a certificate signed by a certificate authority, you will
+need to create a <EM>certificate signing request (CSR)</EM>.  Otherwise, you can
+create a self-signed certificate.
+<P>
+<P>
+<H2><A NAME="ss3.1">3.1 Create a Private Key</A>
+</H2>
+
+<P>To create a private key, you must have the OpenSSL toolkit installed and
+configured with Apache.  The following examples use the OpenSSL command line
+tool which is located in the /usr/local/ssl/bin directory by default.  The
+examples assume that the directory containing the OpenSSL command line tool
+has been added to the $PATH.
+<P>
+<P>To create a private key using the triple des encryption standard
+(recommended), use the following command:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+openssl genrsa -des3 -out filename.key 1024
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>You will be prompted to enter and re-enter a pass phrase.  If you choose to
+use triple des encryption, you will be prompted for the password each time
+you start the SSL server from a cold start.  (When using the restart
+command, you will not be prompted for the password).  Some of you may find
+this password prompt to be a nuisance, especially if you need to boot the
+system during off-hours.  Or, you may believe that your system is already
+sufficiently secure.  So, if you choose not to have a password prompt (hence
+no triple des encryption), use the command below.  If you would rather
+create just a 512-bit key, then omit the 1024 at the end of the command and
+OpenSSL  will default to 512 bits.  Using the smaller key is slightly
+faster, but it is also less secure.
+<P>
+<P>To create a private key without triple des encryption, use the following
+command:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+openssl genrsa -out filename.key 1024
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>To add a password to an existing private key, use the following command:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+openssl -in filename.key -des3 -out newfilename.key
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>To remove a password from an existing private key, use the following
+command:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+openssl -in filename.key -out newfilename.key
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P><B>Note:</B>  Your private key will be created in the current directory unless
+otherwise specified.  There are 3 easy ways to deal with this.  If OpenSSL
+is in your path, you can run it from the directory that you have designated
+to store your key files in (default is <CODE>/etc/httpd/conf/ssl.key</CODE> if you
+installed Apache using the RPM or <CODE>/usr/local/apache/conf/ssl.key</CODE> if you
+installed Apache using the source files).  Another solution is to copy the
+files from the directory where they were created to the correct directory.
+And, last but not least, you can specify the path when running the command
+(eg. <CODE>openssl genrsa -out /etc/httpd/conf/ssl.key/filename.key 1024</CODE>).
+Doesn't matter how you do it as long as it gets done before you proceed.
+<P>
+<P>For more information on the OpenSSL toolkit check out:
+<A HREF="http://www.openssl.org/">OpenSSL Website</A>.
+<P>
+<P>
+<H2><A NAME="ss3.2">3.2 Create a Certificate Signing Request</A>
+</H2>
+
+<P>To obtain a certificate signed by a certificate authority, you will need to
+create a Certificate Signing Request (CSR).  The purpose is to send the
+certificate authority enough information to create the certificate without
+sending the entire private key or compromising any sensitive information.
+The CSR also contains the information that will be included in the
+certificate, such as, domain name, locality information, etc.
+<P>
+<UL>
+<LI>Locate the private key that you would like to creat a CSR from.  Enter the
+following command:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+openssl req -new -key filename.key -out filename.csr
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI>You will be prompted for Locality information, common name (domain name),
+organizational information, etc.  Check with the CA that you are applying to
+for information on required fields and invalid entries.</LI>
+<LI>Send the CSR to the CA per their instructions.</LI>
+<LI>Wait for your new certificate and/or create a self-signed certificate.  A
+self-signed certificate can be used until you receive your certificate from
+the certificate authority.</LI>
+</UL>
+<P>
+<P>
+<P><B>Note:</B> Use the following command to create a private key and request at the
+same time.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+openssl genrsa -des3 -out filename.key 1024
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss3.3">3.3 Creating a Self-Signed Certificate</A>
+</H2>
+
+<P>It is not necessary to create a self-signed certificate if you are obtaining
+a CA-signed certificate. However, creating a self-signed certificate is very
+simple.  All you need is a private key and the name of the server (fully
+qualified domain name) that you want to secure.  You will be prompted for
+information such as locality information, common name (domain name),
+organizational information, etc.  OpenSSL gives you a great deal of freedom
+here.  The only required field for the certificate to function correctly is
+the common name (domain name) field.  If this is not present or incorrect,
+you will receive a <EM>Certificate Name Check</EM> warning from your browser.
+<P>
+<P>To create a self-signed certificate:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+openssl req -new -key filename.key -x509 -out filename.crt
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss3.4">3.4 Installing your Web Server Certificate</A>
+</H2>
+
+<P>If you followed these instructions so far you shouldn't have any problems at
+this point.  If you sent your CSR to a certificate authority and you have
+not gotten your certificate back yet, you can take a break now!  If you are
+using a self-signed certificate, or you have received your certificate, you
+may continue.
+<P>
+<UL>
+<LI>Ensure that the private key file is in the directory that you have chosen to
+use.  The following examples will be based on the RedHat RPM installation
+default of <CODE>/etc/httpd/conf/ssl.key</CODE>.</LI>
+<LI>Ensure that the CA-signed or self-signed certificate is in its designated
+location.  Again, I will be using the RPM default of
+<CODE>/etc/httpd/conf/ssl.crt</CODE>.  If it is not there already, put it there.</LI>
+<LI>If there is an intermediate (root) certificate to be installed, copy it to
+the <CODE>/etc/httpd/conf/ssl.crt</CODE> directory, also.</LI>
+<LI>Now, you will be required to edit the httpd.conf file.  Make a back-up of
+this file before you proceed to the next step, 
+<A HREF="SSL-RedHat-HOWTO-4.html#configure">Configuring your Apache Server</A>.</LI>
+</UL>
+<P>
+<HR>
+<A HREF="SSL-RedHat-HOWTO-4.html">Next</A>
+<A HREF="SSL-RedHat-HOWTO-2.html">Previous</A>
+<A HREF="SSL-RedHat-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

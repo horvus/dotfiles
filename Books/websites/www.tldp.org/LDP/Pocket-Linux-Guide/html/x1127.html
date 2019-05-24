@@ -1,0 +1,778 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Construction</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Pocket Linux Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Automating Startup & Shutdown"
+HREF="phase5.html"><LINK
+REL="PREVIOUS"
+TITLE="Design"
+HREF="x1058.html"><LINK
+REL="NEXT"
+TITLE="Implementation"
+HREF="x1226.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Pocket Linux Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1058.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Automating Startup &#38; Shutdown</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1226.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN1127"
+></A
+>6.3. Construction</H1
+><P
+>There is a lot of typing to do in this section because of all of the
+    start-up scripts that need to be created. Using a mouse to copy the text
+    from this guide and paste it into a text editor can be a great time saving
+    tool.</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1130"
+></A
+>6.3.1. Create a GRUB configuration file</H2
+><P
+>Insert and mount the floppy labeled "boot disk".</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> mount /dev/fd0 /mnt
+<TT
+CLASS="prompt"
+>bash#</TT
+> cd /mnt/boot/grub</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Use your favorite text editor to create the following file and
+      save it as /mnt/boot/grub/menu.lst:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>default 0
+timeout 3
+title Pocket Linux Boot Disk
+kernel (fd0)/boot/vmlinuz root=/dev/fd0 load_ramdisk=1 prompt_ramdisk=1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1138"
+></A
+>6.3.2. Install sysvinit utilities</H2
+><P
+>Download the latest sysvinit source from <A
+HREF="ftp://ftp.cistron.nl/pub/people/miquels/software/"
+TARGET="_top"
+>ftp://ftp.cistron.nl/pub/people/miquels/software/</A
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd /usr/src/sysvinit-2.85/src
+<TT
+CLASS="prompt"
+>bash#</TT
+> make CC="gcc -mcpu=i386"
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp halt init shutdown ~/staging/sbin
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s halt ~/staging/sbin/reboot
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s init ~/staging/sbin/telinit
+<TT
+CLASS="prompt"
+>bash#</TT
+> mknod ~/staging/dev/initctl p</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>In the interest of speed we are skipping the steps for checking
+        libraries and stripping binaries. The library requirements for
+        sysvinit are very basic and the Makefile is configured to
+        automatically strip the binaries.</P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1152"
+></A
+>6.3.3. Create /etc/inittab file</H2
+><P
+>Use a text editor to create the following file and save it as
+      <TT
+CLASS="filename"
+>~/staging/etc/inittab</TT
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+># /etc/inittab - init daemon configuration file
+#
+# Default runlevel
+id:1:initdefault:
+#
+# System initialization
+si:S:sysinit:/etc/init.d/rc S
+#
+# Runlevel scripts
+r0:0:wait:/etc/init.d/rc 0
+r1:1:respawn:/bin/sh
+r2:2:wait:/etc/init.d/rc 2
+r3:3:wait:/etc/init.d/rc 3
+r4:4:wait:/etc/init.d/rc 4
+r5:5:wait:/etc/init.d/rc 5
+r6:6:wait:/etc/init.d/rc 6
+#
+# end of /etc/inittab</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1158"
+></A
+>6.3.4. Create /etc/init.d/rc script</H2
+><P
+>Use a text editor to create the following file and save it as
+      <TT
+CLASS="filename"
+>~/staging/etc/init.d/rc</TT
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#!/bin/sh
+#
+# /etc/init.d/rc - runlevel change script
+#
+PATH=/sbin:/bin
+SCRIPT_DIR="/etc/rc$1.d"
+#
+# Check that the rcN.d directory really exists.
+if [ -d $SCRIPT_DIR ]; then
+#
+# Execute the kill scripts first.
+  for SCRIPT in $SCRIPT_DIR/K*; do
+    if [ -x $SCRIPT ]; then
+      $SCRIPT stop;
+    fi;
+  done;
+#
+# Do the Start scripts last.
+  for SCRIPT in $SCRIPT_DIR/S*; do
+    if [ -x $SCRIPT ]; then
+      $SCRIPT start;
+    fi;
+  done;
+fi
+#
+# end of /etc/init.d/rc</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Make the file executable.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> chmod +x ~/staging/etc/init.d/rc</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1168"
+></A
+>6.3.5. Modify /etc/init.d/local_fs script</H2
+><P
+>A case statement is added to allow the script to either mount or
+      unmount local filesystems depending on the command-line argument given.
+      The original script is contained inside the "start" portion of the case
+      statement. The "stop" portion is new.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#!/bin/sh
+#
+# local_fs - check and mount local filesystems
+#
+PATH=/sbin:/bin ; export PATH
+
+case $1 in
+
+start)
+  echo "Checking local filesystem integrity."
+  fsck -ATCp
+  if [ $? -gt 1 ]; then
+    echo "Filesystem errors still exist!  Manual intervention required."
+    /bin/sh
+  else
+    echo "Remounting / as read-write."
+    mount -n -o remount,rw /
+    echo -n &#62; /etc/mtab
+    mount -f -o remount,rw /
+    echo "Mounting local filesystems."
+    mount -a -t nonfs,smbfs
+  fi
+;;
+
+stop)
+  echo "Unmounting local filesystems."
+  umount -a -r
+;;
+
+*)
+  echo "usage: $0 start|stop";
+;;
+
+esac
+#
+# end of local_fs</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1173"
+></A
+>6.3.6. Create a hostname script</H2
+><P
+>Use a text editor to create the following script and save it as
+      <TT
+CLASS="filename"
+>~/staging/etc/init.d/hostname</TT
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#!/bin/sh
+#
+# hostname - set the system name to the name stored in /etc/hostname
+#
+PATH=/sbin:/bin ; export PATH
+
+echo "Setting hostname."
+if [ -f /etc/hostname ]; then
+  hostname $(cat /etc/hostname)
+else
+  hostname gnu-linux
+fi
+#
+# end of hostname</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1179"
+></A
+>6.3.7. Create halt &#38; reboot scripts</H2
+><P
+>Use a text editor to create
+      <TT
+CLASS="filename"
+>~/staging/etc/init.d/halt</TT
+> as shown below.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#!/bin/sh
+#
+# halt - halt the system
+#
+PATH=/sbin:/bin ; export PATH
+
+echo "Initiating system halt."
+halt
+#
+# end of /etc/init.d/halt</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Create the following script and save it as
+      <TT
+CLASS="filename"
+>~/staging/etc/init.d/reboot</TT
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#!/bin/sh
+#
+# reboot - reboot the system
+#
+PATH=/sbin:/bin ; export PATH
+
+echo "Initiating system reboot."
+reboot
+#
+# end of /etc/init.d/reboot</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Flag all script files as executable.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> chmod +x ~/staging/etc/init.d/*</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1193"
+></A
+>6.3.8. Create rcN.d directories and links</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd ~/staging/etc
+<TT
+CLASS="prompt"
+>bash#</TT
+> mkdir rc0.d rc1.d rc2.d rc3.d rc4.d rc5.d rc6.d rcS.d
+<TT
+CLASS="prompt"
+>bash#</TT
+> cd ~/staging/etc/rcS.d
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s ../init.d/local_fs S20local_fs
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s ../init.d/hostname S30hostname
+<TT
+CLASS="prompt"
+>bash#</TT
+> cd ~/staging/etc/rc0.d
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s ../init.d/local_fs K10local_fs
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s ../init.d/halt K90halt
+<TT
+CLASS="prompt"
+>bash#</TT
+> cd ~/staging/etc/rc6.d
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s ../init.d/local_fs K10local_fs
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s ../init.d/reboot K90reboot</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1208"
+></A
+>6.3.9. Create the root disk image</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd /
+<TT
+CLASS="prompt"
+>bash#</TT
+> dd if=/dev/zero of=/dev/ram7 bs=1k count=4096
+<TT
+CLASS="prompt"
+>bash#</TT
+> mke2fs -m0 /dev/ram7 4096
+<TT
+CLASS="prompt"
+>bash#</TT
+> mount /dev/ram7 /mnt
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp -dpR ~/staging/* /mnt
+<TT
+CLASS="prompt"
+>bash#</TT
+> umount /dev/ram7
+<TT
+CLASS="prompt"
+>bash#</TT
+> dd if=/dev/ram7 of=~/phase5-image bs=1k
+<TT
+CLASS="prompt"
+>bash#</TT
+> gzip -9 ~/phase5-image</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1220"
+></A
+>6.3.10. Copy the image to diskette</H2
+><P
+>Insert the diskette labeled "root disk" into drive fd0.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> dd if=~/phase5-image.gz of=/dev/fd0 bs=1k</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1058.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1226.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Design</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="phase5.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Implementation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

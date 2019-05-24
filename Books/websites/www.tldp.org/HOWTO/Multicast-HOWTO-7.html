@@ -1,0 +1,445 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Multicast over TCP/IP HOWTO: The internals.</TITLE>
+ <LINK HREF="Multicast-HOWTO-8.html" REL=next>
+ <LINK HREF="Multicast-HOWTO-6.html" REL=previous>
+ <LINK HREF="Multicast-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Multicast-HOWTO-8.html">Next</A>
+<A HREF="Multicast-HOWTO-6.html">Previous</A>
+<A HREF="Multicast-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. The internals.</A></H2>
+
+<P>This section's aim is to provide some information, not needed to reach
+a basic understanding on how multicast works nor to be able to write
+multicast programs, but which is very interesting, gives some insight on
+the underlying multicast protocols and implementations, and may be useful to
+avoid common errors and misunderstandings.
+<P>
+<P>
+<H2><A NAME="ss7.1">7.1 IGMP.</A>
+</H2>
+
+<P>When talking about <CODE>IP_ADD_MEMBERSHIP</CODE> and <CODE>IP_DROP_MEMBERSHIP</CODE>,
+we said that the information provided by this "commands" was used by the
+kernel to choose which multicast datagrams accept or discard. This is true,
+but it is not all the truth. Such a simplification would imply that
+multicast datagrams for <EM>all</EM> multicast groups around the world
+would be received by our host, and then it would check the memberships
+issued by processes running on it to decide whether to pass the traffic to
+them or to throw it out. As you can imagine, this is a complete bandwidth
+waste.
+<P>What actually happens is that hosts instruct their routers telling them
+which multicast groups they are interested in; then, those routers
+tell their up-stream routers they want to receive that traffic, and so 
+on. Algorithms employed for making the decision of <EM>when</EM> to
+ask for a group's traffic or saying that it is not desired anymore,
+vary a lot. There's something, however, that never changes: <EM>how</EM>
+this information is transmitted. <B>IGMP</B> is used for that. It stands for
+Internet Group Management Protocol. It is a new protocol, similar in many
+aspects to ICMP, with a protocol number of 2, whose messages are carried in
+IP datagrams, and which all level 2-compliant host are required to implement. 
+<P>As said before, it is used both by hosts giving membership information to
+its routers, and by routers to communicate between themselves. In the
+following I'll cover only the hosts-routers relationships, mainly because
+I was unable to find information describing router to router communication
+other than the mrouted source code (rfc 1075 describing the Distance Vector
+Multicast Routing Protocol is now obsoleted, and <CODE>mrouted</CODE> implements
+a modified DVMRP not yet documented).
+<P>IGMP version 0 is specified in RFC-988 which is now obsoleted. Almost no one
+uses version 0 now.
+<P>IGMP version 1 is described in RFC-1112 and, although it is updated by RFC-2236
+(IGMP version 2) it is in wide use still. The Linux kernel implements the full
+IGMP version 1 and parts of version 2 requirements, but not all.
+<P>Now I'll try to give an informal description of the protocol. You can check
+RFC-2236 for an in-proof formal description, with lots of state diagrams
+and time-out boundaries.
+<P>All IGMP messages have the following structure:
+<HR>
+<PRE>
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |      Type     | Max Resp Time |           Checksum            |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                         Group Address                         |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</PRE>
+<HR>
+<P>IGMP version 1 (hereinafter IGMPv1) labels the "Max Resp Time" as "Unused",
+zeroes it when sent, and ignores it when received. Also, it brakes 
+the "Type" field in two 4-bits wide fields: "Version" and "Type". As IGMPv1
+identifies a "Membership Query" message as 0x11 (version 1, type 1) and
+IGMPv2 as 0x11 too, the 8 bits have the same effective interpretation.
+<P>I think it is more instructive to give first the IGMPv1 description and next
+point out the IGMPv2 additions, as they are mainly that, additions.
+<P>For the following discussions it is important to remember that multicast
+routers receive <EM>all</EM> IP multicast datagrams.
+<P>
+<P>
+<H3><A NAME="sect-IGMPv1"></A> IGMP version 1.</H3>
+
+<P>Routers periodically send <EM>IGMP Host Membership Queries</EM> to the all-hosts
+group (224.0.0.1) with a TTL of 1 (once every minute or two). All 
+multicast-capable hosts hear them, 
+but don't answer immediately to avoid an IGMP Host Membership Report storm. 
+Instead, they start a random delay timer for each group they belong to 
+<EM>on the interface</EM> they received the query. 
+<P>Sooner or later, the timer expires in one of the hosts, and it sends an
+IGMP <EM>Host Membership Report</EM> (also with TTL 1) to the multicast address of the 
+group being reported. As it is sent to the group, all hosts that joined 
+the group -and which are currently waiting for their own timer to expire-
+receive it, too. Then, they stop their timers and don't generate any other
+report. Just one is generated -by the host that chose the smaller timeout-,
+and that is enough for the router. It only needs to know that there are
+members for that group in the subnet, not how many nor which.
+<P>When no reports are received for a given group after a certain number
+of queries, the router assumes that no members are left, and thus it
+doesn't have to forward traffic for that group on that subnet. Note that
+in IGMPv1 there are no "Leave Group messages".
+<P>When a host joins a <EM>new</EM> group, the kernel sends a report for that
+group, so that the respective process needs not to wait a minute or two
+until a new membership query is received. As you can see this IGMP packet
+is generated by the kernel as a response to the <CODE>IP_ADD_MEMBERSHIP</CODE>
+command, seen in section 
+<A HREF="Multicast-HOWTO-6.html#sect-ADD-MEMBERSHIP">IP_ADD_MEMBERSHIP</A>. 
+Note the emphasis in the adjective "new": if a process issues an 
+<CODE>IP_ADD_MEMBERSHIP</CODE> command for a group the host is already a member of,
+no IGMP packets are sent as we must already be receiving traffic for that
+group; instead, a counter for that group's use is incremented.
+<CODE>IP_DROP_MEMBERSHIP</CODE> generates no datagrams in IGMPv1.
+<P>Host Membership Queries are identified by Type 0x11, and Host Membership 
+Reports by Type 0x12.
+<P>No reports are sent for the all-hosts group. Membership in this group is
+permanent.
+<P>
+<P>
+<H3>IGMP version 2.</H3>
+
+<P>One important addition to the above is the inclusion of a <EM>Leave
+Group</EM> message (Type 0x17). The reason is to reduce the bandwidth
+waste between the time the last host in the subnet drops membership and
+the time the router times-out for its queries and decides there are no more 
+members present for that group (leave latency). Leave Group messages should 
+be addressed to
+the all-routers group (224.0.0.2) rather than to the group being left, as that
+information is of no use for other members (kernel versions up to 2.0.33
+send them to the group; although it does no harm to the hosts, it's a waste
+of time as they have to process them, but don't gain useful information). 
+There are certain subtle details regarding when and when-not to send Leave 
+Messages; if interested, see the RFC. 
+<P>When an IGMPv2 router receives a Leave Message for a group, it sends
+<EM>Group-Specific Queries</EM> to the group being left. This is another
+addition. IGMPv1 has no group-specific queries. All queries are sent to the
+all-hosts group. The Type in the IGMP header does not change (0x11, as
+before), but the  "Group Address" is filled with the address of the
+multicast group being left.
+<P>The "Max Resp Time" field, which was set to 0 in transmission and ignored 
+on reception in IGMPv1, is meaningful only
+in "Membership Query" messages. It gives the maximum time allowed before
+sending a report in units of 1/10 second. It is used as a tune mechanism.
+<P>IGMPv2 adds another message type: 0x16. It is a "Version 2 Membership
+Report" sent by IGMPv2 hosts if they detect an IGMPv2 router is present
+(an IGMPv2 host knows an IGMPv1 router is present when it receives a query
+with the "Max Response" field set to 0). 
+<P>When more than one router claims to act as querier, IGMPv2 
+provides a mechanism to avoid "discussions": the router with the lowest IP
+address is designed to be querier. The other routers keep timeouts. If the router
+with lower IP address crashes or is shutdown, the decision of who will be
+the querier is taken again after the timers expire.
+<P>
+<P>
+<P>
+<H2><A NAME="ss7.2">7.2 Kernel corner.</A>
+</H2>
+
+<P>This sub-section gives some start-points to study the multicast implementation
+of the Linux kernel. It does not explain that implementation. It just says
+where to find things.
+<P>The study was carried over version 2.0.32, so it could be a bit outdated by
+the time you read it (network code seems to have changed <EM>A LOT</EM> in
+2.1.x releases, for instance).
+<P>Multicast code in the Linux kernel is always surrounded by 
+<CODE>#ifdef CONFIG_IP_MULTICAST</CODE> / <CODE>#endif</CODE> pairs, so that you can include/
+exclude it from your kernel based on your needs (this inclusion/exclusion
+is done at compile time, as you probably know if reading that section...
+<CODE>#ifdef</CODE>s are handled by the preprocessor.  The decision is made based in 
+what you selected when doing either a <CODE>make config</CODE>, <CODE>make menuconfig</CODE> or 
+<CODE>make xconfig</CODE>).
+<P>You might want multicast features, but if your Linux box is not going to
+act as a multicast router you will probably not want multicast router features
+included in your new kernel. For this you have the multicast routing code 
+surrounded by <CODE>#ifdef CONFIG_IP_MROUTE</CODE> / <CODE>#endif</CODE> pairs.
+<P>Kernel sources are usually placed in /usr/src/linux. However, the place
+may change so, both for accuracy and brevity, I will refer to the
+root directory of the kernel sources as just LINUX. Then, something like
+<CODE>LINUX/net/ipv4/udp.c</CODE> should be the same as 
+<CODE>/usr/src/linux/net/ipv4/udp.c</CODE> if you unpacked the kernel 
+sources in the <CODE>/usr/src/linux</CODE> directory.
+<P>All multicast interfaces with user programs shown in the section devoted
+to multicast programming were driven across the <CODE>setsockopt()</CODE>/
+<CODE>getsockopt()</CODE>
+system calls. Both of them are implemented by means of functions that
+make some tests to verify the parameters passed to them and which, in turn,
+call another function that makes some additional tests, demultiplexes the
+call based on the <CODE>level</CODE> parameter to either system call, and then calls
+another function which... (if interested in all this jumps, you can follow
+them in <CODE>LINUX/net/socket.c</CODE> (functions <CODE>sys_socketcall()</CODE> and 
+<CODE>sys_setsockopt()</CODE>,
+<CODE>LINUX/net/ipv4/af_inet.c</CODE> (function <CODE>inet_setsockopt()</CODE>) and 
+<CODE>LINUX/net/ipv4/ip_sockglue.c</CODE> (function <CODE>ip_setsockopt()</CODE>) ).
+<P>The one which interests us is <CODE>LINUX/net/ipv4/ip_sockglue.c</CODE>. Here we find
+<CODE>ip_setsockopt()</CODE> and <CODE>ip_getsockopt()</CODE> which are mainly a 
+<CODE>switch</CODE> (after some error checking) verifying each possible value for 
+<CODE>optname</CODE>. Along with 
+unicast options, all multicast ones seen here are handled: 
+<CODE>IP_MULTICAST_TTL</CODE>, <CODE>IP_MULTICAST_LOOP</CODE>, <CODE>IP_MULTICAST_IF</CODE>, 
+<CODE>IP_ADD_MEMBERSHIP</CODE> and <CODE>IP_DROP_MEMBERSHIP</CODE>. Previously to the 
+<CODE>switch</CODE>, a test is made to determine
+whether the options are multicast router specific, and if so, they are
+routed to the <CODE>ip_mroute_setsockopt()</CODE> and <CODE>ip_mroute_getsockopt()</CODE> 
+functions (file <CODE>LINUX/net/ipv4/ipmr.c</CODE>).
+<P>In <CODE>LINUX/net/ipv4/af_inet.c</CODE> we can see the default values we talked about 
+in previous sections (loopback enabled, TTL=1) provided when the socket is 
+created (taken from function <CODE>inet_create()</CODE> in this file):
+<HR>
+<PRE>
+ 
+#ifdef CONFIG_IP_MULTICAST
+        sk->ip_mc_loop=1;
+        sk->ip_mc_ttl=1;
+        *sk->ip_mc_name=0;
+        sk->ip_mc_list=NULL;
+#endif
+</PRE>
+<HR>
+<P>Also, the assertion of "closing a socket makes the kernel drop all memberships
+this socket had" is corroborated by:
+<HR>
+<PRE>
+#ifdef CONFIG_IP_MULTICAST
+                /* Applications forget to leave groups before exiting */
+                ip_mc_drop_socket(sk);
+#endif
+</PRE>
+<HR>
+
+taken from <CODE>inet_release()</CODE>, on the same file as before.
+<P>Device independent operations for the Link Layer are kept in 
+<CODE>LINUX/net/core/dev_mcast.c</CODE>.
+<P>Two important functions are still missing: the processing of input and
+output multicast datagrams. As any other datagrams, incoming datagrams are
+passed from the device drivers to the <CODE>ip_rcv()</CODE> function 
+(<CODE>LINUX/net/ipv4/ip_input.c</CODE>).
+In this function is where the perfect filtering is applied to multicast
+packets that crossed the devices layer (recall that lower layers only perform
+best-effort filtering and is IP who 100% knows whether we are interested in
+that multicast group or not). If the host is acting as a multicast router, this
+function decides too whether the datagram should be forwarded and calls
+<CODE>ipmr_forward()</CODE> appropriately. (<CODE>ipmr_forward()</CODE> is implemented in
+<CODE>LINUX/net/ipv4/ipmr.c</CODE>).
+<P>Code in charge of out-putting packets is kept in 
+<CODE>LINUX/net/ipv4/ip_output.c</CODE>.
+Here is where the <CODE>IP_MULTICAST_LOOP</CODE> option takes effect, as it is checked
+to see whether to loop back the packets or not (function <CODE>ip_queue_xmit()</CODE>). 
+Also the TTL of the outgoing
+packet is selected based on whether it is a multicast or unicast one. In the
+former case, the argument passed to the <CODE>IP_MULTICAST_TTL</CODE> option is used
+(function (<CODE>ip_build_xmit()</CODE>).
+<P>While working with <CODE>mrouted</CODE> (a program which gives the kernel information 
+about how to route multicast datagrams), we detected that
+all multicast packets originated on the local network were properly 
+routed..., except the ones from the Linux box that was acting as the multicast
+router!! ip_input.c was working OK, but it seemed ip_output.c wasn't. 
+Reading the source code for the output functions, we found that
+outgoing datagrams were not being passed to <CODE>ipmr_forward()</CODE>, the function
+that had to decide whether they should be routed or not. The packets were
+outputed to the local network but, as network cards are usually unable to
+read their own transmissions, those datagrams were never routed. 
+We added the necessary code to the <CODE>ip_build_xmit()</CODE> function and 
+everything was OK again.  (Having
+the sources for your kernel is not a luxury or pedantry; it's a need!)
+<P><CODE>ipmr_forward()</CODE> has been mentioned a couple of times. It is an important
+function as it solves one important misunderstanding that appears to be
+widely expanded. When routing multicast traffic, it is <EM>not</EM> <CODE>mrouted</CODE>
+who makes the copies and sends them to the proper recipients. <CODE>mrouted</CODE>
+receives all multicast traffic and, based on that information, computes
+the multicast routing tables and <EM>tells the kernel</EM> how to route: 
+"datagrams for this group coming from that interface should be forwarded
+to those interfaces". This information is passed to the kernel by calls
+to <CODE>setsockopt()</CODE> on a raw socket opened by the <CODE>mrouted</CODE> daemon (the
+protocol specified when the raw socket was created <EM>must</EM> be 
+<CODE>IPPROTO_IGMP</CODE>). This
+options are handled in the <CODE>ip_mroute_setsockopt()</CODE> function from
+<CODE>LINUX/net/ipv4/ipmr.c</CODE>. The first option (would be better to call them
+commands rather than options) issued on that socket must be <CODE>MRT_INIT</CODE>. 
+All other commands are
+ignored (returning <CODE>-EACCES</CODE>) if <CODE>MRT_INIT</CODE> is not issued first. Only one
+instance of <CODE>mrouted</CODE> can be running at the same time in the same host.
+To keep track of this, when the first <CODE>MRT_INIT</CODE> is received, an important
+variable, <CODE>struct sock* mroute_socket</CODE>, is pointed to the socket <CODE>MRT_INIT</CODE> 
+was received on. If <CODE>mroute_socket</CODE> is not null when attending an
+<CODE>MRT_INIT</CODE> this means another mrouted is already running and <CODE>-EADDRINUSE</CODE>
+is returned. All resting commands (<CODE>MRT_DONE</CODE>, <CODE>MRT_ADD_VIF</CODE>, 
+<CODE>MRT_DEL_VIF</CODE>, <CODE>MRT_ADD_MFC</CODE>, <CODE>MRT_DEL_MFC</CODE> and <CODE>MRT_ASSERT</CODE>) 
+return <CODE>-EACCES</CODE> if they come from a socket different than 
+<CODE>mroute_socket</CODE>.
+<P>As routed multicast datagrams can be received/sent across either physical 
+interfaces or tunnels, a common abstraction for both was devised: VIFs,
+Virtual InterFaces. <CODE>mrouted</CODE> passes vif structures to the kernel, 
+indicating physical
+or tunnel interfaces to add to its routing tables, and multicast forwarding
+entries saying where to forward datagrams.
+<P>VIFs are added with <CODE>MRT_ADD_VIF</CODE> and deleted with <CODE>MRT_DEL_VIF</CODE>. Both
+pass a <CODE>struct vifctl</CODE> to the kernel (defined in 
+<CODE>/usr/include/linux/mroute.h</CODE>) with the following information:
+<HR>
+<PRE>
+struct vifctl {
+        vifi_t  vifc_vifi;              /* Index of VIF */
+        unsigned char vifc_flags;       /* VIFF_ flags */
+        unsigned char vifc_threshold;   /* ttl limit */
+        unsigned int vifc_rate_limit;   /* Rate limiter values (NI) */
+        struct in_addr vifc_lcl_addr;   /* Our address */
+        struct in_addr vifc_rmt_addr;   /* IPIP tunnel addr */
+};
+</PRE>
+<HR>
+<P>With this information a <CODE>vif_device</CODE> structure is built:
+<HR>
+<PRE>
+struct vif_device
+{
+        struct device   *dev;                   /* Device we are using */
+        struct route    *rt_cache;              /* Tunnel route cache */
+        unsigned long   bytes_in,bytes_out;
+        unsigned long   pkt_in,pkt_out;         /* Statistics */
+        unsigned long   rate_limit;             /* Traffic shaping (NI) */
+        unsigned char   threshold;              /* TTL threshold */
+        unsigned short  flags;                  /* Control flags */
+        unsigned long   local,remote;           /* Addresses(remote for tunnels)*/
+};
+</PRE>
+<HR>
+<P>Note the <CODE>dev</CODE> entry in the structure. The <CODE>device</CODE> structure is 
+defined in <CODE>/usr/include/linux/netdevice.h</CODE> file. It is a big structure,
+but the field that interests us is:
+<HR>
+<PRE>
+  struct ip_mc_list*    ip_mc_list;   /* IP multicast filter chain    */
+</PRE>
+<HR>
+<P>The <CODE>ip_mc_list</CODE> structure -defined in <CODE>/usr/include/linux/igmp.h</CODE>-
+is as follows:
+<HR>
+<PRE>
+struct ip_mc_list
+{
+        struct device *interface;
+        unsigned long multiaddr;
+        struct ip_mc_list *next;
+        struct timer_list timer;
+        short tm_running;
+        short reporter;
+        int users;
+};
+</PRE>
+<HR>
+<P>So, the <CODE>ip_mc_list</CODE> member from the <CODE>dev</CODE> structure is a pointer to a linked
+list of <CODE>ip_mc_list</CODE> structures, each containing an entry for each multicast
+group the network interface is a member of. Here again we see membership is
+associated to interfaces. <CODE>LINUX/net/ipv4/ip_input.c</CODE> traverses this
+linked list to decide whether the received datagram is destined to any group 
+the interface that received the datagram belongs to:
+<HR>
+<PRE>
+#ifdef CONFIG_IP_MULTICAST
+                if(!(dev->flags&amp;IFF_ALLMULTI) &amp;&amp; brd==IS_MULTICAST 
+                   &amp;&amp; iph->daddr!=IGMP_ALL_HOSTS 
+                   &amp;&amp; !(dev->flags&amp;IFF_LOOPBACK))
+                {
+                        /*
+                         *      Check it is for one of our groups
+                         */
+                        struct ip_mc_list *ip_mc=dev->ip_mc_list;
+                        do
+                        {
+                                if(ip_mc==NULL)
+                                {
+                                        kfree_skb(skb, FREE_WRITE);
+                                        return 0;
+                                }
+                                if(ip_mc->multiaddr==iph->daddr)
+                                        break;
+                                ip_mc=ip_mc->next;
+                        }
+                        while(1);
+                }
+#endif
+</PRE>
+<HR>
+<P>The <CODE>users</CODE> field in the <CODE>ip_mc_list</CODE> structure is used to implement
+what was said in section 
+<A HREF="#sect-IGMPv1">IGMP version 1</A>: if a 
+process joins a group and the
+interface is already a member of that group (ie, another process joined
+that same group in that same interface before) only the count of members 
+(<CODE>users</CODE>)
+is incremented. No IGMP messages are sent, as you can see in the following
+code (taken from <CODE>ip_mc_inc_group()</CODE>, called
+by <CODE>ip_mc_join_group()</CODE>, both in <CODE>LINUX/net/ipv4/igmp.c</CODE>):
+<HR>
+<PRE>
+        for(i=dev->ip_mc_list;i!=NULL;i=i->next)
+        {
+                if(i->multiaddr==addr)
+                {
+                        i->users++;
+                        return;
+                }
+        }
+</PRE>
+<HR>
+<P>When dropping memberships, the counter is decremented and additional operations
+are performed only when the count reaches 0 (<CODE>ip_mc_dec_group()</CODE>).
+<P><CODE>MRT_ADD_MFC</CODE> and <CODE>MRT_DEL_MFC</CODE> set or delete forwarding entries in the
+multicast routing tables. Both pass a <CODE>struct mfcctl</CODE> to the kernel
+(also defined in <CODE>/usr/include/linux/mroute.h</CODE>) with this information:
+<HR>
+<PRE>
+struct mfcctl
+{
+        struct in_addr mfcc_origin;             /* Origin of mcast      */
+        struct in_addr mfcc_mcastgrp;           /* Group in question    */
+        vifi_t  mfcc_parent;                    /* Where it arrived     */
+        unsigned char mfcc_ttls[MAXVIFS];       /* Where it is going    */
+};
+</PRE>
+<HR>
+<P>With all this information in hand, <CODE>ipmr_forward()</CODE> "walks" across the VIFs,
+and if a matching is found <EM>it</EM> duplicates the datagram and calls
+<CODE>ipmr_queue_xmit()</CODE> which, in turn, uses the output device specified by
+the routing table and the proper destination address if the packet is
+to be sent across a tunnel (ie, the unicast destination address of the 
+other end of the tunnel).
+<P>Function <CODE>ip_rt_event()</CODE> (not directly related to output, but which is
+in ip_output.c too) receives events related to a network device, like the device
+going up. This function assures that then the device joins the ALL-HOSTS
+multicast group.
+<P>IGMP functions are implemented in <CODE>LINUX/net/ipv4/igmp.c</CODE>. Important 
+information for that functions appears in <CODE>/usr/include/linux/igmp.h</CODE> and
+<CODE>/usr/include/linux/mroute.h</CODE>. The IGMP entry in the <CODE>/proc/net</CODE> 
+directory is created with <CODE>ip_init()</CODE> in <CODE>LINUX/net/ipv4/ip_output.c</CODE>.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Multicast-HOWTO-8.html">Next</A>
+<A HREF="Multicast-HOWTO-6.html">Previous</A>
+<A HREF="Multicast-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

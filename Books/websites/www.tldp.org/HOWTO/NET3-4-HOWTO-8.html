@@ -1,0 +1,686 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Networking-HOWTO (Previously the Net-3 Howto): Other Network Technologies</TITLE>
+ <LINK HREF="NET3-4-HOWTO-9.html" REL=next>
+ <LINK HREF="NET3-4-HOWTO-7.html" REL=previous>
+ <LINK HREF="NET3-4-HOWTO.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="NET3-4-HOWTO-9.html">Next</A>
+<A HREF="NET3-4-HOWTO-7.html">Previous</A>
+<A HREF="NET3-4-HOWTO.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. Other Network Technologies</A></H2>
+
+<P>The following subsections are specific to particular network
+technologies.  The information contained in these sections does not
+necessarily apply to any other type of network technology. The topics
+are sorted alphabetically.
+<H2><A NAME="ss8.1">8.1 ARCNet</A>
+</H2>
+
+<P>ARCNet device names are `<CODE>arc0e</CODE>', `<CODE>arc1e</CODE>', `<CODE>arc2e</CODE>' etc. or
+`<CODE>arc0s</CODE>', `<CODE>arc1s</CODE>', `<CODE>arc2s</CODE>' etc. The first card detected by the
+kernel is assigned `<CODE>arc0e</CODE>' or `<CODE>arc0s</CODE>' and the rest are assigned
+sequentially in the order they are detected. The letter at the end signifies
+whether you've selected ethernet encapsulation packet format or RFC1051 packet
+format.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Network device support  --->
+            [*] Network device support
+            &lt;*> ARCnet support
+            [ ]   Enable arc0e (ARCnet "Ether-Encap" packet format)
+            [ ]   Enable arc0s (ARCnet RFC1051 packet format)
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>Once you have your kernel properly built to support your ethernet card then
+configuration of the card is easy.
+<P>Typically you would use something like:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+        root# ifconfig arc0e 192.168.0.1 netmask 255.255.255.0 up
+        root# route add -net 192.168.0.0 netmask 255.255.255.0 arc0e
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+
+Please refer to the
+<CODE>/usr/src/linux/Documentation/networking/arcnet.txt</CODE> and
+<CODE>/usr/src/linux/Documentation/networking/arcnet-hardware.txt</CODE> files
+for further information.
+<P>ARCNet support was developed by Avery Pennarun, <CODE>apenwarr@foxnet.net</CODE>.
+<H2><A NAME="ss8.2">8.2 Appletalk (<CODE>AF_APPLETALK</CODE>)</A>
+</H2>
+
+<P>The Appletalk support has no special device names as it uses existing network
+devices.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Networking options  --->
+            &lt;*> Appletalk DDP
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>Appletalk support allows your Linux machine to interwork with Apple networks.
+An important use for this is to share resources such as printers and disks
+between both your Linux and Apple computers. Additional software is required,
+this is called <EM>netatalk</EM>. Wesley Craig <CODE>netatalk@umich.edu</CODE> represents
+a team called the `Research Systems Unix Group' at the University of Michigan
+and they have produced the <EM>netatalk</EM> package which provides software that
+implements the Appletalk protocol stack and some useful utilities.
+The <EM>netatalk</EM> package will either have been supplied with your Linux
+distribution, or you will have to ftp it from its home site at the
+<A HREF="ftp://terminator.rs.itd.umich.edu/unix/netatalk/">University of Michigan</A><P>To build and install the package do something like:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+        user% tar xvfz .../netatalk-1.4b2.tar.Z
+        user% make
+        root# make install
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>You may want to edit the `Makefile' before calling <EM>make</EM> to
+actually compile the software. Specifically, you might want to change
+the DESTDIR variable which defines where the files will be installed
+later.  The default of /usr/local/atalk is fairly safe.
+<H3>Configuring the Appletalk software.</H3>
+
+<P>The first thing you need to do to make it all work is to ensure that the
+appropriate entries in the <CODE>/etc/services</CODE> file are present. The
+entries you need are:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+  rtmp  1/ddp   # Routing Table Maintenance Protocol
+  nbp   2/ddp   # Name Binding Protocol
+  echo  4/ddp   # AppleTalk Echo Protocol
+  zip   6/ddp   # Zone Information Protocol
+  
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>The next step is to create the Appletalk configuration files in the
+<CODE>/usr/local/atalk/etc</CODE> directory (or wherever you installed the
+package).
+<P>The first file to create is the <CODE>/usr/local/atalk/etc/atalkd.conf</CODE> file.
+Initially this file needs only one line that gives the name of the network
+device that supports the network that your Apple machines are on:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+  eth0
+  
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>The Appletalk daemon program will add extra details after it is run.
+<H3>Exporting a Linux filesystems via Appletalk.</H3>
+
+<P>You can export filesystems from your linux machine to the network so that
+Apple machine on the network can share them.
+<P>To do this you must configure the
+<CODE>/usr/local/atalk/etc/AppleVolumes.system</CODE> file. There is another
+configuration file called <CODE>/usr/local/atalk/etc/AppleVolumes.default</CODE>
+which has exactly the same format and describes which filesystems users
+connecting with guest privileges will receive.
+<P>Full details on how to configure these files and what the various options are
+can be found in the <EM>afpd</EM> man page.
+<P>A simple example might look like:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+  /tmp Scratch
+  /home/ftp/pub "Public Area"
+  
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>Which would export your <CODE>/tmp</CODE> filesystem as AppleShare Volume
+`Scratch' and your ftp public directory as AppleShare Volume `Public Area'.
+The volume names are not mandatory, the daemon will choose some for you,
+but it won't hurt to specify them anyway.
+<H3>Sharing your Linux printer across Appletalk.</H3>
+
+<P>You can share your linux printer with your Apple machines quite simply.
+You need to run the <EM>papd</EM> program which is the Appletalk
+Printer Access Protocol Daemon. When you run this program it will accept
+requests from your Apple machines and spool the print job to your local
+line printer daemon for printing.
+<P>You need to edit the <CODE>/usr/local/atalk/etc/papd.conf</CODE> file to configure
+the daemon. The syntax of this file is the same as that of your usual
+<CODE>/etc/printcap</CODE> file. The name you give to the definition is
+registered with the Appletalk naming protocol, NBP.
+<P>A sample configuration might look like:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+  TricWriter:\
+     :pr=lp:op=cg:
+  
+</PRE>
+</CODE></BLOCKQUOTE>
+
+
+Which would make a printer named `TricWriter' available to your Appletalk
+network and all accepted jobs would be printed to the linux printer `<CODE>lp</CODE>'
+(as defined in the <CODE>/etc/printcap</CODE> file) using <EM>lpd</EM>. The entry
+`<CODE>op=cg</CODE>' says that the linux user `<CODE>cg</CODE>' is the operator of the printer.
+<H3>Starting the appletalk software.</H3>
+
+<P>Ok, you should now be ready to test this basic configuration. There is an
+<EM>rc.atalk</EM> file supplied with the <EM>netatalk</EM> package that should
+work ok for you, so all you should have to do is:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+        root# /usr/local/atalk/etc/rc.atalk
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>and all should startup and run ok. You should see no error messages and
+the software will send messages to the console indicating each stage as it
+starts.
+<H3>Testing the appletalk software.</H3>
+
+<P>To test that the software is functioning properly, go to one of your Apple
+machines, pull down the Apple menu, select the Chooser, click on AppleShare,
+and your Linux box should appear.
+<H3>Caveats of the appletalk software.</H3>
+
+<P>
+<UL>
+<LI>You may need to start the Appletalk support before you
+configure your IP network. If you have problems
+starting the Appletalk programs, or if after you start
+them you have trouble with your IP network, then try
+starting the Appletalk software before you run your
+<CODE>/etc/rc.d/rc.inet1</CODE> file.
+</LI>
+<LI>The <EM>afpd</EM> (Apple Filing Protocol Daemon)
+severely messes up your hard disk. Below the mount
+points it creates a couple of directories called
+``<CODE>.AppleDesktop</CODE>'' and <CODE>Network Trash
+Folder</CODE>. Then, for each directory you access it
+will create a <CODE>.AppleDouble</CODE> below it so it can
+store resource forks, etc. So think twice before
+exporting <CODE>/</CODE>, you will have a great time
+cleaning up afterwards.
+</LI>
+<LI>The <EM>afpd</EM> program expects clear text passwords
+from the Macs.  Security could be a problem, so be
+very careful when you run this daemon on a machine
+connected to the Internet, you have yourself to blame
+if somebody nasty does something bad.
+</LI>
+<LI>The existing diagnostic tools such as <EM>netstat</EM>
+and <EM>ifconfig</EM> don't support Appletalk. The raw
+information is available in the <CODE>/proc/net/</CODE>
+directory if you need it.
+</LI>
+</UL>
+
+<H3>More information</H3>
+
+<P>For a much more detailed description of how to configure Appletalk for Linux
+refer to Anders Brownworth <EM>Linux Netatalk-HOWTO</EM> page at
+<A HREF="http://thehamptons.com/anders/netatalk/">thehamptons.com</A>.
+<H2><A NAME="ss8.3">8.3 ATM</A>
+</H2>
+
+<P>Werner Almesberger <CODE>&lt;werner.almesberger@lrc.di.epfl.ch&gt;</CODE> is
+managing a project to provide Asynchronous Transfer Mode support for Linux.
+Current information on the status of the project may be obtained from:
+<A HREF="http://lrcwww.epfl.ch/linux-atm/">lrcwww.epfl.ch</A>.
+<H2><A NAME="ss8.4">8.4 AX25 (<CODE>AF_AX25</CODE>)</A>
+</H2>
+
+<P>AX.25 device names are `<CODE>sl0</CODE>', `<CODE>sl1</CODE>', etc. in <CODE>2.0.*</CODE> kernels or
+`<CODE>ax0</CODE>', `<CODE>ax1</CODE>', etc. in <CODE>2.1.*</CODE> kernels.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Networking options  --->
+            [*] Amateur Radio AX.25 Level 2
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>The AX25, Netrom and Rose protocols are covered by the
+<A HREF="AX25-HOWTO.html">AX25-HOWTO</A>.
+These protocols are used by Amateur Radio Operators world wide in packet
+radio experimentation.
+<P>Most of the work for implementation of these protocols has been done by
+Jonathon Naylor, <CODE>jsn@cs.nott.ac.uk</CODE>.
+<H2><A NAME="ss8.5">8.5 DECNet</A>
+</H2>
+
+<P>Support for DECNet is currently being worked on. You should expect it to
+appear in a late <CODE>2.1.*</CODE> kernel.
+<H2><A NAME="ss8.6">8.6 FDDI</A>
+</H2>
+
+<P>FDDI device names are `<CODE>fddi0</CODE>', `<CODE>fddi1</CODE>', `<CODE>fddi2</CODE>' etc. The first
+card detected by the kernel is assigned `<CODE>fddi0</CODE>' and the rest are assigned
+sequentially in the order they are detected.
+<P>Larry Stefani, <CODE>lstefani@ultranet.com</CODE>, has developed a
+driver for the Digital Equipment Corporation FDDI EISA and PCI cards.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Network device support  --->
+            [*] FDDI driver support
+            [*] Digital DEFEA and DEFPA adapter support
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>When you have your kernel built to support the FDDI driver and installed,
+configuration of the FDDI interface is almost identical to that of an ethernet
+interface. You just specify the appropriate FDDI interface name in the
+<EM>ifconfig</EM> and <EM>route</EM> commands.
+<H2><A NAME="ss8.7">8.7 Frame Relay</A>
+</H2>
+
+<P>The Frame Relay device names are `<CODE>dlci00</CODE>', `<CODE>dlci01</CODE>' etc for the
+DLCI encapsulation devices and `<CODE>sdla0</CODE>', `<CODE>sdla1</CODE>' etc for the FRAD(s).
+<P>Frame Relay is a new networking technology that is designed to suit data
+communications traffic that is of a `bursty' or intermittent nature. You
+connect to a Frame Relay network using a Frame Relay Access Device (FRAD).
+The Linux Frame Relay supports IP over Frame Relay as described in RFC-1490.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Network device support  --->
+            &lt;*> Frame relay DLCI support (EXPERIMENTAL)
+            (24)   Max open DLCI
+            (8)   Max DLCI per device
+            &lt;*>   SDLA (Sangoma S502/S508) support
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Mike McLagan, <CODE>mike.mclagan@linux.org</CODE>, developed the Frame Relay support
+and configuration tools.
+<P>Currently the only FRAD supported are the
+<A HREF="http://www.sangoma.com/">Sangoma Technologies</A>
+<CODE>S502A</CODE>, <CODE>S502E</CODE> and <CODE>S508</CODE>.
+<P>To configure the FRAD and DLCI devices after you have rebuilt your kernel
+you will need the Frame Relay configuration tools. These are available from
+<A HREF="ftp://ftp.invlogic.com/pub/linux/fr/frad-0.15.tgz">ftp.invlogic.com</A>.
+Compiling and installing the tools is straightforward, but the lack of a
+top level Makefile makes it a fairly manual process:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+        user% tar xvfz .../frad-0.15.tgz
+        user% cd frad-0.15
+        user% for i in common dlci frad; make -C $i clean; make -C $i; done
+        root# mkdir /etc/frad
+        root# install -m 644 -o root -g root bin/*.sfm /etc/frad
+        root# install -m 700 -o root -g root frad/fradcfg /sbin
+        rppt# install -m 700 -o root -g root dlci/dlcicfg /sbin
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>Note that the previous commands use <EM>sh</EM> syntax, if you use a
+<EM>csh</EM> flavour instead (like <EM>tcsh</EM>), the <EM>for</EM> loop will look
+different.
+<P>After installing the tools you need to create an
+<CODE>/etc/frad/router.conf</CODE> file. You can use this template, which
+is a modified version of one of the example files:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+# /etc/frad/router.conf
+# This is a template configuration for frame relay.
+# All tags are included. The default values are based on the code
+# supplied with the DOS drivers for the Sangoma S502A card.
+#
+# A '#' anywhere in a line constitutes a comment
+# Blanks are ignored (you can indent with tabs too)
+# Unknown [] entries and unknown keys are ignored
+#
+
+[Devices]
+Count=1                 # number of devices to configure
+Dev_1=sdla0             # the name of a device
+#Dev_2=sdla1            # the name of a device
+
+# Specified here, these are applied to all devices and can be overridden for 
+# each individual board.
+#
+Access=CPE
+Clock=Internal
+KBaud=64
+Flags=TX
+#
+# MTU=1500              # Maximum transmit IFrame length, default is 4096
+# T391=10               # T391 value    5 - 30, default is 10
+# T392=15               # T392 value    5 - 30, default is 15
+# N391=6                # N391 value    1 - 255, default is 6
+# N392=3                # N392 value    1 - 10, default is 3
+# N393=4                # N393 value    1 - 10, default is 4
+
+# Specified here, these set the defaults for all boards
+# CIRfwd=16             # CIR forward   1 - 64
+# Bc_fwd=16             # Bc forward    1 - 512 
+# Be_fwd=0              # Be forward    0 - 511
+# CIRbak=16             # CIR backward  1 - 64
+# Bc_bak=16             # Bc backward   1 - 512
+# Be_bak=0              # Be backward   0 - 511
+
+
+#
+#
+# Device specific configuration
+#
+#
+
+#
+# The first device is a Sangoma S502E
+#
+[sdla0]
+Type=Sangoma            # Type of the device to configure, currently only 
+                        # SANGOMA is recognized
+#
+# These keys are specific to the 'Sangoma' type
+#
+# The type of Sangoma board - S502A, S502E, S508
+Board=S502E
+#
+# The name of the test firmware for the Sangoma board
+# Testware=/usr/src/frad-0.10/bin/sdla_tst.502
+#
+# The name of the FR firmware
+# Firmware=/usr/src/frad-0.10/bin/frm_rel.502
+#
+Port=360                # Port for this particular card
+Mem=C8                  # Address of memory window, A0-EE, depending on card
+IRQ=5                   # IRQ number, do not supply for S502A
+DLCIs=1                 # Number of DLCI's attached to this device
+DLCI_1=16               # DLCI #1's number, 16 - 991
+# DLCI_2=17
+# DLCI_3=18
+# DLCI_4=19
+# DLCI_5=20
+#
+# Specified here, these apply to this device only, 
+# and override defaults from above
+#
+# Access=CPE            # CPE or NODE, default is CPE 
+# Flags=TXIgnore,RXIgnore,BufferFrames,DropAborted,Stats,MCI,AutoDLCI
+# Clock=Internal        # External or Internal, default is Internal
+# Baud=128              # Specified baud rate of attached CSU/DSU
+# MTU=2048              # Maximum transmit IFrame length, default is 4096
+# T391=10               # T391 value    5 - 30, default is 10
+# T392=15               # T392 value    5 - 30, default is 15
+# N391=6                # N391 value    1 - 255, default is 6
+# N392=3                # N392 value    1 - 10, default is 3
+# N393=4                # N393 value    1 - 10, default is 4
+
+#
+# The second device is some other card
+#
+# [sdla1]
+# Type=FancyCard        # Type of the device to configure.
+# Board=                # Type of Sangoma board
+# Key=Value             # values specific to this type of device
+
+
+#
+# DLCI Default configuration parameters
+# These may be overridden in the DLCI specific configurations
+#
+CIRfwd=64               # CIR forward   1 - 64
+# Bc_fwd=16             # Bc forward    1 - 512 
+# Be_fwd=0              # Be forward    0 - 511
+# CIRbak=16             # CIR backward  1 - 64
+# Bc_bak=16             # Bc backward   1 - 512
+# Be_bak=0              # Be backward   0 - 511
+
+#
+# DLCI Configuration
+# These are all optional. The naming convention is
+# [DLCI_D&lt;devicenum>_&lt;DLCI_Num>]
+#
+
+[DLCI_D1_16]
+# IP=
+# Net=
+# Mask=
+# Flags defined by Sangoma: TXIgnore,RXIgnore,BufferFrames
+# DLCIFlags=TXIgnore,RXIgnore,BufferFrames
+# CIRfwd=64
+# Bc_fwd=512
+# Be_fwd=0
+# CIRbak=64
+# Bc_bak=512
+# Be_bak=0
+
+[DLCI_D2_16]
+# IP=
+# Net=
+# Mask=
+# Flags defined by Sangoma: TXIgnore,RXIgnore,BufferFrames
+# DLCIFlags=TXIgnore,RXIgnore,BufferFrames
+# CIRfwd=16
+# Bc_fwd=16
+# Be_fwd=0
+# CIRbak=16
+# Bc_bak=16
+# Be_bak=0
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>When you've built your <CODE>/etc/frad/router.conf</CODE> file the only
+step remaining is to configure the actual devices themselves. This is
+only a little trickier than a normal network device configuration, you
+need to remember to bring up the FRAD device before the DLCI
+encapsulation devices. These commands are best hosted in a shell
+script, due to their number:
+
+<BLOCKQUOTE><CODE>
+<PRE>
+        #!/bin/sh
+        # Configure the frad hardware and the DLCI parameters
+        /sbin/fradcfg /etc/frad/router.conf || exit 1
+        /sbin/dlcicfg file /etc/frad/router.conf
+        #
+        # Bring up the FRAD device
+        ifconfig sdla0 up
+        #
+        # Configure the DLCI encapsulation interfaces and routing
+        ifconfig dlci00 192.168.10.1 pointopoint 192.168.10.2 up
+        route add -net 192.168.10.0 netmask 255.255.255.0 dlci00
+        #
+        ifconfig dlci01 192.168.11.1 pointopoint 192.168.11.2 up
+        route add -net 192.168.11.0 netmask 255.255.255.0 dlci00
+        #
+        route add default dev dlci00
+        #
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<H2><A NAME="ss8.8">8.8 IPX (<CODE>AF_IPX</CODE>)</A>
+</H2>
+
+<P>The IPX protocol is most commonly utilized in Novell NetWare(tm) local area
+network environments. Linux includes support for this protocol and may be
+configured to act as a network endpoint, or as a router for IPX.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Networking options  --->
+            [*] The IPX protocol
+            [ ] Full internal IPX network
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>The IPX protocol and the NCPFS are covered in greater depth in the
+<A HREF="IPX-HOWTO.html">IPX-HOWTO</A>.
+
+<H2><A NAME="ss8.9">8.9 NetRom (<CODE>AF_NETROM</CODE>)</A>
+</H2>
+
+<P>NetRom device names are `<CODE>nr0</CODE>', `<CODE>nr1</CODE>', etc.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Networking options  --->
+            [*] Amateur Radio AX.25 Level 2
+            [*] Amateur Radio NET/ROM
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>The AX25, Netrom and Rose protocols are covered by the
+<A HREF="AX25-HOWTO.html">AX25-HOWTO</A>.
+These protocols are used by Amateur Radio Operators world wide in packet
+radio experimentation.
+<P>Most of the work for implementation of these protocols has been done by
+Jonathon Naylor, <CODE>jsn@cs.nott.ac.uk</CODE>.
+<H2><A NAME="ss8.10">8.10 Rose protocol (<CODE>AF_ROSE</CODE>)</A>
+</H2>
+
+<P>Rose device names are `<CODE>rs0</CODE>', `<CODE>rs1</CODE>', etc. in <CODE>2.1.*</CODE> kernels.
+Rose is available in the <CODE>2.1.*</CODE> kernels.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Networking options  --->
+            [*] Amateur Radio AX.25 Level 2
+            &lt;*> Amateur Radio X.25 PLP (Rose)
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>The AX25, Netrom and Rose protocols are covered by the
+<A HREF="AX25-HOWTO.html">AX25-HOWTO</A>.
+These protocols are used by Amateur Radio Operators world wide in packet
+radio experimentation.
+<P>Most of the work for implementation of these protocols has been done by
+Jonathon Naylor, <CODE>jsn@cs.nott.ac.uk</CODE>.
+<H2><A NAME="ss8.11">8.11 SAMBA - `NetBEUI', `NetBios', `CIFS' support.</A>
+</H2>
+
+<P>SAMBA is an implementation of the Session Management Block protocol. Samba
+allows Microsoft and other systems to mount and use your disks and printers.
+<P>SAMBA and its configuration are covered in detail in the
+<A HREF="SMB-HOWTO.html">SMB-HOWTO</A>.
+<H2><A NAME="ss8.12">8.12 STRIP support (Starmode Radio IP)</A>
+</H2>
+
+<P>STRIP device names are `<CODE>st0</CODE>', `<CODE>st1</CODE>', etc.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Network device support  --->
+                [*] Network device support
+                ....
+                [*] Radio network interfaces
+                &lt; > STRIP (Metricom starmode radio IP)
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<P>STRIP is a protocol designed specifically for a range of Metricom
+radio modems for a research project being conducted by Stanford
+University called the 
+<A HREF="http://mosquitonet.Stanford.EDU/mosquitonet.html">MosquitoNet Project</A>.  There is a lot of interesting reading
+here, even if you aren't directly interested in the project.
+<P>The Metricom radios connect to a serial port, employ spread spectrum
+technology and are typically capable of about 100kbps.
+Information on the Metricom radios is available from the:
+<A HREF="http://www.metricom.com/">Metricom Web Server</A>.
+<P>At present the standard network tools and utilities do not support the
+STRIP driver, so you will have to download some customized tools from the
+MosquitoNet web server. Details on what software you need is available at the:
+<A HREF="http://mosquitonet.Stanford.EDU/strip.html">MosquitoNet STRIP Page</A>.
+<P>A summary of configuration is that you use a modified <EM>slattach</EM> program
+to set the line discipline of a serial tty device to STRIP and then configure
+the resulting `<CODE>st[0-9]</CODE>' device as you would for ethernet with one
+important exception, for technical reasons STRIP does not support the ARP
+protocol, so you must manually configure the ARP entries for each of the hosts
+on your subnet. This shouldn't prove too onerous.
+<H2><A NAME="ss8.13">8.13 Token Ring</A>
+</H2>
+
+<P>Token ring device names are `<CODE>tr0</CODE>', `<CODE>tr1</CODE>' etc. Token Ring is an
+IBM standard LAN protocol that avoids collisions by providing a mechanism
+that allows only one station on the LAN the right to transmit at a time.
+A `token' is held by one station at a time and the station holding the
+token is the only station allowed to transmit. When it has transmitted
+its data it passes the token onto the next station. The token loops amongst
+all active stations, hence the name `Token Ring'.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+        Network device support  --->
+                [*] Network device support
+                ....
+                [*] Token Ring driver support
+                &lt; > IBM Tropic chipset based adaptor support
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+
+Configuration of token ring is identical to that of ethernet with the exception
+of the network device name to configure.
+<H2><A NAME="ss8.14">8.14 X.25</A>
+</H2>
+
+<P>X.25 is a circuit based packet switching protocol defined by the
+<CODE>C.C.I.T.T.</CODE> (a standards body recognized by Telecommunications companies
+in most parts of the world). An implementation of X.25 and LAPB are being
+worked on and recent <CODE>2.1.*</CODE> kernels include the work in progress.
+<P>Jonathon Naylor <CODE>jsn@cs.nott.ac.uk</CODE> is leading the development and
+a mailing list has been established to discuss Linux X.25 related matters.
+To subscribe send a message to: <CODE>majordomo@vger.rutgers.edu</CODE> with the
+text "<CODE>subscribe linux-x25</CODE>" in the body of the message.
+<P>Early versions of the configuration tools may be obtained from Jonathon's ftp
+site at 
+<A HREF="ftp://ftp.cs.nott.ac.uk/jsn/">ftp.cs.nott.ac.uk</A>.
+<H2><A NAME="ss8.15">8.15 WaveLan Card</A>
+</H2>
+
+<P>Wavelan device names are `<CODE>eth0</CODE>', `<CODE>eth1</CODE>', etc.
+<P><B>Kernel Compile Options</B>:
+<BLOCKQUOTE><CODE>
+<PRE>
+Network device support  --->
+        [*] Network device support
+        ....
+        [*] Radio network interfaces
+        ....
+        &lt;*> WaveLAN support
+</PRE>
+</CODE></BLOCKQUOTE>
+
+
+The WaveLAN card is a spread spectrum wireless lan card. The card looks
+very like an ethernet card in practice and is configured in much the same
+way.
+<P>You can get information on the Wavelan card from
+<A HREF="http://www.wavelan.com/">Wavelan.com</A>.
+<HR>
+<A HREF="NET3-4-HOWTO-9.html">Next</A>
+<A HREF="NET3-4-HOWTO-7.html">Previous</A>
+<A HREF="NET3-4-HOWTO.html#toc8">Contents</A>
+</BODY>
+</HTML>

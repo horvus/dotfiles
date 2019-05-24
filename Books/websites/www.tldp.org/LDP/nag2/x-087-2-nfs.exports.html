@@ -1,0 +1,461 @@
+<HTML
+><HEAD
+><TITLE
+>The exports File</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The NetworkFile System"
+HREF="x-087-2-nfs.html"><LINK
+REL="PREVIOUS"
+TITLE="The NFS Daemons"
+HREF="x-087-2-nfs.daemons.html"><LINK
+REL="NEXT"
+TITLE="Kernel-Based NFSv2 Server Support"
+HREF="x-087-2-nfs.kernelv2.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nfs.daemons.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 14. The NetworkFile System</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nfs.kernelv2.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NFS.EXPORTS"
+>14.4. The exports File</A
+></H1
+><P
+>&#13;
+
+
+
+ 
+Now we'll look at how we configure the NFS server. Specifically, we'll
+look at how we tell the NFS server what filesystems it should make
+available for mounting, and the various parameters that control the
+access clients will have to the filesystem. The server determines the
+type of access that is allowed to the server's files. The
+<TT
+CLASS="FILENAME"
+>/etc/exports</TT
+> file lists the filesystems that the
+server will make available for clients to mount and use.</P
+><P
+>By default, <B
+CLASS="COMMAND"
+>rpc.mountd</B
+> disallows all directory mounts,
+which is a rather sensible attitude. If you wish to permit one or more hosts
+to NFS-mount a directory, you must <I
+CLASS="EMPHASIS"
+>export</I
+> it, that is,
+specify it in the <TT
+CLASS="FILENAME"
+>exports</TT
+> file. A sample file may look
+like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># exports file for vlager
+/home             vale(rw) vstout(rw) vlight(rw)
+/usr/X11R6        vale(ro) vstout(ro) vlight(ro)
+/usr/TeX          vale(ro) vstout(ro) vlight(ro)
+/                 vale(rw,no_root_squash)
+/home/ftp         (ro)</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Each line defines a directory and the hosts that are allowed to mount it.  A
+hostname is usually a fully qualified domain name but may additionally
+contain the <SPAN
+CLASS="SYSTEMITEM"
+>*</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>?</SPAN
+> wildcards, which act the way they
+do with the Bourne shell. For instance, <TT
+CLASS="LITERAL"
+>lab*.foo.com</TT
+>
+matches <SPAN
+CLASS="SYSTEMITEM"
+>lab01.foo.com</SPAN
+> as well as
+<SPAN
+CLASS="SYSTEMITEM"
+>laboratory.foo.com</SPAN
+>. The host may also
+be specified using an IP address range in the form
+<TT
+CLASS="REPLACEABLE"
+><I
+>address</I
+></TT
+>/<TT
+CLASS="REPLACEABLE"
+><I
+>netmask</I
+></TT
+>. If
+no hostname is given, as with the <TT
+CLASS="FILENAME"
+>/home/ftp</TT
+> directory
+in the previous example, any host matches and is allowed to mount the
+directory.</P
+><P
+>When checking a client host against the <TT
+CLASS="FILENAME"
+>exports</TT
+> file,
+<B
+CLASS="COMMAND"
+>rpx.mountd</B
+> looks up the client's hostname using the
+<TT
+CLASS="FUNCTION"
+>gethostbyaddr</TT
+> call. With DNS, this call returns the
+client's canonical hostname, so you must make sure not to use aliases in
+<TT
+CLASS="FILENAME"
+>exports</TT
+>. In an NIS environment the returned name is
+the first match from the hosts database, and with neither DNS or NIS, the
+returned name is the first hostname found in the <TT
+CLASS="FILENAME"
+>hosts</TT
+>
+file that matches the client's address.</P
+><P
+>The hostname is followed by an optional comma-separated list of flags,
+enclosed in parentheses. Some of the values these flags may take are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><I
+CLASS="EMPHASIS"
+>secure</I
+></DT
+><DD
+><P
+>This flag insists that requests be made from a reserved source port,
+i.e., one that is less than 1,024. This flag is set by default.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>insecure</I
+></DT
+><DD
+><P
+>This flag reverses the effect of the
+<I
+CLASS="EMPHASIS"
+>secure</I
+> flag.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>ro</I
+></DT
+><DD
+><P
+>This flag causes the NFS mount to be read-only. This flag is enabled
+by default.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>rw</I
+></DT
+><DD
+><P
+>This option mounts file hierarchy read-write.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>root_squash</I
+></DT
+><DD
+><P
+>&#13;This security feature denies the superusers on the specified hosts any
+special access rights by mapping requests from uid 0 on the client to
+the uid 65534 (that is, -2) on the server. This uid should be
+associated with the user <SPAN
+CLASS="SYSTEMITEM"
+>nobody</SPAN
+>.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>no_root_squash</I
+></DT
+><DD
+><P
+>Don't map requests from uid 0.  This option is on by default, so
+superusers have superuser access to your system's exported
+directories.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>link_relative</I
+></DT
+><DD
+><P
+>This option converts absolute symbolic links (where the link contents
+start with a slash) into relative links. This option makes sense only
+when a host's entire filesystem is mounted; otherwise, some of the
+links might point to nowhere, or even worse, to files they were never
+meant to point to. This option is on by default.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>link_absolute</I
+></DT
+><DD
+><P
+>This option leaves all symbolic links as they are (the normal behavior
+for Sun-supplied NFS servers).</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>map_identity</I
+></DT
+><DD
+><P
+>&#13;This option tells the server to assume that the client uses the same
+uids and gids as the server. This option is on by default.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>map_daemon</I
+></DT
+><DD
+><P
+>This option tells the NFS server to assume that client and server do not
+share the same uid/gid space.  <B
+CLASS="COMMAND"
+>rpc.nfsd</B
+> then builds a
+list that maps IDs between client and server by querying the client's
+<B
+CLASS="COMMAND"
+>rpc.ugidd</B
+> daemon.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>map_static</I
+></DT
+><DD
+><P
+>This option allows you to specify the name of a file that contains a
+static map of uids and gids. For example,
+<TT
+CLASS="LITERAL"
+>map_static=/etc/nfs/vlight.map</TT
+> would specify the
+<TT
+CLASS="FILENAME"
+>/etc/nfs/vlight.map</TT
+> file as a uid/gid map. The
+syntax of the map file is described in the
+<TT
+CLASS="FILENAME"
+>exports(5)</TT
+> manual page.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>map_nis</I
+></DT
+><DD
+><P
+>This option causes the NIS server to do the uid and gid mapping.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>anonuid</I
+> and <I
+CLASS="EMPHASIS"
+>anongid</I
+></DT
+><DD
+><P
+>These options allow you to specify the uid and gid of the anonymous account.
+This is useful if you have a volume exported for public mounts.</P
+></DD
+></DL
+></DIV
+></P
+><P
+>&#13;Any error in parsing the <TT
+CLASS="FILENAME"
+>exports</TT
+> file is reported
+to <B
+CLASS="COMMAND"
+>syslogd</B
+>&#8201;'s <SPAN
+CLASS="SYSTEMITEM"
+>daemon</SPAN
+> facility at level <SPAN
+CLASS="SYSTEMITEM"
+>notice</SPAN
+> whenever
+<B
+CLASS="COMMAND"
+>rpc.nfsd</B
+> or <B
+CLASS="COMMAND"
+>rpc.mountd</B
+> is
+started up.</P
+><P
+>Note that hostnames are obtained from the client's IP address by
+reverse mapping, so the resolver must be configured properly.
+If you use BIND and are very security conscious, you should enable spoof
+checking in your <TT
+CLASS="FILENAME"
+>host.conf</TT
+> file. We discuss these
+topics in <A
+HREF="x-087-2-resolv.html"
+>Chapter 6</A
+>.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nfs.daemons.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nfs.kernelv2.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The NFS Daemons</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-nfs.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Kernel-Based NFSv2 Server Support</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

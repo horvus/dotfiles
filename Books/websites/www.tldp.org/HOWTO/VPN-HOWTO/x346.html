@@ -1,0 +1,330 @@
+<HTML
+><HEAD
+><TITLE
+>Scripting
+			</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="VPN HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Client"
+HREF="client.html"><LINK
+REL="PREVIOUS"
+TITLE="Bring up the link"
+HREF="x338.html"><LINK
+REL="NEXT"
+TITLE="LRP - Linux Router Project"
+HREF="x362.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>VPN HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x338.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Client</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x362.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN346">4.3. Scripting</H1
+><P
+>&#13;If you don't want to have to type those commands in every time
+that you want to get the tunnel running, I've written a set of bash
+scripts that keep the tunnel up and running.  You can download the
+package from <A
+HREF="http://www.shinythings.com/vpnd/vpnd.tar.gz"
+TARGET="_top"
+>here</A
+>. Just download and uncompress it into /usr/local/vpn.
+Inside you'll find three files:
+</P
+><P
+>&#13;
+<P
+></P
+><UL
+><LI
+><P
+>&#13;vpnd: The script that controls the tunnel connection.
+</P
+></LI
+><LI
+><P
+>&#13;check-vpnd: a script to be run by cron to check that vpnd is still up.
+</P
+></LI
+><LI
+><P
+>&#13;pty-redir: a small executable needed to initialize the tunnel.
+</P
+></LI
+></UL
+>
+
+</P
+><P
+>&#13;You'll need to edit the 
+<A
+NAME="vpn-script"
+></A
+><B
+CLASS="command"
+>vpnd</B
+>
+script to set things like the client's username and the server's
+names.  You may also need to modify the starttunnel section of the
+script to specify which networks you are using.  Below is a copy of
+the script for your reading enjoyment.  You'll note that you could
+put the script in a different directory, you just need to change the
+VPN_DIR variable.
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;#! /bin/bash
+#
+# vpnd: Monitor the tunnel, bring it up and down as necessary
+#
+
+USERNAME=vpn-username
+IDENTITY=/root/.ssh/identity.vpn
+
+VPN_DIR=/usr/local/vpn
+LOCK_DIR=/var/run
+VPN_EXTERNAL=vpn.mycompany.com
+VPN_INTERNAL=vpn-internal.mycompany.com
+PTY_REDIR=${VPN_DIR}/pty-redir
+SSH=${VPN_DIR}/${VPN_EXTERNAL}
+PPPD=/usr/sbin/pppd
+ROUTE=/sbin/route
+CRYPTO=blowfish
+PPP_OPTIONS="noipdefault ipcp-accept-local ipcp-accept-remote local noauth nocrtscts lock nodefaultroute"
+ORIG_SSH=/usr/bin/ssh
+
+
+starttunnel () {
+   $PTY_REDIR $SSH -t -e none -o 'Batchmode yes' -c $CRYPTO -i $IDENTITY -l $USERNAME &#62; /tmp/vpn-device
+   sleep 15
+
+   $PPPD `cat /tmp/vpn-device` $PPP_OPTIONS
+   sleep 15
+
+   # Add routes (modify these lines as necessary)
+   /sbin/route add -net 10.0.0.0 gw $VPN_INTERNAL netmask 255.0.0.0
+   /sbin/route add -net 172.16.0.0 gw $VPN_INTERNAL netmask 255.240.0.0
+   /sbin/route add -net 192.168.0.0 gw $VPN_INTERNAL netmask 255.255.0.0
+}
+
+stoptunnel () {
+   kill `ps ax | grep $SSH | grep -v grep | awk '{print $1}'`
+}
+
+resettunnel () {
+   echo "reseting tunnel."
+   date &#62;&#62; ${VPN_DIR}/restart.log
+   eval stoptunnel
+   sleep 5
+   eval starttunnel
+}
+
+checktunnel () {
+   ping -c 4 $VPN_EXTERNAL 2&#62;/dev/null 1&#62;/dev/null
+
+   if [ $? -eq 0 ]; then
+      ping -c 4 $VPN_INTERNAL 2&#62;/dev/null 1&#62;/dev/null
+      if [ $? -ne 0 ]; then
+         eval resettunnel
+      fi
+   fi
+}
+
+settraps () {
+   trap "eval stoptunnel; exit 0" INT TERM
+   trap "eval resettunnel" HUP
+   trap "eval checktunnel" USR1
+}
+
+runchecks () {
+   if [ -f ${LOCK_DIR}/tunnel.pid ]; then
+      OLD_PID=`cat ${LOCK_DIR}/vpnd.pid`
+      if [ -d /proc/${OLD_PID} ]; then
+         echo "vpnd is already running on process ${OLD_PID}."
+         exit 1
+      else
+         echo "removing stale pid file."
+         rm -rf ${LOCK_DIR}/vpnd.pid
+         echo $$ &#62; ${LOCK_DIR}/vpnd.pid
+         echo "checking tunnel state."
+         eval checktunnel
+      fi
+   else
+      echo $$ &#62; ${LOCK_DIR}/vpnd.pid
+      eval starttunnel
+   fi
+}
+
+case $1 in
+    check)  if [ -d /proc/`cat ${LOCK_DIR}/vpnd.pid` ]; then
+               kill -USR1 `cat ${LOCK_DIR}/vpnd.pid`
+               exit 0
+            else
+               echo "vpnd is not running."
+               exit 1
+            fi ;;
+
+    reset)  if [ -d /proc/`cat ${LOCK_DIR}/vpnd.pid` ]; then
+               kill -HUP `cat ${LOCK_DIR}/vpnd.pid`
+               exit 0
+            else
+               echo "vpnd is not running."
+               exit 1
+            fi ;;
+
+   --help | -h)
+            echo "Usage: vpnd [ check | reset ]"
+            echo "Options:"
+            echo "     check    Sends running vpnd a USR1 signal, telling it to check"
+            echo "              the tunnel state, and restart if neccesary."
+            echo "     reset    Sends running vpnd a HUP signal, telling it to reset"
+            echo "              it's tunnel connection." ;; 
+esac
+
+ln -sf $ORIG_SSH $SSH
+settraps
+runchecks
+
+while true; do
+   i=0
+   while [ $i -lt 600 ]; do
+      i=((i+1))
+      sleep 1
+   done
+   eval checktunnel
+done
+
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x338.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x362.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Bring up the link</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="client.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>LRP - Linux Router Project</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,1470 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>PALO management tool usage</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="PA-RISC/Linux Boot HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="PALO, the PA/Linux kernel loader"
+HREF="palo.html"><LINK
+REL="PREVIOUS"
+TITLE="What does PALO?"
+HREF="whatdoespalo.html"><LINK
+REL="NEXT"
+TITLE="How to use PALO at early boot stage?"
+HREF="paloearlyboot.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>PA-RISC/Linux Boot HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="whatdoespalo.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. <B
+CLASS="command"
+>PALO</B
+>, the PA/Linux kernel loader</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="paloearlyboot.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="paloappusage"
+></A
+>3.3. <B
+CLASS="command"
+>PALO</B
+> management tool usage</H1
+><P
+>&#13;				Here we will show what can be done with the <B
+CLASS="command"
+>PALO</B
+> boot media
+				management tool. For in-depth information about <B
+CLASS="command"
+>palo</B
+>
+				usage, we strongly advise you to take a look at <B
+CLASS="command"
+>PALO</B
+>'s
+				<TT
+CLASS="filename"
+>README</TT
+> file, which can be found in
+				<TT
+CLASS="filename"
+>palo/</TT
+> directory on
+				<A
+HREF="http://cvs.parisc-linux.org/"
+TARGET="_top"
+>http://cvs.parisc-linux.org/</A
+>.
+			</P
+><P
+>&#13;				For the next two steps, you will need a compiler toolchain,
+				see <A
+HREF="gcc.html"
+>Section 5.1</A
+>.
+			</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="lifimagewithramdisk"
+></A
+>3.3.1. Making a <TT
+CLASS="filename"
+>lifimage</TT
+> with <TT
+CLASS="literal"
+>RAMDISK</TT
+></H2
+><P
+>&#13;					First things first: when should you walk this way?
+				</P
+><P
+>&#13;					At an earlier stage of the PA/Linux project, the <TT
+CLASS="filename"
+>lifimage</TT
+>
+					was very useful. In fact, simply putting this file in a boot server
+					tree allows you to boot your PA box using the <B
+CLASS="command"
+>boot lan</B
+>
+					instruction without any further involvement
+					(see <A
+HREF="bootnetwork.html"
+>Section 4.3</A
+>).
+
+					The main advantage of a <TT
+CLASS="literal"
+>RAMDISK</TT
+> is that it unpacks
+					its own file system in RAM, and therefore is completely independent
+					of the machine I/O capabilities (hard drives, etc). The main drawback
+					is that you have to build your own <TT
+CLASS="literal"
+>RAMDISK</TT
+> if
+					you have memory constraints or need some customized files. Now, let's see
+					how to obtain a <TT
+CLASS="filename"
+>lifimage</TT
+> with <TT
+CLASS="literal"
+>RAMDISK</TT
+>.
+				</P
+><P
+>&#13;					We assume you got the latest source of the PA/Linux kernel tree
+					(to which we'll refer below as the
+					"<TT
+CLASS="filename"
+>linux/</TT
+> directory"),
+					and that you are somewhat familiar with kernel configuration. Check
+					<A
+HREF="kernelconf.html"
+>Section 5.2</A
+> for PA-RISC specific options.
+
+					Mainly, you will need a (cross-)compiler, the
+					<TT
+CLASS="filename"
+>linux/</TT
+> directory and the <B
+CLASS="command"
+>PALO</B
+>
+					package installed. If you do not have it, run as
+					<EM
+>root</EM
+> <B
+CLASS="command"
+>apt-get install palo</B
+>.
+					Everything can also be found at
+					<A
+HREF="http://www.parisc-linux.org/"
+TARGET="_top"
+>http://www.parisc-linux.org/</A
+>.
+
+					Go through the kernel configuration step.
+					Then, run <B
+CLASS="command"
+>make palo</B
+> and if <B
+CLASS="command"
+>PALO</B
+> is installed,
+					the following message should appear at the end of the compilation:
+
+					<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;A generic palo config file (./palo.conf) has been created for you.
+You should check it and re-run "make palo".
+WARNING: the "lifimage" file is now placed in this directory by default!
+					</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+					So, edit the <TT
+CLASS="filename"
+>palo.conf</TT
+> file:
+					<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;# This a generic Palo configuration file.  For more information about how
+# it works try 'palo -?'.
+#
+# Most people using 'make palo' want a bootable file, usable for
+# network or tape booting for example.
+--init-tape=lifimage
+--recoverykernel=vmlinux
+
+########## Pick your ROOT here! ##########
+# You need at least one 'root='!
+#
+# If you want a root ramdisk, use the next 2 lines
+#   (Edit the ramdisk image name!!!!)
+--ramdisk=ram-disk-image-file
+--commandline=0/vmlinux HOME=/ root=/dev/ram initrd=0/ramdisk
+
+# If you want NFS root, use the following command line (Edit the HOSTNAME!!!)
+#--commandline=0/vmlinux HOME=/ root=/dev/nfs nfsroot=HOSTNAME ip=bootp
+
+# If you have root on a disk partition, use this (Edit the partition name!!!)
+#--commandline=0/vmlinux HOME=/ root=/dev/sda1
+					</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+					As you can see, the <TT
+CLASS="literal"
+>RAMDISK</TT
+> mode is the default. The string
+					<TT
+CLASS="replaceable"
+><I
+>ram-disk-image-file</I
+></TT
+> should give to <B
+CLASS="command"
+>PALO</B
+> the path
+					of your <TT
+CLASS="literal"
+>RAMDISK</TT
+> file.
+					You shouldn't change anything else to this file.
+					After editing <TT
+CLASS="filename"
+>palo.conf</TT
+>, you can run
+					<B
+CLASS="command"
+>make palo</B
+> again. The result, a <TT
+CLASS="filename"
+>lifimage</TT
+>
+					file, is waiting for you in the <TT
+CLASS="filename"
+>linux/</TT
+> directory.
+				</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="lifimagewithnfsroot"
+></A
+>3.3.2. Making a <TT
+CLASS="filename"
+>lifimage</TT
+> with <TT
+CLASS="literal"
+>NFSROOT</TT
+></H2
+><P
+>&#13;					This method is widely used because the kernel and the file system
+					are directly accessible on your boot server.
+					It is also very easy to test a new kernel.
+					You just have to generate the kernel and put it in the correct directory.
+					When starting up, the PA box will boot the new kernel by typing <B
+CLASS="command"
+>boot lan</B
+>
+					in <B
+CLASS="command"
+>BOOT_ADMIN</B
+>.
+					Finally, it is the only way to go for systems which I/O devices are not supported
+					(such as E class, by the writing of this document).
+				</P
+><P
+>&#13;					Enabling <TT
+CLASS="literal"
+>NFSROOT</TT
+> support is easier than
+					<TT
+CLASS="literal"
+>RAMDISK</TT
+>. You have to edit <TT
+CLASS="filename"
+>palo.conf</TT
+>
+					to specify the boot server IP address instead of the string
+					<TT
+CLASS="replaceable"
+><I
+>HOSTNAME</I
+></TT
+>.
+					For instance, if your server has 10.10.10.2 as its IP address,
+					then the <TT
+CLASS="filename"
+>palo.conf</TT
+> file should contain:
+
+					<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;# This a generic Palo configuration file.  For more information about how
+# it works try 'palo -?'.
+#
+# Most people using 'make palo' want a bootable file, usable for
+# network or tape booting for example.
+--init-tape=lifimage
+--recoverykernel=vmlinux
+
+########## Pick your ROOT here! ##########
+# You need at least one 'root='!
+#
+# If you want a root ramdisk, use the next 2 lines
+#   (Edit the ramdisk image name!!!!)
+#--ramdisk=ram-disk-image-file
+#--commandline=0/vmlinux HOME=/ root=/dev/ram initrd=0/ramdisk
+
+# If you want NFS root, use the following command line (Edit the HOSTNAME!!!)
+--commandline=0/vmlinux HOME=/ root=/dev/nfs nfsroot=10.10.10.2 ip=bootp
+
+# If you have root on a disk partition, use this (Edit the partition name!!!)
+#--commandline=0/vmlinux HOME=/ root=/dev/sda1
+					</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+					If you have another IP, this field must be filled in with the correct data.
+					You shouldn't change anything else to this file.
+					After having properly configured <TT
+CLASS="filename"
+>palo.conf</TT
+>,
+					you can go into the <TT
+CLASS="filename"
+>linux/</TT
+>
+					directory and issue a <B
+CLASS="command"
+>make palo</B
+>.
+					The result, a <TT
+CLASS="filename"
+>lifimage</TT
+> file, is as usual waiting for
+					you in the <TT
+CLASS="filename"
+>linux/</TT
+> directory.
+				</P
+><P
+>&#13;					For advanced details on <TT
+CLASS="literal"
+>NFSROOT</TT
+> management, take a look
+					at <A
+HREF="biblio.html"
+><I
+>Bibliography</I
+></A
+> for the appropriate HOWTOs.
+				</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="bootablepartition"
+></A
+>3.3.3. Making a bootable partition</H2
+><DIV
+CLASS="highlights"
+><A
+NAME="AEN652"
+></A
+><P
+>&#13;					In this part, <B
+CLASS="command"
+>PALO</B
+> can be seen as a <SPAN
+CLASS="application"
+>LILO</SPAN
+> clone.
+					<B
+CLASS="command"
+>palo</B
+> is mainly a program that enables a PA box to boot
+					a kernel present on its hard disk drive.
+					This section is going to explain how to make it work.
+				</P
+></DIV
+><P
+>&#13;					After installing the <B
+CLASS="command"
+>PALO</B
+> package, a copy of the default
+					<TT
+CLASS="filename"
+>palo.conf</TT
+> can be found at
+					<TT
+CLASS="filename"
+>/usr/share/doc/palo/palo.conf</TT
+>. We will explain here
+					how to customize it to fit your needs.
+				</P
+><P
+>&#13;					To setup a bootable hard disk, you have to partition it properly
+					(that is, if you want to use it as your primary boot device).
+					This implies that this step can only be achieved either if you have already
+					booted a minimal system on your PA-RISC box (from CD or network,
+					see <A
+HREF="bootsolutions.html"
+>Chapter 4</A
+>), or if you intend to prepare your hard
+					disk using another computer than the target one (which can be useful to unpack
+					and setup a downloaded file system for a slow box, for example).
+					The point of this HOWTO is not to teach you how to use <B
+CLASS="command"
+>fdisk</B
+>
+					and friends, so here are the few things you HAVE TO know:
+				</P
+><P
+></P
+><UL
+><LI
+><P
+>&#13;							A partition entirely contained within the first 2GB of your target device has
+							to be of partition type '<TT
+CLASS="computeroutput"
+>f0</TT
+>',
+							which is the reserved partition type for <B
+CLASS="command"
+>PALO</B
+> boot loader.
+						</P
+></LI
+><LI
+><P
+>&#13;							There are two ways to use <B
+CLASS="command"
+>PALO</B
+>: the old scheme (available on all versions),
+							in which that partition will only store configuration and recovery kernel;
+							and the new scheme (available since <B
+CLASS="command"
+>PALO</B
+> 1.5), in which that partition will
+							be formatted as ext2 or ext3 and mounted in <TT
+CLASS="filename"
+>/boot</TT
+>.
+						</P
+></LI
+><LI
+><P
+>&#13;							In the first case, the partition does not need to be huge. This is were <B
+CLASS="command"
+>PALO</B
+>
+							will save its configuration, recovery kernel(s) - about 5MB each - and optional
+							recovery ramdisk, so 32MB seem far sufficient.
+						</P
+></LI
+><LI
+><P
+>&#13;							Alternatively, in the second case, since you will use it as
+							<TT
+CLASS="filename"
+>/boot</TT
+>, you should size it decently.
+							100MB is a good cut.
+						</P
+></LI
+></UL
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;					Beware! The <TT
+CLASS="filename"
+>vmlinux</TT
+> file that will be actually booted
+					has also to be located within the first 2GB of the hard disk.
+					We strongly recommend to either (in the <EM
+>old</EM
+> scheme) create
+					a separate <TT
+CLASS="filename"
+>/boot</TT
+> partition at the beginning
+					of the disk (unless you plan to boot recovery kernels every time), or use the
+					<EM
+>new</EM
+> scheme and mount the <B
+CLASS="command"
+>PALO</B
+> partition as
+					<TT
+CLASS="filename"
+>/boot</TT
+>, because if ever your vmlinux binary
+					gets physically stored past the first 2GB of the disk
+					(like when filling up '/' with data), the box won't boot anymore.
+				</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;						In fact, this third usage of <B
+CLASS="command"
+>PALO</B
+> is the most common as the default
+						<TT
+CLASS="filename"
+>/etc/palo.conf</TT
+> makes it easy to configure.
+				</P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="palooldscheme"
+></A
+>3.3.3.1. The old scheme: hidden partition</H3
+><DIV
+CLASS="highlights"
+><A
+NAME="AEN693"
+></A
+><P
+>&#13;						The hidden partition is deprecated. Don't use this for a new setup. Use the
+						new scheme instead (see <A
+HREF="paloappusage.html#palonewscheme"
+>Section 3.3.3.2</A
+>).
+						The hidden partition method is documented for the sake of posterity.
+					</P
+></DIV
+><P
+>&#13;						Here is the output of <B
+CLASS="command"
+>fdisk</B
+> which represents
+						the hard drive of a box with 16MB <B
+CLASS="command"
+>PALO</B
+> space, 128MB swap space
+						and about 1GB '<TT
+CLASS="literal"
+>/</TT
+>' partition:
+					</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="computeroutput"
+>&#13;bash# fdisk -l /dev/sda
+
+Disk /dev/sda: 133 heads, 62 sectors, 1017 cylinders
+Units = cylinders of 8246 * 512 bytes
+
+	 Device Boot    Start       End    Blocks   Id  System
+/dev/sda1   *         1         4     16461   f0  Linux/PA-RISC boot
+/dev/sda2             5        34    123690   82  Linux swap
+/dev/sda3            35       277   1001889   83  Linux
+					</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;						Now let's deal with <B
+CLASS="command"
+>PALO</B
+> configuration.
+						Here are the various parameters you can change:
+					</P
+><P
+></P
+><UL
+><LI
+><P
+><TT
+CLASS="parameter"
+><I
+>recoverykernel</I
+></TT
+> is (as the name suggests)
+								the path to the kernel you want to boot within a failsafe session,
+								it will be stored in the '<TT
+CLASS="literal"
+>f0</TT
+>-type' partition.
+							</P
+></LI
+><LI
+><P
+><TT
+CLASS="parameter"
+><I
+>bootloader</I
+></TT
+> is the path
+								to the <TT
+CLASS="filename"
+>iplboot</TT
+> boot loader utility which is
+								created by <B
+CLASS="command"
+>PALO</B
+> when you issue a <B
+CLASS="command"
+>make iplboot</B
+>.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Usually you don't want to change or even specify this.</P
+></TD
+></TR
+></TABLE
+></DIV
+></LI
+><LI
+><P
+><TT
+CLASS="parameter"
+><I
+>init-partitioned</I
+></TT
+> is used
+								to indicate the pre-partionned device where palo will write its
+								boot parameters. The effect is immediate. It means that <B
+CLASS="command"
+>PALO</B
+> is
+								going to write on (and erase the content of) the '<TT
+CLASS="literal"
+>f0</TT
+>'
+								partition of this device, which has to exist.
+							</P
+></LI
+><LI
+><P
+><TT
+CLASS="parameter"
+><I
+>commandline</I
+></TT
+>:
+								the first digit is the number of your ext2/ext3 partition where the
+								kernel file is located, as reported by <B
+CLASS="command"
+>fdisk</B
+>.
+								Logically, the next string is the absolute path to the kernel
+								<EM
+>from the root of THIS partition</EM
+>
+								<A
+NAME="kpath"
+HREF="#FTN.kpath"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>.
+								The following space separated parameters (do NOT use any quotation
+								mark!) will be passed to the kernel as its arguments. <EM
+>e.g.</EM
+>:
+								<TT
+CLASS="literal"
+>HOME=</TT
+> and <TT
+CLASS="literal"
+>TERM=</TT
+> are
+								environmental parameters passed to <B
+CLASS="command"
+>init</B
+>
+								when booting. They are not compulsory but they can be useful.
+								<TT
+CLASS="literal"
+>root=</TT
+> tells the kernel which partition it
+								must mount as the root file system while booting. It can be
+								tricky when you have more than one disk, and is a mandatory
+								argument. Maximum length for the commandline is 127 characters.
+							</P
+><P
+>&#13;								You can also add <TT
+CLASS="literal"
+>console=</TT
+>,
+								to force the designation of the output console.
+								You should remember that <TT
+CLASS="literal"
+>console=ttyS0</TT
+> is for
+								a serial console and <TT
+CLASS="literal"
+>console=tty0</TT
+> is for a
+								STI (graphic) console. Support for the <SPAN
+CLASS="acronym"
+>MUX</SPAN
+>
+								console (if enabled in the kernel, see <A
+HREF="kernelconf.html"
+>Section 5.2</A
+>)
+								has been added, using <TT
+CLASS="literal"
+>console=ttyB0</TT
+>.
+								Recent versions of <B
+CLASS="command"
+>PALO</B
+> auto detect the right console path
+								(except for <SPAN
+CLASS="acronym"
+>MUX</SPAN
+>), and can figure out whether
+								a 32bit or 64bit kernel should be used. If not, please mail
+								to the mailing list. Last but not least, if you are using
+								Debian 2.6 kernels, you will also need to add
+								<TT
+CLASS="literal"
+>initrd=X/path/to/initrd</TT
+>, following the same
+								rules as for the kernel path<A
+HREF="paloappusage.html#FTN.kpath"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>, see above.
+							</P
+></LI
+></UL
+><P
+>&#13;						According the above <B
+CLASS="command"
+>fdisk</B
+> example, we want to use
+						<TT
+CLASS="filename"
+>/dev/sda3</TT
+> as our root partition. Thus,
+						the configuration file should look like that:
+
+						<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;# The following arguments are set up for booting from /dev/sda, specifically
+# mounting partition 3 as root, and using /boot/vmlinux as both the
+# recovery kernel, and the default dynamically-booted kernel.
+--recoverykernel=/boot/vmlinux
+--init-partitioned=/dev/sda
+--commandline=3/boot/vmlinux root=/dev/sda3
+						</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+					</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="palonewscheme"
+></A
+>3.3.3.2. The new scheme: mounted partition</H3
+><DIV
+CLASS="highlights"
+><A
+NAME="AEN756"
+></A
+><P
+>&#13;						Following is a practical example using the new way of doing things, by using a
+						formatted <B
+CLASS="command"
+>PALO</B
+> partition. That scheme should be the preferred one for new installations.
+					</P
+></DIV
+><P
+>&#13;						Looking at the previous example (<A
+HREF="paloappusage.html#palooldscheme"
+>Section 3.3.3.1</A
+>), very little things
+						need to be changed. Essentially, if you had the need for a separate <TT
+CLASS="filename"
+>/boot</TT
+> partition, it will be gone in the scheme detailed
+						below. The configuration for <B
+CLASS="command"
+>PALO</B
+> will be a little bit different as well, but that's
+						about it.
+					</P
+><P
+>&#13;						Here is the output of <B
+CLASS="command"
+>fdisk</B
+> which represents
+						the hard drive of a box with 100MB <B
+CLASS="command"
+>PALO</B
+> space (which will be mounted as <TT
+CLASS="filename"
+>/boot</TT
+>), 128MB swap space
+						and about 1GB '<TT
+CLASS="literal"
+>/</TT
+>' partition (bear in mind that the
+						<TT
+CLASS="literal"
+>f0</TT
+> partition must still be wholy contained within the first 2GB
+						of the disk):
+					</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="computeroutput"
+>&#13;bash# fdisk -l /dev/sda
+
+Disk /dev/sda: 133 heads, 62 sectors, 1017 cylinders
+Units = cylinders of 8246 * 512 bytes
+
+	 Device Boot    Start       End    Blocks   Id  System
+/dev/sda1   *         1        26    100461   f0  Linux/PA-RISC boot
+/dev/sda2            27        36    123690   82  Linux swap
+/dev/sda3            37       277    917889   83  Linux
+					</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;						Now let's deal with <B
+CLASS="command"
+>PALO</B
+> configuration. Contrary to the previous example, there
+						are far less options to put in the configuration file, and the setup is a single step
+						operation: the <EM
+>initialization</EM
+> step, which needs only to be done
+						once.
+					</P
+><P
+>&#13;						To initialize for the first time the <B
+CLASS="command"
+>PALO</B
+> partition as something the Linux system
+						can understand (<TT
+CLASS="literal"
+>ext2</TT
+> or <TT
+CLASS="literal"
+>ext3</TT
+> filesystem), you need
+						to run the following command (as <TT
+CLASS="literal"
+>root</TT
+>):
+					</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[user@machine ~/dir]&#62;</TT
+> <B
+CLASS="command"
+>palo</B
+> <TT
+CLASS="userinput"
+><B
+>--format-as=<TT
+CLASS="replaceable"
+><I
+>N</I
+></TT
+> --init-partitioned=<TT
+CLASS="replaceable"
+><I
+>target_disk</I
+></TT
+></B
+></TT
+>
+					</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;						Where <TT
+CLASS="replaceable"
+><I
+>N</I
+></TT
+> is either <TT
+CLASS="literal"
+>2</TT
+> for <TT
+CLASS="literal"
+>ext2</TT
+>
+						or <TT
+CLASS="literal"
+>3</TT
+> for <TT
+CLASS="literal"
+>ext3</TT
+>, and <TT
+CLASS="replaceable"
+><I
+>target_disk</I
+></TT
+>
+						is the device which contains the <B
+CLASS="command"
+>PALO</B
+> partition, <TT
+CLASS="filename"
+>/dev/sda</TT
+>
+						in the current example. Continuing with this example, assuming we want an <TT
+CLASS="literal"
+>ext3</TT
+>
+						partition we would use:
+					</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[user@machine ~/dir]&#62;</TT
+> <B
+CLASS="command"
+>palo</B
+> <TT
+CLASS="userinput"
+><B
+>--format-as=3 --init-partitioned=/dev/sda</B
+></TT
+>
+					</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;						Do <EM
+>NOT</EM
+> use <B
+CLASS="command"
+>mkfs</B
+> or <B
+CLASS="command"
+>mke2fs</B
+>
+						to generate the filesystem on this partition. <B
+CLASS="command"
+>PALO</B
+> marks blocks as used where the boot loader
+						portion of <B
+CLASS="command"
+>PALO</B
+> is stored on disk. These tools don't know about <B
+CLASS="command"
+>PALO</B
+> boot loader!
+					</P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;						This needs to be run only once for it will erase any existing data on the 
+						<TT
+CLASS="literal"
+>f0</TT
+> partition.
+					</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;						Finally, we need to tell <B
+CLASS="command"
+>PALO</B
+> about the partition, how we want it to be used, and
+						how we don't want it to be erased everytime <B
+CLASS="command"
+>PALO</B
+> is being run. Thus, keeping in sync
+						with our current example,
+						the configuration file should look like that:
+
+						<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;# The following arguments are set up for booting from /dev/sda, specifically
+# mounting partition 3 as root and booting the vmlinux file in /dev/sda1, palo
+# partition formatted as ext3.
+--update-partitioned=/dev/sda --format-as=3
+--commandline=1/vmlinux root=/dev/sda3
+						</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+					</P
+><P
+>&#13;						As one can see, since we will be storing our kernels directly on the <TT
+CLASS="literal"
+>f0</TT
+>
+						partition, we tell <B
+CLASS="command"
+>PALO</B
+> to load them from it (hence the <TT
+CLASS="literal"
+>1</TT
+> in the
+						<TT
+CLASS="literal"
+>commandline</TT
+> argument.
+					</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;						In the previous section (<A
+HREF="paloappusage.html#palooldscheme"
+>Section 3.3.3.1</A
+>) we dealt with the
+						<TT
+CLASS="parameter"
+><I
+>init-partitioned</I
+></TT
+> parameter. Here, we use
+						<TT
+CLASS="parameter"
+><I
+>update-partitioned</I
+></TT
+> instead, which, contrary to the former,
+						tells <B
+CLASS="command"
+>PALO</B
+> to not erase the content of the partition when run<A
+NAME="AEN825"
+HREF="#FTN.AEN825"
+><SPAN
+CLASS="footnote"
+>[2]</SPAN
+></A
+>.
+					</P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.kpath"
+HREF="paloappusage.html#kpath"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Example: /boot is mounted from a separate partition,
+								which number is, say, 4 according to <B
+CLASS="command"
+>fdisk</B
+>.
+								From a Linux point of view, the absolute path of the file is
+								<TT
+CLASS="filename"
+>/boot/vmlinux</TT
+>, but from a <EM
+>partition</EM
+>
+								point of view, it is <TT
+CLASS="filename"
+>/vmlinux</TT
+>. Therefore,
+								the commandline will start with "<TT
+CLASS="literal"
+>4/vmlinux</TT
+>".
+								We hope that's clear enough!</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN825"
+HREF="paloappusage.html#AEN825"
+><SPAN
+CLASS="footnote"
+>[2]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The
+						<TT
+CLASS="parameter"
+><I
+>format-as</I
+></TT
+> switch is a bit misleading. When used with
+						<TT
+CLASS="parameter"
+><I
+>init-partitioned</I
+></TT
+> it is meant to tell which filesystem to format
+						the new partition, but with <TT
+CLASS="parameter"
+><I
+>update-partitioned</I
+></TT
+>, it is meant to
+						tell <B
+CLASS="command"
+>PALO</B
+> which filesystem is used on the already formatted partition.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="whatdoespalo.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="paloearlyboot.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>What does <B
+CLASS="command"
+>PALO</B
+>?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="palo.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>How to use <B
+CLASS="command"
+>PALO</B
+> at early boot stage?</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

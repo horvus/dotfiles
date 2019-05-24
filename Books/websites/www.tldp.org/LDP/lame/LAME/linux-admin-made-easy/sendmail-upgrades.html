@@ -1,0 +1,430 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring the Sendmail E-mail Daemon</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Administration Made Easy"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Upgrading Linux and Other Applications"
+HREF="upgrading-linux.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring the Squid HTTP Caching Proxy Daemon"
+HREF="squid-upgrades.html"><LINK
+REL="NEXT"
+TITLE="Enterprise Computing with Linux"
+HREF="enterprise-computing.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Administration Made Easy</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="squid-upgrades.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 10. Upgrading Linux and Other Applications</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="enterprise-computing.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SENDMAIL-UPGRADES"
+>10.10. Configuring the Sendmail E-mail Daemon</A
+></H1
+><P
+>I use the Sendmail package to provide e-mail services.  Sendmail is
+<EM
+>the</EM
+> definitive mail handler; in fact it is so popular
+that it is estimated that over 80% of e-mail passing over the Internet
+will be handled at one or both ends by it.  It does just about anything
+and I couldn't imagine running an Internet server without it (another
+e-mail server package called Qmail seems to be quite popular as well --
+but I haven't had a reason yet to give it a try).</P
+><P
+>To keep up with new features and bug-fixes, and most importantly,
+for reasons of security, it is a probably a good idea to upgrade Sendmail
+from time to time.  In addition, the very latest versions of Sendmail
+include powerful anti-spam features which can help prevent your mail
+server being abused by unauthorized users.</P
+><P
+>This section will discuss some of the things you should do if you
+wish to use Sendmail as an incoming e-mail server.  This would be the
+likely scenario for server systems.  If, instead, you have no need to use
+it for incoming mail and wish to only use it as an outgoing mail queue,
+you should ((need some info here)).</P
+><P
+>For this section, it is assumed that you are using the very latest
+version of Sendmail (8.9.3 at the time of this writing), have it installed
+and running.</P
+><P
+>As packaged with the Red Hat distribution, Sendmail usually
+contains appropriate configuration information to operate correctly in
+the majority of server setups.  Nonetheless, you may find it necessary to
+edit the ``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/sendmail.cf</TT
+></TT
+>''
+file and customize some settings as required.  This, however, is beyond
+the scope of this document.</P
+><P
+>One thing I find helpful, however, is to make a couple of changes to
+the configuration file to thwart off spammers.  These include:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+><FONT
+COLOR="RED"
+>O PrivacyOptions=authwarnings</FONT
+>
+<EM
+>change to:</EM
+>
+O PrivacyOptions=authwarnings,noexpn,novrfy
+
+<FONT
+COLOR="RED"
+>O SmtpGreetingMessage=$j Sendmail $v/$Z; $b</FONT
+>
+<EM
+>change to:</EM
+>
+O SmtpGreetingMessage=$j Sendmail $v/$Z; $b  NO UCE  C=xx L=xx</PRE
+></TD
+></TR
+></TABLE
+><P
+>(The first change prevents spammers from using the
+``<TT
+CLASS="LITERAL"
+>EXPN</TT
+>'' and ``<TT
+CLASS="LITERAL"
+>VRFY</TT
+>'' commands in
+sendmail.  I find that these commands are too often abused by unethical
+individuals.  The second change modifies the banner which Sendmail
+displays upon receiving a connection.  You should replace the
+``<EM
+>xx</EM
+>'' in the ``<TT
+CLASS="LITERAL"
+>C=xx L=xx</TT
+>''
+entries with your country and location codes.  For example, in my case, I
+would use ``<TT
+CLASS="LITERAL"
+>C=CA L=ON</TT
+>'' for Ontario, Canada.  (The
+latter change doesn't actually affect anything, but was recommended by
+folks in the <A
+HREF="news:news.admin.net-abuse.email"
+TARGET="_top"
+>news.admin.net-abuse.email</A
+> newsgroup as a legal
+precaution.</P
+><P
+>Next, if your mail server will have a different host name than the
+actual machine it is running on, you can add one or more aliases in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/sendmail.cw</TT
+></TT
+>'' file.  For
+example, if you have a system called
+<SPAN
+CLASS="QUOTE"
+>"<EM
+>kirk.mydomain.name</EM
+>"</SPAN
+> which is set up as
+the mail exchanger for mydomain.name, but want incoming mail addressed in
+the format ``<EM
+>user@mydomain.name</EM
+>'' to be delivered to
+your users on <SPAN
+CLASS="QUOTE"
+>"<EM
+>kirk</EM
+>"</SPAN
+>, simply add this
+alias as follows:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>mydomain.name</PRE
+></TD
+></TR
+></TABLE
+><P
+>Finally, If you need to restrict a domain (or subdomain) from
+connecting to your sendmail service, you can edit the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/mail/access</TT
+></TT
+>'' and add the
+domain information as well as type of restriction.  For example:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>some.domain             REJECT
+hax0r.another.domain    550 Contact site administrator at (555) 555-1234.</PRE
+></TD
+></TR
+></TABLE
+><P
+>The above examples would reject all e-mail connections from the
+``<EM
+>some.domain</EM
+>'' site, as well as reject the specific
+machine name ``<EM
+>hax0r.another.domain</EM
+>'' with a
+descriptive message.</P
+><P
+>After making changes to this file, you will need to update the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>access.db</TT
+></TT
+>'' file, and then
+restart sendmail as follows:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/makemap hash /etc/mail/access.db &#60; /etc/mail/access</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>/etc/rc.d/init.d/sendmail restart</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="TIP"
+><BLOCKQUOTE
+CLASS="TIP"
+><P
+><B
+>Tip: </B
+>Tip: If you are concerned with e-mail abuse, you can get some
+very helpful information from the <SPAN
+CLASS="QUOTE"
+>"Mail Abuse Prevention
+System"</SPAN
+> (<SPAN
+CLASS="ACRONYM"
+>MAPS</SPAN
+>) project on dealing with such
+abuse; see the web pages at <A
+HREF="http://www.mail-abuse.org/"
+TARGET="_top"
+>http://www.mail-abuse.org/</A
+></P
+><P
+>If you're using Sendmail version 8.9 or above, RBL support is
+already built in, but not enabled by default.  To enable this support, add
+the following to your sendmail.mc file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>        FEATURE(rbl)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Then, reconfigure and restart the Sendmail daemon.</P
+><P
+>For more detailed information, including configuration instructions
+for other mail transport agents, see <A
+HREF="http://www.mail-abuse.org/rbl/usage.html"
+TARGET="_top"
+>http://www.mail-abuse.org/rbl/usage.html</A
+>.</P
+><P
+>Sometimes, a domain may end up in the RBL list with which you wish
+to continue communications with.  Perhaps it is vital for you to
+communicate with certain users at the black-listed domain.  In this case,
+Sendmail allows you to override these domains to allow their e-mail to be
+received.  Simply edit the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/mail/access</TT
+></TT
+>'' file in the
+manner described above with the appropriate domain information.  For
+example:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>blacklisted.domain      OK</PRE
+></TD
+></TR
+></TABLE
+><P
+>Don't forget to rebuild your access.db file (described above)!</P
+><P
+>If you do decide to subscribe to the RBL, it is probably a wise idea
+to inform your mail users, if applicable, so they can make other service
+arrangements if they disagree with your decision.</P
+></BLOCKQUOTE
+></DIV
+><P
+>For more information on Sendmail, see the FAQ document located at
+<A
+HREF="http://www.sendmail.org/faq/"
+TARGET="_top"
+>http://www.sendmail.org/faq/</A
+>.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="squid-upgrades.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="enterprise-computing.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring the Squid HTTP Caching Proxy Daemon</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="upgrading-linux.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Enterprise Computing with Linux</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,1054 @@
+<HTML
+><HEAD
+><TITLE
+>Using the Configuration Utilities</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Configuring the Serial Hardware"
+HREF="x-087-2-serial.html"><LINK
+REL="PREVIOUS"
+TITLE="Serial Hardware"
+HREF="x-087-2-serial.hardware.html"><LINK
+REL="NEXT"
+TITLE="Serial Devices and the login: Prompt"
+HREF="x-087-2-serial.getty.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-serial.hardware.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Configuring the Serial Hardware</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-serial.getty.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-SERIAL-CONFIGURATION"
+>4.5. Using the Configuration Utilities</A
+></H1
+><P
+></P
+><P
+>Now let's spend some time looking at the two most useful serial device
+configuration utilities: <B
+CLASS="COMMAND"
+>setserial</B
+> and
+<B
+CLASS="COMMAND"
+>stty</B
+>.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-SERIAL-SETSERIAL"
+>4.5.1. The setserial Command</A
+></H2
+><P
+>The kernel will make its best effort to correctly determine how your
+serial hardware is configured, but the variations on serial device
+configuration makes this determination difficult to achieve 100
+percent reliably in practice. A good example of where this is a
+problem is the internal modems we talked about earlier. The UART they
+use has a 16-byte FIFO buffer, but it looks like a 16450 UART to the
+kernel device driver: unless we specifically tell the driver that this
+port is a 16550 device, the kernel will not make use of the extended
+buffer. Yet another example is that of the dumb 4-port cards that
+allow sharing of a single IRQ among a number of serial devices. We may
+have to specifically tell the kernel which IRQ port it's supposed to
+use, and that IRQs may be shared.</P
+><P
+><B
+CLASS="COMMAND"
+>setserial</B
+> was created to configure the serial driver
+at runtime. The <B
+CLASS="COMMAND"
+>setserial</B
+> command is most commonly
+executed at boot time from a script called <TT
+CLASS="FILENAME"
+>0setserial</TT
+>
+on some distributions, and <TT
+CLASS="FILENAME"
+>rc.serial</TT
+> on others. This
+script is charged with the responsibility of initializing the serial driver
+to accommodate any nonstandard or unusual serial hardware in the machine.</P
+><P
+>The general syntax for the <B
+CLASS="COMMAND"
+>setserial</B
+> command is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>setserial <TT
+CLASS="REPLACEABLE"
+><I
+>device</I
+></TT
+> [<TT
+CLASS="REPLACEABLE"
+><I
+>parameters</I
+></TT
+>]</PRE
+></TD
+></TR
+></TABLE
+>
+in which the device is one of the serial devices, such as
+<I
+CLASS="EMPHASIS"
+>ttyS0</I
+>.</P
+><P
+>The <B
+CLASS="COMMAND"
+>setserial</B
+> command has a large number of
+parameters.  The most common of these are described in <A
+HREF="x-087-2-serial-configuration.html#X-087-2-SERIAL-SETSERIAL-PARAMETERS"
+>Table 4-1</A
+>. For information on the
+remainder of the parameters, you should refer to the
+<B
+CLASS="COMMAND"
+>setserial</B
+> manual page.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="X-087-2-SERIAL-SETSERIAL-PARAMETERS"
+></A
+><P
+><B
+>Table 4-1. setserial Command-Line Parameters</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Parameter</TH
+><TH
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>port</TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>port_number</I
+></TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Specify the I/O port address of the serial device. Port numbers
+	should be specified in hexadecimal notation, e.g., <TT
+CLASS="LITERAL"
+>0x2f8</TT
+>.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>irq</TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>num</I
+></TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Specify the interrupt request line the serial device is
+	using.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>uart</TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>uart_type</I
+></TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Specify the UART type of the serial device. Common values are
+	<TT
+CLASS="LITERAL"
+>16450</TT
+>, <TT
+CLASS="LITERAL"
+>16550</TT
+>, etc. Setting this
+	value to <TT
+CLASS="LITERAL"
+>none</TT
+> will disable this serial device.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>fourport</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Specifying this parameter instructs the kernel serial driver that
+	this port is one port of an AST Fourport card.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>spd_hi</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Program the UART to use a speed of 57.6 kbps when a process
+	requests 38.4 kbps.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>spd_vhi</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Program the UART to use a speed of 115 kbps when a process
+	requests 38.4 kbps.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>spd_normal</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Program the UART to use the default speed of 38.4 kbps when
+	requested. This parameter is used to reverse the effect of a
+	<TT
+CLASS="LITERAL"
+>spd_hi</TT
+> or <TT
+CLASS="LITERAL"
+>spd_vhi</TT
+> performed on
+	the specified serial device.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>auto_irq</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	This parameter will cause the kernel to attempt to automatically
+	determine the IRQ of the specified device. This attempt may not be 
+        completely reliable, so it is probably better to think of this as a 
+        request for the kernel to guess the IRQ. If you know the IRQ of the 
+        device, you should specify that it use the <TT
+CLASS="LITERAL"
+>irq</TT
+> 
+        parameter instead.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>autoconfig</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	This parameter must be specified in conjunction with the
+	<TT
+CLASS="LITERAL"
+>port</TT
+> parameter. When this parameter is supplied,
+	<B
+CLASS="COMMAND"
+>setserial</B
+> instructs the kernel to attempt to
+	automatically determine the UART type located at the supplied port
+	address. If the <TT
+CLASS="LITERAL"
+>auto_irq</TT
+> parameter is also 
+        supplied, the kernel attempts to automatically determine the IRQ,
+	too.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>skip_test</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	This parameter instructs the kernel not to bother performing
+	the UART type test during auto-configuration. This is necessary when
+	the UART is incorrectly detected by the kernel.</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>A typical and simple <TT
+CLASS="FILENAME"
+>rc</TT
+> file to configure your serial
+ports at boot time might look something like that shown in
+<A
+HREF="x-087-2-serial-configuration.html#X-087-2-SERIAL-RC.SERIAL.SETSERIAL"
+>Example 4-1</A
+>. Most Linux distributions
+will include something slightly more sophisticated than this one.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SERIAL-RC.SERIAL.SETSERIAL"
+></A
+><P
+><B
+>Example 4-1. Example rc.serial setserial Commands</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/rc.serial - serial line configuration script.
+#
+# Configure serial devices
+/sbin/setserial /dev/ttyS0 auto_irq skip_test autoconfig
+/sbin/setserial /dev/ttyS1 auto_irq skip_test autoconfig
+/sbin/setserial /dev/ttyS2 auto_irq skip_test autoconfig
+/sbin/setserial /dev/ttyS3 auto_irq skip_test autoconfig
+#
+# Display serial device configuration
+/sbin/setserial -bg /dev/ttyS*</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The <TT
+CLASS="LITERAL"
+>-bg /dev/ttyS*</TT
+> argument in the last
+command will print a neatly formatted summary of the hardware configuration
+of all active serial devices. The output will look like that shown in
+<A
+HREF="x-087-2-serial-configuration.html#X-087-2-SERIAL.SETSERIAL.OUTPUT"
+>Example 4-2</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SERIAL.SETSERIAL.OUTPUT"
+></A
+><P
+><B
+>Example 4-2. Output of setserial -bg /dev/ttyS Command</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/dev/ttyS0 at 0x03f8 (irq = 4) is a 16550A
+/dev/ttyS1 at 0x02f8 (irq = 3) is a 16550A</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-SERIAL-STTY"
+>4.5.2. The stty Command</A
+></H2
+><P
+>&#13;
+&#13;</P
+><P
+>The name <B
+CLASS="COMMAND"
+>stty</B
+> probably means &#8220;set tty,&#8221;
+but the <B
+CLASS="COMMAND"
+>stty</B
+> command can also be used to display a
+terminal's configuration. Perhaps even more so than
+<B
+CLASS="COMMAND"
+>setserial</B
+>, the <B
+CLASS="COMMAND"
+>stty</B
+> command
+provides a bewildering number of characteristics you can
+configure. We'll cover the most important of these in a moment. You
+can find the rest described in the <B
+CLASS="COMMAND"
+>stty</B
+> manual
+page.</P
+><P
+>The <B
+CLASS="COMMAND"
+>stty</B
+> command is most commonly used to configure
+terminal parameters, such as whether characters will be echoed or what
+key should generate a break signal. We explained earlier that serial
+devices are tty devices and the <B
+CLASS="COMMAND"
+>stty</B
+> command is therefore
+equally applicable to them.</P
+><P
+>One of the more important uses of the <B
+CLASS="COMMAND"
+>stty</B
+> for
+serial devices is to enable hardware handshaking on the device. We
+talked briefly about hardware handshaking earlier. The default
+configuration for serial devices is for hardware handshaking to be
+disabled. This setting allows &#8220;three wire&#8221; serial cables to work;
+they don't support the necessary signals for hardware handshaking, and
+if it were enabled by default, they'd be unable to transmit any
+characters to change it.</P
+><P
+>Surprisingly, some serial communications programs don't enable
+hardware handshaking, so if your modem supports hardware handshaking,
+you should configure the modem to use it (check your modem manual for
+what command to use), and also configure your serial device to use
+it. The <B
+CLASS="COMMAND"
+>stty</B
+> command has a
+<TT
+CLASS="LITERAL"
+>crtscts</TT
+> flag that enables hardware handshaking on a
+device; you'll need to use this. The command is probably best issued
+from the <TT
+CLASS="FILENAME"
+>rc.serial</TT
+> file (or equivalent) at boot
+time using commands like those shown in <A
+HREF="x-087-2-serial-configuration.html#X-087-2-SERIAL-RC.SERIAL.STTY"
+>Example 4-3</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SERIAL-RC.SERIAL.STTY"
+></A
+><P
+><B
+>Example 4-3. Example rc.serial stty Commands</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#
+stty crtscts &#60; /dev/ttyS0
+stty crtscts &#60; /dev/ttyS1
+stty crtscts &#60; /dev/ttyS2
+stty crtscts &#60; /dev/ttyS3
+#</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The <B
+CLASS="COMMAND"
+>stty</B
+> command works on the current terminal by
+default, but by using the input redirection (&#8220;&#60;&#8221;)
+feature of the shell, we can have <B
+CLASS="COMMAND"
+>stty</B
+> manipulate
+any tty device. It's a common mistake to forget whether you are
+supposed to use &#8220;&#60;&#8221; or &#8220;&#62;&#8221;; modern
+versions of the <B
+CLASS="COMMAND"
+>stty</B
+> command have a much cleaner
+syntax for doing this. To use the new syntax, we'd rewrite our sample
+configuration to look like that shown in <A
+HREF="x-087-2-serial-configuration.html#X-087-2-SERIAL-RC.SERIAL.STTY.NEW"
+>Example 4-4</A
+>.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SERIAL-RC.SERIAL.STTY.NEW"
+></A
+><P
+><B
+>Example 4-4. Example rc.serial stty Commands Using Modern Syntax</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#
+stty crtscts -F /dev/ttyS0
+stty crtscts -F /dev/ttyS1
+stty crtscts -F /dev/ttyS2
+stty crtscts -F /dev/ttyS3
+#</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>We mentioned that the <B
+CLASS="COMMAND"
+>stty</B
+> command can be used to display
+the terminal configuration parameters of a tty device. To display all of
+the active settings on a tty device, use:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>stty -a -F /dev/ttyS1</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The output of this command, shown in
+<A
+HREF="x-087-2-serial-configuration.html#X-087-2-SERIAL.STTY.OUTPUT"
+>Example 4-5</A
+>, gives you the status of all flags
+for that device; a flag shown with a preceding minus, as in
+<TT
+CLASS="OPTION"
+>&#8211;crtscts</TT
+>, means that the flag has been
+turned off.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-SERIAL.STTY.OUTPUT"
+></A
+><P
+><B
+>Example 4-5. Output of stty -a Command</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>speed 19200 baud; rows 0; columns 0; line = 0;
+intr = ^C; quit = ^\; erase = ^?; kill = ^U; eof = ^D; eol = &#60;undef&#62;; 
+         eol2 = &#60;undef&#62;; start = ^Q; stop = ^S; susp = ^Z; rprnt = ^R;
+         werase = ^W; lnext = ^V; flush = ^O; min = 1; time = 0;
+-parenb -parodd cs8 hupcl -cstopb cread clocal -crtscts
+-ignbrk -brkint -ignpar -parmrk -inpck -istrip -inlcr -igncr -icrnl -ixon
+        -ixoff -iuclc -ixany -imaxbel
+-opost -olcuc -ocrnl onlcr -onocr -onlret -ofill -ofdel nl0 cr0 tab0
+         bs0 vt0 ff0
+-isig -icanon iexten echo echoe echok -echonl -noflsh -xcase -tostop
+         -echoprt echoctl echoke</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>A description of the most important of these flags is given in <A
+HREF="x-087-2-serial-configuration.html#X-087-2-SERIAL.STTY.FLAGS"
+>Table 4-2</A
+>. Each of these flags is enabled
+by supplying it to <B
+CLASS="COMMAND"
+>stty</B
+> and disabled by supplying
+it to <B
+CLASS="COMMAND"
+>stty</B
+> with the &#8211; character in front of
+it. Thus, to disable hardware handshaking on the
+<TT
+CLASS="LITERAL"
+>ttyS0</TT
+> device, you would use:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>stty -crtscts -F /dev/ttyS0</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><DIV
+CLASS="TABLE"
+><A
+NAME="X-087-2-SERIAL.STTY.FLAGS"
+></A
+><P
+><B
+>Table 4-2. stty Flags Most Relevant to Configuring Serial Devices</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Flags</TH
+><TH
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>N</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Set the line speed to <TT
+CLASS="LITERAL"
+>N</TT
+> bits per second.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>crtsdts</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Enable/Disable hardware handshaking.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>ixon</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Enable/Disable XON/XOFF flow control.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>clocal</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Enable/Disable modem control signals such as DTR/DTS and DCD. This
+	is necessary if you are using a &#8220;three wire&#8221; serial cable because it does not supply these signals.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>cs5 cs6 cs7 cs8</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Set number of data bits to 5, 6, 7, or 8, respectively.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>parodd</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Enable odd parity. Disabling this flag enables even parity.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>parenb</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Enable parity checking. When this flag is negated, no parity is used.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>cstopb</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Enable use of two stop bits per character. When this flag is
+	negated, one stop bit per character is used.
+	</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>echo</TT
+></TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>	Enable/Disable echoing of received characters back to sender.
+	</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>The next example combines some of these flags and sets the
+<TT
+CLASS="FILENAME"
+>ttyS0</TT
+> device to 19,200 bps, 8 data bits, no
+parity, and hardware handshaking with echo disabled:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>stty 19200 cs8 -parenb crtscts -echo -F /dev/ttyS0</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+></P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-serial.hardware.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-serial.getty.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Serial Hardware</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-serial.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Serial Devices and the login: Prompt</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux off-line mailing method (offline mailaddr with 1 account): Automation</TITLE>
+ <LINK HREF="Offline-Mailing-6.html" REL=next>
+ <LINK HREF="Offline-Mailing-4.html" REL=previous>
+ <LINK HREF="Offline-Mailing.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Offline-Mailing-6.html">Next</A>
+<A HREF="Offline-Mailing-4.html">Previous</A>
+<A HREF="Offline-Mailing.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="s5">5. Automation</A></H2>
+
+<P>Well, now, everything above works ... (if it doesn't work - don't even think
+about automation before it WILL work ... - now - we need some script so it
+isn't a pain in the ass for the "mailadministrator" or the root user to add
+users to the procmailrc file ... The below example will be for "more 
+experienced users" - since some things NEED to be changed as well ... - it
+is an example with the "B method - Subject lines". It can be easily adapted
+to the "A method". Since the "B method" will be more used (cheaper) than the
+"A" method - i decided to use the "B method" ... Am i sounding repetitive or
+not ? .. well - i meant to write it in this way :)) to bug you :)))..
+<P>
+<H2><A NAME="ss5.1">5.1 The "skeleton".</A>
+</H2>
+
+<P>Since the footer needs to be as footer (everything below won't be processed
+since we are bouncing there); there needs to be a header and a footer file.
+<P>
+<P>
+<H3>the ".procmailrc-header" file</H3>
+
+<P>This file will now be the "header &amp; user" file .. since here will users been
+added and removed - it will be a important file ... - best take a backup from
+it each time you add a user ... - there COULD be something wrong sometime ..
+A system can fail ...
+<P>
+<BLOCKQUOTE>
+<CODE>(*** &lt; file &gt; *** text ***) .procmailrc-header</CODE>
+</BLOCKQUOTE>
+
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+:0 c
+        passtrough
+
+:0 
+* ^To:.*freaker@ibm.net
+! freaker
+
+:0
+* ^Subject:.root
+! root
+
+:0
+* ^Subject:.barbara
+! barbara
+
+:0
+* ^Subject:.paul
+! paul@his.personal.emailaddress
+
+:0 c
+* ^Subject:.john
+! john@his.personal.emailaddress
+
+:0 
+* ^Subject:.john
+! john
+
+:0
+* ^From:.*newsletter@ibm.net
+! freaker
+
+:0
+* ^FROM_DAEMON
+throwaway
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H3>the .procmailrc-footer file ..</H3>
+
+<P>As mentioned above, this file needs to be as footer - since all data BELOW
+it won't be used to deliver - this footer contains the "bounce" code to 
+bounce the users not found *ABOVE* this footer !. it is the ABSOLUTE end of
+the file !
+<P>
+<BLOCKQUOTE>
+<CODE>(*** &lt; file &gt; *** text ***) .procmailrc-footer</CODE>
+</BLOCKQUOTE>
+
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+
+:0
+  |(/usr/bin/formail -r -k \
+     -A"X-loop: mailservice@mydomain.dom "| \
+       /usr/bin/gawk '{print }\
+       /^/ &amp;&amp; !HEADER \
+         { system("/bin/cat nosuchuser"); \
+         print"--" ;\
+         HEADER=1 }' ) |\
+         /usr/bin/sendmail -t
+
+
+exit
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss5.2">5.2 addmail script</A>
+</H2>
+
+<P>This script will add a user to the header file, attach the header &amp; footer
+to eachother - so it will be a complete .procmailrc file. the "#" (comments)
+are not really needed - and are for your info :).
+<P>
+<BLOCKQUOTE>
+<CODE>(*** &lt; file &gt; *** code ***)     addmail   (* chmod 500 *)</CODE>
+</BLOCKQUOTE>
+
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#/bin/sh
+#
+# Copyright (c)1997 by Gunther Voet. rev 1.0.1
+# please leave the Copyright in it when it is distributed with any
+# system using this thingy ...
+
+echo ""
+echo "Addmail v1.0.1 by Gunther Voet, Freaker / TuC'97-98 (21/04/97)"
+echo ""
+
+if [ $1 ]; then
+
+        if [ $2 ]; then
+
+# make a backup file !        
+        
+        cp /home/mailserv/.procmailrc-header /home/mailserv/.procmailrc-backup
+        
+# APPEND (>>) the information to the header file ...        
+
+        echo ":0" >> /home/mailserv/.procmailrc-header
+        echo "* ^Subject:.$1" >> /home/mailserv/.procmailrc-header
+        echo "! $2" >> /home/mailserv/.procmailrc-header
+        echo "" >> /home/mailserv/.procmailrc-header
+
+# copy the header file to .procmailrc - and append the footer file to it !
+
+        cat /home/mailserv/.procmailrc-header > /home/mailserv/.procmailrc
+        cat /home/mailserv/.procmailrc-footer >> /home/mailserv/.procmailrc
+
+# make sure it is owned by "mailserv" and the read/write priveleges are ONLY
+# for the user "mailserv" itself ...
+
+        chown mailserv /home/mailserv/.procmailrc
+        chgrp users /home/mailserv/.procmailrc
+        chmod 600 /home/mailserv/.procmailrc
+else
+        echo "No DESTINATION mail address has been given ..."
+fi
+
+else
+        echo "usage:"
+        echo ""
+        echo "syntax:  addmail from_user to_user(domain)"
+        echo ""
+        echo "example: addmail freaker freaker@myemail.dom"
+        echo ""
+fi
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>Now, this script will append the information of the user, as well the email
+address to the header file, it will copy it to the .procmailrc file, and will
+add the footer to it, so you got a complete .procmailrc to process the mail.
+If you want to delete a user- just edit the .procmailrc-header file, and
+at the next user added it will be deleted at the .procmailrc. To do a instant
+delete, just delete the user from both the files .procmailrc &amp; .procmailrc-
+header.
+<P>I guess you are smart enough to write a script that'll automatically add
+your users when using both methods - when doing a "adduser" at your box.
+<P>
+<HR>
+<A HREF="Offline-Mailing-6.html">Next</A>
+<A HREF="Offline-Mailing-4.html">Previous</A>
+<A HREF="Offline-Mailing.html#toc5">Contents</A>
+</BODY>
+</HTML>

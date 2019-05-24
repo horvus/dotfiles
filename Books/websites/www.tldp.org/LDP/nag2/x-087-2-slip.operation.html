@@ -1,0 +1,580 @@
+<HTML
+><HEAD
+><TITLE
+>SLIP Operation</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Serial Line IP"
+HREF="x-087-2-slip.html"><LINK
+REL="PREVIOUS"
+TITLE="General Requirements"
+HREF="x-087-2-slip.general.html"><LINK
+REL="NEXT"
+TITLE="Dealing with Private IP Networks"
+HREF="x6009.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-slip.general.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. Serial Line IP</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x6009.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-SLIP.OPERATION"
+>7.2. SLIP Operation</A
+></H1
+><P
+>Dialup IP servers frequently offer SLIP service through special user
+accounts. After logging in to such an account, you are not dropped into
+the common shell; instead, a program or shell script is executed that
+enables the server's SLIP driver for the serial line and configures the
+appropriate network interface. Then you have to do the same at your end
+of the link.</P
+><P
+>On some operating systems, the SLIP driver is a user-space program;
+under Linux, it is part of the kernel, which makes it a lot faster.
+This speed requires, however, that the serial line be converted to the
+SLIP mode explicitly. This conversion is done by means of a special
+tty line discipline, SLIPDISC. While the tty is in normal line
+discipline (DISC0), it exchanges data only with user processes, using
+the normal <TT
+CLASS="FUNCTION"
+>read(2)</TT
+> and
+<TT
+CLASS="FUNCTION"
+>write(2)</TT
+> calls, and the SLIP driver is unable to
+write to or read from the tty. In SLIPDISC, the roles are reversed:
+now any user-space processes are blocked from writing to or reading
+from the tty, while all data coming in on the serial port is passed
+directly to the SLIP driver.</P
+><P
+>   The SLIP driver itself
+understands a number of variations on the SLIP protocol. Apart from
+ordinary SLIP, it also understands CSLIP, which performs the so-called
+Van Jacobson header compression (described in RFC-1144) on outgoing IP
+packets. This compression improves throughput for interactive sessions
+noticeably. There are also six-bit versions for each of these
+protocols.</P
+><P
+>&#13;A simple way to convert a serial line to SLIP mode is by using the
+<B
+CLASS="COMMAND"
+>slattach</B
+> tool. Assume you have your modem on
+<TT
+CLASS="FILENAME"
+>/dev/ttyS3</TT
+> and have logged in to the SLIP server
+successfully. You will then execute:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>slattach /dev/ttyS3 &#38;</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This tool switches the line discipline of <TT
+CLASS="FILENAME"
+>ttyS3</TT
+> to
+<TT
+CLASS="LITERAL"
+>SLIPDISC</TT
+> and attaches it to one of the SLIP network
+interfaces. If this is your first active SLIP link, the line will be attached
+to <TT
+CLASS="FILENAME"
+>sl0</TT
+>&#8201;; the second will be attached to
+<TT
+CLASS="FILENAME"
+>sl1</TT
+>, and so on. The current kernels support a default
+maximum of 256 simultaneous SLIP links.</P
+><P
+>&#13;The default line discipline chosen by <B
+CLASS="COMMAND"
+>slattach</B
+> is CSLIP.
+You may choose any other discipline using the <TT
+CLASS="OPTION"
+>&#8211;p</TT
+> switch.
+To use normal SLIP (no compression), you use:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>slattach -p slip /dev/ttyS3 &#38;</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The disciplines available are listed in <A
+HREF="x-087-2-slip.operation.html#X-087-2-SLIP.LINE.DISCIPLINES"
+>Table 7-1</A
+>. A special pseudo-discipline
+is available called <TT
+CLASS="LITERAL"
+>adaptive</TT
+>, which causes the
+kernel to automatically detect which type of SLIP encapsulation is
+being used by the remote end.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="X-087-2-SLIP.LINE.DISCIPLINES"
+></A
+><P
+><B
+>Table 7-1. Linux Slip-Line Disciplines</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Disclipline</P
+></TH
+><TH
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>slip</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Traditional SLIP encapsulation.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>cslip</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>SLIP encapsulation with Van Jacobsen header compression.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>slip6</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>SLIP encapsulation with six-bit encoding. The encoding method is
+	similar to that used by the <B
+CLASS="COMMAND"
+>uuencode</B
+> command, and causes
+	the SLIP datagram to be converted into printable ASCII characters. This conversion is
+	useful when you do not have a serial link that is eight bit clean.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>cslip6</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>SLIP encapsulation with Van Jacobsen header compression and six-bit
+	encoding.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>adaptive</TD
+><TD
+WIDTH="4"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This is not a real line discipline; instead, it causes the kernel to
+	attempt to identify the line discipline being used by the remote machine and
+	to match it.</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>Note that you must use the same encapsulation as your peer. For
+example, if <SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+> uses
+CSLIP, you also have to do so. If your SLIP connection doesn't work,
+the first thing you should do is ensure that both ends of the link
+agree on whether to use header compression or not. If you are unsure
+what the remote end is using, try configuring your host for adaptive
+slip. The kernel might figure out the right type for you.</P
+><P
+><B
+CLASS="COMMAND"
+>slattach</B
+> lets you enable not only SLIP, but other
+protocols that use the serial line, like PPP or KISS (another
+protocol used by ham radio people). Doing this is not common, though, and there are
+better tools available to support these protocols. For details, please refer
+to the <TT
+CLASS="FILENAME"
+>slattach(8)</TT
+> manual page.</P
+><P
+>After turning over the line to the SLIP driver, you must configure the
+network interface. Again, you do this using the standard
+<B
+CLASS="COMMAND"
+>ifconfig</B
+> and <B
+CLASS="COMMAND"
+>route</B
+>
+commands. Assume that we have dialed up a server named <SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+> from <SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+>. On <I
+CLASS="EMPHASIS"
+>vlager</I
+> you would execute:
+
+ 
+ 
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ifconfig sl0 vlager-slip pointopoint cowslip</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>route add cowslip</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>route add default gw cowslip</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The first command configures the interface as a point-to-point link to
+<SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+>, while the second and third
+add the route to <SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+> and the
+default route, using <SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+> as a
+gateway.</P
+><P
+>Two things are worth noting about the <B
+CLASS="COMMAND"
+>ifconfig</B
+>
+invocation: The <SPAN
+CLASS="SYSTEMITEM"
+>pointopoint</SPAN
+>
+option that specifies the address of the remote end of a
+point-to-point link and our use of <SPAN
+CLASS="SYSTEMITEM"
+>vlager-slip</SPAN
+> as the address of the local
+SLIP interface.</P
+><P
+>We have mentioned that you can use the same address you assigned to
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager</SPAN
+>'s Ethernet interface
+for your SLIP link, as well. In this case, <SPAN
+CLASS="SYSTEMITEM"
+>vlager-slip</SPAN
+> might just be another alias
+for address <SPAN
+CLASS="SYSTEMITEM"
+>172.16.1.1</SPAN
+>.
+However, it is also possible that you have to use an entirely
+different address for your SLIP link. One such case is when your
+network uses an unregistered IP network address, as the Brewery
+does. We will return to this scenario in greater detail in the next
+section.</P
+><P
+>For the remainder of this chapter we will always use
+<SPAN
+CLASS="SYSTEMITEM"
+>vlager-slip</SPAN
+> to refer to the address
+of the local SLIP interface.</P
+><P
+>When taking down the SLIP link, you should first remove all routes
+through <SPAN
+CLASS="SYSTEMITEM"
+>cowslip</SPAN
+> using
+<B
+CLASS="COMMAND"
+>route</B
+> with the <TT
+CLASS="OPTION"
+>del</TT
+> option, then
+take the interface down, and send <B
+CLASS="COMMAND"
+>slattach</B
+> the
+hangup signal. The you must hang up the modem using your
+terminal program again:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>route del default</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>route del cowslip</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>ifconfig sl0 down</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>kill -HUP <TT
+CLASS="REPLACEABLE"
+><I
+>516</I
+></TT
+></B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+Note that the <TT
+CLASS="REPLACEABLE"
+><I
+>516</I
+></TT
+> should be replaced with the
+process id (as shown in the output of
+<TT
+CLASS="USERINPUT"
+><B
+>ps ax</B
+></TT
+>) of the <B
+CLASS="COMMAND"
+>slattach</B
+>
+command controlling the slip device you wish to take down.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-slip.general.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x6009.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>General Requirements</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-slip.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Dealing with Private IP Networks</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

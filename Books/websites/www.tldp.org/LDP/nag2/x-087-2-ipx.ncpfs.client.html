@@ -1,0 +1,854 @@
+<HTML
+><HEAD
+><TITLE
+>Mounting a Remote NetWare Volume</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="IPX and the NCP Filesystem"
+HREF="x-087-2-ipx.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring an IPX Router"
+HREF="x-087-2-ipx.router.html"><LINK
+REL="NEXT"
+TITLE="Exploring Some of the Other IPX Tools"
+HREF="x-087-2-ipx.othertools.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-ipx.router.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 15. IPX and the NCP Filesystem</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-ipx.othertools.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-IPX.NCPFS.CLIENT"
+>15.6. Mounting a Remote NetWare Volume</A
+></H1
+><P
+>IPX is commonly used to mount NetWare volumes in the Linux
+filesystem. This allows file-based data sharing between other
+operating systems and Linux. Volker Lendecke developed the NCP client
+for Linux and a suite of associated tools that make data sharing
+possible.</P
+><P
+>In an NFS environment, we'd use the Linux <B
+CLASS="COMMAND"
+>mount</B
+>
+command to mount the remote filesystem. Unfortunately, the NCP
+filesystem has unique requirements that make it impractical to build
+it into the normal <B
+CLASS="COMMAND"
+>mount</B
+>. Linux has an
+<B
+CLASS="COMMAND"
+>ncpmount</B
+> command that we will use instead. The
+<B
+CLASS="COMMAND"
+>ncpmount</B
+> command is one of the tools in Volker's
+<TT
+CLASS="FILENAME"
+>ncpfs</TT
+> package, which is available prepackaged in
+most modern distributions or in source form from <SPAN
+CLASS="SYSTEMITEM"
+>ftp.gwdg.de</SPAN
+> in the
+<TT
+CLASS="FILENAME"
+>/pub/linux/misc/ncpfs/</TT
+> directory. The version
+current at the time of writing is 2.2.0.</P
+><P
+>Before you can mount remote NetWare volumes, you must ensure your IPX network
+interface is configured correctly (as described earlier). Next, you must know
+your login details on the NetWare server you wish to mount; this includes
+the user ID and password. Lastly, you need to know which volume you wish
+to mount and what local directory you wish to mount it under.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN12036"
+>15.6.1. A Simple ncpmount Example</A
+></H2
+><P
+>&#13;A simple example of <B
+CLASS="COMMAND"
+>ncpmount</B
+> usage looks like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ncpmount -S ALES_F1 -U rick -P d00-b-gud /mnt/brewery</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+This command mounts all volumes of the <TT
+CLASS="LITERAL"
+>ALES_F1</TT
+>
+fileserver under the <TT
+CLASS="FILENAME"
+>/mnt/brewery</TT
+> directory,
+using the NetWare login <TT
+CLASS="LITERAL"
+>rick</TT
+> with the password
+<TT
+CLASS="LITERAL"
+>d00-b-gud</TT
+>.</P
+><P
+>The <B
+CLASS="COMMAND"
+>ncpmount</B
+> command is normally setuid to
+<SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+> and may therefore be used
+by any Linux user. By default, that user owns the connection and
+only he or the <SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+> user will
+be able to unmount it.</P
+><P
+>NetWare embodies the notion of a <I
+CLASS="EMPHASIS"
+>volume</I
+>, which is
+analogous to a filesystem in Linux. A NetWare volume is the logical
+representation of a NetWare filesystem, which might be a single disk
+partition be spread across many partitions. By default, the
+Linux NCPFS support treats volumes as subdirectories of a larger
+logical filesystem represented by the whole fileserver. The
+<B
+CLASS="COMMAND"
+>ncpmount</B
+> command causes each of the NetWare
+volumes of the mounted fileserver to appear as a subdirectory under
+the mount point. This is convenient if you want access to the whole
+server, but for complex technical reasons you will be unable to
+re-export these directories using NFS, should you wish to do so. We'll
+discuss a more complex alternative that works around this problem in a
+moment.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN12056"
+>15.6.2. The ncpmount Command in Detail</A
+></H2
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>ncpmount</B
+> has a large number of command line options
+that allow you quite a lot of flexibility in how you manage your NCP mounts.
+The most important of these are described in
+<A
+HREF="x-087-2-ipx.ncpfs.client.html#X-087-2-IPX.NCPMOUNT.ARGS"
+>Table 15-2</A
+>.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="X-087-2-IPX.NCPMOUNT.ARGS"
+></A
+><P
+><B
+>Table 15-2. ncpmount Command Arguments</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Argument</TH
+><TH
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#8211;S <TT
+CLASS="REPLACEABLE"
+><I
+>server</I
+></TT
+></P
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The name of the fileserver to mount.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#8211;U <TT
+CLASS="REPLACEABLE"
+><I
+>user_name</I
+></TT
+></P
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The NetWare user ID to use when logging in to the fileserver.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#8211;P  <TT
+CLASS="REPLACEABLE"
+><I
+>password</I
+></TT
+></P
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The password to use for the NetWare login.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;n</TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option must be used for NetWare logins that don't have a password
+associated with them.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;C</TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This argument disables automatic conversion of passwords to uppercase.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;c <TT
+CLASS="REPLACEABLE"
+><I
+>client_name</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option allows you to specify who owns the connection to the
+fileserver. This is useful for NetWare printing, which we will discuss in
+more detail later.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;u <TT
+CLASS="REPLACEABLE"
+><I
+>uid</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The Linux user ID that should be shown as the owner of files in the
+mounted directory.  If this is not specified, it defaults to the
+user ID of the user who invokes the <B
+CLASS="COMMAND"
+>ncpmount</B
+>
+command.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;g <TT
+CLASS="REPLACEABLE"
+><I
+>gid</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The Linux group ID that should be shown as the owner of files in the
+mounted directory.  If this is not specified, it will default to the
+group ID of the user who invokes the <B
+CLASS="COMMAND"
+>ncpmount</B
+>
+command.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;f <TT
+CLASS="REPLACEABLE"
+><I
+>file_mode</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option allows you to specify the file mode (permissions) that
+files in the mounted directory should have. The value should be
+specified in octal, e.g., <TT
+CLASS="LITERAL"
+>0664</TT
+>. The permissions
+that you will actually have are the file mode permissions
+specified with this option masked with the permissions that your
+NetWare login ID has for the files on the fileserver.  You must have
+rights on the server and rights specified by this option in order to
+access a file. The default value is derived from the current
+<TT
+CLASS="LITERAL"
+>umask</TT
+>.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;d <TT
+CLASS="REPLACEABLE"
+><I
+>dir_mode</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option allows you to specify the directory permissions in the
+mounted directory. It behaves in the same way as the
+<I
+CLASS="EMPHASIS"
+>&#8211;f</I
+> option, except that the default permissions are
+derived from the current <TT
+CLASS="LITERAL"
+>umask</TT
+>. Execute permissions
+are granted where read access is granted.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;V <TT
+CLASS="REPLACEABLE"
+><I
+>volume</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option allows you to specify the name of a single NetWare
+volume to mount under the mount point, rather than mounting all volumes of
+the target server. This option is necessary if you wish to re-export a
+mounted NetWare volume using NFS.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;t <TT
+CLASS="REPLACEABLE"
+><I
+>time_out</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option allows you to specify the time that the NCPFS client will wait
+for a response from a server. The default value is 60mS and the timeout is
+specified in hundredths of a second. If you experience any stability problems
+with NCP mounts, you should try increasing this value.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#8211;r <TT
+CLASS="REPLACEABLE"
+><I
+>retry_count</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The NCP client code attempts to resend datagrams to the server
+a number of times before deciding the connection is dead. This option allows
+you to change the retry count from the default of 5.</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN12146"
+>15.6.3. Hiding Your NetWare Login Password</A
+></H2
+><P
+>&#13;It is somewhat of a security risk to be putting a password on the
+command line, as we did with the <B
+CLASS="COMMAND"
+>ncpmount</B
+> command.
+Other active, concurrent users could see the password if they happen
+to be running a program like <B
+CLASS="COMMAND"
+>top</B
+> or
+<B
+CLASS="COMMAND"
+>ps</B
+>. To reduce the risk of others seeing and
+stealing NetWare login passwords, <B
+CLASS="COMMAND"
+>ncpmount</B
+> is able
+to read certain details from a file in a user's home directory. In
+this file, the user keeps the login name and password associated with
+each of the fileservers he or she intends to mount. The file is called
+<TT
+CLASS="FILENAME"
+>~/.nwclient</TT
+> and it must have permissions of
+<TT
+CLASS="LITERAL"
+>0600</TT
+> to ensure that others cannot read it. If the
+permissions are not correct, the <B
+CLASS="COMMAND"
+>ncpmount</B
+> command
+will refuse to use it.</P
+><P
+>The file has a very simple syntax. Any lines beginning with a #
+character are treated as comments and ignored.
+The remainder of the lines have the syntax:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="REPLACEABLE"
+><I
+>fileserver</I
+></TT
+>/<TT
+CLASS="REPLACEABLE"
+><I
+>userid</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>password</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+The <TT
+CLASS="REPLACEABLE"
+><I
+>fileserver</I
+></TT
+> is the name of the
+fileserver supporting the volumes you wish to mount. The
+<TT
+CLASS="REPLACEABLE"
+><I
+>userid</I
+></TT
+> is the login name of your account on
+that server. The <TT
+CLASS="REPLACEABLE"
+><I
+>password</I
+></TT
+> field is
+optional. If it is not supplied, the <B
+CLASS="COMMAND"
+>ncpmount</B
+>
+command prompts users for the password when they attempt the
+mount. If the <TT
+CLASS="REPLACEABLE"
+><I
+>password</I
+></TT
+> field is specified
+as the &#8211; character, no password is used; this is equivalent
+to the <TT
+CLASS="LITERAL"
+>&#8211;n</TT
+> command-line argument.</P
+><P
+>You can supply any number of entries, but the fileserver field must be
+unique. The first fileserver entry has special significance. The
+<B
+CLASS="COMMAND"
+>ncpmount</B
+> command uses the <TT
+CLASS="LITERAL"
+>&#8211;S</TT
+>
+command-line argument to determine which of the entries in
+<TT
+CLASS="FILENAME"
+>~/.nwclient</TT
+> to use. If no server is specified
+using the <TT
+CLASS="LITERAL"
+>&#8211;S</TT
+> argument, the first server entry
+in <TT
+CLASS="FILENAME"
+>~/.nwclient</TT
+> is assumed, and is treated as your
+preferred server. You should place the fileserver you mount most
+frequently in the first position in the file.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN12176"
+>15.6.4. A More Complex ncpmount Example</A
+></H2
+><P
+>&#13;
+Let's look at a more complex <B
+CLASS="COMMAND"
+>ncpmount</B
+> example involving
+a number of the features we've described. First, let's build a simple
+<TT
+CLASS="FILENAME"
+>~/.nwclient</TT
+> file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># NetWare login details for the Virtual Brewery and Winery
+#
+# Brewery Login
+ALES_F1/MATT staoic1
+#
+# Winery Login
+REDS01/MATT staoic1
+#</PRE
+></TD
+></TR
+></TABLE
+>
+Make sure its permissions are correct:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>chmod 600 ~/.nwclient</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>Let's mount one volume of the Winery's server under a subdirectory of a
+shared directory, specifying the file and directory permissions such that
+others may share the data from there:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ ncpmount -S REDS01 -V RESEARCH -f 0664 -d 0775 /usr/share/winery/data/</PRE
+></TD
+></TR
+></TABLE
+>
+
+This command, in combination with the <TT
+CLASS="FILENAME"
+>~/.nwclient</TT
+> file
+shown, would mount the <TT
+CLASS="LITERAL"
+>RESEARCH</TT
+> volume of the
+<TT
+CLASS="LITERAL"
+>REDS01</TT
+> server onto the
+<TT
+CLASS="FILENAME"
+>/usr/share/winery/data/</TT
+> directory using the NetWare
+login ID of <TT
+CLASS="LITERAL"
+>MATT</TT
+> and the password retrieved
+from the <TT
+CLASS="FILENAME"
+>~/.nwclient</TT
+> file. The permissions of the
+mounted files are <TT
+CLASS="LITERAL"
+>0664</TT
+> and the directory permissions
+are <TT
+CLASS="LITERAL"
+>0775</TT
+>.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.router.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.othertools.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring an IPX Router</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Exploring Some of the Other IPX Tools</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

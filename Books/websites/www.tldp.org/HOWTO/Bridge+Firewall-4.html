@@ -1,0 +1,223 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Bridge+Firewall Mini-HOWTO version 1.2.0: FIREWALLING</TITLE>
+ <LINK HREF="Bridge+Firewall-3.html" REL=previous>
+ <LINK HREF="Bridge+Firewall.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+Next
+<A HREF="Bridge+Firewall-3.html">Previous</A>
+<A HREF="Bridge+Firewall.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="FIREWALLING"></A> <A NAME="s4">4. FIREWALLING</A></H2>
+
+<H2><A NAME="Software and reading"></A> <A NAME="ss4.1">4.1 Software and reading </A>
+</H2>
+
+<P>You should read the 
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/docs/HOWTO/Firewall-HOWTO">Firewall-HOWTO</A>. 
+<P>
+<P>That will tell you where to get <B>ipfwadm</B> if you don't already
+have it. There are other tools you can get but I made no progress until
+I tried <B>ipfwadm</B>. It is nice and low level! You can see exactly what
+it is doing. 
+<P>
+<H2><A NAME="Preliminary checks"></A> <A NAME="ss4.2">4.2 Preliminary checks </A>
+</H2>
+
+<P>You have compiled IP-forwarding and masquerading into the kernel so
+you will want to check that the firewall is in its default (accepting)
+state with 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -l ipfwadm -O -l ipfwadm -F -l 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>That is respectively, &quot;display the rules affecting the ..&quot;
+incoming or outgoing or forwarding (masquerading) &quot;.. sides of the
+firewall&quot;. The &quot;-l&quot; means &quot;list&quot;. 
+<P>
+<P>You might have compiled in accounting too: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -A -l 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>You should see that there are no rules defined and that the default
+is to accept every packet. You can get back to this working state anytime
+with 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -f
+ipfwadm -O -f
+ipfwadm -F -f 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The &quot;-f&quot; means &quot;flush&quot;. You may need to use that.
+<P>
+<P>
+<H2><A NAME="Default rule"></A> <A NAME="ss4.3">4.3 Default rule </A>
+</H2>
+
+<P>I want to cut the world off from my internal net and do nothing else,
+so I will want to give as a last (default) rule that the firewall should
+ignore any packets coming in from the internal net and directed to outside.
+I put all the rules (in this order) into <B>/etc/rc.d/rc.firewall </B>and
+execute it from <B>/etc/rc.d/rc.local</B> at bootup. 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -a reject -S 192.168.2.0/255.255.255.128 -D 0.0.0.0/0.0.0.0 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The &quot;-S&quot; is the source address/mask. The &quot;-D&quot; is
+the destination address/mask. 
+<P>
+<P>This format to is rather long-winded. <B>Ipfwadm</B>
+is intelligent about network names and some common abbreviations. Check
+the man pages. 
+<P>
+<P>It is possibly more convenient to put some or all of these rules on
+the outgoing half of the firewall by using &quot;-O&quot; instead of &quot;-I&quot;,
+but I'll state the rules here all formulated for the incoming half. 
+<P>
+<H2><A NAME="Holes per address"></A> <A NAME="ss4.4">4.4 Holes per address </A>
+</H2>
+
+<P>Before that default rule, I have to place some rules that serve as exceptions
+to this general denial of external services to internal clients. 
+<P>
+<P>I want to treat the firewall machines address on the internal net specially.
+I will stop people logging in to the firewall machine unless they have
+special permission, but once they are there they should be allowed to talk
+to the world. 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -i accept -S 192.168.2.100/255.255.255.255 \
+ -D 0.0.0.0/0.0.0.0 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>I also want the internal clients to be able to talk to the firewalling
+machine. Maybe they can persuade it to let them get out! 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -i accept -S 192.168.2.0/255.255.255.128 \
+ -D 192.168.2.100/255.255.255.255 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Check at this point that you can get in to the clients from outside
+the firewall via <B>telnet</B>, but that you cannot get out. That should
+mean that you can just about make first contact, but the clients cannot
+send you any prompts. You should be able to get all the way in if you use
+the firewall machine as a staging post. Try <B>rlogin</B> and <B>ping </B>too,
+with <B>tcpdump</B> running on one card or the other. You should be able
+to make sense of what you see. 
+<P>
+<H2><A NAME="Holes per protocol"></A> <A NAME="ss4.5">4.5 Holes per protocol </A>
+</H2>
+
+<P>I went on to relax the rules protocol by protocol. I want to allow pings
+from the outside to the inside to get an echo back, for instance, so I
+inserted the rule: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -i accept -P icmp -S 192.168.2.0/255.255.255.128 \
+ -D 0.0.0.0/0.0.0.0 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>The &quot;<CODE>-P icmp</CODE>&quot; works the protocol-specific magic.
+<P>
+<P>
+<P>Until I get hold of an <B>ftp</B> proxy I am also allowing ftp calls
+out with port-specific relaxations. This targets ports 20 21 and 115 on
+outside machines. 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -i accept -P tcp -S 192.168.2.0/255.255.255.128 \
+ -D 0.0.0.0/0.0.0.0 20 21 115 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>I could not make <B>sendmail</B> between the local clients work without
+a nameserver. Rather than set up a nameserver right then on the firewall,
+I just lifted the firewall for tcp domain service queries precisely aimed
+at the nearest existing nameserver and put its address in the clients <B>/etc/resolv.conf</B>
+(&quot;<CODE>nameserver 123.456.789.31</CODE>&quot; on a separate line). 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -i accept -P tcp -S 192.168.2.0/255.255.255.128 \
+ -D 123.456.789.31/255.255.255.255 54 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>You can find which port number and protocol a service requires with
+<B>tcpdump</B>. Trigger the service with a an <B>ftp</B> or a <B>telnet</B>
+or whatever to or from the internal machine and then watch for it on the
+input and output ports of the firewall with <B>tcpdump</B>: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+tcpdump -i eth1 -e host client04 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>for example. The <B>/etc/services </B>file is another important source
+of clues. To let <B>telnet</B> and <B>ftp</B> IN to the firewall from outside,
+you have to allow the local clients to call OUT on a specific port. I understand
+why this is necessary for <B>ftp</B> - it's the server that establishes
+the data stream in the end - but I am not sure why <B>telnet</B> also needs
+this. 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipfwadm -I -i accept -P tcp -S 192.168.2.0/255.255.255.128 ftp telnet \
+ -D 0.0.0.0/0.0.0.0 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>There is a particular problem with some daemons that look up the hostname
+of the firewalling machine in order to decide what is their networking
+address. <B>Rpc.yppasswdd</B> is the one I had trouble with. It insists
+on broadcasting information that says it is outside the firewall (on the
+second card). That means the clients inside can't contact it. 
+<P>
+<P>Rather than start IP aliasing or change the daemon code, I mapped the
+name to the inside card address on the clients in their <B>/etc/hosts</B>.
+<P>
+<P>
+<H2><A NAME="ss4.6">4.6 Checks</A>
+</H2>
+
+<P>You want to test that you can still <B>telnet</B>, <B>rlogin </B>and
+<B>ping</B> from the outside. From the inside you should be able to <B>ping</B>
+out. You should also be able to <B>telnet</B> to the firewall machine from
+the inside and the latter should be able to do anything. 
+<P>
+<P>That is it. At this point you probably want to learn about <B>rpc</B>/<B>Y</B>ellow
+<B>P</B>ages and the interaction with the password file. The firewalled
+network wants to run without its unprivileged users being able to log on
+to the firewall - and thus get out. Some other HOWTO! 
+<P>
+<HR>
+Next
+<A HREF="Bridge+Firewall-3.html">Previous</A>
+<A HREF="Bridge+Firewall.html#toc4">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,323 @@
+<HTML
+><HEAD
+><TITLE
+>Booting the machine</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Custom Linux: A Porting Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Bootcamp: How To Begin ?"
+HREF="c119.html"><LINK
+REL="PREVIOUS"
+TITLE="Compiling the first kernel"
+HREF="x136.html"><LINK
+REL="NEXT"
+TITLE="Booting In The Dark"
+HREF="c184.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Custom Linux: A Porting Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x136.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Bootcamp: How To Begin ?</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c184.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN149"
+></A
+>2.3. Booting the machine</H1
+><P
+>First, configure the terminal program, in our case <SPAN
+CLASS="application"
+>minicom</SPAN
+>,
+the following way: 9600 bps, 8 bits, no parity, 1 stop bit and no flow control of any kind.
+The serial port in Linux should be <TT
+CLASS="filename"
+>/dev/ttyS0</TT
+> for <TT
+CLASS="envar"
+>COM1</TT
+>,
+<TT
+CLASS="filename"
+>/dev/ttyS1</TT
+> for <TT
+CLASS="envar"
+>COM2</TT
+> etc.</P
+><P
+>Start the target. You should see the vxWorks bootloader on your terminal screen, and
+should be able to stop the boot sequence by pressing the space bar.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>We <EM
+>cannot use the vxWorks bootloader to load a Linux kernel</EM
+> since
+it looks in the ELF header and loads the image to the address written there. However, the Linux
+kernel, which uses virtual memory, is linked to a high-memory address, and vxWorks can't
+handle that.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Once the target is stopped, run the <SPAN
+CLASS="application"
+>VisionICE</SPAN
+> software
+and perform the following steps:
+<P
+></P
+><UL
+><LI
+><P
+>Initialize the target by pressing <B
+CLASS="command"
+>Target|Initialize</B
+></P
+></LI
+><LI
+><P
+>Press <B
+CLASS="command"
+>File|Load Executable</B
+>. A dialog box will open,
+   asking you to choose a file. Please choose your kernel image (vmlinux). Before pressing
+   <B
+CLASS="command"
+>Load</B
+>, don't forget to enter a value in the <TT
+CLASS="parameter"
+><I
+>+/- Bias</I
+></TT
+> field.
+   <DIV
+CLASS="tip"
+><P
+></P
+><TABLE
+CLASS="tip"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/tip.gif"
+HSPACE="5"
+ALT="Tip"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The bias field makes it possible to tell ICE to load a certain image in a different
+   address than what's stated in the ELF binary. We wanted to load the kernel into address
+   <TT
+CLASS="envar"
+>0x300000</TT
+>, and since the binary was linked to <TT
+CLASS="envar"
+>0xC0000000</TT
+>, we entered
+   <TT
+CLASS="envar"
+>-0xBFD00000</TT
+>.</P
+></TD
+></TR
+></TABLE
+></DIV
+></P
+></LI
+><LI
+><P
+>Once the image is loaded succesfully, you can press <B
+CLASS="command"
+>Run</B
+>
+   or <B
+CLASS="command"
+>Step</B
+> to start executing your kernel.</P
+></LI
+></UL
+>
+
+After pressing the <B
+CLASS="command"
+>Run</B
+> button, nothing happened. At that moment, and for some time after, it
+seemed that nothing was happening and the kernel was stuck. We used ICE to step through the
+initialization code of the kernel and rule out some potential problems, like virtual memory
+errors, only to finally discover that the problem was simple: the kernel was indeed booting
+but since the console (tty) driver had problems, we couldn't see anything!
+
+<DIV
+CLASS="caution"
+><P
+></P
+><TABLE
+CLASS="caution"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/caution.gif"
+HSPACE="5"
+ALT="Caution"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>VisionICE is not the correct tool to use when debugging Linux. ICE doesn't know
+about virtual memory and protected mode (at least the version we had), and since the Linux
+kernel turns on virtual memory very early, ICE is only useful for debugging the first assembler
+statements. After VM is turned on, ICE starts crashing and giving wierd results. </P
+></TD
+></TR
+></TABLE
+></DIV
+>
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x136.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c184.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Compiling the first kernel</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c119.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Booting In The Dark</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,297 @@
+<HTML
+><HEAD
+><TITLE
+>Running an NIS Server</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Network Information System"
+HREF="x-087-2-nis.html"><LINK
+REL="PREVIOUS"
+TITLE="The Client Side of NIS"
+HREF="x-087-2-nis.clients.html"><LINK
+REL="NEXT"
+TITLE="NIS Server Security"
+HREF="x-087-2-nis.securenets.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.clients.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. The Network Information System</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.securenets.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NIS.SERVER"
+>13.4. Running an NIS Server</A
+></H1
+><P
+>&#13;After so much theoretical techno-babble, it's time to get our hands
+dirty with actual configuration work. In this section, we will cover the
+configuration of an NIS server. If an NIS server is running on your network,
+you won't have to set up your own; in this case, you may safely skip this
+section.</P
+><P
+>Note that if you are just going to experiment with the server, make
+sure you don't set it up for an NIS domain name that is already in use
+on your network. This may disrupt the entire network service and make a
+lot of people very unhappy and very angry.</P
+><P
+>&#13;
+
+
+There are two possible NIS server configurations: master and slave. The slave
+configuration provides a live backup machine, should your master server 
+fail. We will cover the configuration only for a master server here. 
+The server documentation will explain the differences, should you wish 
+to configure a slave server.</P
+><P
+>There are currently two NIS servers freely available for Linux: one contained
+in Tobias Reber's <TT
+CLASS="FILENAME"
+>yps</TT
+> package, and the other in Peter
+Eriksson's <TT
+CLASS="FILENAME"
+>ypserv</TT
+> package. It doesn't matter which one
+you run.</P
+><P
+>After installing the server program (<B
+CLASS="COMMAND"
+>ypserv</B
+>) in
+<TT
+CLASS="FILENAME"
+>/usr/sbin</TT
+>, you should create the directory that
+is going to hold the map files your server is to distribute. When
+setting up an NIS domain for the <SPAN
+CLASS="SYSTEMITEM"
+>brewery</SPAN
+> domain, the maps would go to
+<TT
+CLASS="FILENAME"
+>/var/yp/brewery</TT
+>.  The server determines whether it is
+serving a particular NIS domain by checking if the map directory
+is present. If you are disabling service for some NIS domain, make
+sure to remove the directory as well.&#13;</P
+><P
+>&#13;
+ 
+ 
+Maps are usually stored in DBM files to speed up lookups. They are created
+from the master files using a program called <B
+CLASS="COMMAND"
+>makedbm</B
+> (for
+Tobias's server) or <B
+CLASS="COMMAND"
+>dbmload</B
+> (for Peter's server).</P
+><P
+>Transforming a master file into a form that <B
+CLASS="COMMAND"
+>dbmload</B
+> can 
+parse usually requires some <B
+CLASS="COMMAND"
+>awk</B
+> or <B
+CLASS="COMMAND"
+>sed</B
+> 
+magic, which tends to be a little tedious to type and hard to remember. 
+Therefore, Peter Eriksson's <TT
+CLASS="FILENAME"
+>ypserv</TT
+> package contains a 
+Makefile (called <TT
+CLASS="FILENAME"
+>ypMakefile</TT
+>) that manages the conversion 
+of the most common master files for you. You should install it as
+<TT
+CLASS="FILENAME"
+>Makefile</TT
+> in your map directory and edit it to reflect
+the maps you want the NIS server to share. Towards the top of the file, you'll
+find 
+the <SPAN
+CLASS="SYSTEMITEM"
+>all</SPAN
+>
+target that lists the services <B
+CLASS="COMMAND"
+>ypserv</B
+> offers. By default, the line looks
+something like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>all: ethers hosts networks protocols rpc services passwd group netid</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;If you don't want to produce, for example, the 
+<TT
+CLASS="FILENAME"
+>ethers.byname</TT
+> and <TT
+CLASS="FILENAME"
+>ethers.byaddr</TT
+> 
+maps, simply remove the <SPAN
+CLASS="SYSTEMITEM"
+>ethers</SPAN
+> 
+prerequisite from this rule. To test your setup, you can start with just 
+one or two maps, like the <TT
+CLASS="FILENAME"
+>services.</TT
+>* maps.</P
+><P
+>After editing the <TT
+CLASS="FILENAME"
+>Makefile</TT
+>, while in the map directory,
+type <TT
+CLASS="USERINPUT"
+><B
+>make</B
+></TT
+>. This will automatically generate and install the
+maps. You have to make sure to update the maps whenever you change the master
+files, otherwise the changes will remain invisible to the network.</P
+><P
+>&#13;The section &#8220;Setting Up an NIS Client with GNU libc&#8221; 
+will explain how to configure the NIS client code. If your setup doesn't
+work, you should try to find out whether requests are arriving at your
+server. If you specify the <TT
+CLASS="OPTION"
+>&#8211;&#8211;debug</TT
+>
+command-line flag to <B
+CLASS="COMMAND"
+>ypserv</B
+>, it prints debugging
+messages to the console about all incoming NIS queries and the results
+returned. These should give you a hint as to where the problem
+lies. Tobias's server doesn't have this option.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.clients.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.securenets.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Client Side of NIS</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>NIS Server Security</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

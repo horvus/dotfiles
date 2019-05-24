@@ -1,0 +1,219 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Wacom Graphire USB Mini-HOWTO: Kernel and hard stuff</TITLE>
+ <LINK HREF="Wacom-USB-mini-HOWTO-5.html" REL=next>
+ <LINK HREF="Wacom-USB-mini-HOWTO-3.html" REL=previous>
+ <LINK HREF="Wacom-USB-mini-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Wacom-USB-mini-HOWTO-5.html">Next</A>
+<A HREF="Wacom-USB-mini-HOWTO-3.html">Previous</A>
+<A HREF="Wacom-USB-mini-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Kernel and hard stuff</A> </H2>
+
+<H2><A NAME="ss4.1">4.1 Kernel configuration</A>
+ </H2>
+
+<P>Like I said earlier, the options I'll give come from the 2.3.99pre6 kernel.
+If everything is not exactly the same, I think that taking a good guess should
+help ;)
+<P><B>** Reminder : [] stands for Yes/No options, and &lt;&gt; stands
+for Yes/No/Module **</B>
+<P>First of all, you have to enable the experimental code :
+<P><B>Code Maturity level options ---&gt;</B>
+<P><B>[*] Prompt for development and/or incomplete code/drivers</B>
+<P>If you don't, you won't have access to some of the drivers.
+<P>Then, move on to the USB section.
+<P><B>USB support ---&gt;</B>
+<P><B>&lt;*&gt; Support for USB</B>
+<P><B>[*] USB verbose debug messages</B>
+<P><B>--- Miscellaneous USB options</B>
+<P><B>[*] Preliminary USB device filesystem</B>
+<P>With this option, you'll activate the new features of the /dev/usb/* (which,
+of course, you'll have to create : to be seen later)
+<P><B>--- USB controllers</B>
+<P><B>&lt;*&gt; UHCI (Intel PIIX4, VIA, ...) support</B>
+<P><B>&lt; &gt; OHCI (Compaq, iMacs, OPTi, SiS, ALi, ...) support</B>
+<P>You must choose one of these, and only one. So, if one doesn't work, then
+choose the other. Chances are that, if you use an x86 system, you'll take the
+UHCI driver.
+<P><B>--- USB Devices</B>
+<P><B>&lt; &gt; USB Printer support</B>
+<P><B>&lt; &gt; USB Scanner support</B>
+<P><B>&lt; &gt; USB Audio support</B>
+<P><B>&lt; &gt; USB Modem (CDC ACM) support</B>
+<P>If you have one of these, feel free to activate the options
+<P><B>&lt;M&gt; USB Serial Converter support</B>
+<P>This options must be activated for the Wacom tablet to work.
+<P><B>[*] USB Generic Serial Driver</B>
+<P><B>[ ] USB Handspring Visor Driver</B>
+<P><B>[ ] USB ConnectTech WhiteHEAT Serial Driver (EXPERIMENTAL)</B>
+<P><B>[ ] USB FTDI Single Port Serial Driver (EXPERIMENTAL)</B>
+<P><B>[ ] USB Keyspan PDA Single Port Serial Driver (EXPERIMENTAL)</B>
+<P><B>[ ] USB ZyXEL omni.net LCD Plus Driver (EXPERIMENTAL)</B>
+<P><B>[*] USB Serial Converter verbose debug</B>
+<P>If you want to have all the messages (which can be very helpful in the
+beginning). When satisfied with the functionning, you can deactivate it.
+<P><B>&lt; &gt; USB Kodak DC-2xx Camera support</B>
+<P><B>&lt; &gt; USB Mustek MDC800 Digital Camera support (EXPERIMENTAL)</B>
+<P><B>&lt; &gt; USB Mass Storage support (EXPERIMENTAL)</B>
+<P><B>&lt; &gt; USS720 parport driver</B>
+<P><B>&lt; &gt; DABUSB driver</B>
+<P><B>&lt; &gt; PLUSB Prolific USB-Network driver (EXPERIMENTAL)</B>
+<P><B>&lt; &gt; USB ADMtek Pegasus-based device support (EXPERIMENTAL)</B>
+<P><B>&lt; &gt; USB Diamond Rio500 support (EXPERIMENTAL)</B>
+<P><B>--- USB HID</B>
+<P>The HID is kinda the interface between you and your devices, so you MUST
+activate it.
+<P><B>&lt;M&gt; USB Human Interface Device (HID) support</B>
+<P><B>&lt; &gt; USB HIDBP Keyboard support</B>
+<P><B>&lt; &gt; USB HIDBP Mouse support</B>
+<P><B>&lt;M&gt; Wacom Intuos/Graphire tablet support</B>
+<P>There we go, the Wacom support should be activated (unless you read this
+just for fun ;) )
+<P><B>&lt; &gt; Logitech WingMan Force joystick support</B>
+<P><B>&lt; &gt; Keyboard support</B>
+<P><B>&lt;M&gt; Mouse support</B>
+<P>To be activated to use the Wacom Intuos/Graphire mouse
+<P><B>(1024) Horizontal screen resolution</B>
+<P><B>(768) Vertical screen resolution</B>
+<P><B>&lt;M &gt; Joystick support</B>
+<P><B>&lt;M&gt; Event interface support</B>
+<H2><A NAME="ss4.2">4.2 Kernel compilation</A>
+ </H2>
+
+<P>Now the easy stuff :
+<P>When you exit the configuration do as they say
+<P><B>make dep bzImage modules modules_install</B>
+<P>Type it just like this and the computer will run all the steps one after
+the other.
+<P>Then copy the file bzImage to /boot, copy the System.map to /boot, edit
+your lilo.conf to point to your new kernel and type <B>/sbin/lilo</B> at the prompt.
+<P><B>** Of course all of this (kernel config, kernel compilation and lilo tweaking
+must be done as root) **</B>
+<H2><A NAME="ss4.3">4.3 Before rebooting</A>
+ </H2>
+
+<H3>FStab </H3>
+
+<P>If you want to avoid error messages at the next reboot, you'll have to
+do the following :
+<P>Edit the file /etc/fstab and add the following lines
+<P><B>none          /proc/bus/usb          usbdevfs          defaults          0          0</B>
+<P>This one is to activate the usb device filesystem
+<P><B>none          /var/shm                    shm                     defaults          0          0</B>
+<P>This one is because of a change in the shared memory stuff in the kernel.
+<H3>USB related devices </H3>
+
+<P>Next, if you want to be able to use the USB :
+<P><B>mkdir /dev/input</B>
+<P><B>mknod /dev/input/mouse0 c 13 32</B>
+<P>This will activate the mouse support
+<P><B>mknod /dev/input/event0 c 13 64</B>
+<P><B>mknod /dev/input/event1 c 13 65</B>
+<P><B>mknod /dev/input/event2 c 13 66</B>
+<P><B>mknod /dev/input/event3 c 13 67</B>
+<P>These will activate the stylus : moves, pressure, button and eraser.
+<H3>Modules configuration </H3>
+
+<P>Edit the file /etc/modules.conf and add the following line :
+<P><B>alias char-major-13 usbcore</B>
+<H3>What I did next </H3>
+
+<P>Next I added in the /etc/rc.d/boot.local file (remember, I use a SuSE distribution,
+but you should fine an equivalent for RedHat in /etc/rc.d/init.d/boot.local
+or /etc/rc.d/init.d/rc.local)
+<P><B>/sbin/modprobe wacom</B>
+<P><B>/sbin/modprobe mousedev</B>
+<P><B>/sbin/modprobe evdev</B>
+<P>Just to be sure the modules will load at boot time.
+<H3>Last but not least </H3>
+
+<P>Reboot ;)
+<P>Check your boot messages (<B>dmesg | less</B>), and see if there are no errors
+related to USB. It may be because you've chosen UHCI and your system is an
+OHCI one.
+<P>On my system, the following messages are shown :
+<P><B>..... </B>
+<P><B>..... </B>
+<P><B>usb.c: registered new driver usbdevfs </B>
+<P><B>usb.c: registered new driver hub </B>
+<P><B>usb-uhci.c: $Revision: 1.9 $ time 17:54:28 May 8 2000 </B>
+<P><B>usb-uhci.c: High bandwidth mode enabled </B>
+<P><B>usb-uhci.c: Intel USB controller: setting latency timer to 0 </B>
+<P><B>usb-uhci.c: USB UHCI at I/O 0xffe0, IRQ 11 </B>
+<P><B>usb-uhci.c: Detected 2 ports </B>
+<P><B>usb.c: new USB bus registered, assigned bus number 1 </B>
+<P><B>usb.c: USB new device connect, assigned device number 1 </B>
+<P><B>usb.c: kmalloc IF c3fcd2e0, numif 1 </B>
+<P><B>usb.c: new device strings: Mfr=0, Product=2, SerialNumber=1 </B>
+<P><B>usb.c: USB device number 1 default language ID 0x0 </B>
+<P><B>Product: USB UHCI Root Hub </B>
+<P><B>SerialNumber: ffe0 </B>
+<P><B>hub.c: USB hub found </B>
+<P><B>hub.c: 2 ports detected </B>
+<P><B>hub.c: ganged power switching </B>
+<P><B>hub.c: standalone hub </B>
+<P><B>hub.c: global over-current protection </B>
+<P><B>hub.c: power on to power good time: 2ms </B>
+<P><B>hub.c: hub controller current requirement: 0mA </B>
+<P><B>hub.c: port 1 is removable </B>
+<P><B>hub.c: port 2 is removable </B>
+<P><B>hub.c: local power source is good </B>
+<P><B>hub.c: no over-current condition exists </B>
+<P><B>hub.c: enabling power on all ports </B>
+<P><B>usb.c: hub driver claimed interface c3fcd2e0 </B>
+<P><B>..... </B>
+<P><B>..... </B>
+<P><B>hub.c: port 1 connection change </B>
+<P><B>usb.c: USB new device connect, assigned device number 2 </B>
+<P><B>usb.c: kmalloc IF c3fcd620, numif 1 </B>
+<P><B>usb.c: skipped 1 class/vendor specific interface descriptors </B>
+<P><B>usb.c: new device strings: Mfr=1, Product=2, SerialNumber=0 </B>
+<P><B>usb.c: USB device number 2 default language ID 0x409 </B>
+<P><B>Manufacturer: WACOM </B>
+<P><B>Product: ET-0405-UV1.1-1 </B>
+<P><B>usb.c: unhandled interfaces on device </B>
+<P><B>usb.c: This device is not recognized by any installed USB driver. </B>
+<P><B>Length                             = 18 </B>
+<P><B>DescriptorType          = 01 </B>
+<P><B>USB version                 = 1.00 </B>
+<P><B>Vendor:Product          = 056a:0010 </B>
+<P><B>MaxPacketSize0       = 0 </B>
+<P><B>NumConfigurations  =1 </B>
+<P><B>Device Version           = 1.11 </B>
+<P><B>Device Class:SubClass:Protocol = 00:00:00 </B>
+<P><B>Per-interface classes </B>
+<P><B>Configuration: </B>
+<P><B>..... </B>
+<P><B>.....</B>
+<P>When the kernel says "<B>This device is not recognized by any installed USB
+driver</B>", it's because, at boot time, the wacom module is not yet loaded. But
+as you can see, the whole USB bus and interfaces are recognized. So if your
+system doesn't work and doesn't have such messages, try to check if you haven't
+forgotten an USB option (something I indicated to be put in the kernel and
+that you put as a module : if it's the case, in the <B>/etc/rc.d/init.d/boot.local</B>,
+put the necessary modprobe <B>BEFORE</B> the 3 lines I indicated, for example <B>/sbin/modprobe
+usb-uhci</B>).
+<P>When the wacom module loads, here are the messages :
+<P><B>..... </B>
+<P><B>..... </B>
+<P><B>usb.c: registered new driver wacom </B>
+<P><B>input0: Wacom Graphire on usb2 </B>
+<P><B>usb.c: wacom driver claimed interface c3fcd620 </B>
+<P><B>mouse0: PS/2 mouse device for input0 </B>
+<P><B>mice: PS/2 mouse device common for all mice </B>
+<P><B>event0: Event device for input0 </B>
+<P><B>..... </B>
+<P><B>.....</B>
+<P>Retry and check everything until you get all these messages (or corresponding
+ones).
+<HR>
+<A HREF="Wacom-USB-mini-HOWTO-5.html">Next</A>
+<A HREF="Wacom-USB-mini-HOWTO-3.html">Previous</A>
+<A HREF="Wacom-USB-mini-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

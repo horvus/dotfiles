@@ -1,0 +1,943 @@
+<HTML
+><HEAD
+><TITLE
+>The NNTP Protocol</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="NNTP and thenntpd Daemon"
+HREF="x-087-2-nntp.html"><LINK
+REL="PREVIOUS"
+TITLE="NNTP and thenntpd Daemon"
+HREF="x-087-2-nntp.html"><LINK
+REL="NEXT"
+TITLE="Installing the NNTP Server"
+HREF="x-087-2-nntp.nntpd.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nntp.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 22. NNTP and thenntpd Daemon</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nntp.nntpd.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NNTP.PROTOCOL"
+>22.1. The NNTP Protocol</A
+></H1
+><P
+>We've mentioned two NNTP commands that are key to how news articles are pushed
+or pulled between servers. Now we'll look at these in the context of an actual
+NNTP session to show you how simple the protocol is. For the purposes of our
+illustration, we'll use a simple <B
+CLASS="COMMAND"
+>telnet</B
+> client to connect to
+an INN-based news server at the Virtual Brewery called
+<I
+CLASS="EMPHASIS"
+>news.vbrew.com</I
+>. The server is running
+a minimal configuration to keep the examples short. We'll look at how to
+complete the configuration of this server in <A
+HREF="x-087-2-inn.html"
+>Chapter 23</A
+>.
+In our testing we'll be very careful to generate articles in the
+<I
+CLASS="EMPHASIS"
+>junk</I
+> newsgroup only, to avoid 
+disturbing anyone else.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17812"
+>22.1.1. Connecting to the News Server</A
+></H2
+><P
+>&#13;Connecting to the news server is a simple as opening a TCP connection to
+its NNTP port. When you are connected, you will be greeted with a welcome
+banner. One of the first commands you might try is <SPAN
+CLASS="SYSTEMITEM"
+>help</SPAN
+>. The response you get generally depends upon whether
+the server believes you are a remote NNTP server or a newsreader, as there are
+different command sets required. You can change your operating mode using the
+<B
+CLASS="COMMAND"
+>mode</B
+> command; we'll look at that in a
+moment:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>telnet news.vbrew.com nntp</B
+></TT
+>
+Trying 172.16.1.1...
+Connected to localhost.
+Escape character is '^]'.
+200 news.vbrew.com InterNetNews server INN 1.7.2 08-Dec-1997 ready
+<TT
+CLASS="USERINPUT"
+><B
+>help</B
+></TT
+>
+100 Legal commands
+        authinfo
+		help
+		ihave
+		check
+		takethis
+		list
+		mode
+		xmode
+		quit
+		head
+		stat
+		xbatch
+		xpath
+		xreplic
+For more information, contact "usenet" at this machine.
+.</PRE
+></TD
+></TR
+></TABLE
+><P
+>The responses to NNTP commands always end with a period (.) on a
+line by itself. The numbers you see in the output listing are 
+<I
+CLASS="EMPHASIS"
+>response codes</I
+> and are used by the server to indicate success or
+failure of a command. The response codes are described in RFC-977; we'll talk
+about the most important ones as we proceed.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17825"
+>22.1.2. Pushing a News Article onto a Server</A
+></H2
+><P
+>&#13;
+
+
+We mentioned the <B
+CLASS="COMMAND"
+>IHAVE</B
+> command
+when we talked about pushing news articles onto a news server. Let's
+now have a look at how the <B
+CLASS="COMMAND"
+>IHAVE</B
+> command actually works:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>ihave &#60;123456@gw.vk2ktj.ampr.org&#62;</B
+></TT
+>
+335
+<TT
+CLASS="USERINPUT"
+><B
+>From: terry@gw.vk2ktj.ampr.org
+Subject: test message sent with ihave
+Newsgroups: junk
+Distribution: world
+Path: gw.vk2ktj.ampr.org
+Date: 26 April 1999
+Message-ID: &#60;123456@gw.vk2ktj.ampr.org&#62;
+Body: 
+
+This is a test message sent using the NNTP IHAVE command.
+
+.</B
+></TT
+>
+235</PRE
+></TD
+></TR
+></TABLE
+><P
+>All NNTP commands are case insensitive, so you may enter them in
+either upper- or lowercase. The <B
+CLASS="COMMAND"
+>IHAVE</B
+> command takes one 
+mandatory argument, it being the Message ID of the article that is being pushed. Every news article is assigned a unique message ID when
+it is created. The <B
+CLASS="COMMAND"
+>IHAVE</B
+> command provides a way of the NNTP server to say which articles it has
+when it wants to push articles to another server. The sending server
+will issue an <B
+CLASS="COMMAND"
+>IHAVE</B
+> command
+for each article it wishes to push. If the command response code
+generated by the receiving NNTP server is in the &#8220;3xx&#8221;
+range, the sending NNTP server will transmit the complete article,
+including it's full header, terminating the article with a period on a
+line by itself. If the response code was in the &#8220;4xx&#8221;
+range, the receiving server has chosen not to accept this article,
+possibly because it already has it, or because of some problem, such
+as running out of disk space.</P
+><P
+>When the article has been transmitted, the receiving serve issues another
+response code indicating whether the article transmission was successful.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17849"
+>22.1.3. Changing to NNRP Reader Mode</A
+></H2
+><P
+>&#13;
+Newsreaders use their own set of commands when talking to a
+news server. To activate these commands, the news server has to be
+operating in <I
+CLASS="EMPHASIS"
+>reader</I
+> mode. Most news servers default
+to reader mode, unless the IP address of the connecting host is listed
+as a news-forwarding peer.  In any case, NNTP provides a command to
+explicitly switch into reader mode:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>mode reader</B
+></TT
+>
+200 news.vbrew.com InterNetNews NNRP server INN 1.7.2 08-Dec-1997 ready/
+    (posting ok).
+<TT
+CLASS="USERINPUT"
+><B
+>help</B
+></TT
+>
+100 Legal commands
+  authinfo user Name|pass Password|generic &#60;prog&#62; &#60;args&#62;
+  article [MessageID|Number]
+  body [MessageID|Number]
+  date
+  group newsgroup
+  head [MessageID|Number]
+  help
+  ihave
+  last
+  list [active|active.times|newsgroups|distributions|distrib.pats|/
+      overview.fmt|subscriptions]
+  listgroup newsgroup
+  mode reader
+  newgroups yymmdd hhmmss ["GMT"] [&#60;distributions&#62;]
+  newnews newsgroups yymmddhhmmss ["GMT"] [&#60;distributions&#62;]
+  next
+  post
+  slave
+  stat [MessageID|Number]
+  xgtitle [group_pattern]
+  xhdr header [range|MessageID]
+  xover [range]
+  xpat header range|MessageID pat [morepat...]
+  xpath MessageID
+Report problems to &#60;usenet@vlager.vbrew.com&#62;
+.</PRE
+></TD
+></TR
+></TABLE
+><P
+>NNTP reader mode has a lot of commands. Many of these are designed to
+make the life of a newsreader easier. We mentioned earlier that there are
+commands that instruct the server to send the head and the body of articles
+separately. There are also commands that list the available groups and 
+articles, and others that allow posting, an alternate means of sending news 
+articles to the server.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17863"
+>22.1.4. Listing Available Groups</A
+></H2
+><P
+>&#13;
+
+
+The <B
+CLASS="COMMAND"
+>list</B
+> command lists a number
+of different types of information; notably the groups supported by the server:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>list newsgroups</B
+></TT
+>
+215 Descriptions in form "group description".
+control                 News server internal group
+junk                    News server internal group
+local.general           General local stuff
+local.test              Local test group
+.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17880"
+>22.1.5. Listing Active Groups</A
+></H2
+><P
+>&#13;
+<TT
+CLASS="OPTION"
+>list active</TT
+> shows each supported group and provides information
+about them. The two numbers in each line of the output are the high-water
+mark and the low-water mark&#8212;that is, the highest numbered article and
+lowest numbered article in each group. The newsreader is able to form an
+idea of the number of articles in the group from these. We'll talk a little
+more about these numbers in a moment. The last field in the output displays flags
+that control whether posting is allowed to the group, whether the group is
+moderated, and whether articles posted are actually stored or
+just passed on. These flags are described in detail in <A
+HREF="x-087-2-inn.html"
+>Chapter 23</A
+>. 
+An example looks like this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>list active</B
+></TT
+>
+215 Newsgroups in form "group high low flags".
+control 0000000000 0000000001 y
+junk 0000000003 0000000001 y
+alt.test 0000000000 0000000001 y
+.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17892"
+>22.1.6. Posting an Article</A
+></H2
+><P
+>&#13;
+
+
+We mentioned there was a difference between pushing an article and posting
+an article. When you are pushing an article, there is an implicit assumption 
+that the article already exists, that it has a message identifier that has 
+been uniquely assigned to it by the server to which it was originally posted, 
+and that it has a complete set of headers. When posting an article, you are 
+creating the article for the first time and the only headers you supply are 
+those that are meaningful to you, such as the Subject and the Newgroups to 
+which you are posting the article. The news server you post the article on 
+will add all the other headers for you and create a message ID that it will 
+use when pushing the article onto other servers.</P
+><P
+>All of this means that posting an article is even easier than pushing one.
+An example posting looks like this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>post</B
+></TT
+>
+340 Ok
+<TT
+CLASS="USERINPUT"
+><B
+>From: terry@richard.geek.org.au
+Subject: test message number 1
+Newsgroups: junk
+Body: 
+
+This is a test message, please feel free to ignore it.
+
+.</B
+></TT
+>
+240 Article posted</PRE
+></TD
+></TR
+></TABLE
+><P
+>We've generated two more messages like this one to give our following examples
+some realism.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17912"
+>22.1.7. Listing New Articles</A
+></H2
+><P
+>&#13;
+
+
+When a newsreader first connects to a new server and the user chooses a
+newsgroup to browse, the newsreader will want to retrieve a list of new
+articles, those posted or received since the last login by the user. The
+<TT
+CLASS="OPTION"
+>newnews</TT
+> command is used for this
+purpose. Three mandatory arguments must be supplied: the name of
+the group or groups to query, the start date, and the start time from which
+to list. The date and time are each specified as six-digit numbers, with the
+most significant information first; 
+<TT
+CLASS="REPLACEABLE"
+><I
+>yymmdd</I
+></TT
+> and
+<TT
+CLASS="REPLACEABLE"
+><I
+>hhmmss</I
+></TT
+>, respectively:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>newnews junk 990101 000000</B
+></TT
+>
+230 New news follows
+&#60;7g2o5r$aa$6@news.vbrew.com&#62;
+&#60;7g5bhm$8f$2@news.vbrew.com&#62;
+&#60;7g5bk5$8f$3@news.vbrew.com&#62;
+.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17932"
+>22.1.8. Selecting a Group on Which to Operate</A
+></H2
+><P
+>&#13;
+
+When the user selects a newsgroup to browse, the newsreader may tell the
+news server that the group was selected. This simplifies the interaction
+between newsreader and news server; it removes the need to constantly 
+send the name of the newsgroup with each command. The 
+<TT
+CLASS="OPTION"
+>group</TT
+> command simply takes the name of the selected group as 
+an argument. Many following commands use the group selected as the 
+default, unless another newsgroup is specified explicitly:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>group junk</B
+></TT
+>
+211 3 1 3 junk</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="OPTION"
+>group</TT
+> command returns a message
+indicating the number of active messages, the low-water mark, the high-water
+mark, and the name of the group, respectively. Note that while the number of
+active messages and the high-water mark are the same in our example, this is
+not often the case; in an active news server, some articles may have expired
+or been deleted, lowering the number of active messages but leaving the 
+high-water mark untouched.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17948"
+>22.1.9. Listing Articles in a Group</A
+></H2
+><P
+>&#13;
+
+To address newsgroup articles, the newsreader must know
+which article numbers represent active articles. The 
+<TT
+CLASS="OPTION"
+>listgroup</TT
+> command offers a list of the active 
+article numbers in the current group, or an explicit group if the group name is 
+supplied:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>listgroup junk</B
+></TT
+>
+211 Article list follows
+1
+2
+3
+.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17962"
+>22.1.10. Retrieving an Article Header Only</A
+></H2
+><P
+>&#13;
+
+
+The user must have some information about an article before she can know
+whether she wishes to read it. We mentioned earlier that some commands allow the article header and body to be transferred separately. The
+<TT
+CLASS="OPTION"
+>head</TT
+> command is used to request that the server transmit 
+just the header of the specified article to the newsreader. If the user 
+doesn't want to read this article, we haven't wasted time and network 
+bandwidth transferring a potentially large article body unnecessarily.</P
+><P
+>Articles may be referenced using either their number (from the 
+<TT
+CLASS="OPTION"
+>listgroup</TT
+> command) or their message identifier:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>head 2</B
+></TT
+>
+221 2 &#60;7g5bhm$8f$2@news.vbrew.com&#62; head
+Path: news.vbrew.com!not-for-mail
+From: terry@richard.geek.org.au
+Newsgroups: junk
+Subject: test message number 2
+Date: 27 Apr 1999 21:51:50 GMT
+Organization: The Virtual brewery
+Lines: 2
+Message-ID: &#60;7g5bhm$8f$2@news.vbrew.com&#62;
+NNTP-Posting-Host: localhost
+X-Server-Date: 27 Apr 1999 21:51:50 GMT
+Body: 
+Xref: news.vbrew.com junk:2
+.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17982"
+>22.1.11. Retrieving an Article Body Only</A
+></H2
+><P
+>&#13;
+If, on the other hand, the user decides she does want to read the article, her
+newsreader needs a way of requesting that the message body be transmitted. The
+<TT
+CLASS="OPTION"
+>body</TT
+> command is used for this purpose. It operates in much 
+the same way as the <TT
+CLASS="OPTION"
+>head</TT
+> command, except that only the message 
+body is returned:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>body 2</B
+></TT
+>
+222 2 &#60;7g5bhm$8f$2@news.vbrew.com&#62; body
+This is another test message, please feel free to ignore it too.
+
+.</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN17994"
+>22.1.12. Reading an Article from a Group</A
+></H2
+><P
+>&#13;
+
+
+While it is normally most efficient to separately transfer the headers
+and bodies of selected articles, there are occasions when we are better off
+transferring the complete article. A good example of this is in applications
+through which we want to transfer all of the artices in a group without any sort of
+preselection, such as when we are using an NNTP cache program like
+<B
+CLASS="COMMAND"
+>leafnode</B
+>.<A
+NAME="X-087-2-FNNN03"
+HREF="#FTN.X-087-2-FNNN03"
+>[1]</A
+>&#13;</P
+><P
+>Naturally, NNTP provides a means of doing this, and not surprisingly, it
+operates almost identically to the <TT
+CLASS="OPTION"
+>head</TT
+> command as well. 
+The <TT
+CLASS="OPTION"
+>article</TT
+> command also accepts an article number or 
+message ID as an argument, but returns the whole article including its header:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>article 1</B
+></TT
+>
+220 1 &#60;7g2o5r$aa$6@news.vbrew.com&#62; article
+Path: news.vbrew.com!not-for-mail
+From: terry@richard.geek.org.au
+Newsgroups: junk
+Subject: test message number 1
+Date: 26 Apr 1999 22:08:59 GMT
+Organization: The Virtual brewery
+Lines: 2
+Message-ID: &#60;7g2o5r$aa$6@news.vbrew.com&#62;
+NNTP-Posting-Host: localhost
+X-Server-Date: 26 Apr 1999 22:08:59 GMT
+Body: 
+Xref: news.vbrew.com junk:1
+
+This is a test message, please feel free to ignore it.
+
+.</PRE
+></TD
+></TR
+></TABLE
+><P
+>If you attempt to retrieve an unknown article, the server will return
+a message with an appropriately coded response code and perhaps a readable 
+text message:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>article 4</B
+></TT
+>
+423 Bad article number</PRE
+></TD
+></TR
+></TABLE
+><P
+>We've described how the most important NNTP commands are used in this section.
+If you're interested in developing software that implements the NNTP protocol,
+you should refer to the relevant RFC documents; they provide a great deal of
+detail that we couldn't include here.</P
+><P
+>Let's now look at NNTP in action through the <I
+CLASS="EMPHASIS"
+>nntpd</I
+> server.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNN03"
+HREF="x-087-2-nntp.protocol.html#X-087-2-FNNN03"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+><I
+CLASS="EMPHASIS"
+>leafnode</I
+> is available by anonymous FTP from
+<I
+CLASS="EMPHASIS"
+>wpxx02.toxi.uni-wuerzburg.de</I
+>
+in the <TT
+CLASS="FILENAME"
+>/pub/</TT
+> directory.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nntp.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nntp.nntpd.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>NNTP and thenntpd Daemon</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-nntp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Installing the NNTP Server</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

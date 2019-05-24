@@ -1,0 +1,1004 @@
+<HTML>
+<HEAD>
+
+<TITLE>
+Ethernet Bridge + netfilter Howto
+</TITLE>
+</HEAD>
+<BODY BGCOLOR=white>
+
+<HR>
+<H1>Ethernet Bridge + netfilter Howto</H1>
+
+<H2>
+<A HREF="mailto:Nils.Radtke_@_Think-Future.de">Nils Radtke</A></H2>v0.8, July 2005
+<HR>
+<EM>Setting up an ethernet bridge gives us the chance to integrate a surveying and/or regulating instance transparently into an existing network. This setup requires no changes to the logical network topology. It is accomplished by plugging the ethernet bridge in the physical network topology between the network itself and the routing instance (that piece of hardware connected to the Internet).</EM>
+<HR>
+<P>This Howto is available in 
+<A HREF="http://www.think-future.de/DOCUMENTATION/Ethernet-Bridge-netfilter-HOWTO/other_formats/">other formats</A>.
+Preferably downloadable: 
+<A HREF="http://www.think-future.de/DOCUMENTATION/Ethernet-Bridge-netfilter-HOWTO/Ethernet-Bridge-netfilter-HOWTO.tar.gz">documentation tarball</A>.
+You may find this Howto as part of the 
+<A HREF="http://www.tldp.org/docs.html#howto">Linux Documentation Project</A>.</P>
+
+<P>Looking for other languages? See the 
+<A HREF="http://www.think-future.de/DOCUMENTATION/Ethernet-Bridge-netfilter-HOWTO_de/">German version</A>, then!
+And as of march 2003 there is a french version available with courtesy of François Romieu and Guillaume Lelarge: 
+<A HREF="http://fr.tldp.org/HOWTO/lecture/Ethernet-Bridge-netfilter-HOWTO.html">French version</A>.
+Today, some day in july 2005, I stumbled across an italian version of this HOWTO! Unfortunately there's no translator's note in the document, courtesy is unbeknownst so far: 
+<A HREF="http://ftp-ildp.httpdnet.com/Ethernet-Bridge-netfilter-HOWTO">Italian version</A>.</P>
+
+<P>
+<DL>
+<DT><B>2005-07-12:</B><DD><P>Added link to italian version of this HOWTO (see above). 
+Plus a section about making the changes 
+<A HREF="#reboot">reboot-persistent</A>, a note about 
+<A HREF="#kernel-2.6">2.6 kernel not working as expected</A> 
+and the 
+<A HREF="#user-exp">user experiences-section</A>.
+Included the 
+<A HREF="#final-note">Final note-section</A>. :)</P>
+
+<DT><B>2005-06-06:</B><DD><P>Unfortunately, the linux documentation project does not 
+respond actively to update requests. This results in an outdated 
+version of the on www.tldp.org site. Use this site instead, if you
+want to stick with the most actual version of the HOWTO. 
+Blame the tldp people.</P>
+
+<DT><B>2004-08-03:</B><DD><P>Carsten (C DOT Lueth AT fielmann DOT com) has found a variant for 
+<A HREF="http://www.tecchannel.de/software/1387/0.html">MS Windows (TM) systems</A>.</P>
+
+<DT><B>2004-06-13:</B><DD><P>Update on used kernel versions, 
+warning about 
+<A HREF="#HINT_cutoff">remote administering</A>, 
+<A HREF="#HINT_netfilter_debugging">netfilter debugging</A> code. 
+New translation available: French (link c. f. above). 
+Discontinued german version.</P>
+
+<DT><B>2002-09-19:</B><DD><P>links about ebtables have been updated in the 
+&quot;Related Topics&quot; Section. Added note about 
+<A HREF="#HINT_False_positive">&quot;false positive&quot; br-nf debugging output</A>.</P>
+
+<DT><B>2002-10-08:</B><DD><P>Added section 
+<A HREF="#TESTING_actual_configuration">Actual configuration</A>
+and hints about routing in
+<A HREF="#BRIDGE_routing">Setting up the routing</A>,
+<A HREF="#TESTING_routing">Ping it, Jim!</A>
+, resp.</P>
+</DL>
+</P>
+
+
+
+<P>
+<H2><A NAME="toc1">1.</A> <A HREF="#s1">Introduction</A></H2>
+
+<P>
+<H2><A NAME="toc2">2.</A> <A HREF="#s2">Required software</A></H2>
+
+<UL>
+<LI><A NAME="toc2.1">2.1</A> <A HREF="#ss2.1">Featured Linux kernel </A>
+<LI><A NAME="toc2.2">2.2</A> <A HREF="#ss2.2">Userspace tool: <CODE>brctl</CODE></A>
+<LI><A NAME="toc2.3">2.3</A> <A HREF="#ss2.3">Kernel-Notes </A>
+</UL>
+<P>
+<H2><A NAME="toc3">3.</A> <A HREF="#s3">Set Linux up to serve</A></H2>
+
+<UL>
+<LI><A NAME="toc3.1">3.1</A> <A HREF="#ss3.1">Setting up the bridge</A>
+<LI><A NAME="toc3.2">3.2</A> <A HREF="#ss3.2">Setting up the routing</A>
+<LI><A NAME="toc3.3">3.3</A> <A HREF="#ss3.3">Make it happen again! </A>
+</UL>
+<P>
+<H2><A NAME="toc4">4.</A> <A HREF="#s4">Test your new bridged environment! </A></H2>
+
+<UL>
+<LI><A NAME="toc4.1">4.1</A> <A HREF="#ss4.1">Testing Grounds</A>
+<LI><A NAME="toc4.2">4.2</A> <A HREF="#ss4.2">Ping it, Jim!</A>
+<LI><A NAME="toc4.3">4.3</A> <A HREF="#ss4.3">Actual configuration</A>
+<LI><A NAME="toc4.4">4.4</A> <A HREF="#ss4.4">Final note (Important!) </A>
+<LI><A NAME="toc4.5">4.5</A> <A HREF="#ss4.5">Bug-Notes</A>
+</UL>
+<P>
+<H2><A NAME="toc5">5.</A> <A HREF="#s5">User experiences </A></H2>
+
+<UL>
+<LI><A NAME="toc5.1">5.1</A> <A HREF="#ss5.1">Fedora Core 3</A>
+</UL>
+<P>
+<H2><A NAME="toc6">6.</A> <A HREF="#s6">Links</A></H2>
+
+<UL>
+<LI><A NAME="toc6.1">6.1</A> <A HREF="#ss6.1">Ethernet-Bridge</A>
+<LI><A NAME="toc6.2">6.2</A> <A HREF="#ss6.2">Related Topics</A>
+</UL>
+<HR>
+<H2><A NAME="s1">1.</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc1">Introduction</A></H2>
+
+<P>Ethernet bridges connect two or more distinct ethernet segments transparently.<BR>
+An ethernet bridge distributes ethernet frames coming in on one port to other 
+ports associated to the bridge interface. This is accomplished with 
+brain: Whenever the bridge knows on which port the MAC address to which the 
+frame is to be delivered is located it forwards this frame only to this only 
+port instead of polluting all ports together. </P>
+<P>Ethernet interfaces can be added to an existing bridge interface 
+and become then (logical) ports of the bridge interface.</P>
+<P>Putting a netfilter structure on top of a bridge interface renders the 
+bridge capable of servicing filtering mechanisms. This way, a 
+transparent filtering instance can be created. It even needs no IP address 
+assigned to work. Of course, you can assign an IP address to the bridge 
+interface for maintenance purposes ( certainly, with ssh only ;-).</P>
+<P>The advantage of this system is evident. Transparency alleviates the network 
+administrator of the pain of restructuring the network topology. And users may 
+not notice the existence of the bridge but their connection beeing 
+blocked. Also, users are not disturbed while working (think of a company where 
+network connection loss pays alot).</P>
+<P>The other common case is a client beeing connected to the global web via a 
+leased router. As the providers seldomly grant administration privileges on 
+their leasing hardware, the client cannot change the interconnecting 
+configuration. But, of course, the client has a network running, and wants 
+to spend at least as possible, he does not want to reconfigure his entire 
+network. And he does not need to if he uses a bridging device.</P>
+
+
+
+<HR>
+<H2><A NAME="s2">2.</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2">Required software</A></H2>
+
+<P>This software setup is needed on the ethernet bridge computer. According to our 
+<A HREF="#TESTING_Testing_grounds">Testing grounds</A>.</P>
+
+<H2><A NAME="kernel-2.6"></A> <A NAME="ss2.1">2.1</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2.1">Featured Linux kernel </A>
+</H2>
+
+
+<P>Use of kernel 2.6 is not yet a good idea. Yes, it's astonishing. The why the 
+bridging code 
+breaks and where it does so has not yet come to my and others attention, I 
+cannot recommend kernels of the 2.6 series. You have the clou? Assure yourself 
+the credit, mail the solution to me (e-mail address at entry page).
+See also  
+<A HREF="#kernel-notes">Kernel-Notes</A> for additional 
+information on this. So far, use kernel 2.4 series.<BR>
+As of kernel version <EM>2.4.18</EM>  there's already support for the Ethernet Bridge 
+capability built-in. No patches needed so far.
+Regarding later kernel versions, it must be stated that <EM>2.4.23</EM>  might be less recommendable, especially in conjunction with ebtables and netfilter-bridging. Later versions seem advisable.<BR>
+The following paragraph is outdated now (2005-07-12) as all we need is present in kernel. You may skip this paragraph, it is only retained for legacy:<BR>
+But if we intend to use netfilter capabilities, because we want to run iptables on our new Linux router/fw box, we still need to apply a patch.
+Any patches needed can be found and downloaded on the 
+<A HREF="#LINK_Bridge-home">sourceforge Ethernet Bridge homepage</A>.
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> cd /usr/src/
+root@bridge:~> wget -c http://bridge.sourceforge.net/devel/bridge-nf/bridge-nf-0.0.7-against-2.4.18.diff
+root@bridge:~> cd /usr/src/linux/
+root@bridge:~> patch -p1 -i ../bridge-nf/bridge-nf-0.0.7-against-2.4.18.diff
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Supposedly we want netfilter support on our bridge interface and we have already 
+patched the vanillal kernel we may now activate some necessary kernel configuration 
+items. On how to build a private kernel image see the 
+<A HREF="http://www.think-future.de/DOCUMENTATION/CD-Net-Install-HOWTO/CD-Net-Install-HOWTO-4.html#Kernel_Configuration">CD-Net-Install-HOWTO, Toolbox</A>. 
+Oh, yeah, it's still in German only. Hm, I should fix this some time, but time lacks... Any volunteers? (deadly silence is cracking.. ;)</P>
+<P>Nevertheless, we start by now:
+In 
+<BLOCKQUOTE><CODE>
+<PRE>
+        Code maturity level options
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+we activate
+<BLOCKQUOTE><CODE>
+<PRE>
+        [*] Prompt for development and/or incomplete code/drivers
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and in 
+<BLOCKQUOTE><CODE>
+<PRE>
+        Loadable module support
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<BLOCKQUOTE><CODE>
+<PRE>
+        [*] Enable loadable module support  
+        [*]   Set version information on all module symbols
+        [*]   Kernel module loader
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Ok, so far so good.
+Now, we go to 
+<BLOCKQUOTE><CODE>
+<PRE>
+        Networking options
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and mark
+<BLOCKQUOTE><CODE>
+<PRE>
+        [*] Network packet filtering (replaces ipchains)
+        [ ]   Network packet filtering debugging
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<A NAME="HINT_netfilter_debugging"></A> 
+<DL>
+<DT><B>Note:</B><DD><P>Previously, the above debugging option had been selected. For now, 
+unless you want your <CODE>/var/log/</CODE>-partition being filled up in 
+short-time distance, deactivate this option. <BR>
+If this options is activated, messages similar to the following appear 
+in counts of thousands in dmesg and <CODE>/var/log/{kern.log,debug,syslog,messages}</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+skb: pf=2 (unowned) dev=br0 len=52
+PROTO=6 156.136.32.121:3709 192.168.101.2:112 L=52 S=0x00 I=35470 F=0x4000 T=51 
+nf_hook: hook 1 already set.
+skb: pf=2 (unowned) dev=br0 len=52
+PROTO=6 156.136.32.121:3709 192.168.101.2:112 L=52 S=0x00 I=35470 F=0x4000 T=51 
+nf_hook: hook 0 already set.
+skb: pf=2 (unowned) dev=br0 len=52
+PROTO=6 192.168.101.11:2828 192.168.101.2:202 L=52 S=0x10 I=63 F=0x4000 T=64 
+nf_hook: hook 1 already set.
+skb: pf=2 (unowned) dev=br0 len=52
+PROTO=6 192.168.101.11:2828 192.168.101.2:202 L=52 S=0x10 I=63 F=0x4000 T=64 
+nf_hook: hook 3 already set.
+skb: pf=7 (owned) dev=eth1 len=1500
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+</DL>
+</P>
+<P>Furthermore, in 
+<BLOCKQUOTE><CODE>
+<PRE>
+          IP: Netfilter Configuration  --->
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+we mark any item we need as module.
+Now the long awaited item: activate
+<BLOCKQUOTE><CODE>
+<PRE>
+        &lt;M> 802.1d Ethernet Bridging
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+as well as
+<BLOCKQUOTE><CODE>
+<PRE>
+        [*]   netfilter (firewalling) support
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<DL>
+<DT><B>Note:</B><DD><P>The above entry is available only if we successfully patched our kernel!</P>
+</DL>
+</P>
+<P>Finally, we just need a successful 
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> make dep clean bzImage modules modules_install
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+cycle and we're done.
+Don't forget to edit <CODE>/etc/lilo.conf</CODE> and do
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> lilo -t
+root@bridge:~> lilo
+root@bridge:~> reboot
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+, though.</P>
+<P>
+<DL>
+<DT><B>Hint:</B><DD><P>Perhaps we might mark our new kernel as the bridge kernel? We 
+<CODE>vi</CODE> the toplevel Makefile in our kernel sources and edit the head 
+line called <CODE>EXTRAVERSION =</CODE>. 
+We may actually set it to, say <EM>bridge</EM>? ;-) <BR>
+After the <CODE>modules_install</CODE> we find the fresh modules in 
+<CODE>/lib/modules/2.4.18bridge</CODE><BR>
+For debian users (eventually use <CODE>export PATCH_THE_KERNEL=YES</CODE> 
+before and --added_patches your_patches with make-kpkg):
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> make-kpkg --revision=tf.1.0 kernel_image
+          
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+</DL>
+</P>
+
+<H2><A NAME="ss2.2">2.2</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2.2">Userspace tool: <CODE>brctl</CODE></A>
+</H2>
+
+<P>Once our kernel has the capabilities needed to perform Ethernet Bridge and netfilter 
+actions, we prepare the user space tool <CODE>brctl</CODE>. <CODE>brctl</CODE> is the configuration 
+tool we use to 
+<A HREF="#SETUP_Linux_brctl">set up</A> anything to suit our needs.</P>
+<P>We 
+<A HREF="#LINK_Bridge-home">download the source tarball</A>, unpack it and 
+change directory into it.
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> wget -c http://bridge.sourceforge.net/bridge-utils/bridge-utils-0.9.5.tar.gz
+root@bridge:~> tar xvzf bridge-utils-0.9.5.tar.gz
+root@bridge:~> cd bridge-utils-0.9.5
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+At this time, read the <CODE>README</CODE> and the files in the <CODE>doc/</CODE> subdirectory. 
+Then do a simple make and copy the resulting <CODE>brctl/brctl</CODE> executable to 
+<CODE>/sbin/</CODE>.
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> make
+root@bridge:~> cp -vi brctl/brctl /sbin/
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This is it. Go for 
+<A HREF="#SETUP_Linux_brctl">Setup</A> now.</P>
+
+<H2><A NAME="kernel-notes"></A> <A NAME="ss2.3">2.3</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2.3">Kernel-Notes </A>
+</H2>
+
+<P>Symptom: Anything during setup works but packets do no longer traverse as they did in 2.4 the bridge interfaces.<BR>
+ipuk s (qasuari_ @ _yahoo.com) wrote (about june 2005):
+<BLOCKQUOTE><CODE>
+<PRE>
+[...]
+I have to compile my kernel from 2.4.18-14 to 2.6.0 and activate
+bridge-netfilter&amp;ebtables.
+After compiling, i can't ping from a host to interface of linux box.
+Linux box just have 1 interface.whats wrong with my compilation ???
+[...]
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+
+<HR>
+<H2><A NAME="SETUP_Linux_brctl"></A> <A NAME="s3">3.</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3">Set Linux up to serve</A></H2>
+
+
+
+<H2><A NAME="ss3.1">3.1</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3.1">Setting up the bridge</A>
+</H2>
+
+<P>We need Linux to know about the bridge. First tell it that we want one virtual 
+ethernet bridge interface: (this is to be executed on host <CODE>bridge</CODE>, of course. 
+See 
+<A HREF="#TESTING_Testing_grounds">Testing grounds</A>)
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> brctl addbr br0
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Second, we do not need the STP (Spanning Tree Protocol). I.e. we do only have 
+one single router, so a loop is highly improbable. We may then deactivate this feature. 
+(Results in less polluted networking environment, too):
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> brctl stp br0 off
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+After these preparations, we now do finally some effective commands. We add our two 
+(or even more) physical ethernet interfaces. That means, we attach them to the just 
+born logical (virtual) bridge interface <CODE>br0</CODE>. 
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> brctl addif br0 eth0
+root@bridge:~> brctl addif br0 eth1
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<A NAME="HINT_cutoff"></A> 
+<DL>
+<DT><B>Important Note:</B><DD><P>People sent me emails that it would have helped them if I stressed more 
+clearly the risk of being cut off. So listen at this point to my 
+warnings:<BR>
+If you read this, you are one (small) step before you _might_ cut 
+yourself off your box you are going to subverse to a bridging device.<BR>
+If you love living on bleeding edges, it is now the instant to prepare 
+your first aid material. You will likely need it.<BR>
+If you do not have physical access, nor does another person within your
+range: <BR>
+DO NOT PROCEED UNLESS YOUR FINGERS LEFT THE KEYBOARD IN FRONT OF YOU 
+AND YOUR EYES FIXED REFLECTIVELY SOMETHING OTHER THAN YOUR CONSOLE.<BR>
+You have been warned, now. No responsability is assumed for anything 
+at all.</P>
+</DL>
+
+Now, our two previously physical ethernet interfaces became a logical bridge port each. 
+Erm, ok, there were and will be the physical devices. They are still there, 
+go have a look ;-) But now they became part of the logical bridge device and 
+therefore need no IP configuration any longer. So release the IPs:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> ifconfig eth0 down
+root@bridge:~> ifconfig eth1 down
+root@bridge:~> ifconfig eth0 0.0.0.0 up
+root@bridge:~> ifconfig eth1 0.0.0.0 up
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Great! We now have a box w/o any IP attached. So if you were configuring your future
+fw/router via TP, go for your local console now ;-)) You have a serial console? Happy one :-)<BR>
+<DL>
+<DT><B>Optional:</B><DD><P>We tell Linux the new (logical) interface and associate one single IP with it:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> ifconfig br0 10.0.3.129 up
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+</DL>
+
+And we're done. <BR>
+Read the 
+<A HREF="#TESTING_Important_note">Important Note</A>!</P>
+
+<H2><A NAME="ss3.2">3.2</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3.2">Setting up the routing</A>
+</H2>
+
+<P>
+<A NAME="BRIDGE_routing"></A> 
+In case we are configuring a gateway we enable the forwarding in 
+the linux kernel.
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> echo "1" > /proc/sys/net/ipv4/ip_forward
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Our box already has an IP assigned but no default route. We
+solve this now:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> route add default gw 10.0.3.129
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Finally, we should have a working net from, to and through the gateway.</P>
+
+<H2><A NAME="reboot"></A> <A NAME="ss3.3">3.3</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc3.3">Make it happen again! </A>
+</H2>
+
+<P>Aka: We need the changes to persist reboots.<BR>
+To do so, you need some sh-style script and put this in the appropriate 
+system boot-up directory: <CODE>/etc/init.d/</CODE><BR>
+Secondly, you create the link in your runlevel directory.
+The correct directory depends on your gusto and of course on your linux 
+distribution. 
+Common runlevel values on workstations are <CODE>2</CODE>, <CODE>3</CODE> and <CODE>5</CODE>.
+Examples are: <CODE>/etc/rc?.d/</CODE> (replace the ? with the right runlevel)<BR>
+Also, you need an idea as when your network interfaces are torn up.
+For now, we assume, your network interfaces are activated at system priority 
+<CODE>S</CODE> so we need not to care of.
+If you ever should feel the need to know exactly, look in <CODE>/etc/rcS.d/</CODE>.
+We just want the bridge to be up and operable as soon as possible and so chose 
+our priority to be <CODE>10</CODE>. (Make sure, no service requiring bridging devices 
+is started before, read: with priority-values less than <CODE>10</CODE>)<BR>
+For now, we assume, your runlevel is <CODE>5</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> mv -i bridge.sh /etc/init.d/
+root@bridge:~> cd /etc/rc5.d/
+root@bridge:~> ln -s ../init.d/bridge.sh S10bridge.sh
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Virtually any distribution provides you with some runlevel-checker or 
+equivalent tool that assists you in the tedious job of administering runlevel 
+links. Consult your distro-documentation on this.<BR>
+Hint: debian has update-rc.d, redhat and successors have chkconfig. 
+Finally, SuSE evidentally has also it's own tool, too (of which I don't 
+recall the name easily..).<BR>
+Wondering about the contents of bridge.sh? ;-)
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/bash
+PATH="/sbin:/usr/sbin:/usr/local/sbin";
+slaveIfs="1 2 3 4 6 7 8 9 10";
+cmd="$1";
+[ -z "$cmd" ] &amp;&amp; cmd="start";
+case "$cmd" in
+  start)
+    brctl addbr br0;
+    brctl stp br0 on;
+    brctl addif br0 eth0;
+    brctl addif br0 eth1;
+    (ifdown eth0 1>/dev/null 2>&amp;1;);
+    (ifdown eth1 1>/dev/null 2>&amp;1;);
+    ifconfig eth0 0.0.0.0 up;
+    ifconfig eth1 0.0.0.0 up;
+    ifconfig br0 10.0.3.129 broadcast 10.0.3.255 netmask 255.255.255.0 up ### Adapt to your needs.
+    route add default gw 10.0.3.129; ### Adapt to your needs.
+    for file in br0 eth0 eth1;
+    do
+      echo "1" > /proc/sys/net/ipv4/conf/${file}/proxy_arp;
+      echo "1" > /proc/sys/net/ipv4/conf/${file}/forwarding;
+    done;
+    echo "1" > /proc/sys/net/ipv4/ip_forward;
+    ;;
+  stop)
+    brctl delif br0 eth0;
+    brctl delif br0 eth1;
+    ifconfig br0 down;
+    brctl delbr br0;
+    #ifup eth0; ### Adapt to your needs.
+    #ifup eth1; ### Adapt to your needs.
+    ;;
+  restart,reload)
+    $0 stop;
+    sleep 3;
+    $0 start;
+    ;;
+esac;
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+And, yes, make it executable..
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> chmod 700 /etc/init.d/bridge.sh
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+After all, make sure your bridge survives unattended reboots. It's the 
+same story as with backups: you should test it before you need it.</P>
+
+
+
+<HR>
+<H2><A NAME="TESTING_Testing_grounds"></A> <A NAME="s4">4.</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc4">Test your new bridged environment! </A></H2>
+
+
+
+
+
+<H2><A NAME="ss4.1">4.1</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc4.1">Testing Grounds</A>
+</H2>
+
+<P>We imagine this scenario or similar: 
+<BLOCKQUOTE><CODE>
+<PRE>
+                                                          /\
+          Ethernet           Ethernet           ATM    /-/  \
+---------          ---------          ---------     /-/      |
+|  Box  |----------|Bridge |----------|Router |-----| Inter-  \
+---------          ---------          ---------     \  net  ---|
+         ^        ^         ^        ^               \     /
+         |        |         |        |                \---/
+        eth0     eth0      eth1     if0                 ^
+         |        |         |        |                  |
+      10.0.3.2   none/10.0.3.1      195.137.15.7    anything else
+                  \         /
+                   \       /
+   ^                \-br0-/
+   |                                      ^             ^
+   |                   ^                  |             |
+   |                   |                  |             |
+  own                 own              foreign        hostile
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Our administrative power includes only machines marked with <CODE>own</CODE>, the Router is 
+completely off-limits and so is the Internet, of course.<BR>
+That means, if we want to control the flying bits'n'bytes on the ethernet wire we can 
+chose to integrate a common firewall or file in a bridge. <BR>
+Drawback of the standard 
+way is you have to change the default gateway route on every and any single host in 
+your net. And this is really a heavy weighting drawback, nobody wants to change more 
+than 5 default routes on 5 different hosts more than one time. Keep the time in mind, 
+this will consume, also! Not to forget, this is a error-prone way to handle the more 
+about security..<BR>
+The other way is clean, less time-consuming, more secure and less error-prone.
+More secure in that we won't have the need to assign any IP address. No IP, no danger. 
+So far the theory, we hope, our stacks are safe. (Although this hope should better not 
+relied on..) The overall advantage is, this bridge-setup is completely transparent, 
+no IP, MAC, .. changes at all. <BR>
+So it's up to you to chose your preferred method. But we will handle just the fancy one here ;-)</P>
+
+
+<H2><A NAME="ss4.2">4.2</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc4.2">Ping it, Jim!</A>
+</H2>
+
+<P>We will configure the Box' eth0 as usual. The bridge's interfaces 
+are configured as described in 
+<A HREF="#SETUP_Linux_brctl">Setup</A>.<BR>
+<A NAME="TESTING_routing"></A> 
+If we are to use forwarding we might perhaps do this one: ;-)
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> echo "1" > /proc/sys/net/ipv4/ip_forward
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Optionally, we set up a default route:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> route add default gw 10.0.3.129
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Then we set up some iptables rules on host <CODE>bridge</CODE>:
+<A NAME="TESTING_iptables_listing"></A> 
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> iptables -P FORWARD DROP
+root@bridge:~> iptables -F FORWARD
+root@bridge:~> iptables -I FORWARD -j ACCEPT
+root@bridge:~> iptables -I FORWARD -j LOG
+root@bridge:~> iptables -I FORWARD -j DROP
+root@bridge:~> iptables -A FORWARD -j DROP
+root@bridge:~> iptables -x -v --line-numbers -L FORWARD
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+The last line gives us the following output:
+<BLOCKQUOTE><CODE>
+<PRE>
+Chain FORWARD (policy DROP 0 packets, 0 bytes)
+num      pkts      bytes target   prot opt in     out     source   destination
+1           0        0 DROP       all  --  any    any     anywhere anywhere
+2           0        0 LOG        all  --  any    any     anywhere anywhere      LOG level warning
+3           0        0 ACCEPT     all  --  any    any     anywhere anywhere
+4           0        0 DROP       all  --  any    any     anywhere anywhere
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+The <CODE>LOG</CODE> target logs every packet via <CODE>syslogd</CODE>. Beware, this is intended for 
+testing purposes only, remove in production environment. Else you end up either with 
+filled logs and harddisk partitions by you yourself or anyone else does this Denial 
+of Service to you. You've been warned.<BR>
+Test this ruleset now. Ping the router interface's IP (195.137.15.7) on host <CODE>box</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@box:~> ping -c 3 195.137.15.7
+PING router.provider.net (195.137.15.7) from 10.0.3.2 : 56(84) bytes of data.
+--- router.provider.net ping statistics ---
+3 packets transmitted, 0 received, 100% loss, time 2020ms
+^C
+root@box:~> 
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+By default, we <CODE>DROP</CODE> everything. No response, no logged packet. This netfilter 
+setup is designed to <CODE>DROP</CODE> all packets unless we delete the rule that drops every 
+packet (rule no. 1 above) before the <CODE>LOG</CODE> target matches:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> iptables -D FORWARD 1
+root@bridge:~> iptables -x -v --line-numbers -L FORWARD
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Now, the rules are:
+<BLOCKQUOTE><CODE>
+<PRE>
+Chain FORWARD (policy DROP 0 packets, 0 bytes)
+num      pkts      bytes target   prot opt in     out     source   destination
+2           0        0 LOG        all  --  any    any     anywhere anywhere      LOG level warning
+3           0        0 ACCEPT     all  --  any    any     anywhere anywhere
+4           0        0 DROP       all  --  any    any     anywhere anywhere
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+And any packet may pass through. Test it with a ping on host <CODE>box</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@box:~> ping -c 3 195.137.15.7
+PING router.provider.net (195.137.15.7) from 10.0.3.2 : 56(84) bytes of data.
+64 bytes from router.provider.net (195.137.15.7): icmp_seq=1 ttl=255 time=0.103 ms
+64 bytes from router.provider.net (195.137.15.7): icmp_seq=2 ttl=255 time=0.082 ms
+64 bytes from router.provider.net (195.137.15.7): icmp_seq=3 ttl=255 time=0.083 ms
+
+--- router.provider.net ping statistics ---
+3 packets transmitted, 3 received, 0% loss, time 2002ms
+rtt min/avg/max/mdev = 0.082/0.089/0.103/0.012 ms
+root@box:~> 
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Yippeah! The router is alive, up and running. (Well it has been all day long.. ;-)</P>
+<P>
+<DL>
+<DT><B>Important Note:</B><DD><P>
+<A NAME="TESTING_Important_note"></A> 
+When we just fired up the bridge interface it takes about roughly 30 seconds 
+until the bridge is fully operational. This is due the 30-seconds-learning phase
+of the bridge interface. During this phase, the bridge ports are learning what
+MAC addresses exist on what port. The bridge author, Lennert, tells us in his
+TODO file, the 30-seconds-learning phase is subjected to some improvement in a
+timely manner some time.<BR>
+During the test phase, no packet will we forwarded. No ping be answered. 
+Remind this!</P>
+</DL>
+</P>
+
+<H2><A NAME="ss4.3">4.3</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc4.3">Actual configuration</A>
+</H2>
+
+<P>
+<A NAME="TESTING_actual_configuration"></A> 
+This section is intended to give you, dear reader, some hints about
+how your system should look and feel after having processed this 
+howto successfully.</P>
+
+<H3>Interface configuration</H3>
+
+<P>The output of your <CODE>ifconfig</CODE> command might look similar to
+this:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> ifconfig
+br0       Link encap:Ethernet  HWaddr 00:04:75:81:D2:1D
+          inet addr:10.0.3.129  Bcast:195.30.198.255  Mask:255.255.255.128
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:826 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:737 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:161180 (157.4 Kb)  TX bytes:66708 (65.1 Kb)
+
+eth0      Link encap:Ethernet  HWaddr 00:04:75:81:ED:B7
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:5729 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:3115 errors:0 dropped:0 overruns:0 carrier:656
+          collisions:0 txqueuelen:100
+          RX bytes:1922290 (1.8 Mb)  TX bytes:298837 (291.8 Kb)
+          Interrupt:11 Base address:0xe400
+
+eth1      Link encap:Ethernet  HWaddr 00:04:75:81:D2:1D
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:1 frame:0
+          TX packets:243 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:100
+          RX bytes:342 (342.0 b)  TX bytes:48379 (47.2 Kb)
+          Interrupt:7 Base address:0xe800
+
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          UP LOOPBACK RUNNING  MTU:16436  Metric:1
+          RX packets:1034 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:1034 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:82068 (80.1 Kb)  TX bytes:82068 (80.1 Kb)
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H3>Routing configuration</H3>
+
+<P>The output of your <CODE>route</CODE> command might look similar to
+this:
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+10.0.3.129      0.0.0.0         255.255.255.128 U     0      0        0 br0
+0.0.0.0         10.0.3.129      0.0.0.0         UG    0      0        0 br0
+root@bridge:~>
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H3>Iptables configuration</H3>
+
+<P>Please have a look at the 
+<A HREF="#TESTING_iptables_listing">Ping it, Jim!</A> section.</P>
+
+<H2><A NAME="final-note"></A> <A NAME="ss4.4">4.4</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc4.4">Final note (Important!) </A>
+</H2>
+
+<P>I'd like to hear from you! :-)<BR>
+Did you enjoy the trip? <BR>
+Do you miss anything? <BR>
+Need help? (Call you local assistant ;-) or rtfm.<BR>
+You are still online? Then drop me a msg via email. I'd be really glad.<BR>
+Wanna send me a cheque? Pitty, Don't accept these.. (Just kidding;)<BR>
+Make it worth my time, just send me some nice words, that's enough.<BR>
+Nothing motivates more than happy participants giving you valuable feedback.<BR>
+So, go on, invest a minute and hack me a mail!<BR>
+Thank you!</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Nils
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+
+<H2><A NAME="ss4.5">4.5</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc4.5">Bug-Notes</A>
+</H2>
+
+<P>
+<A NAME="HINT_False_positive"></A> 
+Apparently, there must have been a bug in the br-nf code:
+<BLOCKQUOTE><CODE>
+<PRE>
+From: Bart De Schuymer &lt;bart.de.schuymer_@_pandora.be>
+Date: Sun, 1 Sep 2002 21:52:46 +0200
+To: Nils Radtke &lt;Nils.Radtke_@_Think-Future.de>
+Subject: Re: Ethernet-Brigde-netfilter-HOWTO
+
+Hello Nils,
+
+[...]
+Also, network packet filtering debugging is generally a bad idea with the
+br-nf patch. It can gives a lot of false warnings (about bugs) in the logs.
+[...]
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Personally, I never had false positives in my log. Maybe, that bug has been 
+fixed. This mailed to Bart, he wrote:
+<BLOCKQUOTE><CODE>
+<PRE>
+From: Bart De Schuymer &lt;bart.de.schuymer_@_pandora.be>
+Date: Mon, 2 Sep 2002 18:30:25 +0200
+To: Nils Radtke &lt;Nils.Radtke_@_Think-Future.de>
+Subject: Re: Ethernet-Brigde-netfilter-HOWTO
+
+On Monday 02 September 2002 00:39, Nils Radtke wrote:
+> Will the revision of the nf-debug code in br-nf be subject of improvement?
+
+I must admit I haven't been running any kernel with netfilter debugging
+lately. It sure used to give false positives a few months ago (the bridge
+mailing list has posts about that), I've been lacking time to see why and if
+it is still the case. It's on my todo list.
+[...]
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+But (as of writing this 2002-09-19) I haven't found an official announcement, 
+this particular bug has been closed. So have a constant look at this topic on 
+the 
+<A HREF="#LINK_Mailinglist">ethernet bridge mailinglist</A>
+, if you are interested in it's cure.</P>
+
+
+
+<HR>
+<H2><A NAME="user-exp"></A> <A NAME="s5">5.</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc5">User experiences </A></H2>
+
+
+<H2><A NAME="ss5.1">5.1</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc5.1">Fedora Core 3</A>
+</H2>
+
+<P>James Dinkel (jdinkel_ @ _gmail.com) wrote on Tue, 8 Mar 2005 10:59:22 -0600:
+<BLOCKQUOTE><CODE>
+<PRE>
+[...]
+I am using Fedora Core 3 and all I had to do was "yum install bridge-utils" 
+to use the brctl command. I didn't have to do any kernel recompiling or 
+configurations or messing with kernel modules.  
+It was very easy.
+[...]
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+
+
+<HR>
+<H2><A NAME="s6">6.</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc6">Links</A></H2>
+
+<P>The Howto's author may be contacted via 
+<A HREF="mailto:Ethernet-Bridge-netfilter-Howto_@_Think-Future.de">e-mail</A>.<BR>
+<A HREF="http://Think-Future.de/">Howto Author's homepage</A>.</P>
+
+<H2><A NAME="ss6.1">6.1</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc6.1">Ethernet-Bridge</A>
+</H2>
+
+<P>
+<UL>
+<LI>
+<A NAME="LINK_Mailinglist"></A> 
+<CODE>
+<A HREF="http://www.math.leidenuniv.nl/pipermail/bridge/">Ethernet Bridge Mailinglist</A></CODE></LI>
+<LI>
+<A NAME="LINK_Bridge-home"></A> 
+User space utilities, patches, etc.: 
+<CODE>
+<A HREF="http://bridge.sourceforge.net">Home of Linux kernel Ethernet Bridge</A></CODE></LI>
+<LI>
+<A NAME="LINK_Bridge-stp-howto"></A> 
+<CODE>
+<A HREF="http://www.tldp.org/HOWTO/BRIDGE-STP-HOWTO/index.html">Bridge-STP-HOWTO</A></CODE></LI>
+<LI>
+<A NAME="LINK_Enterprise_fw"></A> 
+<CODE>
+<A HREF="./additional_docs/Firewalling_for_Free.pdf">Firewalling for Free, Shawn Grimes</A></CODE></LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss6.2">6.2</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc6.2">Related Topics</A>
+</H2>
+
+<P>
+<UL>
+<LI>Filtering on frame level, Ethernet-Bridging-Tables:<BR>
+<CODE>
+<A HREF="http://sourceforge.net/projects/ebtables">ebtables, sourceforge</A></CODE><BR>
+<CODE>
+<A HREF="http://users.pandora.be/bart.de.schuymer/ebtables/properties.html">ebtables, supported features</A></CODE><BR>
+<CODE>ebtables, examples: 
+<A HREF="http://users.pandora.be/bart.de.schuymer/ebtables/examples.html">basic</A>, 
+<A HREF="http://users.pandora.be/bart.de.schuymer/ebtables/battlefield_examples.html">advanced</A></CODE></LI>
+<LI>IP mode, Linux Bridge extension: 
+<CODE>
+<A HREF="http://www.ssi.bg/~ja/">IP mode, LVS</A></CODE></LI>
+<LI>Linux in High-Availability environments: 
+<CODE>
+<A HREF="http://www.linux-ha.org/">High-Availability Linux</A></CODE></LI>
+<LI>Linux Virtual Server: 
+<CODE>
+<A HREF="http://www.linuxvirtualserver.org/">LVS</A></CODE></LI>
+</UL>
+</P>
+
+
+
+
+<HR>
+</BODY>
+</HTML>

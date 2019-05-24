@@ -1,0 +1,1053 @@
+<HTML
+><HEAD
+><TITLE
+>Starting Your Software Automatically on Boot</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Designing Integrated High Quality Linux Applications"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Graphical User Interface"
+HREF="gui.html"><LINK
+REL="NEXT"
+TITLE="Red Hat, About the Filesystem Structure"
+HREF="redhat.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Designing Integrated High Quality Linux Applications</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="gui.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="redhat.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="boot">9. Starting Your Software Automatically on Boot</H1
+><P
+>The way Linux starts (and stops) all its subsystems is very simple and modular. Lets you define initialization order, <A
+HREF="boot.html#boot.runlevel"
+>runlevels</A
+> etc</P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="boot.init">9.1. From <SPAN
+CLASS="acronym"
+>BIOS</SPAN
+> to Subsystems</H2
+><P
+>Lets review what happens when we boot Linux:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>The <SPAN
+CLASS="acronym"
+>BIOS</SPAN
+> or a bootloader (<SPAN
+CLASS="application"
+>lilo</SPAN
+>, <SPAN
+CLASS="application"
+>zlilo</SPAN
+>, <SPAN
+CLASS="application"
+>grub</SPAN
+>, etc) loads Linux Kernel from disk to memory, with some parameters defined in the bootloader configuration. We can see this process watching the dots that appear in the screen. Kernel file stays in the <TT
+CLASS="filename"
+>/boot</TT
+> directory, and is accessed only at this moment.</P
+></LI
+><LI
+><P
+>In memory, Kernel code starts to run, detecting a series of vital devices, disk partitions etc.</P
+></LI
+><LI
+><P
+>On of the last things Kernel does is to mount the <TT
+CLASS="filename"
+>/</TT
+> (root) filesystem, that obrigatoriamente must contain the <TT
+CLASS="filename"
+>/etc</TT
+>, <TT
+CLASS="filename"
+>/sbin</TT
+>, <TT
+CLASS="filename"
+>/bin</TT
+> and <TT
+CLASS="filename"
+>/lib</TT
+> directories.</P
+></LI
+><LI
+><P
+>Immediately behind, calls the program called <B
+CLASS="command"
+>init</B
+> (<TT
+CLASS="filename"
+>/sbin/init</TT
+>) and passes the control to him.</P
+></LI
+><LI
+><P
+>The <B
+CLASS="command"
+>init</B
+> command will read his configuration file (<TT
+CLASS="filename"
+>/etc/inittab</TT
+>) which defines the system <STRONG
+>runlevel</STRONG
+>, and some Shell scripts to be run.</P
+></LI
+><LI
+><P
+>These scripts will continue the setup of system's minimal infrastructure, mounting other filesystems (according to <TT
+CLASS="filename"
+>/etc/fstab</TT
+>), activating swap space (virtual memory), etc.</P
+></LI
+><LI
+><P
+>The last step, and most interesting for you, is the execution of the special script called <TT
+CLASS="filename"
+>/etc/rc.d/rc</TT
+>, which initializes the subsystems according to a directory structure under <TT
+CLASS="filename"
+>/etc/rc.d</TT
+>. The name <EM
+>rc</EM
+> comes from <EM
+>run commands</EM
+>.</P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="boot.runlevel">9.2. Runlevels</H2
+><P
+>The runlevels mechanism lets Linux initialize itself in different ways. And also lets us change from one profile (runlevel) to another without rebooting.</P
+><P
+>The default runlevel is defined in <TT
+CLASS="filename"
+>/etc/inittab</TT
+> with a line like this:</P
+><DIV
+CLASS="example"
+><A
+NAME="AEN843"><P
+><B
+>Example 3. Default runlevel (3, in this case) line in <TT
+CLASS="filename"
+>/etc/inittab</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>id:3:initdefault:</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Runlevels are numbers from 0 to 6 and each one of them is used following this standard:</P
+><P
+></P
+><DIV
+CLASS="variablelist"
+><DL
+><DT
+>0</DT
+><DD
+><P
+>Halts the system. Turning to this runlevel, all subsystems are softly deactivated before the shutdown. Don't use it in the <B
+CLASS="command"
+>initdefault</B
+> line of <TT
+CLASS="filename"
+>/etc/inittab</TT
+>.</P
+></DD
+><DT
+>1</DT
+><DD
+><P
+>Mono-user mode. Only vital subsystems are initialized because it is used for system maintenance. No user authentication (login) is required in this runlevel. A command line is directly returned to the user.</P
+></DD
+><DT
+>3, 2</DT
+><DD
+><P
+>3 is used when a system is in full production. Take it as the runlevel your software will run. 2 is historical and is like 3, but without NFS.</P
+></DD
+><DT
+>4</DT
+><DD
+><P
+>Not used. You can define it as you want, but is uncommon.</P
+></DD
+><DT
+>5</DT
+><DD
+><P
+>Like 3 plus a graphical login. It is ideal for a desktop workstation. Use 3 if the machine will be used as a server, for security and performance reasons.</P
+></DD
+><DT
+>6</DT
+><DD
+><P
+>Like runlevel 0, but after complete stop, the machine is rebooted. Don't use it in the <B
+CLASS="command"
+>initdefault</B
+> line of <TT
+CLASS="filename"
+>/etc/inittab</TT
+>.</P
+></DD
+></DL
+></DIV
+><P
+>You can switch from one runlevel to another using the <B
+CLASS="command"
+>telinit</B
+> command. And you can see the current runlevel and the last one with the <B
+CLASS="command"
+>runlevel</B
+> command. See bellow how we switched from runlevel 3 to 5.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>runlevel</B
+>
+N 3
+<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>telinit 5</B
+>
+<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>runlevel</B
+>
+3 5
+<TT
+CLASS="prompt"
+>bash# </TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="boot.subs">9.3. The Subsystems</H2
+><P
+>Subsystems examples are a web-server, data base server, OS network layer etc. We'll not consider a user oriented application (like a text editor) as a subsystem.</P
+><P
+>Linux provides an elegant and modular way to organize the subsystems initialization. An important fact to think is about subsystems interdependencies. For instance, it makes no sense to start a web-server before basic networking subsystem is active.</P
+><P
+>Subsystems are organized under the <TT
+CLASS="filename"
+>/etc/init.d</TT
+> and <TT
+CLASS="filename"
+>/etc/rc.d/rc<TT
+CLASS="replaceable"
+><I
+>N</I
+></TT
+>.d</TT
+> directories: </P
+><P
+></P
+><DIV
+CLASS="variablelist"
+><DL
+><DT
+><TT
+CLASS="filename"
+>/etc/init.d</TT
+></DT
+><DD
+><P
+>All installed Subsystems put in this directory a control program, which is a script that follows a <A
+HREF="boot.html#boot.script"
+>simple standard described bellow</A
+>. This is a simplified listing of this directory:</P
+><DIV
+CLASS="example"
+><A
+NAME="AEN904"><P
+><B
+>Example 4. Subsystems installed in <TT
+CLASS="filename"
+>/etc/init.d</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>bash:/etc/init.d# </TT
+><B
+CLASS="command"
+>ls -l</B
+>
+-rwxr-xr-x  1 root  root   9284 Aug 13  2001 functions
+-rwxr-xr-x  1 root  root   4984 Sep  5 00:18 halt
+-rwxr-xr-x  1 root  root   5528 Nov  5 09:44 firewall
+-rwxr-xr-x  1 root  root   1277 Sep  5 21:09 keytable
+-rwxr-xr-x  1 root  root    487 Jan 30  2001 killall
+-rwxr-xr-x  1 root  root   7958 Aug 15 17:20 network
+-rwxr-xr-x  1 root  root   1490 Sep  5 07:54 ntpd
+-rwxr-xr-x  1 root  root   2295 Jan 30  2001 rawdevices
+-rwxr-xr-x  1 root  root   1830 Aug 31 09:29 httpd
+-rwxr-xr-x  1 root  root   1311 Aug 15 14:18 syslog</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DD
+><DT
+><TT
+CLASS="filename"
+>/etc/rc.d/rc<TT
+CLASS="replaceable"
+><I
+>N</I
+></TT
+>.d</TT
+> (<TT
+CLASS="replaceable"
+><I
+>N</I
+></TT
+> is the runlevel indicator)</DT
+><DD
+><P
+>These directories must contain only special symbolic links to the scripts in <TT
+CLASS="filename"
+>/etc/init.d</TT
+>. This is how it looks:</P
+><DIV
+CLASS="example"
+><A
+NAME="AEN918"><P
+><B
+>Example 5. <TT
+CLASS="filename"
+>/etc/rc3.d</TT
+> listing</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>bash:/etc/rc3.d# </TT
+><B
+CLASS="command"
+>ls -l</B
+>
+lrwxrwxrwx  1 root  root     18 Jan 14 11:59 K92firewall -&#62; ../init.d/firewall
+lrwxrwxrwx  1 root  root     17 Jan 14 11:59 <STRONG
+>S10network -&#62; ../init.d/network</STRONG
+>
+lrwxrwxrwx  1 root  root     16 Jan 14 11:59 S12syslog -&#62; ../init.d/syslog
+lrwxrwxrwx  1 root  root     18 Jan 14 11:59 S17keytable -&#62; ../init.d/keytable
+lrwxrwxrwx  1 root  root     20 Jan 14 11:59 S56rawdevices -&#62; ../init.d/rawdevices
+lrwxrwxrwx  1 root  root     16 Jan 14 11:59 S56xinetd -&#62; ../init.d/xinetd
+lrwxrwxrwx  1 root  root     18 Jan 14 11:59 <STRONG
+>S75httpd -&#62; ../init.d/httpd</STRONG
+>
+lrwxrwxrwx  1 root  root     11 Jan 13 21:45 S99local -&#62; ../rc.local</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Pay attention that all link names has a prefix starting with letter <STRONG
+>K</STRONG
+> (from Kill, to deactivate) or <STRONG
+>S</STRONG
+> (from Start, to activate), and a 2 digit number that defines the boot activation priority. In our example we have HTTPd (priority 75) starting after the Network (priority 10) subsystem. And the Firewalling subsystem will be deactivated (<STRONG
+>K</STRONG
+>) in this runlevel.</P
+></DD
+></DL
+></DIV
+><P
+>So <STRONG
+>to make your Software start automatically in the boot process, it must be a subsystem</STRONG
+>, and we'll see how to do it in the following section.</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="boot.script">9.4. Turning Your Software Into a Subsystem</H2
+><P
+>Your Software's files will spread across the filesystems, but you'll want to provide a simple and consistent interface to let the user at least start and stop it. Subsystems architecture promotes this ease-of-use, also providing a way (non obrigatoria) to be automatically started on system initialization. You just have to create your <TT
+CLASS="filename"
+>/etc/init.d</TT
+> script following a standard to make it functional.</P
+><DIV
+CLASS="example"
+><A
+NAME="AEN936"><P
+><B
+>Example 6. Skeleton of a Subsystem control program in <TT
+CLASS="filename"
+>/etc/init.d</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;#!/bin/sh
+#
+# /etc/init.d/mysystem
+# Subsystem file for "MySystem" server
+#
+# chkconfig: 2345 95 05	<A
+NAME="ex.init.chkconfig"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+>
+# description: MySystem server daemon
+#
+# processname: MySystem
+# config: /etc/MySystem/mySystem.conf
+# config: /etc/sysconfig/mySystem
+# pidfile: /var/run/MySystem.pid
+
+# source function library
+. /etc/rc.d/init.d/functions
+
+# pull in sysconfig settings
+[ -f /etc/sysconfig/mySystem ] &#38;&#38; . /etc/sysconfig/mySystem	<A
+NAME="ex.init.sysconfig"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+>
+
+RETVAL=0
+prog="MySystem"
+.
+.	<A
+NAME="ex.init.any.begin"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+>
+.
+
+start() {	<A
+NAME="ex.init.start"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+>
+	echo -n $"Starting $prog:"
+	.
+	.	<A
+NAME="ex.init.any.start"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+>
+	.
+	RETVAL=$?
+	[ "$RETVAL" = 0 ] &#38;&#38; touch /var/lock/subsys/$prog
+	echo
+}
+
+stop() {	<A
+NAME="ex.init.stop"
+><IMG
+SRC="../images/callouts/6.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(6)"></A
+>
+	echo -n $"Stopping $prog:"
+	.
+	.	<A
+NAME="ex.init.any.stop"
+><IMG
+SRC="../images/callouts/7.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(7)"></A
+>
+	.
+	killproc $prog -TERM
+	RETVAL=$?
+	[ "$RETVAL" = 0 ] &#38;&#38; rm -f /var/lock/subsys/$prog
+	echo
+}
+
+reload() {	<A
+NAME="ex.init.reload"
+><IMG
+SRC="../images/callouts/8.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(8)"></A
+>
+	echo -n $"Reloading $prog:"
+	killproc $prog -HUP
+	RETVAL=$?
+	echo
+}
+
+case "$1" in	<A
+NAME="ex.init.call"
+><IMG
+SRC="../images/callouts/9.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(9)"></A
+>
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		start
+		;;
+	reload)
+		reload
+		;;
+	condrestart)
+		if [ -f /var/lock/subsys/$prog ] ; then
+			stop
+			# avoid race
+			sleep 3
+			start
+		fi
+		;;
+	status)
+		status $prog
+		RETVAL=$?
+		;;
+	*)	<A
+NAME="ex.init.default"
+><IMG
+SRC="../images/callouts/10.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(10)"></A
+>
+		echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"
+		RETVAL=1
+esac
+exit $RETVAL
+</PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="calloutlist"
+><DL
+COMPACT="COMPACT"
+><DT
+><A
+HREF="boot.html#ex.init.chkconfig"
+><IMG
+SRC="../images/callouts/1.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(1)"></A
+></DT
+><DD
+>Although these are comments, they are used by <B
+CLASS="command"
+>chkconfig</B
+> command and must be present. This particular line defines that on runlevels 2,3,4 and 5, this subsystem will be activated with priority 95 (one of the lasts), and deactivated with priority 05 (one of the firsts).</DD
+><DT
+><A
+HREF="boot.html#ex.init.sysconfig"
+><IMG
+SRC="../images/callouts/2.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(2)"></A
+></DT
+><DD
+>Besides your <A
+HREF="software.html#software.soul"
+>Software's own configuration</A
+>, this script can also have a configuration file. The standard place for it is under <TT
+CLASS="filename"
+>/etc/sysconfig</TT
+> directory, and in our case we call it <TT
+CLASS="filename"
+>mySystem</TT
+>. This code line reads this configuration file.</DD
+><DT
+><A
+HREF="boot.html#ex.init.start"
+><IMG
+SRC="../images/callouts/4.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(4)"></A
+><A
+HREF="boot.html#ex.init.stop"
+><IMG
+SRC="../images/callouts/6.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(6)"></A
+><A
+HREF="boot.html#ex.init.reload"
+><IMG
+SRC="../images/callouts/8.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(8)"></A
+></DT
+><DD
+>Your script can have many functions, but it is obrigatorios the implementation of <B
+CLASS="command"
+>start</B
+> and <B
+CLASS="command"
+>stop</B
+> methods, because they are responsible for (de)activation of your Subsystem on boot. Other methods can be called from the command line, and you can define as much as you want.</DD
+><DT
+><A
+HREF="boot.html#ex.init.call"
+><IMG
+SRC="../images/callouts/9.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(9)"></A
+></DT
+><DD
+>After defining the script actions, the command line is analyzed and the requested method (action) is called.</DD
+><DT
+><A
+HREF="boot.html#ex.init.default"
+><IMG
+SRC="../images/callouts/10.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(10)"></A
+></DT
+><DD
+>If this script is executed without any parameter, it will return a help message like this:</DD
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>/etc/init.d/mysystem</B
+>
+Usage: mysystem {start|stop|restart|reload|condrestart|status}</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DT
+><A
+HREF="boot.html#ex.init.any.begin"
+><IMG
+SRC="../images/callouts/3.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(3)"></A
+><A
+HREF="boot.html#ex.init.any.start"
+><IMG
+SRC="../images/callouts/5.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(5)"></A
+><A
+HREF="boot.html#ex.init.any.stop"
+><IMG
+SRC="../images/callouts/7.gif"
+HSPACE="0"
+VSPACE="0"
+BORDER="0"
+ALT="(7)"></A
+></DT
+><DD
+>Here you put your Software's specific command.</DD
+></DL
+></DIV
+></DIV
+><P
+>The <B
+CLASS="command"
+>mysystem</B
+> subsystem methods you implemented will be called by users with the <B
+CLASS="command"
+>service</B
+> command like this example:</P
+><DIV
+CLASS="example"
+><A
+NAME="AEN976"><P
+><B
+>Example 7. <B
+CLASS="command"
+>service</B
+> command usage</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>service mysystem start</B
+>
+Starting MySystem:			[ OK ]
+<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>service mysystem status</B
+>
+Subsysten MySystem is active with pid 1234
+<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>service mysystem reload</B
+>
+Reloading MySystem:			[ OK ]
+<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>service mysystem stop</B
+>
+Stopping MySystem:			[ OK ]
+<TT
+CLASS="prompt"
+>bash# </TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>You don't have to worry about managing the symbolic links in <TT
+CLASS="filename"
+>/etc/rc.d/rc<TT
+CLASS="replaceable"
+><I
+>N</I
+></TT
+>.d</TT
+>. The <B
+CLASS="command"
+>chkconfig</B
+> command makes it for you, based on the control comments defined in the beginning of your script.</P
+><DIV
+CLASS="example"
+><A
+NAME="AEN993"><P
+><B
+>Example 8. Using the <B
+CLASS="command"
+>chkconfig</B
+> command</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>chkconfig --add mysystem</B
+>
+<TT
+CLASS="prompt"
+>bash# </TT
+><B
+CLASS="command"
+>chkconfig --del mysystem</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Read the <B
+CLASS="command"
+>chkconfig</B
+> manual page to see what more it can do for you.</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="boot.install">9.5. Packaging Your Boot Script</H2
+><P
+>When you'll create the RPM, put your Subsystem script in <TT
+CLASS="filename"
+>/etc/init.d</TT
+> and <STRONG
+>do not include</STRONG
+> any <TT
+CLASS="filename"
+>/etc/rc.d/rc<TT
+CLASS="replaceable"
+><I
+>N</I
+></TT
+>.d</TT
+> link, because it is a user decision to make your subsystem automatic or not. If you include them and the user makes any change, the RPM file inventory will become inconsistent.</P
+><P
+>The symbolic links must be created and removed dynamically by the post-installation and pre-uninstallation process of your package, using the <B
+CLASS="command"
+>chkconfig</B
+> command. This approach guarantees 100% package and filesystem consistency.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="gui.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="redhat.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Graphical User Interface</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Red Hat, About the Filesystem Structure</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

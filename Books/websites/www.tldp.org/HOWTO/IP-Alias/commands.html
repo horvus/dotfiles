@@ -1,0 +1,297 @@
+<HTML
+><HEAD
+><TITLE
+>Commands</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.60"><LINK
+REL="HOME"
+TITLE="Setting up IP Aliasing on A Linux Machine Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="My Setup"
+HREF="mysetup.html"><LINK
+REL="NEXT"
+TITLE="Troubleshooting: Questions and Answers"
+HREF="troubleshooting.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Setting up IP Aliasing on A Linux Machine Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="mysetup.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="troubleshooting.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="COMMANDS"
+>2. Commands</A
+></H1
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Load the IP Alias module (you can skip this step if you compiled
+     the module into the kernel):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/sbin/insmod /lib/modules/`uname -r`/ipv4/ip_alias.o</PRE
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Setup the loopback, eth0, and all the IP addresses beginning with the
+     main IP address for the eth0 interface:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/sbin/ifconfig lo 127.0.0.1
+/sbin/ifconfig eth0 up
+/sbin/ifconfig eth0 172.16.3.1
+/sbin/ifconfig eth0:0 172.16.3.10
+/sbin/ifconfig eth0:1 172.16.3.100</PRE
+></TD
+></TR
+></TABLE
+><P
+>172.16.3.1 is the main IP address, while .10 and .100 are the aliases. The
+		     magic is the eth0:x where x=0,1,2,...n for the different IP addresses. The
+		     main IP address does not need to be aliased.</P
+></LI
+><LI
+><P
+>Setup the routes. First route the loopback, then the net, and
+		     finally, the various IP addresses starting with the default (originally
+		     allocated) one:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/sbin/route add -net 127.0.0.0
+/sbin/route add -net 172.16.3.0 dev eth0
+/sbin/route add -host 172.16.3.1 dev eth0
+/sbin/route add -host 172.16.3.10 dev eth0:0
+/sbin/route add -host 172.16.3.100 dev eth0:1
+/sbin/route add default gw 172.16.3.200</PRE
+></TD
+></TR
+></TABLE
+><P
+>That's it.</P
+></LI
+></OL
+><P
+>In the example IP address above, I am using the Private IP addresses (RFC 1918) for
+			illustrative purposes. Substitute them with your own official or private IP
+			addresses.</P
+><P
+>The example shows only 3 IP addresses. The max is defined to be 256 in
+			<TT
+CLASS="FILENAME"
+>/usr/include/linux/net_alias.h.</TT
+> 256 IP addresses on ONE card is a lot :-)!</P
+><P
+>Here's what my <TT
+CLASS="FILENAME"
+>/sbin/ifconfig</TT
+> looks like:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>lo        Link encap:Local Loopback
+	       inet addr:127.0.0.1  Bcast:127.255.255.255  Mask:255.0.0.0
+			 UP BROADCAST LOOPBACK RUNNING  MTU:3584  Metric:1
+		    RX packets:5088 errors:0 dropped:0 overruns:0
+		    TX packets:5088 errors:0 dropped:0 overruns:0
+		
+eth0      Link encap:10Mbps Ethernet  HWaddr 00:8E:B8:83:19:20
+		    inet addr:172.16.3.1  Bcast:172.16.3.255  Mask:255.255.255.0
+		    UP BROADCAST RUNNING PROMISC MULTICAST  MTU:1500  Metric:1
+		    RX packets:334036 errors:0 dropped:0 overruns:0
+		    TX packets:11605 errors:0 dropped:0 overruns:0
+		    Interrupt:7 Base address:0x378
+		
+eth0:0    Link encap:10Mbps Ethernet  HWaddr 00:8E:B8:83:19:20
+		    inet addr:172.16.3.10  Bcast:172.16.3.255  Mask:255.255.255.0
+		    UP BROADCAST RUNNING  MTU:1500  Metric:1
+		    RX packets:0 errors:0 dropped:0 overruns:0
+		    TX packets:0 errors:0 dropped:0 overruns:0
+		
+eth0:1    Link encap:10Mbps Ethernet  HWaddr 00:8E:B8:83:19:20
+		    inet addr:172.16.3.100  Bcast:172.16.3.255  Mask:255.255.255.0
+		    UP BROADCAST RUNNING  MTU:1500  Metric:1
+		    RX packets:1 errors:0 dropped:0 overruns:0
+		    TX packets:0 errors:0 dropped:0 overruns:0</PRE
+></TD
+></TR
+></TABLE
+><P
+>And <TT
+CLASS="FILENAME"
+>/proc/net/aliases</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>device         family    address
+eth0:0           2      172.16.3.10
+eth0:1           2      172.16.3.100</PRE
+></TD
+></TR
+></TABLE
+><P
+>And <TT
+CLASS="FILENAME"
+>/proc/net/alias_types</TT
+>:	</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>type    name            n_attach
+2       ip              2</PRE
+></TD
+></TR
+></TABLE
+><P
+>Of course, the stuff in <TT
+CLASS="FILENAME"
+>/proc/net</TT
+> was created by the <B
+CLASS="COMMAND"
+>ifconfig</B
+> command and
+			not by hand!</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="mysetup.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="troubleshooting.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>My Setup</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Troubleshooting: Questions and Answers</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

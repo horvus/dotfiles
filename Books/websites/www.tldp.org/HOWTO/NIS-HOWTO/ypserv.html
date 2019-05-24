@@ -1,0 +1,632 @@
+<HTML
+><HEAD
+><TITLE
+>Setting up a NIS Server&#13;</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux NIS(YP)/NYS/NIS+ HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="What do you need to set up NIS+ ?"
+HREF="nisplus.html"><LINK
+REL="NEXT"
+TITLE="Verifying the NIS/NYS Installation
+
+
+"
+HREF="verification.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux NIS(YP)/NYS/NIS+ HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="nisplus.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="verification.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="YPSERV"
+></A
+>9. Setting up a NIS Server&#13;</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN400"
+></A
+>9.1. The Server Program ypserv
+
+&#13;</H2
+><P
+>This document only describes how to set up the "ypserv" NIS server.</P
+><P
+>The NIS server software can be found on:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>  Site               Directory                    File Name
+
+  ftp.kernel.org     /pub/linux/utils/net/NIS     ypserv-2.9.tar.gz
+  ftp.kernel.org     /pub/linux/utils/net/NIS     ypserv-2.9.tar.bz2</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>You could also look at
+<A
+HREF="http://www.linux-nis.org/nis/"
+TARGET="_top"
+>http://www.linux-nis.org/nis/</A
+>
+for more information.</P
+><P
+>The server setup is the same for both traditional NIS and NYS.</P
+><P
+>Compile the software to generate the <B
+CLASS="COMMAND"
+>ypserv</B
+> and
+<B
+CLASS="COMMAND"
+>makedbm</B
+>
+programs. ypserv-2.x only supports the securenets file for access
+restrictions.</P
+><P
+>If you run your server as master, determine what files you require to be
+available via NIS and then add or remove the appropriate
+entries to the "all" rule in <TT
+CLASS="FILENAME"
+>/var/yp/Makefile</TT
+>.
+You always should look at the Makefile and edit the Options at the
+beginning of the file.</P
+><P
+>There was one big change between ypserv 1.1 and ypserv 1.2. Since
+version 1.2, the file handles are cached. This means you have to
+call makedbm always with the -c option if you create new maps. Make
+sure, you are using the
+new <TT
+CLASS="FILENAME"
+>/var/yp/Makefile</TT
+> from ypserv 1.2 or later,
+or add the -c flag to makedbm in the Makefile. If you don't do that,
+ypserv will continue to use the old maps, and not the updated one.</P
+><P
+>Now edit <TT
+CLASS="FILENAME"
+>/var/yp/securenets</TT
+> and
+<TT
+CLASS="FILENAME"
+>/etc/ypserv.conf</TT
+>.
+For more information, read the ypserv(8) and ypserv.conf(5) manual pages.</P
+><P
+>Make sure the portmapper (portmap(8)) is running, and start the
+server <B
+CLASS="COMMAND"
+>ypserv</B
+>. The command</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    % rpcinfo -u localhost ypserv</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>should output something like</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    program 100004 version 1 ready and waiting
+    program 100004 version 2 ready and waiting</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>The "version 1" line could be missing, depending on the ypserv version and
+configuration you are using. It is only necessary if you have old
+SunOS 4.x clients.</P
+><P
+>Now generate the NIS (YP) database. On the master, run</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    % /usr/lib/yp/ypinit -m</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>On a slave make sure that <B
+CLASS="COMMAND"
+>ypwhich -m</B
+> works. This means,
+that your slave
+must be configured as NIS client before you could run
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    % /usr/lib/yp/ypinit -s masterhost</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+to install the host as NIS slave.</P
+><P
+>That's it, your server is up and running.</P
+><P
+>If you have bigger problems, you could start <B
+CLASS="COMMAND"
+>ypserv</B
+> and
+<B
+CLASS="COMMAND"
+>ypbind</B
+> in debug
+mode on different xterms. The debug output should show you what goes
+wrong.</P
+><P
+>If you need to update a map, run <B
+CLASS="COMMAND"
+>make</B
+> in the
+<TT
+CLASS="LITERAL"
+>/var/yp</TT
+>
+directory on the NIS master. This will update a map if the source file
+is newer, and push the files to the slave servers. Please don't use
+<B
+CLASS="COMMAND"
+>ypinit</B
+> for updating a map.</P
+><P
+>You might want to edit root's crontab *on the slave* server and add the
+following lines:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>      20 *    * * *    /usr/lib/yp/ypxfr_1perhour
+      40 6    * * *    /usr/lib/yp/ypxfr_1perday
+      55 6,18 * * *    /usr/lib/yp/ypxfr_2perday</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+This will ensure that most NIS maps are kept up-to-date, even if an
+update is missed because the slave was down at the time the update was
+done on the master.</P
+><P
+>You can add a slave at every time later. At first, make sure that
+the new slave server has permissions to contact the NIS master. Then run
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    % /usr/lib/yp/ypinit -s masterhost</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+on the new slave. On the master server, add the new slave server name
+to <TT
+CLASS="FILENAME"
+>/var/yp/ypservers</TT
+> and run
+<B
+CLASS="COMMAND"
+>make</B
+> in <TT
+CLASS="LITERAL"
+>/var/yp</TT
+>
+to update the map.</P
+><P
+>If you want to restrict access for users to your NIS server, you'll have
+to setup the NIS server as a client as well by running ypbind and adding the
+plus-entries to <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> _halfway_
+the password file. The library
+functions will ignore all normal entries after the first NIS entry, and
+will get the rest of the info through NIS. This way the NIS access rules
+are maintained. An example:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>     root:x:0:0:root:/root:/bin/bash
+     daemon:*:1:1:daemon:/usr/sbin:
+     bin:*:2:2:bin:/bin:
+     sys:*:3:3:sys:/dev:
+     sync:*:4:100:sync:/bin:/bin/sync
+     games:*:5:100:games:/usr/games:
+     man:*:6:100:man:/var/catman:
+     lp:*:7:7:lp:/var/spool/lpd:
+     mail:*:8:8:mail:/var/spool/mail:
+     news:*:9:9:news:/var/spool/news:
+     uucp:*:10:50:uucp:/var/spool/uucp:
+     nobody:*:65534:65534:noone at all,,,,:/dev/null:
+     +miquels::::::
+     +:*:::::/etc/NoShell
+     [ All normal users AFTER this line! ]
+     tester:*:299:10:Just a test account:/tmp:
+     miquels:1234567890123:101:10:Miquel van Smoorenburg:/home/miquels:/bin/zsh</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>Thus the user "tester" will exist, but have a shell of /etc/NoShell. miquels
+will have normal access.</P
+><P
+>Alternatively, you could edit the <TT
+CLASS="FILENAME"
+>/var/yp/Makefile</TT
+> file
+and set NIS to use
+another source password file. On large systems the NIS password and group
+files are usually stored in <TT
+CLASS="LITERAL"
+>/etc/yp/</TT
+>. If you do this the normal
+tools to administrate the password file such as <TT
+CLASS="LITERAL"
+>passwd</TT
+>, <TT
+CLASS="LITERAL"
+>chfn</TT
+>,
+<TT
+CLASS="LITERAL"
+>adduser</TT
+> will not work anymore and you need special homemade tools
+for this.</P
+><P
+>However, <TT
+CLASS="LITERAL"
+>yppasswd</TT
+>, <TT
+CLASS="LITERAL"
+>ypchsh</TT
+> and <TT
+CLASS="LITERAL"
+>ypchfn</TT
+> will
+work of course.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN468"
+></A
+>9.2. The Server Program yps
+
+&#13;</H2
+><P
+>To set up the "yps" NIS server please refer to the previous paragraph.
+The "yps" server setup is similar, _but_ not exactly the same so
+beware if you try to apply the "ypserv" instructions to "yps"!
+"yps" is not supported by any author, and contains some security leaks.
+You really shouldn't use it !</P
+><P
+>The "yps" NIS server software can be found on:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>  Site                  Directory                   File Name
+
+  ftp.lysator.liu.se    /pub/NYS/servers            yps-0.21.tar.gz
+  ftp.kernel.org        /pub/linux/utils/net/NIS    yps-0.21.tar.gz</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN478"
+></A
+>9.3. The Program rpc.ypxfrd
+
+&#13;</H2
+><P
+>rpc.ypxfrd is used for speed up the transfer of very large
+NIS  maps  from a NIS master to NIS slave servers. If a
+NIS slave server receives a message that there is  a  new
+map,  it  will  start  ypxfr  for transfering the new map.
+ypxfr will read the contents of  a  map  from  the  master
+server  using the yp_all() function. This process can take
+several minutes when there are very large maps which  have
+to store by the database library.</P
+><P
+>The  rpc.ypxfrd  server  speeds up the transfer process by
+allowing NIS slave  servers  to  simply  copy  the  master
+server's  map  files  rather  than building their own from
+scratch.  rpc.ypxfrd uses an RPC-based file transfer  protocol,
+so that there is no need for building a new map.</P
+><P
+>rpc.ypxfrd can be started by inetd. But since it starts
+very slow, it should be started with ypserv. You need to start
+rpc.ypxfrd only on the NIS master server.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN487"
+></A
+>9.4. The Program rpc.yppasswdd
+
+&#13;</H2
+><P
+>Whenever users change their passwords, the NIS password database and
+probably other NIS databases, which depend on the NIS password
+database, should be updated.  The program "rpc.yppasswdd" is a server that
+handles password changes and makes sure that the NIS information will
+be updated accordingly. rpc.yppasswdd is now integrated in ypserv. You
+don't need the older, separate yppasswd-0.9.tar.gz or yppasswd-0.10.tar.gz,
+and you shouldn't use them any longer.</P
+><P
+>You need to start rpc.yppasswdd only on the NIS master server. By default,
+users are not allowed to change their full name or the login shell.
+You can allow this with the -e chfn or -e chsh option.</P
+><P
+>If your passwd and shadow files are not in another directory then
+/etc, you need to add the -D option. For example, if you have put
+all source files in /etc/yp and wish to allow the user to change
+his shell, you need to start rpc.yppasswdd with the following parameters:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   rpc.yppasswdd -D /etc/yp -e chsh</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>or</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   rpc.yppasswdd -s /etc/yp/shadow -p /etc/yp/passwd -e chsh</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>There is nothing more to do. You just need to make sure, that
+<TT
+CLASS="LITERAL"
+>rpc.yppasswdd</TT
+> uses the same files as <TT
+CLASS="LITERAL"
+>/var/yp/Makefile</TT
+>.
+Errors will be logged using syslog.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="nisplus.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="verification.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>What do you need to set up NIS+ ?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Verifying the NIS/NYS Installation
+
+&#13;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

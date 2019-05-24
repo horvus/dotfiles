@@ -1,0 +1,468 @@
+<HTML
+><HEAD
+><TITLE
+>Automating backups with tar</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.60"><LINK
+REL="HOME"
+TITLE="Securing and Optimizing Linux"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Why's and When's of Backup and Restore"
+HREF="whywhen.html"><LINK
+REL="PREVIOUS"
+TITLE="The tar backup program"
+HREF="chap29sec305.html"><LINK
+REL="NEXT"
+TITLE="Restore files with tar"
+HREF="chap29sec307.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Securing and Optimizing Linux: RedHat Edition -A Hands on Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="chap29sec305.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 33. Why's and When's of Backup and Restore</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="chap29sec307.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="AEN23611"
+>33.3. Automating backups with <B
+CLASS="command"
+>tar</B
+></A
+></H1
+><P
+>&#13;It is always interesting to automate the tasks of a backup. Automation offers enormous opportunities for using your Linux server to achieve the goals you set. The following example below is our backup 
+script, called <TT
+CLASS="filename"
+>backup.cron.</TT
+> This script is designed to run on any computer by changing only the four variables: 
+<P
+></P
+><OL
+TYPE="i"
+><LI
+><P
+>&#13;COMPUTER
+</P
+></LI
+><LI
+><P
+>&#13;DIRECTORIES
+</P
+></LI
+><LI
+><P
+>&#13;BACKUPDIR
+</P
+></LI
+><LI
+><P
+>&#13;TIMEDIR 
+</P
+></LI
+></OL
+>
+</P
+><P
+>&#13;We suggest that you set this script up and run it at the beginning of the month for the first time, and then run it for a month before making major changes. In our example below we do the backup to a directory on 
+the local server BACKUPDIR, but you could modify this script to do it to a tape on the local server or via an <SPAN
+CLASS="acronym"
+>NFS</SPAN
+> mounted file system.
+</P
+><DIV
+CLASS="procedure"
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;Create the backup script <TT
+CLASS="filename"
+>backup.cron</TT
+> file, <B
+CLASS="command"
+>touch</B
+> <TT
+CLASS="filename"
+>/etc/cron.daily/backup.cron</TT
+> and add the following lines to this backup file:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;#!/bin/sh
+# full and incremental backup script
+# created 07 February 2000
+# Based on a script by Daniel O'Callaghan &#60;danny@freebsd.org&#62;
+# and modified by Gerhard Mourani &#60;gmourani@videotron.ca&#62;
+
+#Change the 5 variables below to fit your computer/backup
+
+COMPUTER=deep                           	# name of this computer
+DIRECTORIES="/home"                     	# directoris to backup
+BACKUPDIR=/backups                      	# where to store the backups
+TIMEDIR=/backups/last-full              	# where to store time of full backup
+TAR=/bin/tar                            		# name and locaction of tar
+
+#You should not have to change anything below here
+
+PATH=/usr/local/bin:/usr/bin:/bin
+DOW=`date +%a`              		# Day of the week e.g. Mon
+DOM=`date +%d`              		# Date of the Month e.g. 27
+DM=`date +%d%b`             	# Date and Month e.g. 27Sep
+
+# On the 1st of the month a permanet full backup is made
+# Every Sunday a full backup is made - overwriting last Sundays backup
+# The rest of the time an incremental backup is made. Each incremental
+# backup overwrites last weeks incremental backup of the same name.
+#
+# if NEWER = "", then tar backs up all files in the directories
+# otherwise it backs up files newer than the NEWER date. NEWER
+# gets it date from the file written every Sunday.
+
+
+# Monthly full backup
+if [ $DOM = "01" ]; then
+        NEWER=""
+        $TAR $NEWER -cf $BACKUPDIR/$COMPUTER-$DM.tar $DIRECTORIES
+fi
+
+# Weekly full backup
+if [ $DOW = "Sun" ]; then
+        NEWER=""
+        NOW=`date +%d-%b`
+
+        # Update full backup date
+        echo $NOW &#62; $TIMEDIR/$COMPUTER-full-date
+        $TAR $NEWER -cf $BACKUPDIR/$COMPUTER-$DOW.tar $DIRECTORIES
+
+# Make incremental backup - overwrite last weeks
+else
+
+        # Get date of last full backup
+        NEWER="--newer `cat $TIMEDIR/$COMPUTER-full-date`"
+        $TAR $NEWER -cf $BACKUPDIR/$COMPUTER-$DOW.tar $DIRECTORIES
+fi
+</PRE
+></TD
+></TR
+></TABLE
+>
+<DIV
+CLASS="example"
+><A
+NAME="AEN23634"
+></A
+><P
+><B
+>Example 33-1. Backup directory of a week</B
+></P
+><P
+>&#13;Here is an abbreviated look of the backup directory after one week:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="screen"
+>&#13;[root@deep] /# <B
+CLASS="command"
+>ls</B
+> -l /backups/
+</PRE
+></TD
+></TR
+></TABLE
+>
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="literallayout"
+><TT
+CLASS="computeroutput"
+>&#13;total 22217
+-rw-r--r--   	1 root     root     	 10731288 	Feb  7 11:24 deep-01Feb.<B
+CLASS="command"
+>tar</B
+>
+-rw-r--r--   	1 root     root            	6879 	Feb  7 11:24 deep-Fri.<B
+CLASS="command"
+>tar</B
+>
+-rw-r--r--   	1 root     root         	2831 	Feb  7 11:24 deep-Mon.<B
+CLASS="command"
+>tar</B
+>
+-rw-r--r--   	1 root     root            	7924 	Feb  7 11:25 deep-Sat.<B
+CLASS="command"
+>tar</B
+>
+-rw-r--r--   	1 root     root     	 11923013 	Feb  7 11:24 deep-Sun.<B
+CLASS="command"
+>tar</B
+>
+-rw-r--r--   	1 root     root            	5643 	Feb  7 11:25 deep-Thu.<B
+CLASS="command"
+>tar</B
+>
+-rw-r--r--   	1 root     root            	3152 	Feb  7 11:25 deep-Tue.<B
+CLASS="command"
+>tar</B
+>
+-rw-r--r--   	1 root     root            	4567 	Feb  7 11:25 deep-Wed.<B
+CLASS="command"
+>tar</B
+>
+drwxr-xr-x	2 root     root         	1024 	Feb  7 11:20 last-full
+</TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+</P
+></DIV
+>
+<DIV
+CLASS="important"
+><BLOCKQUOTE
+CLASS="important"
+><P
+><B
+><SPAN
+CLASS="inlinemediaobject"
+><IMG
+SRC="./images/Important.gif"
+ALT="Important"
+></IMG
+></SPAN
+>: </B
+>
+The directory where to store the backups <TT
+CLASS="filename"
+>BACKUPDIR</TT
+>, and the directory where to store time of full backup <TT
+CLASS="filename"
+>TIMEDIR</TT
+> must exist or be created before 
+the use of the backup-script, or you will receive an error message.
+</P
+></BLOCKQUOTE
+></DIV
+>
+</P
+></LI
+><LI
+><P
+>&#13;If you are not running this backup script from the beginning of the month <EM
+>01-month-year</EM
+>, the incremental backups will need the time of the Sunday backup to be able to work properly. If you start in the 
+middle of the week, you will need to create the time file in the <TT
+CLASS="filename"
+>TIMEDIR</TT
+>.
+To create the time file in the <TT
+CLASS="filename"
+>TIMEDIR</TT
+> directory, use the following command:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="screen"
+>&#13;[root@deep] /# <B
+CLASS="command"
+>date</B
+> +%d%b &#60; /backups/last-full/myserver-full-date
+</PRE
+></TD
+></TR
+></TABLE
+>
+Where <TT
+CLASS="envar"
+>/backups/last-full</TT
+> is our variable TIMEDIR wherein we want to store the time of the full backup, and <TT
+CLASS="envar"
+>myserver-full-date</TT
+> is the name of our server e.g. <TT
+CLASS="literal"
+>deep</TT
+>, and our time 
+file consists of a single line with the present date i.e. 15-Feb.
+</P
+></LI
+><LI
+><P
+>&#13;Make this script executable and change its default permissions to be writable only by the super-user <TT
+CLASS="literal"
+>root</TT
+> <TT
+CLASS="literal"
+>755</TT
+>.
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="screen"
+>&#13;[root@deep] /# <B
+CLASS="command"
+>chmod</B
+> 755 /etc/cron.daily/backup.cron
+</PRE
+></TD
+></TR
+></TABLE
+>
+</P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="note"
+><BLOCKQUOTE
+CLASS="note"
+><P
+><B
+><SPAN
+CLASS="inlinemediaobject"
+><IMG
+SRC="./images/Note.gif"
+ALT="Note"
+></IMG
+></SPAN
+>: </B
+>
+Because this script is in the <TT
+CLASS="filename"
+>/etc/cron.daily</TT
+> directory, it will be automatically run as a cron job at one o'clock in the morning every day.
+</P
+></BLOCKQUOTE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="chap29sec305.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="chap29sec307.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The tar backup program</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="whywhen.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Restore files with <B
+CLASS="command"
+>tar</B
+></TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

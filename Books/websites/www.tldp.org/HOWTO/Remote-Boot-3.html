@@ -1,0 +1,216 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Remote-Boot mini-HOWTO:  Configuring Remote-Boot Workstations         with Linux, DOS, Windows 95/98 and Windows NT: Introduction</TITLE>
+ <LINK HREF="Remote-Boot-4.html" REL=next>
+ <LINK HREF="Remote-Boot-2.html" REL=previous>
+ <LINK HREF="Remote-Boot.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Remote-Boot-4.html">Next</A>
+<A HREF="Remote-Boot-2.html">Previous</A>
+<A HREF="Remote-Boot.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Introduction</A></H2>
+
+<P>The configuration described here was developped since Summer 1996 at the
+CUI, University of Geneva. The Computer Science Department uses several
+servers and a number of PCs, which fall into two classes:
+<UL>
+<LI>computers devoted to students</LI>
+<LI>computers devoted to research and teaching assistants</LI>
+</UL>
+
+We developped the current configuration with the following aims:
+<UL>
+<LI>Every computer should be able to run under Linux, DOS, Windows 3.1, 
+Windows 95 or Windows NT. One should be able to choose the desired 
+operating system for each session.</LI>
+<LI>All softwares, including operating systems, should be take from the 
+server, in order to facilitate the installations and upgrades.</LI>
+<LI>Clients computers should be able to run without any write-access on 
+the server (for security reasons), except for their home directory.</LI>
+<LI>Client-side configuration should be reduced to its very minimum.
+Clients should automatically get their IP configuration parameters
+from the server, and this information should be located in 
+a single file, used for all operating systems.</LI>
+<LI>Since almost every computer now has a hard-disk,
+clients should be able to take profit of it for reducing network
+load and as temporary storage space for the user.</LI>
+<LI>Users <EM>must</EM> have a login to be able to use
+any of the computers.</LI>
+<LI>The login should be the same
+for all operating system and should let the user access its
+unique home directory, common to all operating systems.</LI>
+<LI>Student (and secretary :-) computers should be fully cleaned up 
+at each start. That is,
+the PC should always look like if it were just installed.</LI>
+<LI>Every computer has to be protected from virus attacks.</LI>
+</UL>
+
+These constraints lead us to base our configuration on bootprom
+tools. We first developped new tools for the excellent
+<A HREF="http://www.incom.de/products_en.shtml">TCP/IP Bootprom</A>
+from 
+<A HREF="http://www.incom.de">InCom GmbH</A>.
+Now that a standard for preboot execution environments as finally emerged,
+we ported the tools so that it now also works for any PXE-compliant
+bootprom. PXE boot roms, also called LanDesk Service Agent, are now 
+distributed with almost all on-board network adapter.
+For more info on PXE and Intel <EM>Wired for Management</EM> standard
+in general, read from <CODE>
+<A HREF="http://www.intel.com/managedpc">http://www.intel.com/managedpc</A></CODE>. 
+<P>
+<H2><A NAME="ss3.1">3.1 Boot ROM and Hard-disk</A>
+</H2>
+
+<P>Bootproms exist for quite a long time, but until recently, they were
+solely used with diskless computers. Since 1996, this How-to has been 
+claiming that bootproms are even more interesting 
+for computers which have a local harddisk, since they allow to take profit
+of both sides:
+<UL>
+<LI>A boot rom make the configurations more robust, since it ensure
+that the computer will always boot the same way, no matter
+any virus or partition table crash. It can be used, as
+we did, to cleanup the harddisk even before the operating system
+is loaded.</LI>
+<LI>A local harddisk make the configuration more efficient, since
+it can reduce the network trafic through caching, and allows
+for efficient swap.</LI>
+</UL>
+
+Today, we have the pleasure to see that all computer manufacturers have
+come to the same point and provide boot roms as part of new computer
+standards.
+<P>Note that you can still use the tools described below in an <EM>old
+fashioned</EM> way, that is as a simple kernel/ramdisk loader, even for
+diskless computers. However, we do not encourage this use.
+<P>
+<H2><A NAME="ss3.2">3.2 The Network</A>
+</H2>
+
+<P>The University of Geneva owns a class B domain, subdivided into several
+subnets. The CUI uses four subnets, among them one is dedicated to students.
+<P>Originally, our PCs were concerned about two network protocols: IPX and IP.
+On the IPX side, we used a single Novell Netware 3 server for sharing software
+and users files for DOS and Windows. On the IP side, we used a SUN server
+for sharing software and users partitions for Linux, with NFS.
+<P>In our latest configuration, we do not any more use IPX. There is a single
+Unix server (which could be Linux as well as a SUN), sharing software
+and user files using NFS for Linux clients and using SMB (NetBIOS) over
+TCP/IP for Dos and Windows clients. In this way, we have a single
+home directory used by all operating systems.
+<P>
+<H2><A NAME="ss3.3">3.3 How it Works</A>
+</H2>
+
+<P>
+<OL>
+<LI>When a client PC is turned on, it first performs the traditional system 
+checks before the TCP/IP Bootprom or PXE Boot ROM takes the control.</LI>
+<LI>The bootprom issues a BOOTP/DHCP request in order to get its IP 
+configuration parameters.</LI>
+<LI>If the server knows the PC issuing the request, it will send
+back a BOOTP/DHCP reply with informations such as the client's IP
+address, the default gateway, and which bootdisk image to use.</LI>
+<LI>In case of a PXE boot ROM, there might be some more exchanges between
+the client and the server to determine installation parameters.</LI>
+<LI>The bootprom then downloads the boot image from the
+server using the TFTP protocol. The boot image happens to be
+a small program called <CODE>bpbatch</CODE>, our boot-time batch
+file interpreter.</LI>
+<LI>The batch interpreter is started. At this time, it is almost
+alone in the computer memory. There is no operating system loaded,
+except the preboot execution environment (offered by the Boot ROM).</LI>
+<LI>The batch interpreter look in the BOOTP/DHCP reply for command-line
+options, and in particular for the name of the batch to execute.</LI>
+<LI>According to the instructions in the batch file, it will for
+instance:
+<OL>
+<LI>Load a national keyboard mapping</LI>
+<LI>Authenticate the user according to a remote server
+(Unix, Radius or Windows NT)</LI>
+<LI>Let the user choose between the available operating systems</LI>
+<LI>According to the operating system choosen, repartition
+the hard-disk and quick-format some partitions</LI>
+<LI>Check if an up-to-date compressed image of the selected OS
+is present at the end of the disk. If not, it download
+it using TFTP</LI>
+<LI>Uncompress the selected OS to the main partition</LI>
+<LI>If the selected OS is Linux, load a kernel and start it</LI>
+<LI>If the selected OS is DOS or Windows, simply let the computer
+boot on its fresh new hard-disk</LI>
+</OL>
+
+For <B>DOS and Windows 3.1</B>, we use the
+freely available Microsoft LanManager for DOS (search the
+network for the mirror nearest to you; the distribution
+consists of three files named <CODE>disk1</CODE> to <CODE>disk4</CODE>)
+as SMB client. Microsoft LanManager supports dynamic
+configuration using DHCP. After logging in, the user 
+is faced to DOS, and can start Windows 3.1 by typing 
+the traditional <CODE>win</CODE> command. Note that at this point,
+DOS and Windows 3.1 appear to be installed locally.
+
+For <B>Windows 95 and Windows NT</B>, we also use Microsoft SMB client 
+(called <I>Client for the Microsoft Network</I>), that supports
+dynamic configuration using DHCP. We reduce network load using
+<A HREF="http://www.lancache.com">Shared LAN Cache</A>,
+a nice and powerful network-to-disk cache program.</LI>
+</OL>
+
+Students computers can be turned off <EM>the hard way</EM> at any time
+without risks, since the hard disk is reinitialized at each start.
+<P>For "safe" computers (ie. for assistants computers), 
+once the computer has been booted once using the above described system,
+the boot script simply redirect the boot to the local hard-disk,
+without cleaning it again. This allow users to leave
+data on their local hard disk. But whenever the configuration gets corrupted,
+the user can simply choose from the boot menu in order to have
+a fresh installation.
+<P>
+<H2><A NAME="ss3.4">3.4 Related non-commercial documentations</A>
+</H2>
+
+<P>This configuration has been successfully reproduced at several places
+around the world. A few people have written some hints and tricks that
+complement this How-To. If you did so and that your page is not
+already referenced in this documentation, please send
+an e-mail to <CODE>Marc.VuilleumierStuckelberg@cui.unige.ch</CODE>.
+And if you experience problems while reproducing this configuration,
+have a look at these pages !
+<UL>
+<LI><CODE>
+<A HREF="http://www.br.fgov.be/RESEARCH/INFORMATICS/info/bootp.html">http://www.br.fgov.be/RESEARCH/INFORMATICS/info/bootp.html</A></CODE>,
+by Alain Empain of the Belgium National Botanic Garden.
+Many useful sample scripts, and a nice PERL program to
+automatically generate graphic menus and corresponding HTML
+documentation from a higher level description.</LI>
+<LI><CODE>
+<A HREF="http://www.katedral.se/system/elevsyst">http://www.katedral.se/system/elevsyst</A></CODE>,
+by Johan Carlstedt of The Cathedral School of Uppsala, Sweden.
+<EM>At this day, the configuration described at this place
+is still based on the previous version of the remote-boot
+tools. However, almost everything remains applicable, given
+a few changes</EM>.</LI>
+<LI><CODE>
+<A HREF="http://vitoria.upf.tche.br/~fred/">http://vitoria.upf.tche.br/~fred/</A></CODE>,
+in portuguese, by Frederico Goldschmidt of the Passo Fundo
+University, Brasil.</LI>
+<LI><CODE>
+<A HREF="http://www.etse.urv.es/~larinyo">http://www.etse.urv.es/~larinyo</A></CODE>, in spanish,
+by  Lluis Arino, of the Escola Tecnica Superio d'Enginyeria,
+Spain.</LI>
+</UL>
+<P>You can also send me your BpBatch script if you want me to include it
+in the 
+<A HREF="soft/sample-scripts">sample scripts collection</A>.
+<P>
+<HR>
+<A HREF="Remote-Boot-4.html">Next</A>
+<A HREF="Remote-Boot-2.html">Previous</A>
+<A HREF="Remote-Boot.html#toc3">Contents</A>
+</BODY>
+</HTML>

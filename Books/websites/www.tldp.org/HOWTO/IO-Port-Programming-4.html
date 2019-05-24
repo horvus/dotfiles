@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux I/O port programming mini-HOWTO: High-resolution timing</TITLE>
+ <LINK HREF="IO-Port-Programming-5.html" REL=next>
+ <LINK HREF="IO-Port-Programming-3.html" REL=previous>
+ <LINK HREF="IO-Port-Programming.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="IO-Port-Programming-5.html">Next</A>
+<A HREF="IO-Port-Programming-3.html">Previous</A>
+<A HREF="IO-Port-Programming.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. High-resolution timing</A></H2>
+
+<H2><A NAME="ss4.1">4.1 Delays</A>
+</H2>
+
+<P>First of all, I should say that you cannot guarantee user-mode
+processes to have exact control of timing because of the multi-tasking
+nature of Linux. Your process might be scheduled out at any time for
+anything from about 10 milliseconds to a few seconds (on a system with
+very high load). However, for most applications using I/O ports, this
+does not really matter. To minimise this, you may want to nice your
+process to a high-priority value (see the <CODE>nice(2)</CODE> manual page) or
+use real-time scheduling (see below).
+<P>If you want more precise timing than normal user-mode processes give
+you, there are some provisions for user-mode `real time' support.
+Linux 2.x kernels have soft real time support; see the manual page for
+<CODE>sched_setscheduler(2)</CODE> for details. There is a special kernel that
+supports hard real time; see 
+<A HREF="http://luz.cs.nmt.edu/~rtlinux/">http://luz.cs.nmt.edu/~rtlinux/</A> for more information on
+this.
+<P>
+<H3>Sleeping: <CODE>sleep()</CODE> and <CODE>usleep()</CODE></H3>
+
+<P>Now, let me start with the easier timing calls. For delays of multiple
+seconds, your best bet is probably to use <CODE>sleep()</CODE>. For delays of
+at least tens of milliseconds (about 10 ms seems to be the minimum
+delay), <CODE>usleep()</CODE> should work. These functions give the CPU to
+other processes (``sleep''), so CPU time isn't wasted. See the manual
+pages <CODE>sleep(3)</CODE> and <CODE>usleep(3)</CODE> for details.
+<P>For delays of under about 50 milliseconds (depending on the speed of
+your processor and machine, and the system load), giving up the CPU
+takes too much time, because the Linux scheduler (for the x86
+architecture) usually takes at least about 10-30 milliseconds before
+it returns control to your process. Due to this, in small delays,
+<CODE>usleep(3)</CODE> usually delays somewhat more than the amount that you
+specify in the parameters, and at least about 10 ms.
+<P>
+<H3><CODE>nanosleep()</CODE></H3>
+
+<P>In the 2.0.x series of Linux kernels, there is a new system call,
+<CODE>nanosleep()</CODE> (see the <CODE>nanosleep(2)</CODE> manual page), that allows
+you to sleep or delay for short times (a few microseconds or more).
+<P>For delays &lt;= 2 ms, if (and only if) your process is set to soft
+real time scheduling (using <CODE>sched_setscheduler()</CODE>),
+<CODE>nanosleep()</CODE> uses a busy loop; otherwise it sleeps, just like
+<CODE>usleep()</CODE>.
+<P>The busy loop uses <CODE>udelay()</CODE> (an internal kernel function used by
+many kernel drivers), and the length of the loop is calculated using
+the BogoMips value (the speed of this kind of busy loop is one of the
+things that BogoMips measures accurately). See
+<CODE>/usr/include/asm/delay.h</CODE>) for details on how it works.
+<P>
+<H3>Delaying with port I/O</H3>
+
+<P>Another way of delaying small numbers of microseconds is port
+I/O. Inputting or outputting any byte from/to port 0x80 (see above for
+how to do it) should wait for almost exactly 1 microsecond independent
+of your processor type and speed. You can do this multiple times to
+wait a few microseconds. The port output should have no harmful side
+effects on any standard machine (and some kernel drivers use it). This
+is how <CODE>{in|out}[bw]_p()</CODE> normally do the delay (see
+<CODE>asm/io.h</CODE>).
+<P>Actually, a port I/O instruction on most ports in the 0-0x3ff range
+takes almost exactly 1 microsecond, so if you're, for example, using
+the parallel port directly, just do additional <CODE>inb()</CODE>s from that
+port to delay.
+<P>
+<H3>Delaying with assembler instructions</H3>
+
+<P>If you know the processor type and clock speed of the machine the
+program will be running on, you can hard-code shorter delays by
+running certain assembler instructions (but remember, your process
+might be scheduled out at any time, so the delays might well be longer
+every now and then). For the table below, the internal processor speed
+determines the number of clock cycles taken; e.g., for a 50 MHz
+processor (e.g. 486DX-50 or 486DX2-50), one clock cycle takes
+1/50000000 seconds (=200 nanoseconds).
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Instruction   i386 clock cycles   i486 clock cycles
+xchg %bx,%bx          3                   3
+nop                   3                   1
+or %ax,%ax            2                   1
+mov %ax,%ax           2                   1
+add %ax,0             2                   1
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Clock cycles for Pentiums should be the same as for i486, except that
+on Pentium Pro/II, <CODE>add %ax, 0</CODE> may take only 1/2 clock cycles. It
+can sometimes be paired with another instruction (because of
+out-of-order execution, this need not even be the very next
+instruction in the instruction stream).
+<P>The instructions <CODE>nop</CODE> and <CODE>xchg</CODE> in the table should have no
+side effects. The rest may modify the flags register, but this
+shouldn't matter since gcc should detect it. <CODE>xchg %bx, %bx</CODE> is a
+safe choice for a delay instruction.
+<P>To use these, call <CODE>asm(&quot;instruction&quot;)</CODE> in your
+program. The syntax of the instructions is as in the table above; if
+you want multiple instructions in a single <CODE>asm()</CODE> statement,
+separate them with semicolons. For example,
+<CODE>asm(&quot;nop ; nop ; nop ; nop&quot;)</CODE> executes four <CODE>nop</CODE>
+instructions, delaying for four clock cycles on i486 or Pentium
+processors (or 12 clock cycles on an i386).
+<P><CODE>asm()</CODE> is translated into inline assembler code by gcc, so there
+is no function call overhead.
+<P>Shorter delays than one clock cycle are impossible in the Intel x86
+architecture.
+<P>
+<H3><CODE>rdtsc</CODE> for Pentiums</H3>
+
+<P>For Pentiums, you can get the number of clock cycles elapsed since the
+last reboot with the following C code (which executes the CPU
+instrution named RDTSC):
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+   extern __inline__ unsigned long long int rdtsc()
+   {
+     unsigned long long int x;
+     __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
+     return x;
+   }
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>You can poll this value in a busy loop to delay for as many clock
+cycles as you want.
+<P>
+<P>
+<H2><A NAME="ss4.2">4.2 Measuring time</A>
+</H2>
+
+<P>For times accurate to one second, it is probably easiest to use
+<CODE>time()</CODE>. For more accurate times, <CODE>gettimeofday()</CODE> is accurate
+to about a microsecond (but see above about scheduling). For Pentiums,
+the <CODE>rdtsc</CODE> code fragment above is accurate to one clock cycle.
+<P>If you want your process to get a signal after some amount of time,
+use <CODE>setitimer()</CODE> or <CODE>alarm()</CODE>. See the manual pages of the
+functions for details.
+<P>
+<P>
+<HR>
+<A HREF="IO-Port-Programming-5.html">Next</A>
+<A HREF="IO-Port-Programming-3.html">Previous</A>
+<A HREF="IO-Port-Programming.html#toc4">Contents</A>
+</BODY>
+</HTML>

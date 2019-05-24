@@ -1,0 +1,581 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring an IPX Router</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="IPX and the NCP Filesystem"
+HREF="x-087-2-ipx.html"><LINK
+REL="PREVIOUS"
+TITLE="Configuring IPX Interfaces"
+HREF="x-087-2-ipx.interfaces.html"><LINK
+REL="NEXT"
+TITLE="Mounting a Remote NetWare Volume"
+HREF="x-087-2-ipx.ncpfs.client.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-ipx.interfaces.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 15. IPX and the NCP Filesystem</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-ipx.ncpfs.client.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-IPX.ROUTER"
+>15.5. Configuring an IPX Router</A
+></H1
+><P
+>You will recall from our short discussion of the protocols used in an
+IPX environment that IPX is a routable protocol and that the Routing
+Information Protocol (RIP) is used to propagate routing
+information. The IPX version of RIP is quite similar to the IP
+version. They operate in essentially the same way; routers
+periodically broadcast the contents of their routing tables and other
+routers learn of them by listening and integrating the information
+they receive. Hosts need only know who their local network is and be
+sure to send datagrams for all other destinations via their local
+router. The router is responsible for carrying these datagrams and
+forwarding them on to the next hop in the route.</P
+><P
+>&#13;
+In an IPX environment, a second class of information must be
+propagated around the network. The Service Advertisement Protocol
+(SAP) carries information relating to which services are available at
+which hosts around the network. It is the SAP protocol, for example,
+that allows users to obtain lists of file or print servers on the
+network. The SAP protocol works by having hosts that provide services
+periodically broadcast the list of services they offer. The IPX
+network routers collect this information and propagate it throughout
+the network alongside the network routing information.  To be a
+compliant IPX router, you must propagate both RIP and SAP information.</P
+><P
+>&#13;Just like IP, IPX on Linux provides a routing daemon named
+<B
+CLASS="COMMAND"
+>ipxd</B
+> to perform the tasks associated with managing
+routing. Again, just as with IP, it is actually the kernel that
+manages the forwarding of datagrams between IPX network interfaces,
+but it performs this according to a set of rules called the IPX
+routing table.  The <B
+CLASS="COMMAND"
+>ipxd</B
+> daemon keeps that set of
+rules up to date by listening on each of the active network interfaces
+and analyzing when a routing change is necessary. The
+<B
+CLASS="COMMAND"
+>ipxd</B
+> daemon also answers requests from hosts on a
+directly connected network that ask for routing information.</P
+><P
+>The <B
+CLASS="COMMAND"
+>ipxd</B
+> command is available prepackaged in some
+distributions, and in source form by anonymous FTP from 
+<I
+CLASS="EMPHASIS"
+>http://metalab.unc.edu/</I
+> in the
+<TT
+CLASS="FILENAME"
+>/pub/Linux/system/filesystems/ncpfs/ipxripd-x.xx.tgz</TT
+>
+file.</P
+><P
+>No configuration is necessary for the <B
+CLASS="COMMAND"
+>ipxd</B
+> daemon.
+When it starts, it automatically manages routing among the IPX
+devices that have been configured. The key is to ensure that you have
+your IPX devices configured correctly using the
+<B
+CLASS="COMMAND"
+>ipx_interface</B
+> command before you start
+<B
+CLASS="COMMAND"
+>ipxd</B
+>. While auto-detection may work, when you're
+performing a routing function it's best not to take chances, so
+manually configure the interfaces and save yourself the pain of nasty
+routing problems. Every 30 seconds, <B
+CLASS="COMMAND"
+>ipxd</B
+>
+rediscovers all of the locally attached IPX networks and automatically
+manages them. This provides a means of managing networks on interfaces
+that may not be active all of the time, such as PPP interfaces.</P
+><P
+>The <B
+CLASS="COMMAND"
+>ipxd</B
+> would normally be started at boot time from
+an <TT
+CLASS="FILENAME"
+>rc</TT
+> boot script like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/sbin/ipxd</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+No <TT
+CLASS="LITERAL"
+>&#38;</TT
+> character is necessary because <B
+CLASS="COMMAND"
+>ipxd</B
+> will
+move itself into the background by default. While the
+<B
+CLASS="COMMAND"
+>ipxd</B
+> daemon is most useful on machines acting as
+IPX routers, it is also useful to hosts on segments where there are
+multiple routers present. When you specify the
+<TT
+CLASS="LITERAL"
+>&#8211;p</TT
+> argument, <B
+CLASS="COMMAND"
+>ipxd</B
+> will act
+passively, listening to routing information from the segment and
+updating the routing tables, but it will not transmit any routing
+information. This way, a host can keep its routing tables up to date
+without having to request routes each time it wants to contact a
+remote host.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN11957"
+>15.5.1. Static IPX Routing Using the ipx_route Command</A
+></H2
+><P
+>&#13;There are occasions when we might want to hardcode an IPX
+route. Just as with IP, we can do this with IPX. The
+<B
+CLASS="COMMAND"
+>ipx_route</B
+> command writes a route into the IPX
+routing table without it needing to have been learned by the
+<B
+CLASS="COMMAND"
+>ipxd</B
+> routing daemon. The routing syntax is very
+simple (since IPX does not support subnetworking) and looks like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_route add 203a41bc 31a10103 00002a02b102</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+The command shown would add a route to the remote IPX network
+<I
+CLASS="EMPHASIS"
+>203a41bc</I
+> via the router on our local network
+<I
+CLASS="EMPHASIS"
+>31a10103</I
+> with node address <I
+CLASS="EMPHASIS"
+>00002a02b102</I
+>.</P
+><P
+>You can find the node address of a router by making judicious use of
+the <B
+CLASS="COMMAND"
+>tcpdump</B
+> command with the
+<TT
+CLASS="LITERAL"
+>&#8211;e</TT
+> argument to display link level
+headers and look for traffic from the router. If the router is a Linux
+machine, you can more simply use the <B
+CLASS="COMMAND"
+>ifconfig</B
+>
+command to display it.</P
+><P
+>You can delete a route using the <B
+CLASS="COMMAND"
+>ipx_route</B
+> command:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_route del 203a41bc</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;You can list the routes that are active in the kernel by looking at
+the <TT
+CLASS="FILENAME"
+>/proc/net/ipx_route</TT
+> file. Our routing table
+so far looks like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>cat ipx_route</B
+></TT
+>
+Network    Router_Net   Router_Node
+203A41BC   31A10103     00002a02b102
+31A10103   Directly     Connected</PRE
+></TD
+></TR
+></TABLE
+>
+
+The route to the <I
+CLASS="EMPHASIS"
+>31A10103</I
+> network was automatically created when we configured the IPX interface. Each of our local
+networks will be represented by an <TT
+CLASS="FILENAME"
+>/proc/net/ipx_route</TT
+> 
+entry like this one. Naturally, if our machine is to act as a router, it will 
+need at least one other interface.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN11985"
+>15.5.2. Internal IPX Networks and Routing</A
+></H2
+><P
+>&#13;IPX hosts with more than one IPX interface have a unique network/node
+address combination for each of their interfaces. To connect to such a
+host, you may use any of these network/node address combinations. When
+SAP advertizes services, it supplies the network/node address
+associated with the service that is offered. On hosts with multiple
+interfaces, this means that one of the interfaces must be chosen as the
+one to propagate; this is the function of the primary interface flag
+we talked about earlier. But this presents a problem: the route to
+this interface may not always be the optimal one, and if a network
+failure occurs that isolates that network from the rest of the
+network, the host will become unreachable even though there are other
+<I
+CLASS="EMPHASIS"
+>possible</I
+> routes to the other interfaces.  The
+other routes are never known to other hosts because they are never
+propagated, and the kernel has no way of knowing that it should choose
+another primary interface. To avoid this problem, a device was
+developed that allows an IPX host to be known by a single
+route-independent network/node address for the purposes of SAP
+propagation. This solves our problem because this new network/node
+address is reachable via all of the host interfaces, and is the one
+that is advertised by SAP.</P
+><P
+>To illustrate the problem and its solution, <A
+HREF="x-087-2-ipx.router.html#X-087-2-IPX.INTERNAL.NETWORK"
+>Figure 15-1</A
+> shows a server attached to two
+IPX networks. The first network has no internal network, but the second
+does. The host in diagram <A
+HREF="x-087-2-ipx.router.html#X-087-2-IPX.INTERNAL.NETWORK"
+>Figure 15-1</A
+> would 
+choose one of its interfaces as its primary interface, let's assume
+<I
+CLASS="EMPHASIS"
+>0000001a:0800000010aa</I
+>, and that is what 
+would be advertised as its service access point. This works well for hosts
+on the <I
+CLASS="EMPHASIS"
+>0000001a</I
+> network, but means that 
+users on the <I
+CLASS="EMPHASIS"
+>0000002c</I
+> network will route via 
+the network to reach that port, despite the server having a port directly on 
+that network if they've discovered this server from the SAP broadcasts.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-IPX.INTERNAL.NETWORK"
+></A
+><P
+><B
+>Figure 15-1. IPX internal network</B
+></P
+><P
+><IMG
+SRC="lag2_1501.jpg"></P
+></DIV
+><P
+>Allowing such hosts to have a virtual network with virtual host
+addresses that are entirely a software construct solves this
+problem. This virtual network is best thought of as being
+<I
+CLASS="EMPHASIS"
+>inside</I
+> the IPX host. The SAP information then
+needs only to be propagated for this virtual network/node address
+combination. This virtual network is known as an <I
+CLASS="EMPHASIS"
+>internal
+network</I
+>. But how do other hosts know how to reach this
+internal network? Remote hosts route to the internal network via
+the directly connected networks of the host. This means that you 
+see routing entries that refer to the internal network of hosts
+supporting multiple IPX interfaces. Those routes should choose the
+optimal route available at the time, and should one fail, the routing is 
+automatically updated to the next best interface and route. In
+<A
+HREF="x-087-2-ipx.router.html#X-087-2-IPX.INTERNAL.NETWORK"
+>Figure 15-1</A
+>, we've configured an
+internal IPX network of address <I
+CLASS="EMPHASIS"
+>0x10000010</I
+> 
+and used a host address of <I
+CLASS="EMPHASIS"
+>00:00:00:00:00:01</I
+>. It is this address that will be our primary interface and will be advertised via SAP. Our routing will reflect this network as being reachable via
+<I
+CLASS="EMPHASIS"
+>either</I
+> of our real network ports, so hosts will
+always use the best network route to connect to our server.</P
+><P
+>To create this internal network, use the
+<B
+CLASS="COMMAND"
+>ipx_internal_net</B
+> command included in Greg Page's
+IPX tools package. Again, a simple example demonstrates its use:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_internal_net add 10000010 000000000001</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+This command would create an IPX internal network with address
+<I
+CLASS="EMPHASIS"
+>10000010</I
+> and a node address of
+<I
+CLASS="EMPHASIS"
+>000000000001</I
+>. The network address, just like any other
+IPX network address, must be unique on your network. The node address is
+completely arbitrary, as there will normally be only one node on the network.
+Each host may have only one IPX Internal Network, and if configured, the
+Internal Network will always be the primary network.</P
+><P
+>To delete an IPX Internal Network, use:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ipx_internal_net del</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>An internal IPX network is of absolutely no use to you unless your host both
+provides a service and has more than one IPX interface active.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.interfaces.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.ncpfs.client.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configuring IPX Interfaces</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ipx.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Mounting a Remote NetWare Volume</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

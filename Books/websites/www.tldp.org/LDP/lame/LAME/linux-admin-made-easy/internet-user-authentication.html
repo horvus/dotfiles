@@ -1,0 +1,458 @@
+<HTML
+><HEAD
+><TITLE
+>Internet User Authentication with TACACS</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Administration Made Easy"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Custom Configuration and Administration Issues"
+HREF="custom-config.html"><LINK
+REL="PREVIOUS"
+TITLE="Domain Name Server (DNS) Configuration and Administration"
+HREF="domain-name-server.html"><LINK
+REL="NEXT"
+TITLE="Windows-style File and Print Services with Samba"
+HREF="samba-file-and-print.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Administration Made Easy</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="domain-name-server.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. Custom Configuration and Administration Issues</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="samba-file-and-print.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INTERNET-USER-AUTHENTICATION"
+>7.3. Internet User Authentication with TACACS</A
+></H1
+><P
+>At my place of employment, for TACACS authentication of dial-up Internet
+users (who are connecting to our modem pool which are in turn connected to
+a couple of Cisco 250x access servers), we are using the Vikas version of
+<SPAN
+CLASS="QUOTE"
+>"xtacacsd"</SPAN
+>.</P
+><P
+>After compiling and installing the Vikas package (latest versions
+are available from <A
+HREF="ftp://ftp.navya.com/pub/vikas"
+TARGET="_top"
+>ftp://ftp.navya.com/pub/vikas</A
+>; I don't believe the package is
+available in RPM format), you should add the following entries to the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/inetd.conf</TT
+></TT
+>'' file so that
+the daemon will be loaded by the inetd daemon whenever a TACACS request
+is received.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+># TACACS is a user authentication protocol used for Cisco Router products.
+tacacs dgram udp wait root /etc/xtacacsd xtacacsd -c /etc/xtacacsd-conf</PRE
+></TD
+></TR
+></TABLE
+><P
+>Next, you should edit the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/xtacacsd-conf</TT
+></TT
+>'' file and
+customize it, as necessary, for your system (however you will probably be
+able to use the default settings as-is).</P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>Note: If you are using shadow passwords (see <A
+HREF="shadow-file-formats.html"
+>Section 6.6</A
+> for details), you will have some problems
+with this package.  Unfortunately, PAM (Pluggable Authentication Module),
+which Red Hat uses for user authentication, is not supported by this
+package.  One workaround that I use is to keep a separate
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>passwd</TT
+></TT
+>'' file in
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/usr/local/xtacacs/etc/</TT
+></TT
+>'' which
+matches the one in /etc/ but is non-shadowed.  This is a bit of a hassle,
+and if you choose to do this make sure you set permissions on the other
+password file to make sure it is only readable by root:</P
+></BLOCKQUOTE
+></DIV
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>chmod a-wr,u+r /usr/local/xtacacs/etc/passwd</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>If you do indeed use shadow, you will most certainly need to edit
+the ``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/xtacacsd-conf</TT
+></TT
+>'' file
+and location of the non-shadowed password file (assuming you are using
+the workaround I have suggested above).</P
+><P
+>The next step is to configure your access server(s) to authenticate
+logins for the desired devices (such as dial-up modems) with TACACS.  
+Here is a sample session on how this is done:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>mail:/tftpboot#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>telnet xyzrouter</B
+></TT
+>
+
+Escape character is '^]'.
+User Access Verification
+<TT
+CLASS="PROMPT"
+>Password:</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>****</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter&#62;</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>enable</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>Password:</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>****</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>config terminal</B
+></TT
+>
+Enter configuration commands, one per line.  End with CNTL/Z.
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tacacs-server attempts 3</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tacacs-server authenticate connections</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tacacs-server extended</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tacacs-server host 123.12.41.41</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tacacs-server notify connections</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tacacs-server notify enable</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tacacs-server notify logouts</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tacacs-server notify slip</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>line 2 10</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config-line)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>login tacacs</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config-line)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>exit</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter(config)#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>exit</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>write</B
+></TT
+>
+Building configuration...
+<TT
+CLASS="PROMPT"
+>[OK]</TT
+> <TT
+CLASS="USERINPUT"
+><B
+> </B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>xyzrouter#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>exit</B
+></TT
+>
+
+Connection closed by foreign host.</PRE
+></TD
+></TR
+></TABLE
+><P
+>All TACACS activity log messages will be recorded in
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/var/log/messages</TT
+></TT
+>'' for your
+perusal.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="domain-name-server.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="samba-file-and-print.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Domain Name Server (DNS) Configuration and Administration</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="custom-config.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Windows-style File and Print Services with Samba</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

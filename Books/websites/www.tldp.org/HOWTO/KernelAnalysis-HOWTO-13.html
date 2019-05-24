@@ -1,0 +1,239 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>KernelAnalysis-HOWTO: Utility functions</TITLE>
+ <LINK HREF="KernelAnalysis-HOWTO-14.html" REL=next>
+ <LINK HREF="KernelAnalysis-HOWTO-12.html" REL=previous>
+ <LINK HREF="KernelAnalysis-HOWTO.html#toc13" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="KernelAnalysis-HOWTO-14.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-12.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc13">Contents</A>
+<HR>
+<H2><A NAME="s13">13. Utility functions</A></H2>
+
+<H2><A NAME="ss13.1">13.1 list_entry [include/linux/list.h]</A>
+</H2>
+
+<P>Definition:
+<P>
+<P>
+<PRE>
+#define list_entry(ptr, type, member) \
+((type *)((char *)(ptr)-(unsigned long)(&amp;((type *)0)-&gt;member)))
+</PRE>
+<P>Meaning:
+<P>
+<P>"list_entry" macro is used to retrieve a parent struct pointer,
+by using only one of internal struct pointer. 
+<P>
+<P>Example:
+<P>
+<P>
+<PRE>
+struct __wait_queue {
+   unsigned int flags; 
+   struct task_struct * task; 
+   struct list_head task_list;
+};
+struct list_head { 
+   struct list_head *next, *prev; 
+};
+
+// and with type definition:
+typedef struct __wait_queue wait_queue_t;
+
+// we'll have
+wait_queue_t *out list_entry(tmp, wait_queue_t, task_list);
+
+// where tmp point to list_head
+</PRE>
+<P>So, in this case, by means of *tmp pointer [list_head]
+we retrieve an *out pointer [wait_queue_t].
+<P>
+<P>
+<PRE>
+
+ ____________ &lt;---- *out [we calculate that]
+|flags       |             /|\
+|task *--&gt;   |              |
+|task_list   |&lt;----    list_entry
+|  prev * --&gt;|    |         |
+|  next * --&gt;|    |         |
+|____________|    ----- *tmp [we have this]
+ 
+</PRE>
+<H2><A NAME="ss13.2">13.2 Sleep </A>
+</H2>
+
+<H3>Sleep code</H3>
+
+<P>Files: 
+<P>
+<P>
+<UL>
+<LI>kernel/sched.c</LI>
+<LI>include/linux/sched.h</LI>
+<LI>include/linux/wait.h</LI>
+<LI>include/linux/list.h
+</LI>
+</UL>
+<P>Functions:
+<P>
+<P>
+<UL>
+<LI>interruptible_sleep_on</LI>
+<LI>interruptible_sleep_on_timeout</LI>
+<LI>sleep_on</LI>
+<LI>sleep_on_timeout
+</LI>
+</UL>
+<P>Called functions:
+<P>
+<P>
+<UL>
+<LI>init_waitqueue_entry</LI>
+<LI>__add_wait_queue</LI>
+<LI>list_add</LI>
+<LI>__list_add</LI>
+<LI>__remove_wait_queue
+</LI>
+</UL>
+<P>InterCallings Analysis:
+<P>
+<P>
+<PRE>
+|sleep_on
+   |init_waitqueue_entry  --
+   |__add_wait_queue        |   enqueuing request to resource list
+      |list_add              |
+         |__list_add        -- 
+   |schedule              ---     waiting for request to be executed
+      |__remove_wait_queue --   
+      |list_del              |   dequeuing request from resource list
+         |__list_del        -- 
+ 
+
+</PRE>
+<P>Description:
+<P>
+<P>Under Linux each resource (ideally an object shared between many
+users and many processes), , has a queue to manage ALL tasks requesting
+it.
+<P>
+<P>This queue is called "wait queue" and it consists of many items
+we'll call the"wait queue element":
+<P>
+<P>
+<PRE>
+***   wait queue structure [include/linux/wait.h]  ***
+
+
+struct __wait_queue {
+   unsigned int flags; 
+   struct task_struct * task; 
+   struct list_head task_list;
+}
+struct list_head { 
+   struct list_head *next, *prev; 
+};
+</PRE>
+<P>Graphic working: 
+<P>
+<P>
+<PRE>
+        ***  wait queue element  ***
+
+                             /|\
+                              |
+       &lt;--[prev *, flags, task *, next *]--&gt;
+ 
+                     
+
+
+                 ***  wait queue list ***  
+ 
+          /|\           /|\           /|\                /|\
+           |             |             |                  |
+--&gt; &lt;--[task1]--&gt; &lt;--[task2]--&gt; &lt;--[task3]--&gt; .... &lt;--[taskN]--&gt; &lt;--
+|                                                                  |
+|__________________________________________________________________|
+          
+
+           
+              ***   wait queue head ***
+
+       task1 &lt;--[prev *, lock, next *]--&gt; taskN
+   
+ 
+</PRE>
+<P>"wait queue head" point to first (with next *) and last (with prev
+*) elements of the "wait queue list".
+<P>
+<P>When a new element has to be added, "__add_wait_queue" [include/linux/wait.h]
+is called, after which  the generic routine "list_add" [include/linux/wait.h],
+will be executed:
+<P>
+<P>
+<PRE>
+***   function list_add [include/linux/list.h]  ***
+
+// classic double link list insert
+static __inline__ void __list_add (struct list_head * new,  \
+                                   struct list_head * prev, \
+                                   struct list_head * next) { 
+   next-&gt;prev = new; 
+   new-&gt;next = next; 
+   new-&gt;prev = prev; 
+   prev-&gt;next = new; 
+}
+</PRE>
+<P>To complete the description, we see also "__list_del" [include/linux/list.h]
+function called by "list_del" [include/linux/list.h] inside
+"remove_wait_queue" [include/linux/wait.h]:
+<P>
+<P>
+<PRE>
+***   function list_del [include/linux/list.h]  ***
+
+
+// classic double link list delete
+static __inline__ void __list_del (struct list_head * prev, struct list_head * next) { 
+   next-&gt;prev = prev; 
+   prev-&gt;next = next; 
+}
+</PRE>
+<H3>Stack consideration</H3>
+
+<P>A typical list (or queue) is usually managed allocating it into
+the Heap (see Cap.10 for Heap and Stack definition and about where
+variables are allocated). Otherwise here, we statically allocate
+Wait Queue data in a local variable (Stack), then function is interrupted
+by scheduling, in the end, (returning from scheduling) we'll erase
+local variable.
+<P>
+<P>
+<PRE>
+  new task &lt;----|          task1 &lt;------|          task2 &lt;------|
+                |                       |                       |
+                |                       |                       | 
+|..........|    |       |..........|    |       |..........|    | 
+|wait.flags|    |       |wait.flags|    |       |wait.flags|    |
+|wait.task_|____|       |wait.task_|____|       |wait.task_|____|   
+|wait.prev |--&gt;         |wait.prev |--&gt;         |wait.prev |--&gt;
+|wait.next |--&gt;         |wait.next |--&gt;         |wait.next |--&gt;   
+|..        |            |..        |            |..        |    
+|schedule()|            |schedule()|            |schedule()|     
+|..........|            |..........|            |..........|    
+|__________|            |__________|            |__________|     
+ 
+   Stack                   Stack                   Stack
+</PRE>
+<HR>
+<A HREF="KernelAnalysis-HOWTO-14.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-12.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc13">Contents</A>
+</BODY>
+</HTML>

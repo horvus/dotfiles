@@ -1,0 +1,418 @@
+<HTML
+><HEAD
+><TITLE
+>Tying it all together</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="  User Authentication HOWTO
+ "
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Securing User Authentication"
+HREF="x263.html"><LINK
+REL="NEXT"
+TITLE="Resources"
+HREF="x376.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>User Authentication HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x263.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x376.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN316"
+></A
+>5. Tying it all together</H1
+><P
+>   In this section, I'll give a simple example which ought to help tie together what's in the previous section.
+  </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN319"
+></A
+>5.1. Apache + mod_auth_pam</H2
+><P
+>    As our example, we'll install and configure mod_auth_pam, an Apache module that allows you to authenticate users of your webserver using PAM. For the purpose of this example, I'll assume you have apache installed. If it's not installed already you should be able find installation packages from your distributor.
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN322"
+></A
+>5.2. Our example</H2
+><P
+>    Our goal will be to configure a restricted area of our webserver, a <TT
+CLASS="FILENAME"
+>family/</TT
+> directory, to authenticate users via PAM. This directory contains private family information, and should only be accessible to members of the user group family.
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN326"
+></A
+>5.3. Installing mod_auth_pam</H2
+><P
+>    First, you'll want to download mod_auth_pam from <A
+HREF="http://blank.pages.de/pam/mod_auth_pam/"
+TARGET="_top"
+>http://blank.pages.de/pam/mod_auth_pam/</A
+>. The following commands will compile mod_auth_pam (you must be logged in as root):
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>   <TT
+CLASS="PROMPT"
+>~#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>tar xzf mod_auth_pam.tar.gz</B
+></TT
+>
+   <TT
+CLASS="PROMPT"
+>~#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>cd mod_auth_pam-1.0a</B
+></TT
+>
+   <TT
+CLASS="PROMPT"
+>~/mod_auth_pam-1.0a#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>make</B
+></TT
+>
+   <TT
+CLASS="PROMPT"
+>~/mod_auth_pam-1.0a#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>make install</B
+></TT
+>
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    If you have any trouble installing the mod_auth_pam module, make sure you've installed your distribution's apache-dev package. After you've installed mod_auth_pam, you'll need to restart apache. Apache can usually by restarted by typing the following command (again, you must be root):
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>   <TT
+CLASS="PROMPT"
+>~#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>/etc/init.d/apache restart</B
+></TT
+>
+   </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN343"
+></A
+>5.4. Configuring PAM</H2
+><P
+>     The PAM configuration for Apache is stored in <TT
+CLASS="FILENAME"
+>/etc/pam.d/httpd</TT
+>. The default configuration (which was installed when you installed mod_auth_pam) is secure, but it uses a module (<TT
+CLASS="FILENAME"
+>pam_pwdb.so</TT
+>) which may not be available on many systems. (Besides, configuring it from scratch will be fun!) So delete the <TT
+CLASS="FILENAME"
+>/etc/pam.d/httpd</TT
+> file, and start with a fresh one.
+    </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN349"
+></A
+>5.4.1. Deciding how to configure PAM</H3
+><P
+>      If we're going to configure how PAM deals with Apache's authentication requests, we need to figure out exactly what we need PAM to check for. First, we want PAM to make sure the user's password matches their password in the standard unix password database. This sounds like the 'auth' type and the <TT
+CLASS="FILENAME"
+>pam_unix.so</TT
+> module. We'll want the module's control type to be set to 'required', so authentication will fail without a correct password. Here's what the first line of our <TT
+CLASS="FILENAME"
+>/etc/pam.d/httpd</TT
+> looks like:
+     </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     auth	required	pam_unix.so
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>      Secondly, we must make sure that the users account is valid (i.e. their password has not expired or any such nastiness). This is the 'account' type and is also provided by the <TT
+CLASS="FILENAME"
+>pam_unix.so</TT
+> module. Again, we'll set this module's control type to 'required'. After adding this line, our <TT
+CLASS="FILENAME"
+>/etc/pam.d/httpd</TT
+> configuration looks like this:
+     </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     auth	required	pam_unix.so
+     account	required	pam_unix.so
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>      It's not terribly sophisticated, but it does the job. It ought to be a good start for learning how to configure PAM services.
+     </P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN360"
+></A
+>5.5. Configuring Apache</H2
+><P
+>     Now that PAM is configured to authenticate apache's requests, we'll configure apache to properly utilize PAM authentication to restrict access to the <TT
+CLASS="FILENAME"
+>family/</TT
+> directory. To do so, add the following lines to your <TT
+CLASS="FILENAME"
+>httpd.conf</TT
+> (usually stored in <TT
+CLASS="FILENAME"
+>/etc/apache/</TT
+> or <TT
+CLASS="FILENAME"
+>/etc/httpd</TT
+>):
+    </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>    &#60;Directory /var/www/family&#62;
+    AuthPAM_Enabled on
+    AllowOverride None
+    AuthName "Family Secrets"
+    AuthType "basic"
+    require group family
+    &#60;/Directory&#62;
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>     You may need to replace <TT
+CLASS="FILENAME"
+>/var/www/</TT
+> with the default location of web documents, which is often <TT
+CLASS="FILENAME"
+>/home/httpd/</TT
+>. Wherever that is, you'll need to create the <TT
+CLASS="FILENAME"
+>family</TT
+> directory.
+    </P
+><P
+>     Before we test our setup, I'll take a moment to explain the Apache configuration you just entered. The &#60;Directory&#62; directive is used to encapsulate configuration data for this directory. Inside this directive, we've enabled PAM authentication ("AuthPAM_enabled on"), turned off any overriding of this configuration ("AllowOverride none"), named this authentication zone "Family Secrets" ("AuthName "Family Secrets""), set the http authentication (not the PAM authentication) type to the default ("AuthType "basic""), and required the user group family ("require group family").
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN373"
+></A
+>5.6. Testing our setup</H2
+><P
+>     Now that we've got everything setup up properly, it's time to revel in our success. Fire up your favorite web browser and head over to http://your-domain/family/ (replacing your-domain with, well, your domain). You are now an uber-authenticator!
+    </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x263.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x376.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Securing User Authentication</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Resources</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,1850 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Enabling Support for Your (Webcam) Hardware in Linux</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Webcam HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="intro.html"><LINK
+REL="NEXT"
+TITLE="Accessing the Video Device"
+HREF="dev-intro.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Webcam HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="dev-intro.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="HARDWARE"
+></A
+>2. Enabling Support for Your (Webcam) Hardware in Linux</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DRIVER-INTRO"
+></A
+>2.1. Drivers and Modules</H2
+><P
+> For your webcam to work you will need support for the connection and support for the actual camera hardware. Those who are already versed in kernels and modules and how to load them should skip to <A
+HREF="hardware.html#CONNECTION"
+>Section 2.2</A
+>, which addresses support of the connection type. If you know your USB, IEEE 1394 or whatever bus you will be connecting your camera to is already configured and working, you should move on to the list of specific webcam hardware listed in <A
+HREF="hardware.html#MODELS"
+>Section 2.3</A
+>. </P
+><P
+>Webcam drivers are usually available one of three ways: within the kernel, as a compilable stand alone module, or available as a pre-compiled (packaged) binary driver from your Linux distribution.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNEL-MODULES"
+></A
+>2.1.1. Module or In-Kernel?</H3
+><P
+>As a rule, often the stock kernel, or working part of the operating system, of your initial installation may already have support for what you need. Your Linux distribution vendor has likely enabled the most common options already, including the bus, or connection type, and drivers for common camera models. The driver exists either as a loadable module or within the already running kernel.</P
+><P
+>An easy way to tell if the driver is enabled is to use the <B
+CLASS="COMMAND"
+>dmesg</B
+> command piped into <B
+CLASS="COMMAND"
+>less</B
+> (for easy paging) to look for an acknowledgement that it was loaded when your system started up:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $  dmesg | less</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>...which may yield something like the following, depending on your hardware:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   Dec 18 17:35:18 localhost kernel: hub 5-0:1.0: USB hub found
+   Dec 18 17:35:18 localhost kernel: hub 5-0:1.0: 2 ports detected
+   Dec 18 17:35:18 localhost kernel: Linux video capture interface: v1.00
+   Dec 18 17:35:18 localhost kernel: quickcam: QuickCam USB camera found (driver version QuickCam USB $Date: 2005/01/07 13:29:53 $)
+   Dec 18 17:35:18 localhost kernel: quickcam: Kernel:2.6.7 bus:1 class:FF subclass:FF vendor:046D product:0840
+   Dec 18 17:35:18 localhost kernel: quickcam: Sensor HDCS-1000/1100 detected
+   Dec 18 17:35:18 localhost kernel: quickcam: Registered device: /dev/video0
+   Dec 18 17:35:18 localhost kernel: usbcore: registered new driver quickcam</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>If you don't see it, the particular driver may exist as a loadable module. If you know what that module is named, try using <TT
+CLASS="FILENAME"
+>find</TT
+>; in this example we are looking for the 'ibmcam' module:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>  $  find /lib/modules -name ibmcam.o</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Note that up until the 2.4 series modules had the suffix <TT
+CLASS="FILENAME"
+>.o</TT
+>; for 2.6+ series kernels this was replaced with <TT
+CLASS="FILENAME"
+>.ko</TT
+>.</P
+><P
+>You can get a list of all modules available by typing the following at the command line:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>  $  ls -R /lib/modules/`uname -r`/kernel </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> Where <B
+CLASS="COMMAND"
+>`uname -r`</B
+>, surrounded by forward tick marks, is your kernel version number.
+
+The following output is an example of what you might find in a USB
+webcam-ready kernel , where everything is loaded as a module (all
+but the relevant lines have been edited for brevity):</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   ./usb: usbvideo.o usbcore.o ibmcam.o</PRE
+></FONT
+></TD
+></TR
+></TABLE
+> </P
+><P
+>Once you know which module your camera needs you can find out if it is already loaded 
+by typing the following at the command line:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #  lsmod</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> As shown by the prompt above, you will need to have root privileges
+to do this.
+
+You should get output similar to the following:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   cdrom                  29312   0  (autoclean) [sr_mod]
+   usb-ohci               17888   0  (unused) 
+   usbcore                56768   0  [scanner ibmcam usbvideo usb-ohci] 
+   ibmcam                 39680   0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> Most stock kernels are compiled with <TT
+CLASS="FILENAME"
+>kmod</TT
+>, which enabling automatic loading of necessary modules when the appropriate hardware is detected. It may not always do so, however, so  if you don't have the particular module you're seeking loaded and
+you think the module may be available, try loading
+it manually with <B
+CLASS="COMMAND"
+>modprobe</B
+>, as in the following using the <TT
+CLASS="FILENAME"
+>ibmcam</TT
+> module as an example:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   # modprobe -v ibmcam</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Drivers for specific webcam models, or links to project pages hosting code for drivers, are outlined in <A
+HREF="hardware.html#MODELS"
+>Section 2.3</A
+>. The drivers are usually available one of three ways: within the kernel, as a compilable stand alone module, or available as a pre-compiled binary from your Linux distribution.</P
+><P
+>If the support for your driver is not found either enabled statically within the kernel or as a module, don't despair. Drivers for numerous models are in the Linux kernel source (available directly from <A
+HREF="http://www.kernel.org"
+TARGET="_top"
+>kernel.org</A
+> source code repository), or in code offered separately from the kernel that can be configured to work with your current setup as oulined in <A
+HREF="hardware.html#BINARY"
+>Section 2.1.2</A
+>. If your webcam driver is available in the kernel source but not enabled as a module or otherwise in your default system, you can either recompile the kernel from the source code you have or obtain a new version of the kernel source, either pre-packaged by your Linux distributor or directly from the previous link (as a so-called <SPAN
+CLASS="QUOTE"
+>"vanilla"</SPAN
+> kernel).
+If you are unfamiliar with the prerequisites and procedure of compiling your own kernel, I direct you to the <A
+HREF="http://www.tldp.org/HOWTO/Kernel-HOWTO.html"
+TARGET="_top"
+>Kernel HOWTO</A
+>
+for more information.  </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="BINARY"
+></A
+>2.1.2. Patching, Source-Only or Precompiled Binary?</H3
+><P
+>You may find that your webcam is supported by only a kernel patch, by a source-only driver not requiring a kernel recompile, or you may even be lucky enough to have a distribution that makes a pre-compiled and packaged binary driver available for your computer's architecture. The procedure involved in the former is largely beyond the scope of this document and is probably best outlined in the documentation available on the web page of your particular model's driver found in <A
+HREF="hardware.html#MODELS"
+>Section 2.3</A
+>. Some further more general documentation on these processes are, however, addressed in <A
+HREF="troubleshooting.html"
+>Section 5</A
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CONNECTION"
+></A
+>2.2. Supporting the Connection Type</H2
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="USB-TYPE"
+></A
+>2.2.1. USB Webcams</H3
+><P
+> If you have a USB webcam, it is likely a Linux driver has been written for your device.
+
+There are two ways of supporting USB devices in Linux.
+
+One is the more traditional kernel support, and the other is through
+libusb.
+
+For at least one webcam category, the STV0680-based models, working 
+libusb support is recommended, at least according to <A
+HREF="http://stv0680-usb.sourceforge.net/"
+TARGET="_top"
+>the Sourceforge page 
+on the subject</A
+>.</P
+><P
+>Unless you know your driver requires libusb support, you should probably 
+stick with the more conventional in-kernel support for USB devices beginning 
+in <A
+HREF="hardware.html#USB-KERNEL"
+>Section 2.2.1.2</A
+>.  </P
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="LIBUSB"
+></A
+>2.2.1.1. Libusb</H4
+><P
+> Libusb is a library that allows access to the USB functions in
+Linux through userspace and without the need to enable kernel support
+and insert modules. 
+
+Most distributions, at this point, are offering <A
+HREF="http://libusb.sourceforge.net/"
+TARGET="_top"
+>libusb</A
+> in their stable
+branches (and some install it by default), so if you don't already have
+kernel support for USB devices, then you may only have to install the
+libusb package in order to access your device.
+
+You must have USB device filesystem support enabled in your kernel,
+which most distributions do.
+
+To find out for sure, issue the following at the command line: </P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $  cat /proc/filesystems</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>You should see (among others):</P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   nodev    usbdevfs 
+   nodev    usbfs</PRE
+></FONT
+></TD
+></TR
+></TABLE
+> </P
+><P
+> You may need to mount usbdevfs to enable it and see the device
+files, which you can do at the command line with <B
+CLASS="COMMAND"
+>mount -t
+usbdevfs none /proc/bus/usb</B
+>.
+
+Don't try to use libusb while your particular <EM
+>kernel</EM
+>
+webcam support is enabled either statically or the module loaded; you
+can only use one at at time.</P
+><P
+> You can obtain the libusb package in <TT
+CLASS="FILENAME"
+>.rpm</TT
+>,
+<TT
+CLASS="FILENAME"
+>.tgz</TT
+> or <TT
+CLASS="FILENAME"
+>.deb</TT
+> format from your
+Linux distribution.</P
+></DIV
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="USB-KERNEL"
+></A
+>2.2.1.2. Linux Kernel USB Support</H4
+><P
+> Kernel support is required for USB webcam support if not using
+libusb (outlined above).</P
+><P
+>For 2.2 and 2.4 series kernels, your USB webcam may require the module <TT
+CLASS="FILENAME"
+>usbvideo</TT
+>
+to function. This is not required in the 2.6+ series.&#13;</P
+><P
+> For generic USB bus support in Linux, you will need USB subsystem
+support in your kernel, whether usb-ohci, usb-ehci, or whatever flavor
+of USB driver your system prefers.
+
+USB subsystem support has been present in the Linux kernel since the
+late 2.2 series.
+
+For a more in-depth discussion of USB support in general, I direct you to
+the <A
+HREF="http://www.linux-usb.org/"
+TARGET="_top"
+>Linux-usb project site</A
+>.
+
+If you want to find out which modules are loaded, at the command line
+or in an xterm, type the following:&#13;</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #  lsmod</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> As shown by the prompt above, you will need to have root privileges
+to do this.
+
+You should get output similar to the following:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   cdrom	       29312   0  (autoclean) [sr_mod]
+   usb-ohci	       17888   0  (unused) 
+   usbcore             56768   0  [scanner ibmcam usbvideo usb-ohci] 
+   ibmcam              39680   0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> If you don't have the particular module you're seeking loaded and
+you think the module may be available, try loading
+it directly (using the usb ibmcam module as an example):</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   #  modprobe -v ibmcam</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> ...at which point you should see something like the
+following:</P
+><P
+> <TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   Using /lib/modules/2.4.20/kernel/drivers/usb/ibmcam.o</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> By placing the entry <TT
+CLASS="FILENAME"
+>ibmcam</TT
+> (for example) in
+<TT
+CLASS="FILENAME"
+>/etc/modules</TT
+> (note that this varies by distribution),
+you can have the module load at boot-time automatically.
+
+You can then confirm the module was loaded by checking the syslog or in
+the boot-time record with <B
+CLASS="COMMAND"
+>dmesg | less</B
+>), where you
+should see an entry such as the following:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   Oct 18 12:43:12 K7 kernel: hub.c: new USB device 00:02.3-2, assigned address 3 
+   Oct 18 12:43:12 K7 kernel: ibmcam.c: IBM PC Camera USB camera found (model 2, rev. 0x030a) 
+   Oct 18 12:43:12 K7 kernel: usbvideo.c: ibmcam on /dev/video1: canvas=352x240 videosize=352x240</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="IEEE1394"
+></A
+>2.2.2. IEEE 1394 (<SPAN
+CLASS="TRADEMARK"
+>Firewire</SPAN
+>&#8482;,
+<SPAN
+CLASS="TRADEMARK"
+>i.Link</SPAN
+>&#8482;)</H3
+><P
+> IEEE 1394 webcams require an IEEE 1394 PCI card or an IEEE 1394
+bus port on your mainboard.
+
+The IEEE interface has been supported in Linux since the early 2.4-series
+kernel.
+
+If you are lucky enough to own such a device, generic information
+on support of the IEEE 1394 bus in Linux can be found at <A
+HREF="http://www.linux1394.org"
+TARGET="_top"
+>www.linux1394.org</A
+>.
+
+If you have a kernel older than 2.4.2, you will need to
+patch your kernel with one of the patches found on <A
+HREF="http://download.sourceforge.net/linux1394"
+TARGET="_top"
+>this page</A
+>
+matched to your kernel version.
+
+In addition, you will require <A
+HREF="http://download.sourceforge.net/libraw1394"
+TARGET="_top"
+>libraw1394</A
+>.
+
+The previously referenced linux1394.org site has a great installation
+guide.</P
+><P
+> The <A
+HREF="http://www.tele.ucl.ac.be/PEOPLE/DOUXCHAMPS/ieee1394/cameras/"
+TARGET="_top"
+>IEEE1394
+Digital Camera List</A
+>, by Damien Douxchamps, offers an outstanding
+summary of the capabilities of IEEE 1394 cameras as well as the current
+status of support for individual models.  </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="PARPORT-GENERAL"
+></A
+>2.2.3. Generic Parallel Port Support for Parport Webcams</H3
+><P
+> For 2.2 and 2.4 kernel systems, parallel-port support must be
+enabled statically or as a module (stock kernels usually have this
+enabled by default).
+
+You may want to read <A
+HREF="http://www.torque.net/linux-pp.html"
+TARGET="_top"
+>more
+generic info about parallel-port device support under the Linux
+kernel</A
+> before starting this process.
+
+To find out for sure if the module <TT
+CLASS="FILENAME"
+>parport</TT
+> is loaded,
+you can check the <TT
+CLASS="FILENAME"
+>dmesg</TT
+> file or use <B
+CLASS="COMMAND"
+>lsmod </B
+> as outlined above.
+
+Using <B
+CLASS="COMMAND"
+>dmesg | less</B
+>, you should see (among many other
+lines) the following: </P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   Mar  3 08:00:25 K7 kernel: parport0: PC-style at 0x378 (0x778) [PCSPP,TRISTATE] 
+   Mar  3 08:00:25 K7 kernel: parport0: irq 7 detected</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+> If you are compiling your own kernel, enable 'Parallel Port
+support'.
+
+You should enable 'IEEE 1284 transfer modes', and if you have x86 type
+architecture, you should also enable 'PC-style hardware'.  </P
+><P
+> If modprobe returns an error when you attempt to load the module,
+note that you may need to determine and supply the hardware address when
+invoking <B
+CLASS="COMMAND"
+>modprobe</B
+>.
+
+The most common address is 0x378 for an x86 system; 0x278 and 0x3BC are
+other possibilities for integrated or ISA parallel ports.
+
+Add-in PCI parallel ports may have unusual base addresses.
+
+You can also arrange multiple devices with either the parport_pc or
+parport_arc modules, though that topic is beyond the scope of this
+document.</P
+><DIV
+CLASS="WARNING"
+><P
+></P
+><TABLE
+CLASS="WARNING"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>WARNING: Be sure you have the correct address before
+entering this information at the command line or else your machine may
+become unstable, crash or otherwise implode.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+> Your parallel port should be set to preferably <SPAN
+CLASS="QUOTE"
+>"EPP"</SPAN
+>
+mode, or alternatively ECP/EPP.
+
+<SPAN
+CLASS="QUOTE"
+>"Bidirectional"</SPAN
+> (also known as <SPAN
+CLASS="QUOTE"
+>"BPP"</SPAN
+> or
+<SPAN
+CLASS="QUOTE"
+>"PS/2"</SPAN
+>) may work, albeit much more slowly.
+
+<SPAN
+CLASS="QUOTE"
+>"Unidirectional"</SPAN
+> mode is unsuitable for scanning.
+
+The above setting can usually be accessed through your BIOS menu, at
+least on x86 systems.</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MODELS"
+></A
+>2.3. Specific Webcam Models</H2
+><P
+> Note that this information is frequently changing.
+
+The <A
+HREF="http://www.qbik.ch/usb/devices/index.php"
+TARGET="_top"
+>Linux-USB
+Device Overview</A
+> site is a great place to look if you have a
+USB webcam.
+
+Also, you will want to check for your model's homepage at <A
+HREF="http://www.exploits.org/v4l/"
+TARGET="_top"
+>http://www.exploits.org/v4l/</A
+>.
+
+The information compiled below on specific webcam models is from the
+same source, so you may find more up-to-date information through the
+previous link.
+
+If you can't find an entry for your particular hardware, you can find
+links to resources on how to write your own driver!</P
+><DIV
+CLASS="IMPORTANT"
+><P
+></P
+><TABLE
+CLASS="IMPORTANT"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/important.gif"
+HSPACE="5"
+ALT="Important"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>It is important to note that if your camera isn't listed,
+the easiest way to find out if your camera is supported is to find out
+what chipset is used in its manufacture.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>This information is usually present in the specifications published in
+your webcam's manual or on the manufacturer's website.  </P
+><P
+> If you can't find your camera model listed
+and aren't sure what chipset your camera is made with,
+you should consider searching and/or subscribing to <A
+HREF="https://listman.redhat.com/mailman/listinfo/video4linux-list"
+TARGET="_top"
+>the
+video4linux-list mailing list hosted by Redhat.</A
+> </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="THREECOM"
+></A
+>2.3.1. 3com HomeConnect PC Digital Webcam</H3
+><P
+> This driver is supported with the kernel patch located at
+<A
+HREF="http://homeconnectusb.sourceforge.net/"
+TARGET="_top"
+>the homeconnectusb
+project</A
+> web page.
+
+It may require a kernel recompile after patching depending on your
+kernel version.  </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="CPIA"
+></A
+>2.3.2. CPiA based Webcams</H3
+><P
+> Please see the <A
+HREF="http://webcam.sourceforge.net/"
+TARGET="_top"
+>project
+home page</A
+> for up-to-date information.
+
+This chipset has been used in the manufacture of both USB and parallel
+port webcams including the following: </P
+><P
+>	<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>			Aiptek HyperVcam Fun USB (non-OV511 based)
+		</P
+></LI
+><LI
+><P
+>  Creative Video Blaster WebCam II USB
+		and parallel-port </P
+></LI
+><LI
+><P
+>			CVideo-Mail Express parallel-port
+		</P
+></LI
+><LI
+><P
+> Digicom Galileo USB and Digicom Galileo
+		Plus </P
+></LI
+><LI
+><P
+>			Dynalink Digital Camera
+		</P
+></LI
+><LI
+><P
+> Ezonics EZCam (not Pro or Plus)
+		</P
+></LI
+><LI
+><P
+>			I-View NetView NV200M
+		</P
+></LI
+><LI
+><P
+> Microtek EyeStar USB </P
+></LI
+><LI
+><P
+>			Pace Color Video Camera USB
+		</P
+></LI
+><LI
+><P
+>			SuperCam WonderEye
+		</P
+></LI
+><LI
+><P
+>			TCE Netcam 310 USB
+		</P
+></LI
+><LI
+><P
+>			Terracam USB (non-OV511 based or Terracam Pro)
+			</P
+></LI
+><LI
+><P
+>			Trust SpaceC@m Lite USB and SpaceC@m 100 </P
+></LI
+><LI
+><P
+>			Utopia USB Camera </P
+></LI
+><LI
+><P
+>			ZoomCam USB and parallel-port
+		</P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="SE401"
+></A
+>2.3.3. SE401, SE402 and EP800 based USB webcams</H3
+><P
+> This
+project is a work in progress.
+
+The drivers and other useful information are
+available at the project homepage located <A
+HREF="http://members.brabant.chello.nl/~j.vreeken/se401"
+TARGET="_top"
+>here</A
+>.
+
+As of writing this, it is necessary to patch and recompile your kernel
+in order to obtain support for these models.
+
+The driver supports the following: </P
+><P
+> SE401 chipset via the 'se401' driver: </P
+><P
+>	<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>			Aox SE401 camera </P
+></LI
+><LI
+><P
+>			Philips PCVC665 USB VGA webcam 'Vesta Fun'</P
+></LI
+><LI
+><P
+>			Kensington VideoCAM PC Camera (Models
+			67014-67017)</P
+></LI
+></UL
+></P
+><P
+> SE402 and EP 800 chipsets via the 'epcam' driver
+
+	<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>			Spypen Actor</P
+></LI
+><LI
+><P
+>			Rimax Slim Multicam </P
+></LI
+><LI
+><P
+>			Concord Eye-Q Easy </P
+></LI
+><LI
+><P
+>			Creative PD1001</P
+></LI
+><LI
+><P
+>			Chicony DC-100</P
+></LI
+><LI
+><P
+>			Endpoints SE402 and EP800</P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="OV511"
+></A
+>2.3.4. OmniVision based Webcams</H3
+><P
+> This category includes a
+multitude of webcam and video-capture devices manufactured by Omnivision,
+including the OV511(+), OV518(+), OV6620, OV6630, OV7610, and OV7620AE.
+
+The project homepage is <A
+HREF="http://alpha.dyndns.org/ov511"
+TARGET="_top"
+>here</A
+>.
+
+Supported models include: </P
+><P
+>	<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>			Aiptek HyperVcam Home and Mobile</P
+></LI
+><LI
+><P
+>			Amitech AWK-300</P
+></LI
+><LI
+><P
+>			I-view NetView NV300M</P
+></LI
+><LI
+><P
+>			TEVion MD9308</P
+></LI
+><LI
+><P
+>			Intel Me2Cam</P
+></LI
+><LI
+><P
+>			Dlink DSB C100, C300</P
+></LI
+><LI
+><P
+>			Hawking Tech. UC-110, UC-300 and UC-310</P
+></LI
+><LI
+><P
+>			Puretek PT-6007</P
+></LI
+><LI
+><P
+>			Alpha Vision Tech AlphaCam SE model AC-520</P
+></LI
+><LI
+><P
+>			Creative Labs WebCam model PD1001 with OV518
+			chipset</P
+></LI
+><LI
+><P
+>			Creative Labs WebCam 3, WebCam Go, Webcam Go
+			Plus</P
+></LI
+><LI
+><P
+>			Elecom UCAM-C1C20</P
+></LI
+><LI
+><P
+>			Elta WEBCam 8211 PCC</P
+></LI
+><LI
+><P
+>			Ezonics EZPhone Cam</P
+></LI
+><LI
+><P
+>			Philips ToUCam XS (old version with OV518)</P
+></LI
+><LI
+><P
+>			LG Electronics LPC-UM10</P
+></LI
+><LI
+><P
+>			Lifeview various USB Life TV models</P
+></LI
+><LI
+><P
+>			Genius VideoCam Express</P
+></LI
+><LI
+><P
+>			AverMedia Intercam Elite</P
+></LI
+><LI
+><P
+>			Maxxtro Cam22U</P
+></LI
+><LI
+><P
+>			MediaForte MV300, PC Vision 300</P
+></LI
+><LI
+><P
+>			Terratec TerraCam PRO and some TerraCam
+			models</P
+></LI
+><LI
+><P
+>			OmniVision (except those with OV519)</P
+></LI
+><LI
+><P
+>			TRENDNet TV-PC301</P
+></LI
+><LI
+><P
+>			Trust Sp@ceC@m USB</P
+></LI
+><LI
+><P
+>			Lifetec LT9388</P
+></LI
+><LI
+><P
+>			BestBuy EasyCam U</P
+></LI
+><LI
+><P
+>			Maxell Maxcam</P
+></LI
+><LI
+><P
+>			TCE NetCam 310u</P
+></LI
+><LI
+><P
+>			Medion MD9388</P
+></LI
+><LI
+><P
+>			Webeye 2000B</P
+></LI
+><LI
+><P
+>			Suma eON</P
+></LI
+><LI
+><P
+>			Prochips PCA-3100</P
+></LI
+><LI
+><P
+>			Ezonics EZ USB Cam II (the OV511+ models)</P
+></LI
+><LI
+><P
+>			Waytech I-Pac VIC-30</P
+></LI
+><LI
+><P
+>			Zoom Telephonics ZoomCam III USB (model
+			1598)</P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="QCAM"
+></A
+>2.3.5. Logitech (formerly Connectix) Quickcam
+Support</H3
+><P
+> The QuickCam VC USB and parallel port model
+webcams are supported by the driver offered <A
+HREF=" http://digilander.libero.it/demarchidaniele/qcamvc/quickcam-vc.html"
+TARGET="_top"
+>here</A
+>.
+
+A kernel patch and recompile are necessary for support of this model.</P
+><P
+> The Quickcam driver is represented by two different projects that offer two different flavors
+of driver for certain Quickcam models, both of which are stand-alone
+drivers that do not require a kernel patch or recompile.
+
+The <A
+HREF="http://qce-ga.sourceforge.net/"
+TARGET="_top"
+>qce-ga</A
+> and <A
+HREF="http://www.ee.oulu.fi/~tuukkat/quickcam/quickcam.html"
+TARGET="_top"
+>qc-usb</A
+>
+drivers support the following models: </P
+><P
+>	<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>			Logitech (earlier models of) Quickcam Express</P
+></LI
+><LI
+><P
+>			Quickcam Web</P
+></LI
+><LI
+><P
+>			Legocam</P
+></LI
+><LI
+><P
+>			Dexxa Webcam</P
+></LI
+><LI
+><P
+>			Labtec Webcam</P
+></LI
+></UL
+>&#13;</P
+><P
+> The qc-usb driver is more experimental but reportedly works better
+on some models such as the Quickcam Web. Also, I have recieved correspondence that newer versions of the 
+Logitech Quickcam Express no longer work with the above drivers; instead <A
+HREF="http://home.tiscali.dk/tomasgc/labtec/"
+TARGET="_top"
+>this page</A
+> offers an experimental driver that claims to support the newer model.</P
+><P
+>  
+
+Note to Redhat users: The qce-ga driver doesn't compile properly using the
+modified kernel source provided in Redhat 9, but a fix is available <A
+HREF="http://www.ee.oulu.fi/~tuukkat/quickcam/FAQ"
+TARGET="_top"
+>here</A
+>.  </P
+><P
+> Some Logitech camera models are supported by the Philips driver
+in <A
+HREF="hardware.html#PHILIPS"
+>Section 2.3.8</A
+>.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="ICM532"
+></A
+>2.3.6. ICM532 Based Webcams</H3
+><P
+>One driver for this chipset, <A
+HREF="http://icm532.sourceforge.net/home.html"
+TARGET="_top"
+>homepage here,</A
+> is now merged into the 2.6 kernel source; the other is (per the developer's own description) experimental and available <A
+HREF="http://home.tiscali.dk/tomasgc/labtec/"
+TARGET="_top"
+>here</A
+>. Either or both claim to support the following models:</P
+><P
+><P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>	IC-Media Corp Pencam</P
+></LI
+><LI
+><P
+>	Newer versions of the Logitech Quickcam Express </P
+></LI
+><LI
+><P
+>	Newer versions of the Labtec Webcam</P
+></LI
+><LI
+><P
+>	Biolux 654 microscope</P
+></LI
+><LI
+><P
+>	Ezonics EZCam USB II (uvt8532)</P
+></LI
+><LI
+><P
+>	Ezonics EZCam USB III</P
+></LI
+><LI
+><P
+>	TerraCam USB</P
+></LI
+><LI
+><P
+>	Stick Webcam</P
+></LI
+><LI
+><P
+>	Mini WebCam</P
+></LI
+><LI
+><P
+>	Tucan PenCam</P
+></LI
+><LI
+><P
+>	Che-ez! Webbie</P
+></LI
+><LI
+><P
+>	SNAKE EYE SI-8480/8481</P
+></LI
+><LI
+><P
+>	PC CAM CP03</P
+></LI
+><LI
+><P
+>	WEB Camera PBC0006</P
+></LI
+><LI
+><P
+>	Clipcam</P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="NW802"
+></A
+>2.3.7. NW802 Based Webcams</H3
+><P
+> This chipset, manufactured by DIVIO, is supported by the driver
+found <A
+HREF="http://nw802.sourceforge.net"
+TARGET="_top"
+>here</A
+>.
+
+The models supported include the following: </P
+><P
+>	<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>			BTC SurfCam CMOS300k</P
+></LI
+><LI
+><P
+>			Mustek WCam 300</P
+></LI
+><LI
+><P
+>			Logitech QuickCam Pro USB (the earlier "dark
+			focus ring" model)</P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="PHILIPS"
+></A
+>2.3.8. Philips USB Webcams</H3
+><P
+> 
+Because of the expiration of the Non-Disclosure-Agreement between Philips Corporation and the former maintainer of the <TT
+CLASS="FILENAME"
+>pwc</TT
+> driver, the previous kernel support for Philips PWC-chip-based webcams has been removed. Luckily a new, still experimental driver that does not require a proprietary module is under development. The old site, with a discussion of the change, can be seen at <A
+HREF="http://www.smcc.demon.nl/webcam/"
+TARGET="_top"
+>http://www.smcc.demon.nl/webcam/</A
+>; the new driver is maintained at <A
+HREF="http://www.saillard.org/linux/pwc/"
+TARGET="_top"
+>saillard.org</A
+> with more information at the <A
+HREF=""
+TARGET="_top"
+>PWC Documentation Project</A
+>.&#13;</P
+><P
+> Philips models supported by the above include the following.</P
+><P
+>	<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>			PCA645VC</P
+></LI
+><LI
+><P
+>			PCA646VC</P
+></LI
+><LI
+><P
+>			PCVC675K Vesta, Vesta Pro and Vesta Scan</P
+></LI
+><LI
+><P
+>			PCVC720K/40 ToUCam XS, ToUCam Fun, ToUCam Pro
+			and ToUCam Scan</P
+></LI
+><LI
+><P
+>			Askey VC010</P
+></LI
+><LI
+><P
+>			Creative Labs Webcam 5, Pro Ex</P
+></LI
+><LI
+><P
+>			Logitech 3000 and 4000 Pro, Notebook Pro,
+			and Zoom</P
+></LI
+><LI
+><P
+>			Samsung MPC-C10 and MPC-C30</P
+></LI
+><LI
+><P
+>			Sotec Afina Eye</P
+></LI
+><LI
+><P
+>			Visionite VCS UM100 and UC300</P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="SPCA50X"
+></A
+>2.3.9. SPCA50X USB Camera Linux Driver</H3
+><P
+>Information regarding this chipset can be found <A
+HREF="http://spca50x.sourceforge.net/spca50x.php"
+TARGET="_top"
+>here</A
+>, and is under heavy development and includes partial or complete support for the following models:</P
+><P
+><P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>Kodak DVC-325 and EZ200	
+	</P
+></LI
+><LI
+><P
+>Creative PC-CAM 300, 600, 750
+	</P
+></LI
+><LI
+><P
+>Genius VideoCAM Express V2
+	</P
+></LI
+><LI
+><P
+>Micro Innovation IC 200/IC 150
+
+	</P
+></LI
+><LI
+><P
+>Logitech ClickSmart 310, 420, 510, 820 and Cordless models 
+	</P
+></LI
+><LI
+><P
+>Logitech Pocket750
+	</P
+></LI
+><LI
+><P
+>Benq DC 1016, 1300, 1500, 3410
+	</P
+></LI
+><LI
+><P
+>Flexcam 100
+	</P
+></LI
+><LI
+><P
+> Aiptek MegaCam, [1.3 Megapixel] Mini PenCam and PocketCam 1.3M Smart
+	</P
+></LI
+><LI
+><P
+>Finet Technology Palmpix DC-85
+	</P
+></LI
+><LI
+><P
+>Pure DigitalDakota
+	</P
+></LI
+><LI
+><P
+>3Com Home Connect lite
+	</P
+></LI
+><LI
+><P
+>Megapix V4
+	</P
+></LI
+><LI
+><P
+>Mustek gSmart: Mini, Mini2, Mini3, LCD 2, LCD 3
+	</P
+></LI
+><LI
+><P
+>Digital Dream Enigma 1.3, Epsilon 1.3
+	</P
+></LI
+><LI
+><P
+>Maxwell Compact Pc PM3
+	</P
+></LI
+><LI
+><P
+>Jenoptik models
+	</P
+></LI
+><LI
+><P
+> Minton S-Cam F5
+	</P
+></LI
+><LI
+><P
+>D-Link DSC-350
+
+	</P
+></LI
+><LI
+><P
+>Trust FamilyC@m 300 Movie
+	</P
+></LI
+><LI
+><P
+> Aiptek Pocket DV, PocketDVII, DV3100+, mini PenCam 2, PocketCam 3M, Pencam SD 2, Pocket DV3500
+	</P
+></LI
+><LI
+><P
+>Hama Sightcam 100
+	</P
+></LI
+><LI
+><P
+> Micro Innovations IC50C, IC400c
+	</P
+></LI
+><LI
+><P
+>FlyCam USB100
+	</P
+></LI
+><LI
+><P
+>Arowana USB Camera 300 K
+	</P
+></LI
+><LI
+><P
+>Intel Easy PC Camera, CS120 (Easy PC Share), PC Camera Pro (CS431), Pocket PC Camera (CS630) 
+	</P
+></LI
+><LI
+><P
+>Grandtec V.cap
+	</P
+></LI
+><LI
+><P
+>Sigma-Apo Petcam
+	</P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="STV"
+></A
+>2.3.10. STV0680 based Models</H3
+><P
+> The USB version of webcams made with this chipset are supported by
+the 2.4.18 and above kernel with the <TT
+CLASS="FILENAME"
+>stv680.o</TT
+> module.
+
+Alternatively, you can obtain the source from <A
+HREF="http://stv0680-usb.sourceforge.net"
+TARGET="_top"
+>the project homepage</A
+>.
+
+This driver supports models including the Aiptek Pencam and the Nisis
+Quickpix 2.  </P
+><P
+> If you have a serial version, the main one
+of which is the Scan e-Studio, you should go <A
+HREF="http://stv0680.sourceforge.net"
+TARGET="_top"
+>here</A
+>.  </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="W9966CF"
+></A
+>2.3.11. Winbond w9966cf</H3
+><P
+> This is a driver for the parallel-port interface that supports
+the Philips SAA7111 CCD-control chip as found on the Lifeview Flycam
+SUPRA webcam. It is included in the late 2.4 kernel series and later
+under the heading 'video4linux' support.
+
+The homepage for this project is <A
+HREF="http://hem.fyristorg.com/mogul/w9966.html"
+TARGET="_top"
+>here.</A
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="XIRLINK"
+></A
+>2.3.12. Xirlink <SPAN
+CLASS="TRADEMARK"
+>C-it</SPAN
+>&#8482; HDCS-1000
+based Webcams</H3
+><P
+> This driver is for the USB webcams manufactured by Xirlink, IBM
+(PC Camera) and Veo Stingray model webcams.
+
+Support has been in the Linux kernel USB section since 2.2.12.
+
+The homepage is at <A
+HREF="http://www.linux-usb.org/ibmcam"
+TARGET="_top"
+>http://www.linux-usb.org/ibmcam</A
+>.</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="dev-intro.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Accessing the Video Device</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

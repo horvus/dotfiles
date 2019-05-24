@@ -1,0 +1,235 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>Filesystems HOWTO: Macintosh Hierarchical Filesystem - HFS</TITLE>
+ <LINK HREF="Filesystems-HOWTO-8.html" REL=next>
+ <LINK HREF="Filesystems-HOWTO-6.html" REL=previous>
+ <LINK HREF="Filesystems-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Filesystems-HOWTO-8.html">Next</A>
+<A HREF="Filesystems-HOWTO-6.html">Previous</A>
+<A HREF="Filesystems-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="hfs"></A> <A NAME="s7">7.</A> <A HREF="Filesystems-HOWTO.html#toc7">Macintosh Hierarchical Filesystem - HFS</A> </H2>
+
+<P>All Macintosh storage devices except floppy disks are partitioned into
+one or more volumes. Volumes can contain four kinds of items: files,
+directories, directory threads and file threads. Each item is described
+by a catalog record which is analogous to a Unix inode. Catalog records
+are organized in the on-disk catalog B-Tree. Directory contents are
+derived from searching the catalog B-Tree. Only a file can occupy space
+outside of its catalog record.</P>
+
+<P>A Macintosh "file" contains two components,
+or forks. The resource fork is an indexed file containing code
+segments, menu items, dialog boxes, etc. The data fork has the "stream of
+bytes" semantics of a Unix file contents. Each fork is comprised of one
+or more extents or contiguous runs of blocks. An extent descriptor encodes
+an extent's starting block and length into a 32bit quantity. The first
+extent record (three extent descriptors) of each fork is a part of the
+file's catalog record. Any further extent records are kept in the
+extents overflow B-Tree.</P>
+
+<P>In addition to file and B-Tree extents a volume also contains two boot
+blocks, a volume information block, and a free space bitmap. There is
+a remarkable amount of redundancy in the on diskdata structures which
+improves crash recovery. While not strictly a part of the filesystem,
+it should be noted that several catalog record fields are reserved
+for the exclusive use of Finder, a program which handles user access
+to the filesystem and automatically maintains associations between
+applications and data files. Thus, HFS must also maintain this Finder
+info. </P>
+
+<P>Every file and directory on an HFS volume has an identification number,
+similar to an inode number in the Unix filesystem. However, a file or
+directory is named by its parent's identification number and the file
+or directory's file name, which is a 32 character string that can
+contain nulls. This combination is the search key to the volume's
+catalog B-Tree. The catalog B-Tree differs from a traditional B-Tree
+structure in that all the nodes at each level of the B-Tree are linked
+together to form a doubly linked list and all of the records are in
+the leaf nodes. These variations permit accessing many items in the
+same directory by traversing the leaves using the linked list. Strictly
+speaking, the HFS B-Trees are a variant of B+-Trees although Apple's
+technical documentation calls them B*-Trees. </P>
+
+<P>Each directory, including the root directory, contains its directory
+thread, which has the empty filename. The directory thread record
+contains the name of the directory and the id of the parent of the directory.
+Similarly, filethreads contain the name of a file and the id of the
+directory they are in. While every directory must contain a directory
+thread, file threads are very uncommon. In fact, both are examples of
+HFS redundancy - for undamaged trees, threads are not strictly necessary.
+Both file and directory records contain 32 bytes of information used by
+Finder. The first three extent descriptors for the catalog B-Tree are kept
+in the volume information block. If the catalog B-Tree file grows beyond
+three extents, the remaining extent descriptors are kept in the extents
+overfow.</P>
+
+<P>HFS and HFS+ (also called Sequoia) filesystems are well documented. The
+best source of tech. information about HFS can be found in the <B>Inside
+Macintosh</B> series of books. Look at
+<A HREF="http://developer.apple.com/techpubs/mac/Files/Files-99.html">http://developer.apple.com/techpubs/mac/Files/Files-99.html</A>.
+The HFS+ filesystem is described in <B>Technote 1150</B>,
+available online at 
+<A HREF="http://developer.apple.com/technotes/tn/tn1150.html">http://developer.apple.com/technotes/tn/tn1150.html</A>.
+A lot of information is available also in other technotes. This links
+are collected by Paul H. Hargrove:</P>
+<P>
+<UL>
+<LI>
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_22.html">http://developer.apple.com/dev/technotes/fl/fl_22.html</A>
+- HFS Ruminations.</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_32.html">http://developer.apple.com/dev/technotes/fl/fl_32.html</A>
+- Hey, Buddy, Can You Spare A Block?</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_505.html">http://developer.apple.com/dev/technotes/fl/fl_505.html</A>
+- Alias Manager Q&amp;As</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_515.html">http://developer.apple.com/dev/technotes/fl/fl_515.html</A>
+- File Manager File Handling Q&amp;As</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_530.html">http://developer.apple.com/dev/technotes/fl/fl_530.html</A>
+- File Manager Volume Handling Q&amp;As</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/qa/ops/ops08.html">http://developer.apple.com/dev/qa/ops/ops08.html</A>
+- Bizarre Extension Loading Order: BackQuote Sorts Between "A" and "B"</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/tb/tb_535.html">http://developer.apple.com/dev/technotes/tb/tb_535.html</A>
+- Finder Q&amp;As</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="hfs_from_linux"></A> <A NAME="ss7.1">7.1</A> <A HREF="Filesystems-HOWTO.html#toc7.1">Accessing HFS from Linux</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www-sccm.stanford.edu/~hargrove/HFS/">http://www-sccm.stanford.edu/~hargrove/HFS/</A></LI>
+<LI> Author: Paul. Hargrove &lt;
+<A HREF="mailto:hargrove@sccm.Stanford.edu">hargrove@sccm.stanford.edu</A>&gt;</LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/08/07/902523578.html">Console/Filesystems</A></LI>
+<LI> License: GPL</LI>
+</UL>
+</P>
+
+<H2><A NAME="hfs_from_os2"></A> <A NAME="ss7.2">7.2</A> <A HREF="Filesystems-HOWTO.html#toc7.2">Accessing HFS from OS/2 (HFS/2)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.student.nada.kth.se/~f96-bet/HFS/">http://www.student.nada.kth.se/~f96-bet/HFS/</A></LI>
+<LI> Author: Marcus Better &lt;
+<A HREF="mailto:Marcus.Better@abc.se">Marcus.Better@abc.se</A>&gt;</LI>
+</UL>
+</P>
+<P>HFS/2 lets OS/2 users seamlessly read and write files
+on diskettes formatted with the Hierarchical File System, the
+file system used by Macintosh computers. With HFS/2, Macintosh
+diskettes can be used just as if they were regular diskettes.</P>
+
+<P>This program is no longer being developed, because author doesn't
+use OS/2. If you are willing to maintain the program, let him know.</P>
+
+<H2><A NAME="hfs_from_win"></A> <A NAME="ss7.3">7.3</A> <A HREF="Filesystems-HOWTO.html#toc7.3">Accessing HFS from Windows 95/98/NT (HFV Explorer)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://gamma.nic.fi/~lpesonen/HFVExplorer/">http://gamma.nic.fi/~lpesonen/HFVExplorer/</A></LI>
+<LI> Author: Lauri Pesonen &lt;
+<A HREF="mailto:lpesonen@nic.fi">lpesonen@nic.fi</A>&gt;</LI>
+<LI> Access: R/W access to floppies, Zip disks and virtual volume
+files. Read access to HFS and hybrid CD's.</LI>
+<LI> License: GPL</LI>
+</UL>
+
+An HFS volume browser for Windows NT and Windows 9x based
+on hfsutils. Launch pad support for all major Macintosh
+emulators running on Windows.</P>
+
+<H2><A NAME="hfs_from_dos"></A> <A NAME="ss7.4">7.4</A> <A HREF="Filesystems-HOWTO.html#toc7.4">Accessing HFS from DOS (MAC-ETTE)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author: Paul E. Thomson </LI>
+<LI> Download: 
+<A HREF="http://home2.inet.tele.dk/shefan/macette3.zip">http://home2.inet.tele.dk/shefan/macette3.zip</A></LI>
+<LI> Access: Read-Only</LI>
+<LI> License: Shareware ($34)</LI>
+</UL>
+
+Mac-ette is a PC utility which can read, write, format and duplicate Macintosh
+HFS format 1.4 Meg diskettes on a PC equipped with a 3.5 inch high density
+diskette drive.</P>
+
+<H2><A NAME="hfs_utils"></A> <A NAME="ss7.5">7.5</A> <A HREF="Filesystems-HOWTO.html#toc7.5">HFS utils </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.mars.org/home/rob/proj/hfs/">http://www.mars.org/home/rob/proj/hfs/</A></LI>
+<LI> Author: Robert Leslie &lt;
+<A HREF="mailto:rob@mars.org">rob@mars.org</A>&gt;</LI>
+<LI> OS/2 port: 
+<A HREF="http://www.f.kth.se/~f96-bet/hfsutils/">http://www.f.kth.se/~f96-bet/hfsutils/</A></LI>
+</UL>
+</P>
+<P>The hfsutils package contains a set of command-line utilities
+such as hformat, hmount, hdir,
+hcopy, etc. They allow read-write access of files and directories
+on HFS volumes.</P>
+
+<H2><A NAME="macfs_lib"></A> <A NAME="ss7.6">7.6</A> <A HREF="Filesystems-HOWTO.html#toc7.6">MacFS: A Portable Macintosh File System Library</A>
+</H2>
+
+<P>
+<UL>
+<LI> Tech report: 
+<A HREF="http://reports-archive.adm.cs.cmu.edu/anon/1998/abstracts/98-145.html">http://reports-archive.adm.cs.cmu.edu/anon/1998/abstracts/98-145.html</A></LI>
+<LI> Author: Peter A. Dinda &lt;
+<A HREF="mailto:pdinda+macfs@cs.cmu.edu">pdinda+macfs@cs.cmu.edu</A>&gt;,
+George C. Necula, and Morgan Price</LI>
+<LI> Download: 
+<A HREF="ftp://ftp.cs.cmu.edu/user/pdinda/MacFS_0.1.tar.gz">ftp://ftp.cs.cmu.edu/user/pdinda/MacFS_0.1.tar.gz</A></LI>
+<LI> Access: Read/Write, full open/read/write/seek/close support</LI>
+<LI> License: Free for noncommercial and nonmilitary use, see
+<A HREF="ftp://ftp.cs.cmu.edu/user/pdinda/MacFS_0.1.LICENSE">ftp://ftp.cs.cmu.edu/user/pdinda/MacFS_0.1.LICENSE</A></LI>
+</UL>
+
+This is a Macintosh file system library which is portable to a
+variety of operating systems and platforms. It presents a programming
+interface sufficient for creating a user level API as well as file system
+drivers for operating systems that support them. Authors implemented
+and tested such a user level API and utility programs based on it
+as well as an experimental Unix Virtual File System.
+They also describe the Macintosh Hierarchical File System and their
+implementation and note that
+the design is not well suited to reentrancy and that its complex
+data structures can lead to slow
+implementations in multiprogrammed environments. Performance
+measurements show that
+our implementation is faster than the native Macintosh
+implementation at creating, deleting,
+reading and writing files with small request sizes, but slower than the Berkeley Fast File
+System (FFS.) However, the native Macintosh implementation can
+perform large read and write operations faster that either our
+implementation or FFS.</P>
+
+<HR>
+<A HREF="Filesystems-HOWTO-8.html">Next</A>
+<A HREF="Filesystems-HOWTO-6.html">Previous</A>
+<A HREF="Filesystems-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

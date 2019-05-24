@@ -1,0 +1,413 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Sat (Satellite Technology) HOWTO: Configuration under Linux</TITLE>
+ <LINK HREF="Sat-HOWTO-7.html" REL=next>
+ <LINK HREF="Sat-HOWTO-5.html" REL=previous>
+ <LINK HREF="Sat-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Sat-HOWTO-7.html">Next</A>
+<A HREF="Sat-HOWTO-5.html">Previous</A>
+<A HREF="Sat-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Configuration under Linux</A></H2>
+
+<P>In this section I will assume to use a Siemens compatible card, like an
+Hauppage WinTV DVB card, for such cards you can download drivers from 
+<A HREF="http://www.linuxtv.org/download/dvb">LinuxTV</A> or 
+<A HREF="http://www2.arnes.si/~mthale1/index.html ">DVB-s PCI cards under Linux</A>.
+<P>Unfortunately there are no drivers (at this moment) for SkyStar2 (Netsystem
+card) for Linux!
+<H2><A NAME="ss6.1">6.1 Drivers installation</A>
+</H2>
+
+<P>Once downloaded drivers, you have to untar them to a directory, enter it
+and type "make" and "make insmod". To do this you need to have actual kernel sources
+under /usr/src/linux (unless, download them from 
+<A HREF="http://www.kernel.org">http://www.kernel.org</A> and recompile them).
+<P>After made "make insmod", your system should have DVB modules loaded. To
+unload them type simply "make rmmod".
+<H2><A NAME="ss6.2">6.2 Setting up /etc/dvbd.conf</A>
+</H2>
+
+<P>/etc/dvbd.conf file is used to setup data-link parameters for your DVB
+card. Here main settings:
+<P>
+<UL>
+<LI>"power", which indicates the power to LNB, 1=ON, 0=OFF. Usually you should
+set it to 1, unless you do some kind of cascade between more than 1 LNB.</LI>
+<LI>"symbolrate", this is the symbol rate per seconds, for example 22.000.000.</LI>
+<LI>"frequency", at which receiving datas, like 12.640.000.</LI>
+<LI>"ttk", the 22 kHz signal, almost always to 1.</LI>
+<LI>"diseqc", used to control the diseq, (it means only when you have a diseq
+controlling 2 or more converters) 0 if none.</LI>
+<LI>"AFC", usually set to 1.</LI>
+<LI>"polarization", 1 for horizontal or 0 for vertical one.</LI>
+<LI>"filter_n &lt;PID&gt; &lt;MAC&gt; &lt;BITFILTER&gt;", where n is intended
+0 for Unicast and 1-9 for Multicast; PID is expressed in decimal form, MAC
+is the MAC address only valid for Multicast filter and BITFILTER is a number
+which bits represent bytes to mask (for example 10 = 2 (bit 1) + 8 (bit 3),
+so mask will be 00 00 FF 00 FF 00).</LI>
+</UL>
+<P>
+<BLOCKQUOTE>
+Example
+</BLOCKQUOTE>
+<P>------------------------------------------
+<P># DVB receiver configuration file, (c) 2000 data planet international
+<P># standard location in /etc
+<P># LNB power on=1/off=0
+<P>power 1
+<P># symbol rate [symbol/sec]
+<P>symbolrate 22000000
+<P># ASTRA TR 114
+<P>frequency 12640000
+<P># 22 kHz signal on=1/off=0
+<P>ttk 1
+<P># diseqc on=1/off=0
+<P>diseqc 0
+<P># AFC on=1/off=0
+<P>AFC 1
+<P># polarisation H=1/V=0
+<P>polarisation 1
+<P># settings for MPE filter, PID and MAC filtering, valid MAC bytes
+<P>filter_0 512
+<P>filter_1 785 00:D0:5C:1E:96:01 48
+<P>filter_2 786 00:D0:5C:1E:96:01 48
+<P>filter_3 1041 00:D0:5C:1E:96:01 48
+<P>-----------------------------------------
+<P>filter_0 has no MAC and no bitfilter values cause the right MAC address
+is calculated from IP address (see Appendix A). We will see this setting is
+OK only for some ISP, for others we'll have to change dvbd.c
+<H2><A NAME="ss6.3">6.3 Dvbd daemon</A>
+</H2>
+
+<P>Once your /etc/dvbd.conf is ok, you can launch dvbd application, which,
+if executed without -d option, write to stdout signal quality level:
+<P>
+<UL>
+<LI>Sync MUST be 127 or near it</LI>
+<LI>Vber MUST be 0</LI>
+</UL>
+<P>unless you are not well receiving from Sat (check cable and/or dish pointing).
+<P>Note:
+<P>Maybe you have to change, in dvbd.h this line
+<P>#define network_device &quot;eth0&quot; 
+<P>to
+<P>#define network_device &quot;ppp0&quot;
+<P>depending on which interface you use to reach Internet, eth0 or ppp0: type
+"make" to update binary file and restart dvbd.
+<H2><A NAME="ss6.4">6.4 How to config EON service</A>
+</H2>
+
+<P>Now you have a good signal, you can try to use some sat service.
+<P>For EON go at "proxy" setting in Netscape preferences and set under HTTP
+and FTP:
+<P>proxy.xxx.europeonline.net
+<P>and, in "port" 8080 and FTP proxy with "port" 8090.
+<P>where xxx is the transponder number (103,113,114 or 115) you are using
+(see Appendix B for more).
+<P>Now you should be able to navigate wherever you want.... Good navigation.
+<P>To share EON service with many clients you can use 
+<A HREF="http://www.squid-cache.org">Squid proxy</A> application, enabling
+cascade to EON proxy.
+<P>For a more complex use of EON, like more complex cascade proxy or sharing
+users, see 
+<A HREF="http://obiwan.hvrlab.org/~faz/eon/eon_masq.html">EON Linux Masquering FAQ Page</A><H2><A NAME="ss6.5">6.5 How to use Netsystem service</A>
+</H2>
+
+<P>Netsystem service is a little more complicated than EON under Linux, cause,
+in addition, you need to setup:
+<P>
+<OL>
+<LI>VPN connection</LI>
+<LI>patch for pppd (needed only if using pppd &lt;= 2.4.0)</LI>
+<LI>routing settings with simple scripts</LI>
+<LI>patch for dvbd.c</LI>
+<LI>Test it</LI>
+<LI>Get performance better</LI>
+<LI>Sharing Netsystem with many clients</LI>
+</OL>
+<H3>VPN connection</H3>
+
+<P>First you need to download 
+<A HREF="http://cag.lcs.mit.edu/~cananian/Projects/PPTP/">VPN PPTP client application</A>.
+<P>After untared, compiled and installed it, you should add an entry to your
+/etc/ppp/pap-secrets and /etc/ppp/chap-secrets files, like that: 
+<P>"login" * "password" *
+<P>where "login" and "password" are the same according to 
+<A HREF="http://css.netsystem.com">Netsystem registration</A>.
+<H3>Patch for pppd</H3>
+
+<P>As described at 
+<A HREF="http://www.sigpipe.org/~me/vpn/pptp.html">PPTP description</A>, you need to patch your pppd daemon to support connection
+with Netsystem VPN server (Linux server).
+<P>Warning: using pppd version &gt;= 2.4.0 you don't need pppd patch.
+<P>So you have to:
+<P>
+<OL>
+<LI>download a 
+<A HREF="ftp://cs.anu.edu.au/pub/software/ppp/">recent pppd version</A></LI>
+<LI>download and gunzip the correspondent patch for pppd from 
+<A HREF="ftp://ftp.binarix.com/pub/ppp-mppe/">Here</A></LI>
+<LI>untar pppd in a directory</LI>
+<LI>type "patch -p0 &lt; patch_name"</LI>
+<LI>enter pppd directory</LI>
+<LI>type "make", "make install"</LI>
+</OL>
+<H3>Routing settings</H3>
+
+<P>Now your pppd will be able to working with:
+<P>"pptp vpn.netsystem.com debug user &lt;login&gt;" 
+<P>where &lt;login&gt; is your login account from Netsystem: you should see,
+in log file (/var/log/messages) ppp1 connection debug info. 
+<P>If all is ok you should see ppp1 interface with "ifconfig" command.
+<P>If you still have problems on authentication, please add a "noauth" line
+to your /etc/ppp/options file.
+<P>Once ppp1 interface is up, you should do the following:
+<P>
+<OL>
+<LI>type "ifconfig ppp1" and find the IP address (I will call IP) on the right
+of "P-t-P:" string.</LI>
+<LI>delete it from routing table with "route del IP"</LI>
+<LI>add it to ppp0 interface with "route add IP dev ppp0"</LI>
+<LI>delete default gateway from ppp0 with "route del default"</LI>
+<LI>add default gateway to ppp1 with "route add default dev ppp1"</LI>
+</OL>
+<P>Points 1-3 are requested cause point-to-point interface are managed, under
+Linux, adding the gateway to the new interface (which is not a good idea in
+this case): unless it you will have a endless loop, cause your packet will
+be continuously encapsulated on itself.
+<P>Points 4,5 are used to make "all internet requests" to ppp1 interface, so
+we'll reach the "world" by using VPN connection: this could be not optimal in
+some condition, for example for DNS queries, which could be sent directly to
+avoid useless Sat delay time.
+<P>Instead of manually setup routing configuration you can try using these
+little scripts: 
+<P>&quot;netsystem.on&quot; script 
+<P>______________________________________________________________________
+<P>
+<P>route add IP_DNS1 dev ppp0 
+<P>route add IP_DNS2 dev ppp0 
+<P>route add -net 212.31.242.0 netmask 255.255.255.0 dev ppp0 
+<P>pptp vpn.netsystem.com user &lt;login&gt; 
+<P>/bin/sleep 5 
+<P>route add default dev ppp1 
+<P>______________________________________________________________________
+<P>
+<P>&quot;netsystem.off&quot; script 
+<P>______________________________________________________________________
+<P>
+<P>route del IP_DNS1 dev ppp0 
+<P>route del IP_DNS2 dev ppp0 
+<P>route del -net 212.31.242.0 netmask 255.255.255.0 dev ppp0 
+<P>kill -9 `ps x|grep &quot;pppd&quot;|grep &quot;&lt;login&gt;&quot;|grep
+-v &quot;ps&quot;|tr &quot; &quot; &quot;\n&quot;|head -n 2` 
+<P>rm --force /var/lock/LCK..tty* 
+<P>rm --force /var/run/pptp/* 
+<P>rm --force /var/run/ppp1.pid 
+<P>killall -9 pptp 
+<P>______________________________________________________________________
+<P>
+<P>IP_DNS1 and IP_DNS2 are ip addresses of your dns servers (primary and secondary).
+<P>
+<P>&lt;login&gt; is the login name of your Netsystem account. 
+<P>I tried it out under kernel 2.4.6 RedHat 7.1 and it works very well (without
+any problems about ppp1 endless loop or similar).
+<P>This line: 
+<P>kill -9 `ps x|grep &quot;pppd&quot;|grep &quot;&lt;login&gt;&quot;|grep
+-v &quot;ps&quot;|tr &quot; &quot; &quot;\n&quot;|head -n 2` 
+<P>is used to find PID of pppd process talking with VPN server (ppp1 interface):
+notice that you cannot just only type &quot; killall pppd&quot; cause your
+ppp0 interface also would go down.
+<H3>Patch for dvbd.c</H3>
+
+<P>After solved problems about PPTP you have to change some line in dvbd.c,
+near the end of it:
+<P>
+<PRE>
+if (strcmp (v, &quot;filter_0&quot;) == 0) { if (s != NULL) { unsigned char ip[4];
+dvbcfg[0].status = ON ;
+dvbcfg[0].filter.data[0] = 0x3eff ;
+dvbcfg[0].filter.pid = (__u16) atoi (s) ;
+dvbcfg[0].filter.mode = 0x0c ;
+if (ipget (ip, network_device)) { fprintf(stderr,&quot;Can't get local ip address. Stop.\n&quot;) ; return -1 ; }
+syslog (LOG_NOTICE, &quot;Local ip is %u:%u:%u:%u\n&quot;, ip[0], ip[1], ip[2], ip[3]);
+dvbcfg[0].filter.data[1] = (ip[3] &lt;&lt; 8) | 0x00ff ; 
+dvbcfg[0].filter.data[2] = (ip[2] &lt;&lt; 8) | 0x00ff ; 
+dvbcfg[0].filter.data[6] = (ip[1] &lt;&lt; 8) | 0x00ff ; 
+dvbcfg[0].filter.data[7] = (ip[0] &lt;&lt; 8) | 0x00ff ; 
+dvbcfg[0].filter.data[8] = (0x02 &lt;&lt; 8) | 0x00ff ; 
+dvbcfg[0].filter.data[9] = (0x00 &lt;&lt; 8) | 0x00ff ;
+setmac (ip) ; }
+else { dvbcfg[1].status = OFF ; } }
+</PRE>
+<P>
+<BLOCKQUOTE>
+Now following lines:
+</BLOCKQUOTE>
+<P>dvbcfg[0].filter.data[1] = (ip[3] &lt;&lt;
+8) | 0x00ff ; 
+<P>dvbcfg[0].filter.data[2] = (ip[2] &lt;&lt;
+8) | 0x00ff ; 
+<P>dvbcfg[0].filter.data[6] = (ip[1] &lt;&lt;
+8) | 0x00ff ; 
+<P>dvbcfg[0].filter.data[7] = (ip[0] &lt;&lt;
+8) | 0x00ff ; 
+<P>dvbcfg[0].filter.data[8] = (0x02 &lt;&lt; 8) | 0x00ff
+; 
+<P>dvbcfg[0].filter.data[9] = (0x00 &lt;&lt; 8) | 0x00ff
+;
+<P>
+<BLOCKQUOTE>
+will be changed to
+</BLOCKQUOTE>
+<P>dvbcfg[0].filter.data[1] = (MAC[5] &lt;&lt;
+8) | 0x00ff ;
+<P>dvbcfg[0].filter.data[2] = (MAC[4] &lt;&lt;
+8) | 0x00ff; 
+<P>dvbcfg[0].filter.data[6] = (MAC[3] &lt;&lt;
+8) | 0x00ff ; 
+<P>dvbcfg[0].filter.data[7] = (MAC[2] &lt;&lt;
+8) | 0x00ff ; 
+<P>dvbcfg[0].filter.data[8] = (MAC[1] &lt;&lt;
+8) | 0x00ff ; 
+<P>dvbcfg[0].filter.data[9] = (MAC[0] &lt;&lt;
+8) | 0x00ff ;
+<P>Where MAC[0]:MAC[1]:MAC[2]:MAC[3]:MAC[4]:MAC[5]
+is our MAC address (according to Netsystem registration).
+<P>For example, using the address 00:d0:d0:d0:d0:d0 we'll have:
+<P>dvbcfg[0].filter.data[1] = (0xd0 &lt;&lt; 8) | 0x00ff
+;
+<P>dvbcfg[0].filter.data[2] = (0xd0 &lt;&lt; 8) | 0x00ff;
+<P>
+<P>dvbcfg[0].filter.data[6] = (0xd0 &lt;&lt; 8) | 0x00ff
+; 
+<P>dvbcfg[0].filter.data[7] = (0xd0 &lt;&lt; 8) | 0x00ff
+; 
+<P>dvbcfg[0].filter.data[8] = (0xd0 &lt;&lt; 8) | 0x00ff
+; 
+<P>dvbcfg[0].filter.data[9] = (0x00 &lt;&lt; 8) | 0x00ff
+;
+<P>notice hexadecimal notation 0x?? 
+<P>After, you have to type "make" and use the new dvbd created.
+<P>Note: to successfully patch the dvbd.c you need to use dvb driver version
+&gt;= 0.8.2, cause older versions have some instability problems.
+<H3>Test it</H3>
+
+<P>Finally, we can test Netsystem under Linux. We can make a "ping www.somehostpingable.com"
+and check the response time: it should be between 400 and 2000 ms.
+<P>If you still have problems, you should control if all is OK with VPN interface:
+<P>
+<OL>
+<LI>open your preferred network sniffer (for example 
+<A HREF="http://www.ethereal.net">Ethereal</A>) and starts to analyze
+"ppp0" interface (ppp0, not ppp1!!)</LI>
+<LI>make a ping</LI>
+</OL>
+<P>If VPN is ok you should see 2 (or maybe 1) GRE-Encapsulated packets each
+second, endless. If you cannot view anything your VPN is not correctly working:
+stop it and restart it.
+<H3>Get performance better</H3>
+
+<P>Once you setup all things you NEED to use (particularly with Netsystem
+service) some "download accelerator" to get performance better: please see Appendix
+A for more.
+<H3>Sharing Netsystem with many clients</H3>
+
+<P>To do this you can enable "IP Masquering", allowing your client to use VPN
+like a normal Internet interface; main problem is that our satellite connection
+is very good for download while it has bad performance for just browsing web
+pages (or other service more interactive than downloading).
+<P>You can think to use 
+<A HREF="http://www.squid-cache.org">Squid proxy</A> or 
+<A HREF="http://www.socks.nec.com/">Socks proxy</A>, but you don't solve your problems, cause even
+now ALL your request would be forwarded to same interface, VPN.
+<P>The solution is to use 2 routing tables, one using direct line interface
+and the other using VPN one. So you can do like this:
+<P>
+<OL>
+<LI>be sure of have installed "iproute2" commands (for example type "ip" on shell
+and control if it tells you something), for more see 
+<A HREF="http://www.linuxdoc.org/HOWTO/Adv-Routing-HOWTO.html">Linux 2.4 Advanced Routing HOWTO</A>.</LI>
+<LI>be sure of have started Netsystem service and annotate ppp1 interface IP
+address, we'll call it LOCALIP.</LI>
+<LI>type: "echo "210 sat" &gt;&gt; /etc/iproute2/rt_tables", to more comfortable
+call "sat" rule 210</LI>
+<LI>type: "ip rule add from LOCALIP table sat", to create table "sat" relative
+to all requests coming from LOCALIP IP address.</LI>
+<LI>type: "ip route add default dev ppp1 table sat", to send all "sat" requests
+(see above) to ppp1 interface.</LI>
+<LI>if you use 
+<A HREF="http://www.socks.nec.com/">Socks proxy</A> be sure to set, in sockd.conf file, "external" to LOCALIP. </LI>
+<LI>if you use 
+<A HREF="http://www.squid-cache.org">Squid proxy</A> be sure to set, in squid.conf file, "tcp_outgoing_address" to
+LOCALIP.</LI>
+</OL>
+<P>Once done all that, you will notice to have 2 kind of working: without
+any proxy your clients will ask to direct line, while by using proxy (squid
+or sockd) the request will be forwarded to VPN interface and, definitely, toward
+satellite.
+<P>Notice that maybe you wish to use sockd instead of squid, cause satellite
+requests are typically used for download (while squid is typically used for
+browsing...).
+<P>What happens with iproute2 commands is that, when you ask for an address
+to sockd or squid, relative proxy (using IPLOCAL IP address, bound at run-time
+by proxy network daemon) request enters the TCP/IP stack where kernel will
+forward it (thanks to point 4 above) to sat table and, definitely (by using
+point 5) to ppp1 interface. All other rules will be forwarded to classical
+default route (I mean across ppp0 interface or whatever other interface for
+direct Internet).
+<H2><A NAME="ss6.6">6.6 How to use Sat Node service</A>
+</H2>
+
+<P>You have to follow all instructions as for Netsystem.
+<P>Before enabling VPN connection, you need to type:
+<P>
+<UL>
+<LI>''route del default'', we delete default route</LI>
+<LI>''route add 212.56.224.36 dev ppp0'', we tell it that it has to reach the
+vpn server just through ppp0</LI>
+<LI>''pptp 212.56.224.36 user user-name'', we create VPN</LI>
+<LI>''route add default dev ppp1'', we tell it that it must use this route
+to reach every place.</LI>
+</UL>
+<P>What really changes from Netsystem is that, we don't force VPN gateway
+(212.56.224.34, IP on the right of ''P-t-P'' in ppp1 interface) on ppp0 interface,
+but we force another IP (212.56.224.36). All other things should not change.
+<P>Thanks to Ricardo Santiago Mozos and Norberto Garcia Prieto.
+<H2><A NAME="ss6.7">6.7 OpenSky service under Linux</A>
+</H2>
+
+<P>
+<OL>
+<LI>You need to register at 
+<A HREF="http://www.opensky.it/cc/index.asp?f=registrazione.htm">Opensky Registration site</A>. You'll receive a confirming email with login
+and password in few days. </LI>
+<LI>After you have to go to 
+<A HREF="https://sdr.eutelsat.net">https://sdr.eutelsat.net</A> and enter login and password data to connect.</LI>
+<LI>Set the proxy: ''proxy.eutelsat.net:8080''.</LI>
+</OL>
+<P>It is strongly suggested to use downloader applications (see Appendix A
+for more) to get performance better.
+<P>OpenSky is the latest satellite service and it offers 300 MB at month (for
+free). 
+<P>Configuration is pretty like EON service, you have to use 0.8.2 siemens
+drivers you download from 
+<A HREF="http://www.linuxtv.org/download/dvb">LinuxTV</A>, then you NEED to patch dvbd applications.
+<P>To apply the patch and to test OpenSky you can find useful infos at:
+<P>
+<UL>
+<LI>
+<A HREF="http://members.tripod.com/andrei_b/linux/dvbd/dvb-app-dvbd.htm">http://members.tripod.com/andrei_b/linux/dvbd/dvb-app-dvbd.htm</A> </LI>
+<LI>
+<A HREF="http://pguiral.free.fr/DVBS/opensky.html">http://pguiral.free.fr/DVBS/opensky.html</A>.</LI>
+</UL>
+<HR>
+<A HREF="Sat-HOWTO-7.html">Next</A>
+<A HREF="Sat-HOWTO-5.html">Previous</A>
+<A HREF="Sat-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

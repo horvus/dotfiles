@@ -1,0 +1,421 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Design</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Pocket Linux Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Automating Startup & Shutdown"
+HREF="phase5.html"><LINK
+REL="PREVIOUS"
+TITLE="Analysis"
+HREF="x1036.html"><LINK
+REL="NEXT"
+TITLE="Construction"
+HREF="x1127.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Pocket Linux Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1036.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Automating Startup &#38; Shutdown</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1127.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN1058"
+></A
+>6.2. Design</H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1060"
+></A
+>6.2.1. Determining necessary utilities</H2
+><P
+>Loading the kernel without manually typing parameters is easy to
+      do if we read the grub info page. According to the section entitled
+      "configuration" all of the commands used for booting can be put in a
+      file called <TT
+CLASS="filename"
+>menu.lst</TT
+> and placed in the
+      <TT
+CLASS="filename"
+>/boot/grub</TT
+> directory.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Be sure to type the <TT
+CLASS="filename"
+>menu.lst</TT
+> filename
+        correctly with a lowercase L after the dot and not a number
+        one.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>To automate system start-up we will need an init daemon. We know
+      this because the Bootdisk-HOWTO and From-Powerup-To-BASH-Prompt-HOWTO
+      both make mention of <B
+CLASS="command"
+>init</B
+> as the first program to
+      start after the kernel loads. The latter HOWTO also goes into some
+      detail about the <TT
+CLASS="filename"
+>/etc/inittab</TT
+> file and the
+      organization of startup scripts. This could be helpful since FHS, the
+      blueprint we have used so far, makes no recommendation for init
+      scripts.</P
+><P
+>We will also need to find the <B
+CLASS="command"
+>shutdown</B
+> command
+      to fulfill the second goal of graceful shutdown capability.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1073"
+></A
+>6.2.2. Obtaining source code</H2
+><P
+>Searching the Linux Software Map on Ibiblio for the keyword "init"
+      gives a large number of results. From reading the
+      From-Powerup-To-BASH-Prompt-HOWTO however, we know that most Linux
+      systems use a System V style init daemon. Narrowing the search with the
+      additional key phrase of "System V" gives much better results. The
+      sysvinit package contains <B
+CLASS="command"
+>init</B
+>,
+      <B
+CLASS="command"
+>shutdown</B
+>, <B
+CLASS="command"
+>halt</B
+> and
+      <B
+CLASS="command"
+>reboot</B
+> which is everything we need. The version
+      listed in the LSM entry looks to be pretty old, but there is a
+      primary-site URL that will probably lead to the latest version.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1080"
+></A
+>6.2.3. Checking dependencies</H2
+><P
+>The manpage for <B
+CLASS="command"
+>init</B
+> mentions a FIFO called
+      <TT
+CLASS="filename"
+>/dev/initctl</TT
+> that is required for
+      <B
+CLASS="command"
+>init</B
+> to communicate with other programs in the
+      sysvinit package. We will have to create this file for
+      <B
+CLASS="command"
+>init</B
+> to function properly.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1087"
+></A
+>6.2.4. Designing a simple GRUB configuration file.</H2
+><P
+>Using a GRUB configuration file is slightly more complex than
+      specifying the bootloader commands manually. There are directives for
+      features like menus, default selections and timeouts that need to be
+      specified in the configuration file as well as the familiar kernel
+      loading command. The info page for GRUB gives much of the necessary
+      information. We may also be able to use the GRUB configuration file on
+      the development system as a template. However, there is some
+      inconsistency between vendors as to the name and location of the file.
+      Regardless of what the path is on the development system it should be
+      <TT
+CLASS="filename"
+>/boot/grub/menu.lst</TT
+> on the Pocket Linux
+      System.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1091"
+></A
+>6.2.5. Outlining start-up scripts</H2
+><P
+>Many of the popular GNU/Linux distributions use System V style
+      init scripts. Since we are using a "sysvinit" daemon it makes sense to
+      use System V style scripts as well. The following documents all touch
+      upon the System V style init scripts in some way and will serve as
+      references when building the scripts for this project:</P
+><P
+></P
+><UL
+><LI
+><P
+>The Debian Policy Manual -- available online at <A
+HREF="http://www.debian.org/doc/debian-policy"
+TARGET="_top"
+>http://www.debian.org/doc/debian-policy</A
+>.</P
+></LI
+><LI
+><P
+>The Linux Standard Base specification -- downloadable in many
+          formats from <A
+HREF="http://www.linuxbase.org/spec/index.shtml"
+TARGET="_top"
+>http://www.linuxbase.org/spec/index.shtml</A
+>.</P
+></LI
+><LI
+><P
+>Essential System Administration, 3rd Edition by Aeleen Frisch
+          -- available at libraries, bookstores or directly from O'Reilly
+          Publishing at <A
+HREF="http://www.oreilly.com/"
+TARGET="_top"
+>http://www.oreilly.com/</A
+>.</P
+></LI
+></UL
+><P
+>After glancing at one or two of the above references we should
+      have a pretty good idea of how the System V style system initialization
+      process works. We should also know what it takes to create System V
+      style init scripts for the Pocket Linux project. Below is a brief list
+      of what needs to be done:</P
+><P
+></P
+><UL
+><LI
+><P
+>Create an <TT
+CLASS="filename"
+>inittab</TT
+> file to call an
+          <TT
+CLASS="filename"
+>rc</TT
+> script with a numerical argument giving the
+          runlevel.</P
+></LI
+><LI
+><P
+>Write an <TT
+CLASS="filename"
+>rc</TT
+> script that uses the runlevel
+          argument to execute the appropriate "K" and "S" scripts.</P
+></LI
+><LI
+><P
+>Modify the previously built <TT
+CLASS="filename"
+>local_fs</TT
+>
+          script to take <TT
+CLASS="parameter"
+><I
+>start</I
+></TT
+> and
+          <TT
+CLASS="parameter"
+><I
+>stop</I
+></TT
+> arguments.</P
+></LI
+><LI
+><P
+>Create new scripts for <TT
+CLASS="filename"
+>shutdown</TT
+> and
+          <TT
+CLASS="filename"
+>reboot</TT
+>.</P
+></LI
+><LI
+><P
+>Set up <TT
+CLASS="filename"
+>/etc/rcN.d</TT
+> directories and links
+          to scripts in <TT
+CLASS="filename"
+>/etc/init.d</TT
+>.</P
+></LI
+></UL
+><P
+>As always, the BASH(1) manpage and the Advanced BASH Scripting
+      Guide are very helpful for writing and understanding shell
+      scripts.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1036.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1127.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Analysis</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="phase5.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Construction</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

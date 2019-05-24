@@ -1,0 +1,580 @@
+<HTML
+><HEAD
+><TITLE
+>Domain Name Server (DNS) Configuration and Administration</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux Administration Made Easy"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Custom Configuration and Administration Issues"
+HREF="custom-config.html"><LINK
+REL="PREVIOUS"
+TITLE="Web Server and HTTP Caching Proxy Administration"
+HREF="web-server-administration.html"><LINK
+REL="NEXT"
+TITLE="Internet User Authentication with TACACS"
+HREF="internet-user-authentication.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Administration Made Easy</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="web-server-administration.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. Custom Configuration and Administration Issues</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="internet-user-authentication.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="DOMAIN-NAME-SERVER"
+>7.2. Domain Name Server (DNS) Configuration and Administration</A
+></H1
+><P
+>At my place of employment, we are using Linux as a DNS server.  It
+performs exceptionally well.  This section will address configuration of
+DNS tables for these services using the BIND 8.x package which comes standard
+with the Red Hat distribution.</P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>Note: Red Hat versions 5.1 and earlier used the BIND 4.x package,
+which used a slightly different format for its configuration file.  BIND
+8.x offers more functionality over that offered by BIND 4.x, and as 4.x is
+no longer being developed, you should probably consider upgrading your
+BIND package to the latest version.  Simply install the BIND RPM package
+(see <A
+HREF="using-rpm.html"
+>Section 10.1</A
+> for details on using the RPM utility),
+then convert your configuration file to the new format.</P
+><P
+>Fortunately, converting your existing BIND 4.x configuration file to
+be compliant with BIND 8.x is easy!  In the documentation directory
+provided as part of BIND (for example,
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/usr/doc/bind-8.1.2/</TT
+></TT
+>'' for BIND
+version 8.1.2), there exists a file called
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>named-bootconf.pl</TT
+></TT
+>'', which is an
+executable Perl program.  Assuming you have Perl installed on your system,
+you can use this program to convert your configuration file.  To do so,
+type the following commands (as root):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="USERINPUT"
+><B
+>cd /usr/doc/bind-8.1.2</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>./named-bootconf.pl &#60; /etc/named.boot &#62; /etc/named.conf</B
+></TT
+>
+<TT
+CLASS="USERINPUT"
+><B
+>mv /etc/named.boot /etc/named.boot-obsolete</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+><P
+>You should now have an
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/named.conf</TT
+></TT
+>'' file which
+should work with BIND 8.x <SPAN
+CLASS="QUOTE"
+>"out-of-the-box"</SPAN
+>.  Your existing
+DNS tables will work as-is with the new version of BIND, as the format of
+the tables remains the same.</P
+></BLOCKQUOTE
+></DIV
+><P
+>Configuration of DNS services under Linux involves the following
+steps:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>To enable DNS services,
+the ``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/host.conf</TT
+></TT
+>'' file
+should look like this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+># Lookup names via /etc/hosts first, then by DNS query
+order hosts, bind
+# We don't have machines with multiple addresses
+multi on
+# Check for IP address spoofing
+nospoof on
+# Warn us if someone attempts to spoof
+alert on</PRE
+></TD
+></TR
+></TABLE
+><P
+>The extra spoof detection adds a bit of a performance hit to DNS
+lookups (although negligible), so if you're not too worried about this you
+may wish to disable the <SPAN
+CLASS="QUOTE"
+>"nospool"</SPAN
+> and <SPAN
+CLASS="QUOTE"
+>"alert"</SPAN
+>
+entries.</P
+></LI
+><LI
+><P
+>Configure the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+></TT
+>'' file as needed.  
+Typically there doesn't need to be much in here, but for improved
+performance you can add any hosts you access often (such as local
+servers) to avoid performing DNS lookups on them.</P
+></LI
+><LI
+><P
+>The
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/named.conf</TT
+></TT
+>'' file should be
+configured to point to your DNS tables according to the example below.</P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>(Note: IP addresses shown are examples only and must be replaced
+with your own class addresses!):</P
+></BLOCKQUOTE
+></DIV
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>options {
+	// DNS tables are located in the /var/named directory
+	directory "/var/named";
+
+	// Forward any unresolved requests to our ISP's name server
+	// (this is an example IP address only -- do not use!)
+	forwarders {
+		123.12.40.17;
+	};
+
+	/*
+	 * If there is a firewall between you and nameservers you want
+	 * to talk to, you might need to uncomment the query-source
+	 * directive below.  Previous versions of BIND always asked
+	 * questions using port 53, but BIND 8.1 uses an unprivileged
+	 * port by default.
+	 */
+	// query-source address * port 53;
+};
+
+// Enable caching and load root server info
+zone "named.root" {
+	type hint;
+	file "";
+};
+
+// All our DNS information is stored in /var/named/mydomain_name.db
+// (eg. if mydomain.name = foobar.com then use foobar_com.db)
+zone "mydomain.name" {
+	type master;
+	file "mydomain_name.db";
+	allow-transfer { 123.12.41.40; };
+};
+
+// Reverse lookups for 123.12.41.*, .42.*, .43.*, .44.* class C's
+// (these are example Class C's only -- do not use!)
+zone "12.123.IN-ADDR.ARPA" {
+	type master;
+	file "123_12.rev";
+	allow-transfer { 123.12.41.40; };
+};
+
+// Reverse lookups for 126.27.18.*, .19.*, .20.* class C's
+// (these are example Class C's only -- do not use!)
+zone "27.126.IN-ADDR.ARPA" {
+	type master;
+	file "126_27.rev";
+	allow-transfer { 123.12.41.40; };
+};</PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="TIP"
+><BLOCKQUOTE
+CLASS="TIP"
+><P
+><B
+>Tip: </B
+>Tip: Make note of the <TT
+CLASS="LITERAL"
+>allow-transfer</TT
+>
+options above, which restricts DNS zone transfers to a given IP address.  
+In our example, we are allowing the host at 123.12.41.40 (probably a slave
+DNS server in our domain) to request zone transfers.  If you omit this
+option, anyone on the Internet will be able to request such transfers.  
+As the information provided is often used by spammers and IP spoofers, I
+strongly recommend you restrict zone transfers except to your slave DNS
+server(s), or use the loopback address, ``<TT
+CLASS="LITERAL"
+>127.0.0.1</TT
+>''
+instead.</P
+></BLOCKQUOTE
+></DIV
+></LI
+><LI
+><P
+>Now you can set up your DNS tables in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>var/named/</TT
+></TT
+>'' directory as
+configured in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/named.conf</TT
+></TT
+>'' file in step
+three.  Configuring DNS database files for the first time is a major
+undertaking, and is beyond the scope of this document.  There are several
+guides, online and in printed form that should be referred to.  However,
+several examples are provided below.</P
+><P
+>Sample entries in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/var/named/mydomain_name.db</TT
+></TT
+>''
+forward lookup file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>; This is the Start of Authority (SOA) record.  Contains contact
+; &#38; other information about the name server.  The serial number
+; must be changed whenever the file is updated (to inform secondary
+; servers that zone information has changed).
+    @ IN SOA mydomain.name.  postmaster.mydomain.name. (
+	19990811	; Serial number
+	3600		; 1 hour refresh
+	300		; 5 minutes retry
+	172800		; 2 days expiry
+	43200 )		; 12 hours minimum
+
+; List the name servers in use.  Unresolved (entries in other zones)
+; will go to our ISP's name server isp.domain.name.com
+	IN NS		mydomain.name.
+	IN NS		isp.domain.name.com.
+
+; This is the mail-exchanger.  You can list more than one (if
+; applicable), with the integer field indicating priority (lowest
+; being a higher priority)
+	IN MX		mail.mydomain.name.
+
+; Provides optional information on the machine type &#38; operating system
+; used for the server
+	IN HINFO	Pentium/350	LINUX
+
+; A list of machine names &#38; addresses
+    spock.mydomain.name.    IN A    123.12.41.40   ; OpenVMS Alpha
+    mail.mydomain.name.     IN A    123.12.41.41   ; Linux (main server)
+    kirk.mydomain.name.     IN A    123.12.41.42   ; Windows NT (blech!)
+
+; Including any in our other class C's
+    twixel.mydomain.name.   IN A    126.27.18.161  ; Linux test machine
+    foxone.mydomain.name.   IN A    126.27.18.162  ; Linux devel. kernel
+
+; Alias (canonical) names
+    gopher	IN CNAME	mail.mydomain.name.
+    ftp		IN CNAME	mail.mydomain.name.
+    www		IN CNAME	mail.mydomain.name.</PRE
+></TD
+></TR
+></TABLE
+><P
+>Sample entries in the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/var/named/123_12.rev</TT
+></TT
+>'' reverse
+lookup file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>; This is the Start of Authority record.  Same as in forward lookup table.
+    @ IN SOA mydomain.name.  postmaster.mydomain.name. (
+	19990811	; Serial number
+	3600		; 1 hour refresh
+	300		; 5 minutes retry
+	172800		; 2 days expiry
+	43200 )		; 12 hours minimum
+
+; Name servers listed as in forward lookup table
+	IN NS		mail.mydomain.name.
+	IN NS		isp.domain.name.com.
+
+; A list of machine names &#38; addresses, in reverse.  We are mapping
+; more than one class C here, so we need to list the class B portion
+; as well.
+    40.41	IN PTR    spock.mydomain.name.
+    41.41	IN PTR    mail.mydomain.name.
+    42.41	IN PTR    kirk.mydomain.name.
+
+; As you can see, we can map our other class C's as long as they are
+; under the 123.12.* class B addresses
+    24.42	IN PTR    tsingtao.mydomain.name.
+    250.42	IN PTR    redstripe.mydomain.name.
+    24.43	IN PTR    kirin.mydomain.name.
+    66.44	IN PTR    sapporo.mydomain.name.
+
+; No alias (canonical) names should be listed in the reverse lookup
+; file (for obvious reasons).</PRE
+></TD
+></TR
+></TABLE
+><P
+>Any other reverse lookup files needed to map addresses in a different
+class B (such as 126.27.*) can be created, and would look much the same
+as the example reverse lookup file above.</P
+></LI
+><LI
+><P
+>Make sure the named daemon is running. This daemon is
+usually started from the
+``<TT
+CLASS="LITERAL"
+><TT
+CLASS="FILENAME"
+>/etc/rc.d/init.d/named</TT
+></TT
+>'' file
+upon system boot. You can also start and stop the daemon manually; type
+``<TT
+CLASS="LITERAL"
+>named start</TT
+>'' and ``<TT
+CLASS="LITERAL"
+>named stop</TT
+>'',
+respectively.</P
+></LI
+><LI
+><P
+>Whenever changes are made to the DNS tables, the DNS
+server should be restarted by typing ``<TT
+CLASS="LITERAL"
+>/etc/rc.d/init.d/named
+restart</TT
+>''.  You may then wish to test your changes by using a
+tool such as <SPAN
+CLASS="QUOTE"
+>"<TT
+CLASS="LITERAL"
+>nslookup</TT
+>"</SPAN
+> to query the
+machine you have added or changed.</P
+></LI
+></OL
+><P
+>More information on configuring DNS services can be found in the
+``<EM
+>DNS-HOWTO</EM
+>'' guide at
+<A
+HREF="http://metalab.unc.edu/Linux/HOWTO/DNS-HOWTO-5.html"
+TARGET="_top"
+>http://metalab.unc.edu/Linux/HOWTO/DNS-HOWTO-5.html</A
+>.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="web-server-administration.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="internet-user-authentication.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Web Server and HTTP Caching Proxy Administration</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="custom-config.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Internet User Authentication with TACACS</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,536 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>KernelAnalysis-HOWTO: Linux Multitasking</TITLE>
+ <LINK HREF="KernelAnalysis-HOWTO-7.html" REL=next>
+ <LINK HREF="KernelAnalysis-HOWTO-5.html" REL=previous>
+ <LINK HREF="KernelAnalysis-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="KernelAnalysis-HOWTO-7.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-5.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Linux Multitasking</A></H2>
+
+<H2><A NAME="ss6.1">6.1 Overview</A>
+</H2>
+
+<P>This section will analyze data structures--the mechanism used
+to manage multitasking environment under Linux.
+<P>
+<H3>Task States</H3>
+
+<P>A Linux Task can be one of the following states (according to
+[include/linux.h]):
+<P>
+<P>
+<OL>
+<LI>TASK_RUNNING, it means that it is in the "Ready List"</LI>
+<LI>TASK_INTERRUPTIBLE, task waiting for a signal or a resource (sleeping)</LI>
+<LI>TASK_UNINTERRUPTIBLE, task waiting for a resource (sleeping),
+it is in same "Wait Queue"</LI>
+<LI>TASK_ZOMBIE, task child without father</LI>
+<LI>TASK_STOPPED, task being debugged
+</LI>
+</OL>
+<H3>Graphical Interaction</H3>
+
+<P>
+<PRE>
+       ______________     CPU Available     ______________
+      |              |  ----------------&gt;  |              |
+      | TASK_RUNNING |                     | Real Running |  
+      |______________|  &lt;----------------  |______________|
+                           CPU Busy
+            |   /|\       
+Waiting for |    | Resource  
+ Resource   |    | Available             
+           \|/   |      
+    ______________________                     
+   |                      |
+   | TASK_INTERRUPTIBLE / |
+   | TASK-UNINTERRUPTIBLE |
+   |______________________|
+ 
+                     Main Multitasking Flow
+</PRE>
+<H2><A NAME="ss6.2">6.2 Timeslice</A>
+</H2>
+
+<H3>PIT 8253 Programming</H3>
+
+<P>Each 10 ms (depending on HZ value) an IRQ0 comes, which helps
+us in a multitasking environment. This signal comes from PIC 8259
+(in arch 386+) which is connected to PIT 8253 with a clock of 1.19318
+MHz.
+<P>
+<P>
+<PRE>
+    _____         ______        ______        
+   | CPU |&lt;------| 8259 |------| 8253 |
+   |_____| IRQ0  |______|      |___/|\|
+                                    |_____ CLK 1.193.180 MHz
+          
+// From include/asm/param.h
+#ifndef HZ 
+#define HZ 100 
+#endif
+ 
+// From include/asm/timex.h
+#define CLOCK_TICK_RATE 1193180 /* Underlying HZ */
+ 
+// From include/linux/timex.h
+#define LATCH ((CLOCK_TICK_RATE + HZ/2) / HZ) /* For divider */
+ 
+// From arch/i386/kernel/i8259.c
+outb_p(0x34,0x43); /* binary, mode 2, LSB/MSB, ch 0 */ 
+outb_p(LATCH &amp; 0xff , 0x40); /* LSB */
+outb(LATCH &gt;&gt; 8 , 0x40); /* MSB */
+ 
+</PRE>
+<P>So we program 8253 (PIT, Programmable Interval Timer) with LATCH
+= (1193180/HZ) = 11931.8 when HZ=100 (default). LATCH indicates the
+frequency divisor factor.
+<P>
+<P>LATCH = 11931.8 gives to 8253 (in output) a frequency of 1193180
+/ 11931.8 = 100 Hz, so period = 10ms
+<P>
+<P>So Timeslice = 1/HZ.
+<P>
+<P>With each Timeslice we temporarily interrupt current process
+execution (without task switching), and we do some housekeeping work,
+after which we'll return back to our previous process.
+<P>
+<H3>Linux Timer IRQ ICA</H3>
+
+<P>
+<PRE>
+Linux Timer IRQ
+IRQ 0 [Timer]
+ |  
+\|/
+|IRQ0x00_interrupt        //   wrapper IRQ handler
+   |SAVE_ALL              ---   
+      |do_IRQ                |   wrapper routines
+         |handle_IRQ_event  ---
+            |handler() -&gt; timer_interrupt  // registered IRQ 0 handler
+               |do_timer_interrupt
+                  |do_timer  
+                     |jiffies++;
+                     |update_process_times  
+                     |if (--counter &lt;= 0) { // if time slice ended then
+                        |counter = 0;        //   reset counter           
+                        |need_resched = 1;   //   prepare to reschedule
+                     |}
+         |do_softirq
+         |while (need_resched) { // if necessary
+            |schedule             //   reschedule
+            |handle_softirq
+         |}
+   |RESTORE_ALL
+ 
+</PRE>
+<P>Functions can be found under:
+<P>
+<P>
+<UL>
+<LI>IRQ0x00_interrupt, SAVE_ALL [include/asm/hw_irq.h]</LI>
+<LI>do_IRQ, handle_IRQ_event [arch/i386/kernel/irq.c]</LI>
+<LI>timer_interrupt, do_timer_interrupt [arch/i386/kernel/time.c]</LI>
+<LI>do_timer, update_process_times [kernel/timer.c]</LI>
+<LI>do_softirq [kernel/soft_irq.c]</LI>
+<LI>RESTORE_ALL, while loop [arch/i386/kernel/entry.S]
+</LI>
+</UL>
+<P>Notes:
+<P>
+<P>
+<OL>
+<LI>Function "IRQ0x00_interrupt" (like others IRQ0xXY_interrupt) is
+directly pointed by IDT (Interrupt Descriptor Table, similar to Real
+Mode Interrupt Vector Table, see Cap 11 for more), so EVERY interrupt
+coming to the processor is managed by "IRQ0x#NR_interrupt" routine,
+where #NR is the interrupt number. We refer to it as "wrapper
+irq handler".</LI>
+<LI>wrapper routines are executed, like "do_IRQ","handle_IRQ_event" [arch/i386/kernel/irq.c].</LI>
+<LI>After this, control is passed to official IRQ routine (pointed
+by "handler()"), previously registered with "request_irq" [arch/i386/kernel/irq.c],
+in this case "timer_interrupt" [arch/i386/kernel/time.c].</LI>
+<LI>"timer_interrupt" [arch/i386/kernel/time.c] routine is
+executed and, when it ends,</LI>
+<LI>control backs to some assembler routines [arch/i386/kernel/entry.S].
+</LI>
+</OL>
+<P>Description: 
+<P>
+<P>To manage Multitasking, Linux (like every other Unix) uses a
+''counter'' variable to keep track of how much CPU was used by the
+task. So, on each IRQ 0, the counter is decremented (point 4) and,
+when it reaches 0, we need to switch task to manage timesharing (point
+4 "need_resched" variable is set to 1, then, in point 5 assembler routines
+control "need_resched" and call, if needed, "schedule" [kernel/sched.c]).
+<P>
+<H2><A NAME="ss6.3">6.3 Scheduler</A>
+</H2>
+
+<P>The scheduler is the piece of code that chooses what Task has
+to be executed at a given time.
+<P>
+<P>Any time you need to change running task, select a candidate.
+Below is the ''schedule [kernel/sched.c]'' function.
+<P>
+<P>
+<PRE>
+|schedule
+   |do_softirq // manages post-IRQ work
+   |for each task
+      |calculate counter
+   |prepare_to__switch // does anything
+   |switch_mm // change Memory context (change CR3 value)
+   |switch_to (assembler)
+      |SAVE ESP
+      |RESTORE future_ESP
+      |SAVE EIP
+      |push future_EIP *** push parameter as we did a call 
+         |jmp __switch_to (it does some TSS work) 
+         |__switch_to()
+          ..
+         |ret *** ret from call using future_EIP in place of call address
+      new_task
+
+</PRE>
+<H2><A NAME="ss6.4">6.4 Bottom Half, Task Queues. and Tasklets</A>
+</H2>
+
+<H3>Overview</H3>
+
+<P>In classic Unix, when an IRQ comes (from a device), Unix makes
+"task switching" to interrogate the task that requested the device.
+<P>
+<P>To improve performance, Linux can postpone the non-urgent work
+until later, to better manage high speed event.
+<P>
+<P>This feature is managed since kernel 1.x by the "bottom half" (BH).
+The irq handler "marks" a bottom half, to be executed later, in scheduling
+time.
+<P>
+<P>In the latest kernels there is a "task queue"that is more dynamic
+than BH and there is also a "tasklet" to manage multiprocessor environments.
+<P>
+<P>BH schema is:
+<P>
+<P>
+<OL>
+<LI>Declaration</LI>
+<LI>Mark</LI>
+<LI>Execution
+</LI>
+</OL>
+<H3>Declaration</H3>
+
+<P>
+<PRE>
+#define DECLARE_TASK_QUEUE(q) LIST_HEAD(q)
+#define LIST_HEAD(name) \
+   struct list_head name = LIST_HEAD_INIT(name) 
+struct list_head { 
+   struct list_head *next, *prev; 
+};
+#define LIST_HEAD_INIT(name) { &amp;(name), &amp;(name) } 
+ 
+      ''DECLARE_TASK_QUEUE'' [include/linux/tqueue.h, include/linux/list.h] 
+</PRE>
+<P>"DECLARE_TASK_QUEUE(q)" macro is used to declare a structure named
+"q" managing task queue.
+<P>
+<H3>Mark</H3>
+
+<P>Here is the ICA schema for "mark_bh" [include/linux/interrupt.h]
+function:
+<P>
+<P>
+<PRE>
+|mark_bh(NUMBER)
+   |tasklet_hi_schedule(bh_task_vec + NUMBER)
+      |insert into tasklet_hi_vec
+         |__cpu_raise_softirq(HI_SOFTIRQ) 
+            |soft_active |= (1 &lt;&lt; HI_SOFTIRQ)
+ 
+                   ''mark_bh''[include/linux/interrupt.h]
+</PRE>
+<P>For example, when an IRQ handler wants to "postpone" some work,
+it would  "mark_bh(NUMBER)", where NUMBER is a BH declarated (see section
+before).
+<P>
+<H3>Execution</H3>
+
+<P>We can see this calling from "do_IRQ" [arch/i386/kernel/irq.c]
+function:
+<P>
+<P>
+<PRE>
+|do_softirq
+   |h-&gt;action(h)-&gt; softirq_vec[TASKLET_SOFTIRQ]-&gt;action -&gt; tasklet_action
+      |tasklet_vec[0].list-&gt;func
+         
+
+</PRE>
+<P>"h-&gt;action(h);" is the function has been previously queued.
+<P>
+<H2><A NAME="ss6.5">6.5 Very low level routines</A>
+</H2>
+
+<P>set_intr_gate
+<P>
+<P>set_trap_gate
+<P>
+<P>set_task_gate (not used).
+<P>
+<P>(*interrupt)[NR_IRQS](void) = { IRQ0x00_interrupt,
+IRQ0x01_interrupt, ..}
+<P>
+<P>NR_IRQS = 224 [kernel 2.4.2]
+<P>
+<H2><A NAME="ss6.6">6.6 Task Switching</A>
+</H2>
+
+<H3>When does Task switching occur?</H3>
+
+<P>Now we'll see how the Linux Kernel switchs from one task to another.
+<P>
+<P>Task Switching is needed in many cases, such as the following:
+<P>
+<P>
+<UL>
+<LI>when TimeSlice ends, we need to give access to some other task</LI>
+<LI>when a task decide to access a resource, it sleeps for it, so
+we have to choose another task</LI>
+<LI>when a task waits for a pipe, we have to give access to other
+task, which would write to pipe
+</LI>
+</UL>
+<H3>Task Switching</H3>
+
+<P>
+<PRE>
+                           TASK SWITCHING TRICK
+#define switch_to(prev,next,last) do {                                  \
+        asm volatile(&quot;pushl %%esi\n\t&quot;                                  \
+                     &quot;pushl %%edi\n\t&quot;                                  \
+                     &quot;pushl %%ebp\n\t&quot;                                  \
+                     &quot;movl %%esp,%0\n\t&quot;        /* save ESP */          \
+                     &quot;movl %3,%%esp\n\t&quot;        /* restore ESP */       \
+                     &quot;movl $1f,%1\n\t&quot;          /* save EIP */          \
+                     &quot;pushl %4\n\t&quot;             /* restore EIP */       \
+                     &quot;jmp __switch_to\n&quot;                                \
+                     &quot;1:\t&quot;                                             \
+                     &quot;popl %%ebp\n\t&quot;                                   \
+                     &quot;popl %%edi\n\t&quot;                                   \
+                     &quot;popl %%esi\n\t&quot;                                   \
+                     :&quot;=m&quot; (prev-&gt;thread.esp),&quot;=m&quot; (prev-&gt;thread.eip),  \
+                      &quot;=b&quot; (last)                                       \
+                     :&quot;m&quot; (next-&gt;thread.esp),&quot;m&quot; (next-&gt;thread.eip),    \
+                      &quot;a&quot; (prev), &quot;d&quot; (next),                           \
+                      &quot;b&quot; (prev));                                      \
+} while (0)
+</PRE>
+<P>Trick is here:
+<P>
+<P>
+<OL>
+<LI>''pushl %4'' which puts future_EIP into the stack</LI>
+<LI>''jmp __switch_to'' which execute ''__switch_to'' function, but
+in opposite of ''call'' we will return to valued pushed in point
+1 (so new Task!)
+</LI>
+</OL>
+<P>
+<PRE>
+      U S E R   M O D E                 K E R N E L     M O D E
+
+ |          |     |          |       |          |     |          |
+ |          |     |          | Timer |          |     |          |
+ |          |     |  Normal  |  IRQ  |          |     |          |
+ |          |     |   Exec   |------&gt;|Timer_Int.|     |          |
+ |          |     |     |    |       | ..       |     |          |
+ |          |     |    \|/   |       |schedule()|     | Task1 Ret|
+ |          |     |          |       |_switch_to|&lt;--  |  Address |
+ |__________|     |__________|       |          |  |  |          |
+                                     |          |  |S |          | 
+Task1 Data/Stack   Task1 Code        |          |  |w |          |
+                                     |          | T|i |          |
+                                     |          | a|t |          |
+ |          |     |          |       |          | s|c |          |
+ |          |     |          | Timer |          | k|h |          |
+ |          |     |  Normal  |  IRQ  |          |  |i |          | 
+ |          |     |   Exec   |------&gt;|Timer_Int.|  |n |          |
+ |          |     |     |    |       | ..       |  |g |          |
+ |          |     |    \|/   |       |schedule()|  |  | Task2 Ret|
+ |          |     |          |       |_switch_to|&lt;--  |  Address |
+ |__________|     |__________|       |__________|     |__________|
+ 
+Task2 Data/Stack   Task2 Code        Kernel Code  Kernel Data/Stack
+</PRE>
+<H2><A NAME="ss6.7">6.7 Fork</A>
+</H2>
+
+<H3>Overview</H3>
+
+<P>Fork is used to create another task. We start from a Task Parent,
+and we copy many data structures to Task Child.
+<P>
+<P>
+<PRE>
+ 
+                               |         |
+                               | ..      |
+         Task Parent           |         |
+         |         |           |         |
+         |  fork   |----------&gt;|  CREATE |   
+         |         |          /|   NEW   |
+         |_________|         / |   TASK  |
+                            /  |         |
+             ---           /   |         |
+             ---          /    | ..      |
+                         /     |         |
+         Task Child     / 
+         |         |   /
+         |  fork   |&lt;-/
+         |         |
+         |_________|
+              
+                       Fork SysCall
+</PRE>
+<H3>What is not copied</H3>
+
+<P>New Task just created (''Task Child'') is almost equal to Parent
+(''Task Parent''), there are only few differences:
+<P>
+<P>
+<OL>
+<LI>obviously PID</LI>
+<LI>child ''fork()'' will return 0, while parent ''fork()'' will
+return PID of Task Child, to distinguish them each other in User
+Mode</LI>
+<LI>All child data pages are marked ''READ + EXECUTE'', no "WRITE''
+(while parent has WRITE right for its own pages) so, when a write
+request comes, a ''Page Fault'' exception is generated which will
+create a new independent page: this mechanism is called ''Copy on
+Write'' (see Cap.10 for more).
+</LI>
+</OL>
+<H3>Fork ICA</H3>
+
+<P>
+<PRE>
+|sys_fork 
+   |do_fork
+      |alloc_task_struct 
+         |__get_free_pages
+       |p-&gt;state = TASK_UNINTERRUPTIBLE
+       |copy_flags
+       |p-&gt;pid = get_pid    
+       |copy_files
+       |copy_fs
+       |copy_sighand
+       |copy_mm // should manage CopyOnWrite (I part)
+          |allocate_mm
+          |mm_init
+             |pgd_alloc -&gt; get_pgd_fast
+                |get_pgd_slow
+          |dup_mmap
+             |copy_page_range
+                |ptep_set_wrprotect
+                   |clear_bit // set page to read-only              
+          |copy_segments // For LDT
+       |copy_thread
+          |childregs-&gt;eax = 0  
+          |p-&gt;thread.esp = childregs // child fork returns 0
+          |p-&gt;thread.eip = ret_from_fork // child starts from fork exit
+       |retval = p-&gt;pid // parent fork returns child pid
+       |SET_LINKS // insertion of task into the list pointers
+       |nr_threads++ // Global variable
+       |wake_up_process(p) // Now we can wake up just created child
+       |return retval
+              
+               fork ICA
+ 
+</PRE>
+<P>
+<UL>
+<LI>sys_fork [arch/i386/kernel/process.c]</LI>
+<LI>do_fork [kernel/fork.c]</LI>
+<LI>alloc_task_struct [include/asm/processor.c]</LI>
+<LI>__get_free_pages [mm/page_alloc.c]</LI>
+<LI>get_pid [kernel/fork.c]</LI>
+<LI>copy_files </LI>
+<LI>copy_fs</LI>
+<LI>copy_sighand</LI>
+<LI>copy_mm</LI>
+<LI>allocate_mm</LI>
+<LI>mm_init</LI>
+<LI>pgd_alloc -&gt; get_pgd_fast [include/asm/pgalloc.h]</LI>
+<LI>get_pgd_slow</LI>
+<LI>dup_mmap [kernel/fork.c]</LI>
+<LI>copy_page_range [mm/memory.c]</LI>
+<LI>ptep_set_wrprotect [include/asm/pgtable.h]</LI>
+<LI>clear_bit [include/asm/bitops.h]</LI>
+<LI>copy_segments [arch/i386/kernel/process.c]</LI>
+<LI>copy_thread</LI>
+<LI>SET_LINKS [include/linux/sched.h]</LI>
+<LI>wake_up_process [kernel/sched.c]
+</LI>
+</UL>
+<H3>Copy on Write</H3>
+
+<P>To implement Copy on Write for Linux:
+<P>
+<P>
+<OL>
+<LI>Mark all copied pages as read-only, causing a Page Fault when
+a Task tries to write to them.</LI>
+<LI>Page Fault handler creates a new page.
+</LI>
+</OL>
+<P>
+<PRE>
+ 
+ | Page 
+ | Fault 
+ | Exception
+ |
+ |
+ -----------&gt; |do_page_fault
+                 |handle_mm_fault
+                    |handle_pte_fault 
+                       |do_wp_page        
+                          |alloc_page      // Allocate a new page
+                          |break_cow
+                             |copy_cow_page // Copy old page to new one
+                             |establish_pte // reconfig Page Table pointers
+                                |set_pte
+                            
+              Page Fault ICA
+ 
+</PRE>
+<P>
+<UL>
+<LI>do_page_fault [arch/i386/mm/fault.c] </LI>
+<LI>handle_mm_fault [mm/memory.c]</LI>
+<LI>handle_pte_fault </LI>
+<LI>do_wp_page</LI>
+<LI>alloc_page [include/linux/mm.h]</LI>
+<LI>break_cow [mm/memory.c]</LI>
+<LI>copy_cow_page</LI>
+<LI>establish_pte</LI>
+<LI>set_pte [include/asm/pgtable-3level.h]
+</LI>
+</UL>
+<HR>
+<A HREF="KernelAnalysis-HOWTO-7.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-5.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

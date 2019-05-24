@@ -1,0 +1,656 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux IPX-HOWTO: Configuring your Linux machine as an NCP server.</TITLE>
+ <LINK HREF="IPX-HOWTO-11.html" REL=next>
+ <LINK HREF="IPX-HOWTO-9.html" REL=previous>
+ <LINK HREF="IPX-HOWTO.html#toc10" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="IPX-HOWTO-11.html">Next</A>
+<A HREF="IPX-HOWTO-9.html">Previous</A>
+<A HREF="IPX-HOWTO.html#toc10">Contents</A>
+<HR>
+<H2><A NAME="s10">10. Configuring your Linux machine as an NCP server.</A></H2>
+
+<P>There are two packages available that allow Linux to provide the functions of
+a Novell Fileserver. They both allow you to share files on your linux
+machine with users using Novell NetWare client software. Users can attach and
+map filesystems to appear as local drives on their machines just as they would
+to a real Novell fileserver. You may want to try both to see which best
+serves your intended purpose.
+<P>
+<H2><A NAME="ss10.1">10.1 The <B><EM>mars_nwe</EM></B> package.</A>
+</H2>
+
+<P>Martin Stover <CODE>&lt;mstover@freeway.de></CODE> developed <EM>mars_nwe</EM>
+to enable linux to provide both file and print services for NetWare clients.
+<P>In case you are wondering about the name: <EM>mars_nwe</EM> is Martin Stovers
+Netware Emulator.
+<P>
+<H3>Capability of <B><EM>mars_nwe</EM></B>.</H3>
+
+<P><EM>mars_nwe</EM> implements a subset of the full Novell NCP for file services,
+disk based bindery and also print services. It is likely to contain bugs but
+there are many people using it now and the number of bugs is steadily
+decreasing as new versions are released.
+<P>
+<H3>Obtaining <B><EM>mars_nwe</EM></B>.</H3>
+
+<P>You can obtain <EM>mars_nwe</EM> from
+<A HREF="ftp://ftp.gwdg.de/pub/linux/misc/ncpfs/">ftp.gwdg.de</A>
+or from
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/system/filesystems/ncpfs/">ftp://sunsite.unc.edu/pub/Linux/system/filesystems/ncpfs/</A>.
+<P>The version current at the time of writing was: <CODE>mars_nwe-0.99.pl10.tgz</CODE>.
+<P>
+<H3>Building the <EM>mars_nwe</EM> package.</H3>
+
+<P>
+<DL>
+<DT><B>Build a kernel with Ethernet and IPX Support</B><DD><P>In the <CODE>1.2.13</CODE>
+version kernel you need only ensure that you have answered <CODE>Y</CODE> to the
+question: '<CODE>The IPX protocol</CODE>' and <CODE>N</CODE> to the question:
+`<CODE>Full internal IPX network</CODE>' as illustrated:
+<PRE>
+ ...
+ ...
+The IPX protocol (CONFIG_IPX) [n] y
+ ...
+ ...
+Full internal IPX network (CONFIG_IPX_INTERN) [N/y/?] n
+ ...
+ ...
+</PRE>
+
+In newer kernels a similar process is adopted but the actual text of the prompt
+may have changed slightly.
+<P>You will also need to ensure that you include an appropriate driver for your
+Ethernet card. If you do not know how to do this then you should read the
+<A HREF="Ethernet-HOWTO.html">Ethernet-HOWTO</A>.
+<P>You can then proceed to build your kernel. Make sure you remember to run
+<EM>lilo</EM> to install it when you have finished.
+<P>
+<DT><B>Untar the <EM>mars_nwe</EM> package.</B><DD><P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# cd /usr/src
+# tar xvfz mars_nwe-0.99.pl10.tgz
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<DT><B>Make <EM>mars_nwe</EM>.</B><DD><P>To make the package is very simple.
+The first step is to simply run <CODE>make</CODE>, this will create a
+<CODE>config.h</CODE> file for you. Next you should look at and edit the
+<CODE>config.h</CODE> file if necessary. It allows you to configure items
+such as the installation directories that will be used and the maximum
+number of sessions and volumes that the server will support. The really
+important entries to look at are:
+<PRE>
+FILENAME_NW_INI       the location of the initialisation file
+PATHNAME_PROGS        where the executable support programs will be found.
+PATHNAME_BINDERY      where the 'bindery' files will go.
+PATHNAME_PIDFILES     the directory for the 'pid' files to be written.
+MAX_CONNECTIONS       the maximum number of simultaneous connections allowed.
+MAX_NW_VOLS           the maximum number of volumes mars_nwe will support.
+MAX_FILE_HANDLES_CONN the maximum number of open files per connection.
+WITH_NAME_SPACE_CALLS if you want to support ncpfs clients.
+INTERNAL_RIP_SAP      whether you want mars_nwe to provide rip/sap routing.
+SHADOW_PWD            whether you use shadow passwords or not.
+</PRE>
+<P>The defaults will probably be ok but you should check anyway.
+<P>When this is done:
+<BLOCKQUOTE><CODE>
+<PRE>
+# make
+# make install
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>will build the servers and install them in the appropriate directory. The
+installation script also installs the configuration file
+<CODE>/etc/nwserv.conf</CODE>.
+<P>
+<DT><B>Configure the server.</B><DD><P>Configuration is fairly simple. You need to
+edit the <CODE>/etc/nwserv.conf</CODE> file. The format of this file may at first
+look a little cryptic, but it is fairly straightforward. The file contains a
+number of single line configuration items. Each line is whitespace delimited
+and begins with a number that indicates the contents of the line. All
+characters following a '<CODE>#</CODE>' character are considered a comment and
+ignored. Martin supplies an example configuration file in the package,
+but I'll present what I consider to be a simplified example to offer an
+alternative for you.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# VOLUMES (max. 5)
+# Only the SYS volume is compulsory. The directory containing the SYS
+# volume must contain the directories: LOGIN, PUBLIC, SYSTEM, MAIL.
+# The 'i' option ignores case.
+# The 'k' option converts all filenames in NCP requests to lowercase.
+# The 'm' option marks the volume as removable (useful for cdroms etc.)
+# The 'r' option set the volume to read-only.
+# The 'o' option indicates the volume is a single mounted filesystem.
+# The 'P' option allows commands to be used as files.
+# The 'O' option allows use of the OS/2 namespace
+# The 'N' option allows use of the NFS namespace
+# The default is upper case.
+# Syntax:
+#    1 &lt;Volumename> &lt;Volumepath>   &lt;Options>
+
+1   SYS         /home/netware/SYS/               # SYS
+1   DATA        /home/netware/DATA/      k       # DATA
+1   CDROM       /cdrom                   kmr     # CDROM
+
+# SERVER NAME
+# If not set then the linux hostname will be converted to upper case
+# and used. This is optional, the hostname will be used if this is not
+# configured.
+# Syntax:
+#    2 &lt;Servername>
+
+2   LINUX_FS01
+
+# INTERNAL NETWORK ADDRESS
+# The Internal IPX Network Address is a feature that simplifies IPX routing
+# for multihomed hosts (hosts that have ports on more than one IPX network).
+# Syntax:
+#    3 &lt;Internal Network Address> [&lt;Node Number>]
+# or:
+#    3 auto
+#
+# If you use 'auto' then your host IP address will be used. NOTE: this may
+# be dangerous, please be sure you pick a number unique to your network.
+# Addresses are 4byte hexadecimal (the leading 0x is required).
+
+3   0x49a01010  1
+
+
+# NETWORK DEVICE(S)
+# This entry configures your IPX network. If you already have your
+# IPX network configured then you do not need this. This is the same as
+# using ipx_configure/ipx_interface before you start the server.
+# Syntax:
+#    4 &lt;IPX Network Number> &lt;device_name> &lt;frametype> [&lt;ticks>]
+#                         Frame types: ethernet_ii, 802.2, 802.3, SNAP
+
+4  0x39a01010  eth0  802.3  1
+
+# SAVE IPX ROUTES AFTER SERVER IS DOWNED
+# Syntax:
+#    5 &lt;flag>
+#       0 = don't save routes, 1 = do save routes
+
+5 0
+
+# NETWARE VERSION
+# Syntax:
+#    6 &lt;version>
+#      0 = 2.15, 1 = 3.11
+
+6 1
+
+# PASSWORD HANDLING
+# Real Novell DOS clients support a feature which encypts your
+# password when changing it. You can select whether you want your
+# mars server to support this feature or not.
+# Syntax
+#    7 &lt;flag>
+#    &lt;flag> is:
+#        0 to force password encryption. (Clients can't change password)
+#        1 force password encryption, allow unencrypted password change.
+#        7 allow non-encrypted password but no empty passwords.
+#        8 allow non-encrypted password including empty passwords.
+#        9 completely unencrypted passwords (doesn't work with OS/2)
+
+7 1
+
+# MINIMAL GID UID rights
+# permissions used for attachments with no login. These permissions
+# will be used for the files in your primary server attachment.
+# Syntax:
+#    10 &lt;gid>
+#    11 &lt;uid>
+#    &lt;gid> &lt;uid> are from /etc/passwd, /etc/groups
+
+10  200
+11  201
+
+# SUPERVISOR password
+# May be removed after the server is started once. The server will
+# encrypt this information into the bindery file after it is run.
+# You should avoid using the 'root' user and instead use another
+# account to administer the mars fileserver.
+#
+# This entry is read and encrypted into the server bindery files, so
+# it only needs to exist the first time you start the server to ensure
+# that the password isn't stolen.
+#
+# Syntax:
+#    12 &lt;Supervisor-Login> &lt;Unix username> [&lt;password>]
+
+12  SUPERVISOR  terry  secret
+
+# USER ACCOUNTS
+# This associates NetWare logins with unix accounts. Password are
+# optional.
+# Syntax:
+     13 &lt;User Login> &lt;Unix Username> [&lt;password>]
+
+13  MARTIN martin
+13  TERRY  terry  
+
+# LAZY SYSTEM ADMIN CONFIGURATION
+# If you have a large numbers of users and could not be bothered using
+# type 13 individual user mappings, you can automatically map mars_nwe
+# logins to linux user names. BUT, there is currently no means of making
+# use of the linux login password so all users configured this way are
+# will use the single password supplied here. My recommendation is not
+# to do this unless security is absolutely no concern to you.
+# Syntax:
+#    15 &lt;flag> &lt;common-password>
+#    &lt;flag> is: 0  - don't automatically map users.
+#               1  - do automatically map users not configured above.
+#               99 - automatically map every user in this way.
+
+15  0  duzzenmatta
+
+# SANITY CHECKING
+# mars_nwe will automatically ensure that certain directories exist if
+# you set this flag.
+# Syntax:
+#    16 &lt;flag>
+#    &lt;flag> is 0 for no, don't, or 1 for yes, do.
+
+16  0
+
+# PRINT QUEUES
+# This associates NetWare printers with unix printers. The queue
+# directories must be created manually before printing is attempted.
+# The queue directories are NOT lpd queues.
+# Syntax:
+#    21 &lt;queue_name> &lt;queue_directory> &lt;unix_print_cmd>
+
+21  EPSON  SYS:/PRINT/EPSON lpr -h
+21  LASER  SYS:/PRINT/LASER lpr -Plaser
+
+# DEBUG FLAGS
+# These are not normally needed, but may be useful if are you debugging
+# a problem.
+# Syntax:
+#    &lt;debug_item> &lt;debug_flag>
+#
+#    100 = IPX KERNEL
+#    101 = NWSERV
+#    102 = NCPSERV
+#    103 = NWCONN
+#    104 = start NWCLIENT
+#    105 = NWBIND
+#    106 = NWROUTED
+#                 0 = disable debug, 1 = enable debug
+
+100 0
+101 0
+102 0
+103 0
+104 0
+105 0
+106 0
+
+# RUN NWSERV IN BACKGROUND AND USE LOGFILE
+# Syntax:
+#    200 &lt;flag>
+#        0 = run NWSERV in foreground and don't use logfile
+#        1 = run NWSERV in background and use logfile
+
+200  1
+
+# LOGFILE NAME
+# Syntax:
+#    201 &lt;logfile>
+
+201  /tmp/nw.log
+
+# APPEND LOG OR OVERWRITE
+# Syntax:
+#    202 &lt;flag>
+#        0 = append to existing logfile
+#        1 = overwrite existing logfile
+
+202  1
+
+# SERVER DOWN TIME
+# This item sets the time after a SERVER DOWN is issued that the
+# server really goes down.
+# Syntax:
+#    210 &lt;time>
+#        in seconds. (defaults 10)
+
+210  10
+
+# ROUTING BROADCAST INTERVAL
+# The time is seconds between server broadcasts
+# Syntax:
+#    211 &lt;time>
+#        in seconds. (defaults 60)
+
+211  60
+
+# ROUTING LOGGING INTERVAL
+# Set how many broadcasts take place before logging of routing
+# information occurs.
+# Syntax:
+#    300  &lt;number>
+
+300  5
+
+# ROUTING LOGFILE
+# Set the name of the routing logfile
+# Syntax:
+#    301 &lt;filename>
+
+301  /tmp/nw.routes
+
+# ROUTING APPEND/OVERWRITE
+# Set whether you want to append to an existing log file or
+# overwrite it.
+# Syntax:
+#    302 &lt;flag>
+#        &lt;flag> is 0 for append, 1 for create/overwrite
+
+302  1
+
+# WATCHDOG TIMING
+# Set the timing for watchdog messages that ensure the network is
+# still alive.
+# Syntax:
+#    310 &lt;value>
+#        &lt;value> =   0 - always send watchdogs
+#                  &lt; 0 - (-ve) for disable watchdogs
+#                  > 0 - send watchdogs when network traffic
+#                        drops below 'n' ticks
+
+310  7
+
+# STATION FILE
+# Set the filename for the stations file which determine which
+# machines this fileserver will act as the primary fileserver for.
+# The syntax of this file is described in the 'examples' directory
+# of the source code.
+# Syntax:
+#    400 &lt;filename>
+
+400  /etc/nwserv.stations
+
+# GET NEAREST FILESERVER HANDLING
+# Set how SAP Get Nearest Fileserver Requests are handled.
+# Syntax:
+#    401 &lt;flag>
+#        &lt;flag> is: 0 - disable 'Get Nearest Fileserver' requests.
+#                   1 - The 'stations' file lists stations to be excluded.
+#                   2 - The 'stations' file lists stations to be included.
+
+401  2
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<DT><B>Start the server</B><DD><P>If you've configured the server to expect external
+programs to configure your network and/or provide the routing function then
+you should start those before starting the server. Presuming you have
+configured the server so that it will configure your interfaces for you and
+provide the routing services you need only issue the command:
+<BLOCKQUOTE><CODE>
+<PRE>
+# nwserv
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<DT><B>Test the server</B><DD><P>To test the server you should first try to attach
+and login from a NetWare client on your network. You then set a
+<CODE>CAPTURE</CODE> from the client and attempt a print. If both of these are
+successful then the server is working.
+</DL>
+<P>
+<H2><A NAME="ss10.2">10.2 The <B><EM>lwared</EM></B> package.</A>
+</H2>
+
+<P>Ales Dryak <CODE>&lt;A.Dryak@sh.cvut.cz></CODE> developed <EM>lwared</EM> to allow
+Linux to function as an NCP based fileserver.
+<P>Ales has called the package <EM>lwared</EM>, an abbreviation for <EM>LinWare
+Daemon</EM>.
+<P>
+<H3>Capability of <B><EM>lwared</EM></B>.</H3>
+
+<P>The <EM>lwared</EM> server is capable of providing a subset of the full
+function of the Novell NCP. It incorporates messaging but it does not provide
+any printing facilities at all. It does not currently work very well with
+either Windows95 or Windows NT clients. The <EM>lwared</EM> server relies
+on external programs to build and update the IPX routing and SAP tables.
+Misbehaving clients can cause the server to crash. Importantly, filename
+translation facilities have not been included.
+<P>The server does work for NETX and VLM NetWare shells.
+<P>
+<H3>Obtaining <B><EM>lwared</EM></B></H3>
+
+<P>The <EM>lwared</EM> package can be built for any kernel newer than
+<CODE>1.2.0</CODE>, I recommend you use version <CODE>1.2.13</CODE> as no kernel
+patches are required if you do. Some of the IPX functionality has changed
+with the version <CODE>1.3.*</CODE> kernels and this means that patches are
+now required to make it work properly. Appropriate patches are included for
+the new kernels, so if you must use an alpha kernel you should still be able
+to get <EM>lwared</EM> to work properly for you.
+<P>You can obtain the <EM>lwared</EM> package by anonymous ftp from:
+<A HREF="ftp://klokan.sh.cvut.cz/pub/linux/linware/">klokan.sh.cvut.cz</A><P>or from:
+<P>
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/system/network/daemons">sunsite.unc.edu</A>
+or mirror sites. The current version at the time of writing was:
+<CODE>lwared-0.95.tar.gz</CODE>
+<P>
+<H3>Building <B><EM>lwared</EM></B></H3>
+
+<P>
+<DL>
+<DT><B>Untar the <EM>lwared</EM>package</B><DD><P>Something like:
+<PRE>
+# cd /usr/src
+# tar xvpfz lwared-0.95.tar.gz
+</PRE>
+<P>
+<DT><B>Build a kernel with Ethernet and IPX support</B><DD><P>If you are using an alpha <CODE>1.3.*</CODE> kernel then you should try and use
+kernel version <CODE>1.3.17</CODE> or newer because the supplied patches were built
+against it. <CODE>1.3.*</CODE> kernels older than <CODE>1.3.17</CODE> will require
+hand patching to install. (<EM>some information on how to do this is included
+in the <CODE>INSTALL</CODE> file in the package.</EM>). To install the patches
+against a <CODE>1.3.17</CODE> kernel or newer you should try:
+<PRE>
+# make patch
+</PRE>
+<P>After applying the patches if necessary, the next thing you need to do is
+ensure that your kernel has been built with IPX support enabled. In the
+<CODE>1.2.13</CODE> version kernel you need only ensure that you have answered
+<CODE>Y</CODE> to the question: '<CODE>The IPX protocol</CODE>' as 
+illustrated:
+<PRE>
+ ...
+ ...
+Assume subnets are local (CONFIG_INET_SNARL) [y]
+Disable NAGLE algorithm (normally enabled) (CONFIG_TCP_NAGLE_OFF) [n]
+The IPX protocol (CONFIG_IPX) [n] y
+*
+* SCSI support
+ ...
+ ...
+</PRE>
+
+In newer kernels a similar process is adopted by the actual text of the prompt
+may have changed slightly.
+<P>You will also need to ensure that you include an appropriate driver for your
+Ethernet card. If you do not know how to do this then you should read the
+<A HREF="Ethernet-HOWTO.html">Ethernet-HOWTO</A>.
+<P>You can then proceed to build your kernel. Make sure you remember to run
+<EM>lilo</EM> to install it when you have finished.
+<P>
+<DT><B>Compile and install <EM>lwared</EM>.</B><DD><P>To compile <EM>lwared</EM> you
+should first check, edit if necessary, the <CODE>server/config.h</CODE> file. This
+file contains various settings that will govern the way your server will
+behave when it is running. The defaults are reasonable, though you might want
+to check that the directories specified for the log files and configuration
+files suit your system.
+<PRE>
+# make depend
+# make
+# make install
+</PRE>
+
+I found that the '<CODE>make depend</CODE>' complained about not finding the
+<CODE>float.h</CODE> file on my system but appeared to work anyway.
+I also found that when I tried compiling with gcc <CODE>2.6.3</CODE> I found
+I had to change the line:
+<PRE>
+#include &lt;net/route.h>
+</PRE>
+
+to
+<PRE>
+#include &lt;net/if_route.h>
+</PRE>
+
+in <CODE>lib/ipxkern.c</CODE> as this file changed name sometime.
+<P>The '<CODE>make install</CODE>' will attempt to install the server and routing
+daemon programs into your <CODE>/usr/sbin</CODE> directory, the <EM>lwpasswd</EM>
+program into your <CODE>/usr/bin</CODE> directory, the IPX utility programs will
+be installed into your <CODE>/sbin</CODE> directory and last but not least the
+manual pages will go into the <CODE>/usr/man</CODE> directory structure. If any
+of these locations are not suitable for your system then you should edit
+the relevant <CODE>Makefile</CODE> and change the target directories to suit.
+<P>
+</DL>
+<P>
+<H3>Configuring and using <B><EM>lwared</EM></B></H3>
+
+<P>Now the fun bit!
+<P>
+<DL>
+<DT><B>Configuring the IPX network</B><DD><P>The first thing you must do is configure
+your Ethernet interfaces to support the IPX networks your server will support.
+To do this you will need to know the IPX network addresses for each of your
+LAN segments, which Ethernet device (<CODE>eth0</CODE>, <CODE>eth1</CODE> etc.) is
+on which segment, what frame type (<CODE>802.3</CODE>, <CODE>EtherII</CODE> etc.) each
+LAN segment uses and what Internal Network address your server should use
+(this is really needed if your server will service more than one LAN segment).
+A configuration for a server that is on two dis-similar segments with IPX
+network addresses <CODE>23a91300</CODE> and <CODE>23a91301</CODE> and internal network
+address <CODE>bdefaced</CODE> might look like:
+<PRE>
+# ipx_internal_net add BDEFACED 1
+# ipx_interface add eth0 802.3 23a91300
+# ipx_interface add eth1 etherii 23a91301
+</PRE>
+<P>
+<DT><B>Start the routing daemons</B><DD><P>The kernel software itself actually does
+the IPX packet forwarding as it does for IP, but the kernel requires additional
+programs to manage the routing table updates. In the case of IPX two daemons
+are needed and both are supplied with <EM>lwared</EM>: <EM>ipxripd</EM> manages
+the IPX routing information and <EM>ipxsapd</EM> manages the SAP information.
+To start the daemons you need only specify the location of where they should
+write their log messages:
+<PRE>
+# ipxripd /var/adm/ipxrip
+# ipxsapd /var/adm/ipxsap
+</PRE>
+<P>
+<DT><B>Configure the <EM>lwared</EM> server</B><DD><P>There are two files that you
+must manually configure to allow user login to your <EM>lwared</EM> server.
+They are:
+<P>
+<P>
+<DL>
+<DT><B><CODE>/etc/lwpasswd</CODE></B><DD><P>This is where LinWare user account
+information is kept. The <EM>lwpasswd</EM> program is to keep it up to date.
+In its simplest form the <CODE>/etc/lwpasswd</CODE> file looks like:
+<PRE>
+ales:
+terryd:
+guest:
+</PRE>
+
+Its format is a simple list of login id followed by a ':' character and then
+the encrypted version of the login passwd. A couple of important caveats here:
+No encrypted password means no password, LinWare users must have Linux
+accounts, that is any user you place in <CODE>/etc/lwpasswd</CODE> must also
+appear in <CODE>/etc/passwd</CODE> and <CODE>root</CODE> is the only account that can
+change the password of another LinWare user. If you are logged in as
+<CODE>root</CODE> you can change the password of a LinWare user as this transcript
+demonstrates:
+<PRE>
+# lwpasswd rodg
+Changing password for RODG
+Enter new password: 
+Re-type new password: 
+Password changed.
+</PRE>
+<DT><B><CODE>/etc/lwvtab</CODE></B><DD><P>This is the LinWare volume tables and it stores
+information about what directories should be made available to LinWare users
+(this file is similar in nature to the NFS <CODE>/etc/exports</CODE> file). A
+simple example of its format is as follows:
+<PRE>
+SYS             /lwfs/sys
+DATA            /lwfs/data
+HOME            /home
+</PRE>
+
+The format is simple: Volume name followed by whitespace followed by Linux
+directory to export. You must have at <B>least</B> an entry for the
+<CODE>SYS</CODE> volume for the server to start. If you intend your DOS based
+users to be able use your LinWare server as their primary server then you must
+install a standard <CODE>SYS</CODE> volume directory structure underneath the
+directory you export as your <CODE>SYS</CODE> volume. Since these files are
+proprietary and copyright to the Novell corporation you should have a license
+for these. If you users will be using a Novell fileserver as their primary
+server then this will not be necessary.
+</DL>
+<P>
+<DT><B>Start the <EM>lwared</EM> server.</B><DD><P>tada!
+<PRE>
+# lwared
+</PRE>
+
+It is almost an anticlimax isn't it ? Ok so you've got a question, right?
+What is the fileserver name that is being advertised ? If you started the
+server as shown then the LinWare server name being advertised will be
+based on what is returned by the Linux <EM>hostname</EM>. If you'd like it
+to be something else then you can give the server the name when you start
+it, for example:
+<PRE>
+# lwared -nlinux00
+</PRE>
+
+would start the server with the name <CODE>linux00</CODE>.
+<P>
+<DT><B>Test the <EM>lwared</EM> server.</B><DD><P>The very first thing to test is
+that your LinWare server appears in an <EM>slist</EM> from a DOS client
+on your network. The <EM>slist</EM> program is stored on the <CODE>SYS</CODE>
+volume of a Novell fileserver so you must do this from a machine that is
+already logged in somewhere. If this is not successful then check that
+<EM>ipxsapd</EM> and <EM>lwared</EM> are both running. If the <EM>slist</EM>
+is successful then you should try attaching to the server and mapping
+a volume:
+<PRE>
+C:> attach linux00/ales
+ ...
+ ...
+C:> map l:=linux00/data:
+C:> l:
+</PRE>
+
+You should then be able to treat the new map just like any other map. The
+file permissions you will have will be based on those allowed to the
+<EM>linux</EM> account that parallels your LinWare login.
+<P>
+</DL>
+<P>
+<HR>
+<A HREF="IPX-HOWTO-11.html">Next</A>
+<A HREF="IPX-HOWTO-9.html">Previous</A>
+<A HREF="IPX-HOWTO.html#toc10">Contents</A>
+</BODY>
+</HTML>

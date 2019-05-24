@@ -1,0 +1,644 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>CD-Writing HOWTO: Dear Winfried,...</TITLE>
+ <LINK HREF="CD-Writing-HOWTO-5.html" REL=next>
+ <LINK HREF="CD-Writing-HOWTO-3.html" REL=previous>
+ <LINK HREF="CD-Writing-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="CD-Writing-HOWTO-5.html">Next</A>
+<A HREF="CD-Writing-HOWTO-3.html">Previous</A>
+<A HREF="CD-Writing-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Dear Winfried,...</A></H2>
+
+<P>This is the section usually known as "frequently asked
+questions with answers". If you have a problem with your partner, kids or
+dog, just send it in, as long as it is related to writing CD-Rs or is
+otherwise entertaining.
+<P>
+<H2><A NAME="ss4.1">4.1 How sensitive is the burning process?</A>
+</H2>
+
+<P>Test it. Use the option -dummy to do an empty run of cdrecord. Do
+everything you would do otherwise and watch if the burning process
+survives.
+<P>If you feed cdrecord directly from mkisofs, then disk intensive processes
+such as updating the <I>locate</I> database lower the maximum flow rate
+and may corrupt the CD. You better check such processes are not started
+via <CODE>cron</CODE>, <CODE>at</CODE> or <CODE>anacron</CODE> while you burn
+CD-Rs on older machines.
+<P>
+<H2><A NAME="ss4.2">4.2 Has file fragmentation a bad impact on the throughput?</A>
+</H2>
+
+<P>Fragmentation of files is usually so low that its impact isn't noticed. However,
+you can easily construct pathological cases of fragmentation, which lower
+the throughput of your hard disks under 100 kbytes/second. So don't do
+that. :-)
+Yes, files on a hard disk get fragmented over the years. The faster, the
+fuller the filesystem is. Always leave 10% or 20% free space, and you
+should run fine with respect to writing CD-Rs.
+<P>If you're uncertain then look at the messages printed while booting. The
+percentage of fragmentation is reported while checking the filesystems. You
+can check for this value with the very dangerous command
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+shell&gt; e2fsck -n  /dev/sda5        # '-n' is important!
+[stuff deleted -- ignore any errors]
+/dev/sda5: 73/12288 files (12.3% non-contiguous)
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>In this example the fragmentation seems to be very high -- but there are
+only 73 very small files on the filesystem. So the
+value is <I>not</I> alarming.
+<P>There is an experimental utility called e2defrag to defragment extended-2
+filesystems. The current version does not work reliable enough to use
+it even for private environments. If you really want to defragment your
+filesystem, make a backup copy (better: two copies), practice restoring the
+data, then create a new filesystem (that will destroy the old) and restore the
+data. This sketch is currently the safest technique.
+<P>
+<P>
+<H2><A NAME="ss4.3">4.3 Is it possible to store the CD-image on an UMSDOS-filesystem?</A>
+</H2>
+
+<P>Yes. The only filesystem that isn't reliable and fast enough for writing
+CD-ROMs from is the <I>network filesystem</I> (<I>NFS</I>).
+I used UMSDOS myself to share the disk-space between Linux and DOS/Win
+on a PC (486/66) dedicated for writing CD-ROMs.
+<P>
+<P>
+<H2><A NAME="ss4.4">4.4 Isn't there some way to get around the ISO-9660 limitations?</A>
+</H2>
+
+<P>Yes. You can put any filesystem you like on the CD. But other operating
+systems than Linux won't be able to deal with this CD.
+Here goes the recipe:
+<P>
+<UL>
+<LI>Create an empty file of 650MB size.
+<BLOCKQUOTE><CODE>
+<PRE>
+dd if=/dev/zero of="empty_file" bs=1024k count=650
+</PRE>
+</CODE></BLOCKQUOTE>
+
+</LI>
+<LI>Create an extended-2 filesystem on this file
+<BLOCKQUOTE><CODE>
+<PRE>
+shell&gt; /sbin/mke2fs  -b 2048  empty_file
+empty_file is not a block special device.
+Proceed anyway? (y,n) y
+</PRE>
+</CODE></BLOCKQUOTE>
+
+</LI>
+<LI>Mount this empty file through the loopback devices (you need a reasonable new mount for this; read above).
+<BLOCKQUOTE><CODE>
+<PRE>
+mount -t ext2 -o loop=/dev/loop1 empty_file /mnt
+</PRE>
+</CODE></BLOCKQUOTE>
+
+</LI>
+<LI>Copy files to /mnt and umount it afterwards.
+</LI>
+<LI>Use <CODE>cdrecord</CODE> on empty_file (which is no
+longer empty) as if it were an ISO-9660-image.</LI>
+</UL>
+<P>If you want to make an entry in <CODE>/etc/fstab</CODE> for such
+a CD, then disable the checking of the device file on system
+startup. For example:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+/dev/cdrom  /cdrom  ext2  defaults,ro  0 0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The first 0 means "don't include in dumps" (backup), the second
+(=important) one means "don't check for errors on startup" (fsck would fail
+to check the CD for errors).
+<P>
+<P>
+<H2><A NAME="ss4.5">4.5 How to read the tracks from audio CDs?</A>
+</H2>
+
+<P>There are several software packages available. The newest one is
+"cdpranoia" and can be downloaded from
+<P>
+<BLOCKQUOTE>
+<A HREF="http://www.xiph.org/paranoia/">http://www.xiph.org/paranoia/</A><P>
+</BLOCKQUOTE>
+<P>Or you want to try the combination of "cdda2wav" and "sox", available from
+sunsite and its mirrors:
+<P>
+<BLOCKQUOTE>
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/apps/sound/cdrom/cdda2wav0.71.src.tar.gz">ftp://sunsite.unc.edu/pub/Linux/apps/sound/cdrom/cdda2wav0.71.src.tar.gz</A><P>
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/apps/sound/convert/sox-11gamma-cb3.tar.gz">ftp://sunsite.unc.edu/pub/Linux/apps/sound/convert/sox-11gamma-cb3.tar.gz</A></BLOCKQUOTE>
+<P><CODE>cdda2wav</CODE> enables you to get a specific interval (or a whole track)
+from your audio CD and converts it into a .wav-file.  <CODE>sox</CODE> converts
+the WAV files back into the (audio CD) cdda-format so it can be written to
+the CD-R using <CODE>cdrecord</CODE>. You don't necessarily need <CODE>sox</CODE> if
+you use a recent version of <CODE>cdrecord</CODE>, because it has built-in
+support for .au and .wav files.
+<P>
+<P>
+<H2><A NAME="ss4.6">4.6 How to probe for SCSI devices after boot?</A>
+</H2>
+
+<P>The file <CODE>drivers/scsi/scsi.c</CODE> contains the information
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+/*
+ * Usage: echo "scsi add-single-device 0 1 2 3" >/proc/scsi/scsi
+ * with  "0 1 2 3" replaced by your "Host Channel Id Lun".
+ * Consider this feature BETA.
+ *     CAUTION: This is not for hot plugging your peripherals. As
+ *     SCSI was not designed for this you could damage your
+ *     hardware !
+ * However perhaps it is legal to switch on an
+ * already connected device. It is perhaps not
+ * guaranteed this device doesn't corrupt an ongoing data transfer.
+ */
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Please note that this should only be used if your add SCSI devices to the
+end of the chain. Inserting new SCSI devices into an existing chain
+disturbs the naming of devices (directory /dev) and may destroy the
+complete content of your hard disk.
+<P>Some kernel versions do not like re-scanning the SCSI bus at all and your
+system may freeze solid when trying out the above. You have been warned.
+<P>
+<H2><A NAME="ss4.7">4.7 Is it possible to make a 1:1 copy of a data CD?</A>
+</H2>
+
+<P>
+<P>
+<P>
+<P>Yes. But you should be aware of the fact that any errors while reading the
+original (due to dust or scratches) will result in a defective copy.
+Please note that both methods will fail on audio CDs! You have to use cdrdao or
+cdda2wav on audio CDs.
+<P>First case: you have a CD-writer and a separate CD-ROM drive. By issuing the
+command
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cdrecord -v dev=0,6,0 speed=2 -isosize /dev/scd0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>you read the data stream from the CD-ROM drive attached as
+<CODE>/dev/scd0</CODE> and write it directly to the CD-writer.
+<P>Second case: you don't have a separate CD-ROM drive. In this case you have
+to use the CD-writer to read out the CD-ROM first:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+dd if=/dev/scd0 of=cdimage
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This command reads the content of the CD-ROM from the device /dev/scd0 and
+writes it into the file "cdimage". The contents of this file are equivalent
+to what <CODE>mkisofs</CODE> produces, so you can proceed as described earlier
+in this document (which is to take the file cdimage as input for cdrecord).
+If you want to see a progress-meter and other fancy stuff, then you can also
+use J&ouml;rg Schillings  <CODE>sdd</CODE>.
+<P>In case you run into errors, then install a recent version of cdrecord,
+which ships a tool called "readcd" (found under misc/). It gives you the
+same result as dd, but reads sectors on the CD-ROM several times in case
+of errors.
+<P>
+<P>
+<H2><A NAME="ss4.8">4.8 Can Linux read Joliet CD-ROMs? (obsolete answer)</A>
+</H2>
+
+<P>Yes. Newer Kernels (2.0.36 and the upcoming 2.2) have built-in support for
+the joliet format. Remember you have to use both options in your
+/etc/fstab: the keywords iso9660 and joliet (later is really an extension).
+For more details, see 
+<A HREF="http://www-plateau.cs.berkeley.edu/people/chaffee/joliet.html">http://www-plateau.cs.berkeley.edu/people/chaffee/joliet.html</A>.
+<P>
+<P>
+<H2><A NAME="ss4.9">4.9 How do I read/mount CD-ROMs with the CD-writer?</A>
+</H2>
+
+<P>Just as you do with regular CD-ROM drives. No tricks at all. Note that you
+have to use the scd devices (SCSI CD-ROM) to mount CD-ROMs for reading,
+even if you have an ATAPI CD-ROM (remember you configured your
+ATAPI devices to act like SCSI). Example entry for /etc/fstab:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+/dev/scd0  /cdrom  iso9660  ro,user,noauto  0  0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss4.10">4.10 How to put even more data on the CD-R?</A>
+</H2>
+
+<P>Use <CODE>bzip2</CODE> instead of any other compressor like <CODE>gzip</CODE> or
+<CODE>pkzip</CODE>. It will save you up to 30% of disk-space for larger
+(&gt;100kb) files. You can download it from 
+<P>
+<BLOCKQUOTE>
+<A HREF="http://www.muraroa.demon.co.uk/">http://www.muraroa.demon.co.uk/</A><P>
+</BLOCKQUOTE>
+<P>
+<P>Instead of writing a true audio CD, you can optionally convert your
+WAV audio files into MP3 audio files and store them on a ISO-9660
+filesystem as regular files. Usually MPEG III give you a compression of
+1:10. Of course, most CD-players are not able to read files... this is the
+drawback. On the other hand, why not running the music for your next party
+from hard disk? 18 Gbytes are enough for 3000-4000 titles. :-)
+<P>A software MPEG III-encoder is available from
+<BLOCKQUOTE>
+<A HREF="http://www.sulaco.org/mp3/">http://www.sulaco.org/mp3/</A><P>
+</BLOCKQUOTE>
+<P>A MPEG III-player is available from
+<BLOCKQUOTE>
+<A HREF="http://www.mpg123.org/">http://www.mpg123.org/</A><P>
+</BLOCKQUOTE>
+<P>For recorded speech, you may want to try to reduce its size using
+<CODE>shorten</CODE> or "GSM lossy speech compression":
+<P>
+<BLOCKQUOTE>
+<A HREF="ftp://svr-ftp.eng.cam.ac.uk/pub/comp.speech/">ftp://svr-ftp.eng.cam.ac.uk/pub/comp.speech/</A><P>
+<P>
+<A HREF="http://kbs.cs.tu-berlin.de/~jutta/toast.html">http://kbs.cs.tu-berlin.de/~jutta/toast.html</A><P>
+</BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss4.11">4.11 How to make bootable CD-ROMs?</A>
+</H2>
+
+<P>You must have an 1.44 MB bootable floppy-disk. Create an exact image of
+this floppy-disk by issuing the command
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+dd if=/dev/fd0 of=boot.img bs=18k
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Place this floppy image into the directory holding the collection of your
+files (or into a subdirectory of it, just as you like). Tell mkisofs about
+this file with the option '-b' and also use '-c'. For details read the file
+README.eltorito in the mkisofs-distribution.
+<P>An interesting application for a custom bootable CD is as a virus safe DOS-
+or Windows-system. It saves you the money for the hard disks (if you have a
+network and use samba to put the user-data on a file server). The German
+computer magazine c't has a article about this issue in the issue 11/99,
+page 206 (
+<A HREF="http://www.heise.de/">http://www.heise.de/</A>).
+<P>Some details about the bootable RedHat CD-ROM is available from 
+<A HREF="http://members.bellatlantic.net/~smithrod/rhjol-technical.html">http://members.bellatlantic.net/~smithrod/rhjol-technical.html</A>.
+<P>
+<H2><A NAME="ss4.12">4.12 How to make CD-ROMs writable like a hard disk?</A>
+</H2>
+
+<P>There is an <I>overlay filesystem</I> available for Linux, which is
+mounted over the CD-ROM and intercepts all writing operations. New and
+modified files are stored elsewhere, but for the user it looks like the
+CD-ROM is modified. For more information, see 
+<A HREF="http://home.att.net/~artnaseef/ovlfs/ovlfs.html">http://home.att.net/~artnaseef/ovlfs/ovlfs.html</A>.
+<P>If that is not enough for your needs: wait for the UDF-filesystem to be
+supported by Linux or help developing it (see 
+<A HREF="http://trylinux.com/projects/udf/">http://trylinux.com/projects/udf/</A>. At the moment only reading of
+CD-media is supported due to a limitation in the CD-ROM drivers of the
+Linux kernel.
+<P>
+<P>
+<H2><A NAME="ss4.13">4.13 Is it possible to use several writers at once?</A>
+</H2>
+
+<P>Yes. It is reported to work with at least 3 writers at full speed (6x) on a
+PC with 233 Mhz and a single SCSI bus running kernel 2.2.12. You need
+either a recent version of the Linux kernel (2.2.12 or higher).
+<P>
+<P>
+<P>
+<H2><A NAME="ss4.14">4.14 What about Solaris, *BSD, AIX, HP-UX, etc.? Is my variant of Unix supported?</A>
+</H2>
+
+<P>Only chapter 2 is Linux-specific. You can apply chapter 3 and 4 even if you
+run another family of operating systems than Linux. Please see the files
+README.NetBSD, README.aix, README.hpux, README.next,
+README.solaris, README.sunos, README.vms or README.xxxBSD from the
+cdrecord-distribution.
+<P>Probably yes. Compile cdrecord for your platform and issue the command
+"cdrecord -scanbus". Read the README.* file for your Unix distributed with
+the sources of cdrecord. However, not all variants of Unix can read the
+RockRidge, Joliet or HFS extensions on your newly written CD-R.
+<P>
+<P>
+<H2><A NAME="ss4.15">4.15 Where to store the local configuration permanently?</A>
+</H2>
+
+<P>
+<P>You have two options. Either you use the built-in configuration file for
+cdrecord, or you use a shell wrapper like the one shown below. This
+shell script reads a configuration file, which lists the options and
+parameters for cdrecord line by line. The names are exactly the same
+as on the command line, but without the leading dash. Comments are allowed.
+Example:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# be verbose
+v
+# set the speed of the writer
+speed=2
+# the device-coordinates in the form BUS,ID,LUN
+dev=0,6,0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The configuration files for the wrapper belong into /etc/cdrecord/
+and must be referenced on the command line. Example: if you want
+to refer to the configuration /etc/cdrecord/mywriter.cfg, then
+you can issue the command "cdrecord.sh mywriter.cfg -audio track1...".
+Everything after mywrite.cfg is passed to cdrecord.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#! /bin/bash
+
+CFGDIR="/etc/cdrecord"
+
+CFG="$1"
+shift
+ARGS_LEFT="$@"
+
+if [ ! -f "$CFGDIR/$CFG" ]
+then
+    echo "Configuration file $CFGDIR/$CFG not found. Exiting."
+    exit 1
+fi
+
+while read LINE
+do
+    case $LINE in
+        \#*|"") continue;;
+    esac
+    old_IFS="$IFS"
+    IFS="$IFS="
+    set -- $LINE
+    IFS="$old_IFS"
+    O_NAME="$1"
+    O_VALUE=""
+    while shift
+    do
+        case $1 in
+            "") continue;;
+        esac
+        O_VALUE="$1"
+    done
+
+    if [ -z "$O_VALUE" ]
+    then
+        O_CDRECORD="$O_CDRECORD -$O_NAME "
+        continue
+    fi
+    O_CDRECORD="$O_CDRECORD $O_NAME=$O_VALUE "
+    
+done &lt; "$CFGDIR/$CFG"
+
+set -x    #DEBUG
+exec cdrecord $O_CDRECORD $ARGS_LEFT
+echo "Execution of cdrecord failed."
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss4.16">4.16 How can the CD-info be retrieved?</A>
+</H2>
+
+<P>Somewhere behind the first 32 k on the CD, a block with information about
+the CD is located. You can extract the information with the following
+shell script:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#! /bin/bash
+
+RD=/dev/cdrom
+for i in 32768,7   32776,32 32808,32 32958,128 33086,128 33214,128 \
+         33342,128 33470,32 33581,16 33598,16  33615,16  33632,16
+do
+    old_IFS="$IFS"
+    IFS=","
+    set -- $i
+    IFS="$old_IFS"
+    OFFSET=$1
+    LENGTH=$2
+    echo "*`dd if=$RD bs=1 skip=$OFFSET count=$LENGTH   2> /dev/null`#"
+done
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss4.17">4.17 What about re-writing</A>
+</H2>
+
+<P>When overwriting  CD-RW media, specify the parameter blank=fast to
+cdrecord. That's all. See the man page of cdrecord for details about this
+parameter.
+<P>
+<H2><A NAME="ss4.18">4.18 How to create a multi-session CD?</A>
+</H2>
+
+<P>First of all, the image for a multi-session CD must be formatted using the
+ISO-9660 filesystem using RockRidge-extensions. And you must use the option
+-multi for cdrecord as long as you want to add further sessions. So at
+least for the first session, you must specify the option -multi.
+<P>Some CD-writers have no support for CD-ROM XA mode 2 or for session-at-once
+(SAO), so you need to specify the switch -data for cdrecord on the command
+line.
+<P>The images for the second and subsequent sessions are a little bit more
+complicated to generate. Mkisofs must know where the free space on the
+CD-R begins. That information can be gathered by using the option -msinfo
+on cdrecord (see example below).
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+shell&gt; NEXT_TRACK=`cdrecord -msinfo dev=0,6,0`
+shell&gt; echo $NEXT_TRACK
+shell&gt; mkisofs -R -o cd_image2 -C $NEXT_TRACK -M /dev/scd5
+         private_collection/ \
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>For more information, please read the file README.multi, which is
+distributed with cdrecord.
+<P>
+<H2><A NAME="ss4.19">4.19 Should I use the SCSI adapter shipped with the writer?</A>
+</H2>
+
+<P>Reported via email: Most CD-writer docs say to use a separate SCSI bus 
+if going from a CD-ROM to a CD-writer and I have seen this myself in
+the following scenario:
+<P>Adaptec 2940UW SCSI card, a 24x SCSI CD-ROM and a 4x4 SCSI CD-writer.  When
+I got the CD-writer, it came with its own ISA SCSI card which could only
+handle one device.  I figured I'd toss this and use my better adaptec card
+for all the stuff. I noticed it was quite prone to buffer under-runs when
+recording at the 4x speed, but as soon as I tried hooking up the ISA SCSI
+card, it had no problems. I know 2 other people (both using adaptec 2940
+cards), who have experienced exactely the same symptoms, usually when writing
+from a CD-ROM to a CD-recorder. Though I've never experienced the problem
+when going from a hard drive to a CD-writer on the same bus.
+<P>
+<P>
+<H2><A NAME="ss4.20">4.20 How to burn over the network?</A>
+</H2>
+
+<P>Usally a file transfer with FTP is fast enough to feed a CD-recorder at
+quadruple (4x) speed even over a 10 Mbit ethernet. You can couple the
+ftp-client and cdrecord via a fifo. First create a fifo named cdimage:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+mkfifo cdimage
+ftp other.host.org
+get cdimg cdimage
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Then treat cdimage like a regular file, i.e. issue the following command:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cdrecord dev=0,1,0 speed=2 cdimage
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Your ftp-client will notice when cdrecord wants to read from the file and
+will start transfering data from the ftp-host.
+<P>
+<P>
+<H2><A NAME="ss4.21">4.21 I hear a crack or click sound at the end of the each track.</A>
+</H2>
+
+<P>You have to use disk-at-once mode (DAO) to get rid of the cracks.
+<P>
+<P>
+<H2><A NAME="ss4.22">4.22 How can this be set up so that a user can burn CDs instead of always</A>
+being root?</H2>
+
+<P>You can add the setuid-bit to the cdrecord-executable. However, this might
+be a security risk. Just setting the permissions on the device files does
+not help as cdrecord issues privileged commands via the SCSI generic
+interfaces.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+which cdrecord
+chown root.root /usr/bin/cdrecord
+chmod 4111 /usr/bin/cdrecord
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss4.23">4.23 Where do I get the "Yellow Book" and "Orange Book" standards?</A>
+</H2>
+
+<P>You get the printed specifications from Philips and they are expensive.
+<P>
+<P>
+<H2><A NAME="ss4.24">4.24 I've been searching for information on burning Video-CD under Linux.</A>
+</H2>
+
+<P>
+<P>Here you can find utilities for creation of MPEG videos and Video-CDs:
+<A HREF="http://www.mainconcept.de/">http://www.mainconcept.de/</A><P>
+<A HREF="http://www.johanni.de/munich-vision/vcd/">http://www.johanni.de/munich-vision/vcd/</A><P>Political correct people mention the Berkeley-tools and other
+YUV-strategies. Their usage is complicated, takes much time and
+harddisk-space and gives you no audio track. I recommend to
+use conceptually higher level applications like the ones mentioned
+above.
+<P>
+<P>
+<H2><A NAME="ss4.25">4.25 Which is easier to set up, IDE or SCSI?</A>
+</H2>
+
+<P>SCSI CD-writers are slightly easier to set up with regard to CD-writing
+under Linux. And they are reported to have better error recovery. If that
+outweights the higher price cannot be answered generally.
+<P>
+<P>
+<H2><A NAME="ss4.26">4.26 How can I overburn a CD using {cdrecord,cdrdao}?</A>
+</H2>
+
+<P>Overburning a CD-R is nothing special. It is at your own risk that the data
+fits on the CD-ROM, but thats all. There are no 650 Mbytes-limits in the
+software under Linux.
+<P>
+<P>
+<H2><A NAME="ss4.27">4.27 What will cdrecord do when it stops getting input from the pipe?</A>
+</H2>
+
+<P>It will finish writing. So you can just couple your favourite backup tool
+with cdrecord using a pipe, like in "bru -size=640m -f - | cdrecord
+dev=0,1,0 speed=2 -". You have to take special care within the backup
+utility if the backup spans multiple CD-Rs.
+<P>
+<P>
+<H2><A NAME="ss4.28">4.28 Is there an equivalent to ignore=hdX for the ide-scsi emulation?</A>
+</H2>
+
+<P>I know of no way, but anybody is welcome to add this feature to the
+Linux kernel sources.
+<P>
+<P>
+<H2><A NAME="ss4.29">4.29 How many times can you re-use CD-RW before they become faulty?</A>
+</H2>
+
+<P>Good question.
+<P>
+<P>
+<H2><A NAME="ss4.30">4.30 Which format to choose for a platform independant CD-ROM?</A>
+</H2>
+
+<P>A CD-ROM to be read by all systems can only use the plain ISO 9660
+format. That means stupid 8+3 filenames from old MS-DOS and without any HFS
+(Macintosh), Joliet (Microsoft) or RockRidge (newer Unices) extensions.
+There is no extension for longer filenames, which could be read by all
+operating systems.
+<P>
+<P>
+<H2><A NAME="ss4.31">4.31 Is multi-session for audio tracks possible?</A>
+</H2>
+
+<P>Audio CD-players are only able to deal with audio tracks stored in the first
+session. In other words, you cannot add audio tracks using subsequent
+sessions. However, writing data tracks into the second session effectively
+hides them from audio CD-players. This way you prevent having an silent
+track on your mixed mode CD (audio and data mixed).
+<P>
+<P>
+<H2><A NAME="ss4.32">4.32 What hardware resources do I need? Is an old Pentium enough?</A>
+</H2>
+
+<P>An answer depends on your wishes. If you need a reason to buy a new
+computer, here is the answer from the international association of computer
+manufactures: Whatever you plan to do, you need a processor with 800
+Mhz. Because it won't fit into your existing motherboard, you need a new
+motherboard, too. The easiest solution is just to buy the typical complete
+offer as seen in advertisements on TV. Please ignore the rest of this
+section.
+<P>Now the case if you just want a rational answer: I wrote several CD-ROMs
+sucessfully using a "486" with 66 Mhz. Although MS does not consider them
+to be PCs anymore, but recommends to run a CE version on them (seen on the
+CeBIT), Linux runs even fine on the predecessors of the Pentium and is even
+able to write CDs. You can easily find out if the power of your hardware is
+sufficient for writing CD-ROMs by testing it out. Just add the command line
+switch -dummy when executing cdrecord and the laser will be kept off. Watch
+the burning process.
+<P>
+<P>
+<HR>
+<A HREF="CD-Writing-HOWTO-5.html">Next</A>
+<A HREF="CD-Writing-HOWTO-3.html">Previous</A>
+<A HREF="CD-Writing-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

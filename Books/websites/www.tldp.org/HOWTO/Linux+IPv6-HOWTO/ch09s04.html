@@ -1,0 +1,38 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>4. Setup of 6to4 tunnels</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="ch09.html" title="Chapter 9. Configuring IPv6-in-IPv4 tunnels"><link rel="prev" href="ch09s03.html" title="3. Setup of point-to-point tunnel"><link rel="next" href="ch10.html" title="Chapter 10. Configuring IPv4-in-IPv6 tunnels"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">4. Setup of 6to4 tunnels</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch09s03.html">Prev</a> </td><th width="60%" align="center">Chapter 9. Configuring IPv6-in-IPv4 tunnels</th><td width="20%" align="right"> <a accesskey="n" href="ch10.html">Next</a></td></tr></table><hr></div><div class="sect1"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="configuring-ipv6to4-tunnels"></a>4. Setup of 6to4 tunnels</h2></div></div></div><p>Pay attention that the support of 6to4 tunnels currently lacks on vanilla kernel series 2.2.x (see <a class="link" href="ch04s01.html" title="1. IPv6-ready kernel">systemcheck/kernel</a> for more information). Also note that that the prefix length for a 6to4 address is 16 because of from network point of view, all other 6to4 enabled hosts are on the same layer 2.</p><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp50859856"></a>4.1. Add a 6to4 tunnel</h3></div></div></div><p>First, you have to calculate your 6to4 prefix using your local assigned global routable IPv4 address (if your host has no global routable IPv4 address, in special cases NAT on border gateways is possible):</p><p>Assuming your IPv4 address is </p><pre class="screen">
+1.2.3.4
+</pre><p>the generated 6to4 prefix will be</p><pre class="screen">
+2002:0102:0304::
+</pre><p>Local 6to4 gateways should (but it's not a must, you can choose an arbitrary suffix with local-scope, if you feel better) always assigned the suffix &#8221;::1&#8221;, therefore your local 6to4 address will be</p><pre class="screen">
+2002:0102:0304::1
+</pre><p>Use e.g. following for automatic generation:</p><pre class="screen">
+ipv4="1.2.3.4"; printf "2002:%02x%02x:%02x%02x::1" `echo $ipv4 | tr "." " "`
+</pre><p>There are two ways possible to setup 6to4 tunneling now.</p><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50865152"></a>4.1.1. Using "ip" and a dedicated tunnel device</h4></div></div></div><p>This is now the recommended way (a TTL must be specified because the default value is 0).</p><p>Create a new tunnel device</p><pre class="screen">
+# /sbin/ip tunnel add tun6to4 mode sit ttl &lt;ttldefault&gt; remote any local
+¬ &lt;localipv4address&gt; 
+</pre><p>Bring interface up</p><pre class="screen">
+# /sbin/ip link set dev tun6to4 up 
+</pre><p>Add local 6to4 address to interface (note: prefix length 16 is important!)</p><pre class="screen">
+# /sbin/ip -6 addr add &lt;local6to4address&gt;/16 dev tun6to4 
+</pre><p>Add (default) route to the global IPv6 network using the all-6to4-routers IPv4 anycast address</p><pre class="screen">
+# /sbin/ip -6 route add default via ::192.88.99.1 dev tun6to4 metric 1
+</pre><p>It was reported that some versions of &#8221;ip&#8221; (e.g. SuSE Linux 9.0) don't support IPv4-compatible IPv6 addresses for gateways, in this case the related IPv6 address has to be used:</p><pre class="screen">
+# /sbin/ip -6 route add default via 2002:c058:6301::1 dev tun6to4 metric 1
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50871488"></a>4.1.2. Using "ifconfig" and "route" and generic tunnel device &#8221;sit0&#8221; (deprecated)</h4></div></div></div><p>This is now deprecated because using the generic tunnel device sit0 doesn't let specify filtering per device.</p><p>Bring generic tunnel interface sit0 up</p><pre class="screen">
+# /sbin/ifconfig sit0 up 
+</pre><p>Add local 6to4 address to interface</p><pre class="screen">
+# /sbin/ifconfig sit0 add &lt;local6to4address&gt;/16
+</pre><p>Add (default) route to the global IPv6 network using the all-6to4-relays IPv4 anycast address</p><pre class="screen">
+# /sbin/route -A inet6 add default gw ::192.88.99.1 dev sit0
+</pre></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp50875440"></a>4.2. Remove a 6to4 tunnel</h3></div></div></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50876080"></a>4.2.1. Using "ip" and a dedicated tunnel device</h4></div></div></div><p>Remove all routes through this dedicated tunnel device</p><pre class="screen">
+# /sbin/ip -6 route flush dev tun6to4
+</pre><p>Shut down interface</p><pre class="screen">
+# /sbin/ip link set dev tun6to4 down
+</pre><p>Remove created tunnel device</p><pre class="screen">
+# /sbin/ip tunnel del tun6to4 
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp50879168"></a>4.2.2. Using &#8221;ifconfig&#8221; and &#8221;route&#8221; and generic tunnel device &#8221;sit0&#8221; (deprecated)</h4></div></div></div><p>Remove (default) route through the 6to4 tunnel interface</p><pre class="screen">
+# /sbin/route -A inet6 del default gw ::192.88.99.1 dev sit0
+</pre><p>Remove local 6to4 address to interface</p><pre class="screen">
+# /sbin/ifconfig sit0 del &lt;local6to4address&gt;/16
+</pre><p>Shut down generic tunnel device (take care about this, perhaps it's still in use...)</p><pre class="screen">
+# /sbin/ifconfig sit0 down 
+</pre></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch09s03.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ch09.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch10.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">3. Setup of point-to-point tunnel </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 10. Configuring IPv4-in-IPv6 tunnels</td></tr></table></div></body></html>

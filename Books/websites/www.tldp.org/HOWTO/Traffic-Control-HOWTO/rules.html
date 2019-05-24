@@ -1,0 +1,428 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Rules, Guidelines and Approaches</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Traffic Control HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Classful Queuing Disciplines (qdiscs)"
+HREF="classful-qdiscs.html"><LINK
+REL="NEXT"
+TITLE="Scripts for use with QoS/Traffic Control"
+HREF="scripts.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Traffic Control HOWTO: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="classful-qdiscs.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="scripts.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="rules"
+></A
+>8. Rules, Guidelines and Approaches</H1
+><P
+>&#13;  </P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="r-general"
+></A
+>8.1. General Rules of Linux Traffic Control</H2
+><P
+>&#13;      There are a few general rules which ease the study of Linux traffic
+      control.
+      Traffic control structures under Linux are the same whether the initial
+      configuration has been done with <A
+HREF="software.html#s-tcng"
+><B
+CLASS="command"
+>tcng</B
+></A
+> or with <A
+HREF="software.html#s-iproute2-tc"
+><B
+CLASS="command"
+>tc</B
+></A
+>.
+    </P
+><P
+></P
+><UL
+><LI
+><P
+>&#13;          Any router performing a shaping function should be the bottleneck on
+          the link, and should be shaping slightly below the maximum available
+          link bandwidth.  This prevents queues from forming in other routers,
+          affording maximum control of packet latency/deferral to the shaping
+          device.
+        </P
+></LI
+><LI
+><P
+>&#13;          A device can only shape traffic it transmits
+          <A
+NAME="AEN1189"
+HREF="#FTN.AEN1189"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>.  Because the traffic has already been received on an
+          input interface, the traffic cannot be shaped.  A traditional
+          solution to this problem is an ingress policer.
+        </P
+></LI
+><LI
+><P
+>&#13;          Every interface must have a <A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+>.  The default qdisc
+          (the <A
+HREF="classless-qdiscs.html#qs-pfifo_fast"
+><TT
+CLASS="constant"
+>pfifo_fast</TT
+></A
+> qdisc) is used when another qdisc is not
+          explicitly attached to the interface.
+        </P
+></LI
+><LI
+><P
+>&#13;          One of the <A
+HREF="classful-qdiscs.html"
+>classful qdiscs</A
+> added to an interface with no children
+          classes typically only consumes CPU for no benefit.
+        </P
+></LI
+><LI
+><P
+>&#13;          Any newly created class contains a <A
+HREF="classless-qdiscs.html#qs-fifo"
+>FIFO</A
+>.
+          This qdisc can be replaced explicitly with any other qdisc.  The
+          FIFO qdisc will be removed implicitly if a child class is
+          attached to this class.
+        </P
+></LI
+><LI
+><P
+>&#13;          Classes directly attached to the <TT
+CLASS="constant"
+>root</TT
+> qdisc can be used to
+          simulate virtual circuits.
+        </P
+></LI
+><LI
+><P
+>&#13;          A <A
+HREF="components.html#c-filter"
+><TT
+CLASS="constant"
+>filter</TT
+></A
+> can be attached to classes or one of the
+          <A
+HREF="classful-qdiscs.html"
+>classful qdiscs</A
+>.
+        </P
+></LI
+></UL
+><P
+>&#13;    </P
+><P
+>&#13;    </P
+><P
+>&#13;    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="r-known-bandwidth"
+></A
+>8.2. Handling a link with a known bandwidth</H2
+><P
+>&#13;      HTB is an ideal <A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+> to use on a link with a known
+      bandwidth, because the innermost (root-most) class can be set to the
+      maximum bandwidth available on a given link.  Flows can be further
+      subdivided into children classes, allowing either guaranteed bandwidth
+      to particular classes of traffic or allowing preference to specific
+      kinds of traffic.
+    </P
+><P
+>&#13;    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="r-unknown-bandwidth"
+></A
+>8.3. Handling a link with a variable (or unknown) bandwidth</H2
+><P
+>&#13;      In theory, the PRIO scheduler is an ideal match for links with
+      variable bandwidth, because it is a work-conserving <A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+> (which
+      means that it provides no <A
+HREF="elements.html#e-shaping"
+>shaping</A
+>).  In the case of a link
+      with an unknown or fluctuating bandwidth, the PRIO scheduler
+      simply prefers to dequeue any available packet in the highest priority
+      band first, then falling to the lower priority queues.
+    </P
+><P
+>&#13;    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="r-sharing-flows"
+></A
+>8.4. Sharing/splitting bandwidth based on flows</H2
+><P
+>&#13;      Of the many types of contention for network bandwidth, this is one of
+      the easier types of contention to address in general.  By using the
+      SFQ qdisc, traffic in a particular queue can be separated into
+      flows, each of which will be serviced fairly (inside that queue).
+      Well-behaved applications (and users) will find that using SFQ and
+      ESFQ are sufficient for most sharing needs.
+    </P
+><P
+>&#13;      The Achilles heel of these fair queuing algorithms is a misbehaving user
+      or application which opens many connections simultaneously (e.g., eMule,
+      eDonkey, Kazaa).  By creating a large number of individual flows, the
+      application can dominate slots in the fair queuing algorithm.  Restated,
+      the fair queuing algorithm has no idea that a single application is
+      generating the majority of the flows, and cannot penalize the user.
+      Other methods  are called for.
+    </P
+><P
+>&#13;    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="r-sharing-ips"
+></A
+>8.5. Sharing/splitting bandwidth based on IP</H2
+><P
+>&#13;      For many administrators this is the ideal method of dividing bandwidth
+      amongst their users.  Unfortunately, there is no easy solution, and it
+      becomes increasingly complex with the number of machine sharing a
+      network link.
+    </P
+><P
+>&#13;      To divide bandwidth equitably between <TT
+CLASS="parameter"
+><I
+>N</I
+></TT
+> IP
+      addresses, there must be <TT
+CLASS="parameter"
+><I
+>N</I
+></TT
+> classes.
+    </P
+><P
+>&#13;    </P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN1189"
+HREF="rules.html#AEN1189"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;              In fact, the
+              <A
+HREF="software.html#s-imq"
+>Intermediate Queuing Device
+              (IMQ)</A
+> simulates an output device onto which traffic
+              control structures can be attached.  This clever solution allows
+              a networking device to shape ingress traffic in the same fashion
+              as egress traffic.  Despite the apparent contradiction of the
+              rule, IMQ appears as a device to the kernel.  Thus, there has
+              been no violation of the rule, but rather a sneaky
+              reinterpretation of that rule.
+            </P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="classful-qdiscs.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="scripts.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Classful Queuing Disciplines (<A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+>s)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Scripts for use with QoS/Traffic Control</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

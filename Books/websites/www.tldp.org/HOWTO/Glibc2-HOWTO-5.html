@@ -1,0 +1,379 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Glibc 2 HOWTO: Installing as the primary C library.</TITLE>
+ <LINK HREF="Glibc2-HOWTO-6.html" REL=next>
+ <LINK HREF="Glibc2-HOWTO-4.html" REL=previous>
+ <LINK HREF="Glibc2-HOWTO.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Glibc2-HOWTO-6.html">Next</A>
+<A HREF="Glibc2-HOWTO-4.html">Previous</A>
+<A HREF="Glibc2-HOWTO.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="primary-install"></A> <A NAME="s5">5. Installing as the primary C library.</A></H2>
+
+<P>
+<!--
+glibc!installation
+-->
+<P>This section covers installing glibc 2 as your primary C library.  Any
+new programs you compile will be linked with this library, unless you
+use special compile options to link with another version.
+<P>If you are are using Redhat or Debian and have downloaded the appropriate
+rpm or deb files, see the Redhat or Debian installion instructions.  You
+can then skip this section.
+<P>
+<P>
+<H2><A NAME="compiling"></A> <A NAME="ss5.1">5.1 Building the library from source.</A>
+</H2>
+
+<P>
+<!--
+glibc!installation!compilation
+-->
+<P>This section explains how to compile glibc 2 and add-ons from the sources.
+You must compile the library if you want to change optimization or
+configuration options or use a package you do not have the binaries for.
+<P>
+<H3>Prerequisites.</H3>
+
+<P>
+<!--
+glibc!installation!prerequisites
+-->
+<P>
+<UL>
+<LI>About 150 MB free disk space</LI>
+<LI>GNU make 3.75</LI>
+<LI>gcc &gt;= 2.7.2 (better 2.7.2.1)</LI>
+<LI>binutils 2.8.1 (for alpha you need a snapshot)</LI>
+<LI>bash 2.0</LI>
+<LI>autoconf 2.12 (if you change configure.in)</LI>
+<LI>texinfo 3.11</LI>
+</UL>
+<P>On an i586@133 with 64 MB of RAM, it takes about 3 hours to compile with full
+libraries with add-ons.  On a loaded i686@200, it takes about half
+an hour.
+<P>
+<H3>Extracting the source.</H3>
+
+<P>
+<!--
+glibc!installation!sources, extracting
+-->
+<P>You need to extract the source from the archives so you can compile it.
+The best way to do this is:
+<BLOCKQUOTE><CODE>
+<PRE>
+ tar xzf glibc-2.0.6.tar.gz
+ cd glibc-2.0.6
+ tar xzf ../glibc-linuxthreads-2.0.6.tar.gz
+ tar xzf ../glibc-crypt-2.0.6.tar.gz
+ tar xzf ../glibc-localedata-2.0.6.tar.gz
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This will put linuxthreads, crypt, and localedata directories in the
+glibc-2.0.6 directory where configure can find these add-ons.
+<P>
+<H3>Configuring.</H3>
+
+<P>
+<!--
+glibc!installation!configuration
+-->
+<P>In the <CODE>glibc-2.0.6</CODE> directory, create a directory named compile, and
+cd into it.  All work will be done in this directory, which will simplify
+cleaning up.  (The developers have not been very concerned with getting 'make
+clean' perfect yet.)
+<BLOCKQUOTE><CODE>
+<PRE>
+mkdir compile
+cd compile
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Run <CODE>../configure</CODE>.  To use the add-on packages, you need to specify
+them with --enable-add-ons, such as --enable-add-ons=linuxthreads,crypt,localedata.
+You probably will also want to specify paths where it will be installed.
+To match the standard linux distributions, specify --prefix=/usr.  (When
+a prefix of <CODE>/usr</CODE> is specified on a linux system, configure knows to
+adjust other paths to place libc.so and other important libraries in
+<CODE>/lib</CODE>.)  The whole configure line would be:
+<BLOCKQUOTE><CODE>
+<PRE>
+ ../configure --enable-add-ons=linuxthreads,crypt,localedata --prefix=/usr
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>Compiling.</H3>
+
+<P>
+<!--
+glibc!installation!compilation
+-->
+<P>To compile and verify, run:
+<BLOCKQUOTE><CODE>
+<PRE>
+ make
+ make check
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss5.2">5.2 Preparing for installation.</A>
+</H2>
+
+<P>
+<!--
+glibc!installation!preparation for
+-->
+<P>Now you need to move some files around to prepare for the new library,
+whether you are installing from source or binaries.  Any new program compiled
+will be linked to glibc, but old programs which are not statically linked
+will still depend on libc 5, so you can not just overwrite the old version.
+<P>
+<OL>
+<LI>Create a new directory to hold the old files to:
+<BLOCKQUOTE><CODE>
+<PRE>
+ mkdir -p /usr/i486-linuxlibc5/lib
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+</LI>
+<LI>The old header files must be evacuated from <CODE>/usr/include</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+ mv /usr/include /usr/i486-linuxlibc5/include
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+</LI>
+<LI>Create a new include directory and set up the links to other include
+directories:
+<BLOCKQUOTE><CODE>
+<PRE>
+ mkdir /usr/include
+
+ ln -s /usr/src/linux/include/linux /usr/include/linux
+ ln -s /usr/src/linux/include/asm /usr/include/asm
+ ln -s /usr/X11R6/include/X11 /usr/include/X11
+ ln -s /usr/lib/g++-include /usr/include/g++
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+The links may need adjusting according to your distribution.  At least
+Slackware puts g++ headers in <CODE>/usr/local/g++-include</CODE>, while Debian
+puts the headers in <CODE>/usr/include/g++</CODE>, and links
+<CODE>/usr/lib/g++-include</CODE> to <CODE>/usr/include/g++</CODE>.  In the later
+case, you probably will want to move the original g++ include directory back
+to <CODE>/usr/include</CODE>.
+</LI>
+<LI>Restore any extra header files and links.  Some non-standard libraries
+such as ncurses put files in <CODE>/usr/include</CODE> or put a link to their
+include directories in the <CODE>/usr/include</CODE>.  These files and links need
+to be restored in order to use the extra libraries properly.
+</LI>
+<LI>Add your new library directory (such as
+<CODE>/usr/i486-linuxlibc5/lib</CODE>) <EM>at the top</EM> of your
+<CODE>/etc/ld.so.conf</CODE> file.  You should have ld.so 1.8.8 or
+better installed to avoid getting strange messages once glibc is installed.
+</LI>
+<LI>Move/copy all the old C libraries into the new directory.
+<BLOCKQUOTE><CODE>
+<PRE>
+ mv /usr/lib/libbsd.a /usr/i486-linuxlibc5/lib
+ mv /usr/lib/libc.a /usr/i486-linuxlibc5/lib
+ mv /usr/lib/libgmon.a /usr/i486-linuxlibc5/lib
+ mv /usr/lib/libm.a /usr/i486-linuxlibc5/lib
+ mv /usr/lib/libmcheck.a /usr/i486-linuxlibc5/lib
+ mv /usr/lib/libc.so /usr/i486-linuxlibc5/lib
+ mv /usr/lib/libm.so /usr/i486-linuxlibc5/lib
+ cp /lib/libm.so.5.* /usr/i486-linuxlibc5/lib
+ cp /lib/libc.so.5.* /usr/i486-linuxlibc5/lib
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<CODE>libm.so.5</CODE> and <CODE>libc.so.5</CODE> should be copied and not moved if
+<CODE>/usr</CODE> is a seperate partition from <CODE>/</CODE>, because they are
+required by programs used to start linux and must be located on the root
+drive partition.
+</LI>
+<LI>Move the <CODE>/usr/lib/*.o</CODE> files into the new directory.
+<BLOCKQUOTE><CODE>
+<PRE>
+ mv /usr/lib/crt1.o /usr/i486-linuxlibc5/lib
+ mv /usr/lib/crti.o /usr/i486-linuxlibc5/lib
+ mv /usr/lib/crtn.o /usr/i486-linuxlibc5/lib
+ mv /usr/lib/gcrt1.o /usr/i486-linuxlibc5/lib
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+</LI>
+<LI>Update your library cache after your libraries are moved.
+<BLOCKQUOTE><CODE>
+<PRE>
+ ldconfig -v
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+</OL>
+<P>
+<P>
+<H2><A NAME="ss5.3">5.3 Installing from the binary package.</A>
+</H2>
+
+<P>
+<!--
+glibc!installation!precompiled binaries
+-->
+<P>If you are installing glibc from precompiled binaries, you first want
+to check what is in the package before you install the binaries:
+<BLOCKQUOTE><CODE>
+<PRE>
+ tar -tzvvf glibc-2.0.bin.i386.tar.gz
+ tar -tzvvf glibc-crypt-2.0.bin.i386.tar.gz
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+If you are happy with that, you can install glibc with:
+<BLOCKQUOTE><CODE>
+<PRE>
+ cd /
+ tar -xzf glibc-2.0.bin.i386.tar.gz
+ tar -xzf glibc-crypt-2.0.bin.i386.tar.gz
+ ldconfig -v
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+If you have a different architecture or version, substitute the proper
+file names.
+<P>The most recent glibc version is generally not available as a binary
+package, and it is strongly recommended that you run the most recent
+version to avoid bugs.  If you can not build the library yourself, grab
+a binary package of glibc from one of the distributions that is based
+on glibc (e.g. RedHat) and install this.
+<P>
+<H2><A NAME="ss5.4">5.4 Installing from the source.</A>
+</H2>
+
+<P>
+<!--
+glibc!installation!from source
+-->
+<P>To install the library from source, run as root from the <CODE>compile/</CODE>
+directory:
+<BLOCKQUOTE><CODE>
+<PRE>
+ make install
+ ldconfig -v
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss5.5">5.5 Updating the gcc specs.</A>
+</H2>
+
+<P>
+<!--
+glibc!installation!gcc specs file, updating
+-->
+<P>The final step of the installation (for both binary and source installs)
+is to update the gcc <CODE>specs</CODE> file so you can link your programs
+properly. To determine which specs file is the one used by gcc, use:
+<BLOCKQUOTE><CODE>
+<PRE>
+ % gcc -v
+ reading specs from /usr/lib/gcc-lib/i486-unknown-linux/2.7.2.2/specs
+ gcc version 2.7.2.2
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>In this case, i486-unknown-linux is the system, and 2.7.2.2 is the version.
+You need to copy the <CODE>/usr/lib/gcc-lib/&lt;system&gt;</CODE> to the old
+system directory:
+<BLOCKQUOTE><CODE>
+<PRE>
+ cd /usr/lib/gcc-lib/
+ cp -r i486-unknown-linux i486-linuxlibc5
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Change into the original directory and version directory
+<BLOCKQUOTE><CODE>
+<PRE>
+ cd /usr/lib/gcc-lib/i486-unknown-linux/2.7.2.2
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>and edit the file <CODE>specs</CODE> found in this directory.  In this file,
+change <CODE>/lib/ld-linux.so.1</CODE> to <CODE>/lib/ld-linux.so.2</CODE>.  You
+also need to remove all expressions <CODE>%{...:-lgmon}</CODE> in the file,
+since glibc does not use the gmon library for profiling.  A sample specs
+file can be found in the 
+<A HREF="Glibc2-HOWTO-10.html#specs">Sample specs file</A> section.
+<P>
+<P>
+<H2><A NAME="ss5.6">5.6 Testing your installation.</A>
+</H2>
+
+<P>
+<!--
+glibc!installation!testing
+-->
+<P>To test the installation, create the following program in a file glibc.c:
+<BLOCKQUOTE><CODE>
+<PRE>
+ #include &lt;stdio.h&gt;
+
+ main()
+ {
+     printf("hello world!\n");
+ }
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and compile the program.
+<BLOCKQUOTE><CODE>
+<PRE>
+ % gcc glibc.c -o glibc
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Use ldd to verify the program was linked with glibc2, and not your old libc:
+<BLOCKQUOTE><CODE>
+<PRE>
+ % ldd glibc
+ libc.so.6 => /lib/libc.so.6 (0x4000e000)
+ /lib/ld-linux.so.2 => /lib/ld-linux.so.2 (0x40000000)
+ 
+</PRE>
+</CODE></BLOCKQUOTE>
+
+If this compiles and generates &quot;hello world!&quot; when run, the
+installation was successful.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Glibc2-HOWTO-6.html">Next</A>
+<A HREF="Glibc2-HOWTO-4.html">Previous</A>
+<A HREF="Glibc2-HOWTO.html#toc5">Contents</A>
+</BODY>
+</HTML>

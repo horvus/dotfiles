@@ -1,0 +1,465 @@
+<HTML
+><HEAD
+><TITLE
+>The Server Side</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Modem Sharing mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Legal Notice"
+HREF="legalnotice.html"><LINK
+REL="NEXT"
+TITLE="The Client Side"
+HREF="the-client-side.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Modem Sharing mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="legalnotice.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="the-client-side.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="THE-SERVER-SIDE"
+>2. The Server Side</A
+></H1
+><P
+>It is assumed that the server is a Linux system with either:</P
+><P
+></P
+><UL
+><LI
+><P
+>a modem attached to a <TT
+CLASS="FILENAME"
+>/dev/ttySx</TT
+> device</P
+></LI
+><LI
+><P
+>an 'isdn4linux'-emulated modem mapped to a <TT
+CLASS="FILENAME"
+>/dev/ttyIx</TT
+> device</P
+></LI
+></UL
+><P
+>The easiest setup I can think of uses a five lines perl script to implement a 
+modem daemon in <TT
+CLASS="FILENAME"
+>/usr/sbin/modemd</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>   
+#!/usr/bin/perl
+select((select(STDOUT), $| = 1)[$[]);
+select((select(STDIN), $| = 1)[$[]);
+exec 'cu -s 115200 -l /dev/ttyS1';
+die '$0: Cant exec cu: $!\n';</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>The modem daemon is started by the <B
+CLASS="COMMAND"
+>inetd</B
+> process 
+if a client connects to the appropriate port as described below. The 
+<B
+CLASS="COMMAND"
+>modemd</B
+> simply connects the socket handle with STDIN 
+and STDOUT of the <B
+CLASS="COMMAND"
+>cu</B
+> command and lets 
+<B
+CLASS="COMMAND"
+>cu</B
+> handle the actual modem device.</P
+><P
+>The existence of the modem daemon must be made known to the 
+<B
+CLASS="COMMAND"
+>inetd</B
+> process by updating its configuration file, 
+usually <TT
+CLASS="FILENAME"
+>/etc/inetd.conf</TT
+> like:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#
+# modem daemon
+#
+modem stream tcp nowait root /usr/sbin/tcpd /usr/sbin/modemd /dev/ttyS1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>In order to make this work, an entry to 
+<TT
+CLASS="FILENAME"
+>/etc/services</TT
+> needs to be added like:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   
+modem           2006/tcp        modemd</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This associates a symbolic name with an explicit port, 2006 in the
+example. The portnumber could be any number not already assigned to an
+existing service. After these changes have been made, a signal must be
+sent to the inetd process in order to let <B
+CLASS="COMMAND"
+>inetd</B
+> 
+re-read and process its configuration file:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   
+<TT
+CLASS="PROMPT"
+>bash#</TT
+> ps | grep inetd
+194  ?  S     0:00 /usr/sbin/inetd
+
+<TT
+CLASS="PROMPT"
+>bash#</TT
+> kill -HUP 194</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now the server side is ready to accept requests from clients. The
+correct function can be verified by:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>bash$</TT
+> telnet localhost modem
+
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You are now connected to the modem. You can now issue 
+<B
+CLASS="COMMAND"
+>AT</B
+> commands in order to verify the setup:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   
+atz
+atz
+OK
+
+ati1
+ati1
+Linux ISDN
+OK
+
+^]
+telnet&#62;quit
+<TT
+CLASS="PROMPT"
+>bash$</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Instead of using the Perl script as a modem server, there is also a
+program named <SPAN
+CLASS="PRODUCTNAME"
+>Masqdialer</SPAN
+> available at
+<A
+HREF="http://w3.cpwright.com/mserver/"
+TARGET="_top"
+>http://w3.cpwright.com/mserver/</A
+>.</P
+><P
+>With <SPAN
+CLASS="PRODUCTNAME"
+>Masqdialer</SPAN
+> you can export any number 
+of modems connected to your server to any host that can connect the server 
+via TCP/IP on a given port with a binary data stream.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MASQDIALER-INSTALLATION"
+>2.1. Masqdialer Installation</A
+></H2
+><P
+>Before compiling check config.h for compile time options:</P
+><P
+></P
+><UL
+><LI
+><P
+>set the path for the config file to your liking</P
+></LI
+><LI
+><P
+>set the path for the lock file to your liking</P
+></LI
+></UL
+><P
+>Do <B
+CLASS="COMMAND"
+>make all</B
+>.</P
+><P
+>Copy the binaries (<TT
+CLASS="FILENAME"
+>mserver</TT
+> and 
+<TT
+CLASS="FILENAME"
+>tcpconn</TT
+>) into a suitable directory 
+such as <SPAN
+CLASS="SYSTEMITEM"
+>/usr/local/sbin/</SPAN
+>. Copy 
+<TT
+CLASS="FILENAME"
+>mserver.conf</TT
+> into the path that you specified in 
+<TT
+CLASS="FILENAME"
+>config.h</TT
+>.</P
+><P
+><SPAN
+CLASS="PRODUCTNAME"
+>Masqdialer</SPAN
+> could be started from one of 
+your system startup scripts. A simple 
+<B
+CLASS="COMMAND"
+>/usr/local/sbin/mserver</B
+> will run it as a daemon.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MASQDIALER-CONFIGURATION"
+>2.2. Masqdialer Configuration</A
+></H2
+><P
+>A line in <TT
+CLASS="FILENAME"
+>mserver.conf</TT
+> could look like 
+this:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>5800 /dev/ttyS1      115200,8,N,1    *.foo.org,192.168.2.1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>which would mean that a modem connected to 
+<TT
+CLASS="FILENAME"
+>/dev/ttyS1</TT
+> can be connected via port 5800 from 
+anywhere in the domain foo.org and from host 192.168.2.1. Any other 
+hosts are rejected. Pitfall: If you don't specify hosts then 
+<EM
+>ANY</EM
+> host will be allowed to connect.  The serial 
+line settings are fixed and cannot be changed from the client side. You 
+can export several modems on a single port. 
+<SPAN
+CLASS="PRODUCTNAME"
+>Masqdialer</SPAN
+> only locks the modem devices by 
+use of UUCP style lock files when they are actually in use thus 
+allowing other programs to take advantage of them.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="legalnotice.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="the-client-side.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Legal Notice</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Client Side</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

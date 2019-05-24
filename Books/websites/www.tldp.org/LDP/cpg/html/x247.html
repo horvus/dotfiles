@@ -1,0 +1,210 @@
+<HTML
+><HEAD
+><TITLE
+>Big-little endian (we should have known)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Custom Linux: A Porting Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Linux Still Isn't Booting"
+HREF="c233.html"><LINK
+REL="PREVIOUS"
+TITLE="Memory probing, RTC and decrementors"
+HREF="x235.html"><LINK
+REL="NEXT"
+TITLE="Ethernet: our first PCI device"
+HREF="x259.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Custom Linux: A Porting Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x235.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Linux Still Isn't Booting</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x259.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN247"
+></A
+>4.2. Big-little endian (we should have known)</H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN249"
+></A
+>4.2.1. Probing the CPC700</H2
+><P
+>Finally, we reached the PCI-probing part of the boot process, only to discover that it didn't work. We tried communicating with the CPC700 using <TT
+CLASS="function"
+>cpc700_read_local_pci_cfgb()</TT
+>, which was supplied along with the PMPPC's LSP, and tried to read CPC's config register.  We should have gotten <TT
+CLASS="envar"
+>0x1014</TT
+>, which is the vendor ID, but we didn't. We realized that we were talking little-endian and the CPC was listening in big-endian. We made a small patch to the functions, so that we spoke big-endian to the CPC700.  We could then read the vendor ID correctly, but the rest of it still didn't work.  We didn't want to alter the code so that everything would be done big-endian style.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN254"
+></A
+>4.2.2. Making CPC700 speak little-endian</H2
+><P
+>We discovered that the CPC700 can be initialized to do automatic byte-swapping, which does little-to-big endian convertion on the fly.  As it seems, our board was initialized to do just that.  We added a small code segment in <TT
+CLASS="function"
+>setup_arch()</TT
+>, which checks if byte-swapping is enabled, and if so, disables it:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;while (cnt&#60;2) {
+	cpc700_read_local_pci_cfgb(0, );
+	cpc700_read_local_pci_cfgb(1, );
+	if (l == 0 &#38;&#38; h == 0) {
+		if (cnt == 0) {
+			printk("CPC700 byte swaping enabled - trying to disable ... ");
+			cpc700_write_pifcfg_be(0x18, 0); /* disable byte-swapping */
+		} else {
+			printk("FAILED !!\n");
+			break;
+		}
+	} else {cd
+		printk("byte swapping disabled.\n");
+		break;
+	}
+	++cnt;
+}
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+A short compilation later, PCI probing was working! We got some beer and partied ;-)</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x235.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x259.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Memory probing, RTC and decrementors</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c233.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Ethernet: our first PCI device</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

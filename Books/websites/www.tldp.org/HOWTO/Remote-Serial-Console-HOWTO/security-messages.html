@@ -1,0 +1,678 @@
+<HTML
+><HEAD
+><TITLE
+>Restrict console messages</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Remote Serial Console HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Security"
+HREF="security.html"><LINK
+REL="PREVIOUS"
+TITLE="Use or configure a dumb modem"
+HREF="security-dumb.html"><LINK
+REL="NEXT"
+TITLE="Modem features to restrict usage"
+HREF="security-modem.html"></HEAD
+><BODY
+CLASS="SECTION"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Remote Serial Console HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="security-dumb.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. Security</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="security-modem.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECTION"
+><H1
+CLASS="SECTION"
+><A
+NAME="SECURITY-MESSAGES"
+></A
+>9.4. Restrict console messages</H1
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="SECURITY-MESSAGES-LOG"
+></A
+>9.4.1. Restrict console messages from the system log</H2
+><P
+>Generating a stready stream of console messages can easily
+    overwhelm a 9600<SPAN
+CLASS="ABBREV"
+>bps</SPAN
+> link.</P
+><P
+>Although displaying all <SPAN
+CLASS="APPLICATION"
+>syslog</SPAN
+>
+    messages on the console appears to be a good idea, this actually
+    provides the unprivileged user a simple method to deny effective
+    use of the remote console.</P
+><P
+>Configure system log messages to the console to the bare
+    minimum. Look in <TT
+CLASS="FILENAME"
+>/etc/syslog.conf</TT
+> for lines
+    ending with <TT
+CLASS="FILENAME"
+>/dev/console</TT
+>.</P
+><P
+>Consider sending all log messages to another machine for
+    recording and analysis.  <A
+HREF="security-messages.html#SECURITY-MESSAGES-SYSLOGCONF"
+>Figure 9-2</A
+> shows the standard
+    <TT
+CLASS="FILENAME"
+>/etc/syslog.conf</TT
+> from <SPAN
+CLASS="PRODUCTNAME"
+>Red Hat
+    Linux</SPAN
+> <SPAN
+CLASS="PRODUCTNUMBER"
+>7.2</SPAN
+> modified to
+    record log messages to a log server.  Each line of
+    <TT
+CLASS="FILENAME"
+>syslog.conf</TT
+> has been repeated to send a copy
+    of the message to the log server.  The log server has the
+    <SPAN
+CLASS="ACRONYM"
+>DNS</SPAN
+> alias <SPAN
+CLASS="SYSTEMITEM"
+>loghost.example.edu.au</SPAN
+>; using a
+    <SPAN
+CLASS="ACRONYM"
+>DNS</SPAN
+> alias allows the log server to be moved
+    without updating the configuration of all the remote machines.
+    The local copy of the log message is no longer the only means of
+    determining the cause of a system failure, so we can gain some
+    performance advantage by disabling synchronous file writes,
+    although this increases the odds of an inconsistent filesystem (an
+    issue with filesystems that do not do journalling).  Placing a
+    <TT
+CLASS="LITERAL"
+>-</TT
+> before the filename disables synchronous file
+    writes.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SECURITY-MESSAGES-SYSLOGCONF"
+></A
+><P
+><B
+>Figure 9-2. <TT
+CLASS="FILENAME"
+>/etc/syslog.conf</TT
+> modified to copy log
+     messages to a log server</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+># Log anything (except mail) of level info or higher.
+# Don't log private authentication messages!
+*.info;mail.none;authpriv.none;cron.none  @loghost.example.edu.au
+*.info;mail.none;authpriv.none;cron.none  -/var/log/messages
+
+# The authpriv file has restricted access.
+authpriv.*                                @loghost.example.edu.au
+authpriv.*                                /var/log/secure
+
+# Log all the mail messages in one place.
+mail.*                                    @loghost.example.edu.au
+mail.*                                    -/var/log/maillog
+
+# Log cron stuff
+cron.*                                    @loghost.example.edu.au
+cron.*                                    -/var/log/cron
+
+# Everybody gets emergency messages
+*.emerg                                   @loghost.example.edu.au
+*.emerg                                   *
+
+# Save news errors of level crit and higher in a special file.
+uucp,news.crit                            @loghost.example.edu.au
+uucp,news.crit                            -/var/log/spooler
+
+# Save boot messages also to boot.log
+local7.*                                  @loghost.example.edu.au
+local7.*                                  -/var/log/boot.log</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>A log server is configured using the standard
+    <TT
+CLASS="FILENAME"
+>/etc/syslog.conf</TT
+> configured to allow the
+    reception of remote <SPAN
+CLASS="APPLICATION"
+>syslog</SPAN
+> messages.
+    This configuration for <SPAN
+CLASS="PRODUCTNAME"
+>Red Hat Linux</SPAN
+> is
+    shown in <A
+HREF="security-messages.html#SECURITY-MESSAGES-SYSCONFIG"
+>Figure 9-3</A
+>.  In
+    addition to configuring the system log daemon, also prevent denial
+    of service attacks by configuring <SPAN
+CLASS="APPLICATION"
+>IP
+    Tables</SPAN
+> to restrict the sources of the syslog
+    messages; and also improve performance by checking that
+    <SPAN
+CLASS="APPLICATION"
+>nscd</SPAN
+> is running to cache reverse
+    <SPAN
+CLASS="ACRONYM"
+>DNS</SPAN
+> lookups.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SECURITY-MESSAGES-SYSCONFIG"
+></A
+><P
+><B
+>Figure 9-3. Allowing remote log messages by setting options in
+     <TT
+CLASS="FILENAME"
+>/etc/sysconfig/syslog</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+># Red Hat Linux default value, does not write timer mark messages
+SYSLOGD_OPTIONS="-m 0"
+# Add option to accept remote syslog messages
+SYSLOGD_OPTIONS="${SYSLOGD_OPTIONS} -r"</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SECURITY-MESSAGES-IPTABLES"
+></A
+><P
+><B
+>Figure 9-4. Restrict <SPAN
+CLASS="APPLICATION"
+>syslog</SPAN
+> messages to
+     <SPAN
+CLASS="SYSTEMITEM"
+>remote.example.edu.au</SPAN
+></B
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+> bash#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>chkconfig iptables on</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+> bash#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>/etc/init.d/iptables restart</B
+></TT
+>
+# Allow all IP traffic from this machine
+<TT
+CLASS="PROMPT"
+> bash#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>iptables --append INPUT --source 127.0.0.0/8 --in-interface lo --jump ACCEPT</B
+></TT
+>
+# Perhaps filter other traffic
+&#8230;
+# Accept syslog messages from remote.example.edu.au
+<TT
+CLASS="PROMPT"
+> bash#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>iptables --append INPUT --source remote.example.edu.au --protocol udp --destination-port syslog -j ACCEPT</B
+></TT
+>
+# Silently drop unexpected syslog messages
+<TT
+CLASS="PROMPT"
+> bash#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>iptables --append INPUT --protocol udp --destination-port syslog -j DROP</B
+></TT
+>
+# Save the running configuration
+<TT
+CLASS="PROMPT"
+> bash#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>/etc/init.d/iptables save</B
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SECURITY-MESSAGES-NSCD"
+></A
+><P
+><B
+>Figure 9-5. Using <SPAN
+CLASS="APPLICATION"
+>nscd</SPAN
+> to cache reverse
+     <SPAN
+CLASS="ACRONYM"
+>DNS</SPAN
+> lookups</B
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>bash#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>chkconfig nscd on</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>bash#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>/etc/init.d/nscd restart</B
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="SECURITY-MESASGES-WALL"
+></A
+>9.4.2. Restrict broadcast messages to the console</H2
+><P
+>Users that are logged into the serial console should not
+    accept broadcast messages.  Add new files to <TT
+CLASS="FILENAME"
+>/etc/profile.d</TT
+> to do this.  <A
+HREF="security-messages.html#SECURITY-MESSAGES-SHLONG"
+>Figure 9-6</A
+> shows a file for use by the
+    Bourne shell.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SECURITY-MESSAGES-SHLONG"
+></A
+><P
+><B
+>Figure 9-6. Restrict sending of messages to console user</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#
+# Do we have files referred to?
+if [ -x /usr/bin/mesg -a -x /usr/bin/tty ]
+then
+  # Are we on serial console?
+  if [ `/usr/bin/tty` = /dev/ttyS0 ]
+  then
+    # Do not accept broadcast messages
+    /usr/bin/mesg n
+  fi
+fi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>As this file is run frequently, we use a faster but less
+    readable version of <A
+HREF="security-messages.html#SECURITY-MESSAGES-SHLONG"
+>Figure 9-6</A
+>,
+    shown in <A
+HREF="security-messages.html#SECURITY-MESSAGES-SH"
+>Figure 9-7</A
+>.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SECURITY-MESSAGES-SH"
+></A
+><P
+><B
+>Figure 9-7. Restrict sending of messages to console user,
+     <TT
+CLASS="FILENAME"
+>/etc/profile.d/mesg.sh</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#
+# /etc/profile.d/mesg.sh -- prevent people hassling the serial console user
+[ -x /usr/bin/mesg -a -x /usr/bin/tty -a `/usr/bin/tty` = /dev/ttyS0 ] &#38;&#38; /usr/bin/mesg n</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>We also need a C shell version, shown in <A
+HREF="security-messages.html#SECURITY-MESSAGES-CSH"
+>Figure 9-8</A
+>.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SECURITY-MESSAGES-CSH"
+></A
+><P
+><B
+>Figure 9-8. Restrict sending of messages to console user,
+     <TT
+CLASS="FILENAME"
+>/etc/profile.d/mesg.csh</TT
+></B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#
+# /etc/profile.d/mesg.csh -- prevent people hassling the serial console user
+if (-X mesg &#38;&#38; -X tty &#38;&#38; `tty` == /dev/ttyS0) then
+  mesg n
+endif</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Although <TT
+CLASS="FILENAME"
+>mesg.sh</TT
+> and
+    <TT
+CLASS="FILENAME"
+>mesg.csh</TT
+> are included by the parent shell
+    rather than executed, the files need the execute permission
+    set. The procedure in <A
+HREF="security-messages.html#SECURITY-MESSAGES-INSTALL"
+>Figure 9-9</A
+>
+    installs the files and sets the permissions.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SECURITY-MESSAGES-INSTALL"
+></A
+><P
+><B
+>Figure 9-9. Install files into <TT
+CLASS="FILENAME"
+>/etc/profile.d</TT
+></B
+></P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>bash#</TT
+> <B
+CLASS="COMMAND"
+>cp mesg.*sh /etc/profile.d/</B
+>
+<TT
+CLASS="PROMPT"
+>bash#</TT
+> <B
+CLASS="COMMAND"
+>chown root:root /etc/profile.d/mesg.*sh</B
+>
+<TT
+CLASS="PROMPT"
+>bash#</TT
+> <B
+CLASS="COMMAND"
+>chmod u=rwx,g=rx,o=rx /etc/profile.d/mesg.*sh</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="security-dumb.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="security-modem.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Use or configure a dumb modem</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="security.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Modem features to restrict usage</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

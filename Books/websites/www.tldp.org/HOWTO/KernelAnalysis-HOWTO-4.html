@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>KernelAnalysis-HOWTO: Linux Startup</TITLE>
+ <LINK HREF="KernelAnalysis-HOWTO-5.html" REL=next>
+ <LINK HREF="KernelAnalysis-HOWTO-3.html" REL=previous>
+ <LINK HREF="KernelAnalysis-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="KernelAnalysis-HOWTO-5.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-3.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Linux Startup</A></H2>
+
+<P>We start the Linux kernel first from C code executed from ''startup_32:''
+asm label:
+<P>
+<P>
+<PRE>
+|startup_32:
+   |start_kernel
+      |lock_kernel
+      |trap_init
+      |init_IRQ
+      |sched_init
+      |softirq_init
+      |time_init
+      |console_init 
+      |#ifdef CONFIG_MODULES 
+         |init_modules 
+      |#endif 
+      |kmem_cache_init 
+      |sti 
+      |calibrate_delay 
+      |mem_init
+      |kmem_cache_sizes_init
+      |pgtable_cache_init
+      |fork_init
+      |proc_caches_init 
+      |vfs_caches_init
+      |buffer_init
+      |page_cache_init
+      |signals_init 
+      |#ifdef CONFIG_PROC_FS 
+        |proc_root_init 
+      |#endif 
+      |#if defined(CONFIG_SYSVIPC) 
+         |ipc_init
+      |#endif 
+      |check_bugs      
+      |smp_init
+      |rest_init
+         |kernel_thread
+         |unlock_kernel
+         |cpu_idle
+</PRE>
+<P>
+<UL>
+<LI>startup_32 [arch/i386/kernel/head.S]</LI>
+<LI>start_kernel [init/main.c]</LI>
+<LI>lock_kernel [include/asm/smplock.h]</LI>
+<LI>trap_init [arch/i386/kernel/traps.c]</LI>
+<LI>init_IRQ [arch/i386/kernel/i8259.c]</LI>
+<LI>sched_init [kernel/sched.c]</LI>
+<LI>softirq_init [kernel/softirq.c]</LI>
+<LI>time_init [arch/i386/kernel/time.c]</LI>
+<LI>console_init [drivers/char/tty_io.c]</LI>
+<LI>init_modules [kernel/module.c]</LI>
+<LI>kmem_cache_init [mm/slab.c]</LI>
+<LI>sti [include/asm/system.h]</LI>
+<LI>calibrate_delay [init/main.c]</LI>
+<LI>mem_init [arch/i386/mm/init.c]</LI>
+<LI>kmem_cache_sizes_init [mm/slab.c]</LI>
+<LI>pgtable_cache_init [arch/i386/mm/init.c]</LI>
+<LI>fork_init [kernel/fork.c]</LI>
+<LI>proc_caches_init </LI>
+<LI>vfs_caches_init [fs/dcache.c]</LI>
+<LI>buffer_init [fs/buffer.c]</LI>
+<LI>page_cache_init [mm/filemap.c]</LI>
+<LI>signals_init [kernel/signal.c]</LI>
+<LI>proc_root_init [fs/proc/root.c]</LI>
+<LI>ipc_init [ipc/util.c]</LI>
+<LI>check_bugs [include/asm/bugs.h]</LI>
+<LI>smp_init [init/main.c]</LI>
+<LI>rest_init</LI>
+<LI>kernel_thread [arch/i386/kernel/process.c]</LI>
+<LI>unlock_kernel [include/asm/smplock.h]</LI>
+<LI>cpu_idle [arch/i386/kernel/process.c]
+</LI>
+</UL>
+<P>The last function ''rest_init'' does the following:
+<P>
+<P>
+<OL>
+<LI>launches the kernel thread ''init''</LI>
+<LI>calls unlock_kernel</LI>
+<LI>makes the kernel run cpu_idle routine, that will be the idle
+loop executing when nothing is scheduled
+</LI>
+</OL>
+<P>In fact the start_kernel procedure never ends. It will execute
+cpu_idle routine endlessly.
+<P>
+<P>Follows ''init'' description, which is the first Kernel Thread:
+<P>
+<P>
+<PRE>
+|init
+   |lock_kernel
+   |do_basic_setup
+      |mtrr_init
+      |sysctl_init
+      |pci_init
+      |sock_init
+      |start_context_thread
+      |do_init_calls
+         |(*call())-&gt; kswapd_init
+   |prepare_namespace
+   |free_initmem
+   |unlock_kernel
+   |execve
+</PRE>
+<HR>
+<A HREF="KernelAnalysis-HOWTO-5.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-3.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

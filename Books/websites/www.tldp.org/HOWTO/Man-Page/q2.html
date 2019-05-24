@@ -1,0 +1,296 @@
+<HTML
+><HEAD
+><TITLE
+>How are man pages accessed?</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux Man Page Howto"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="A few thoughts on documentation"
+HREF="q1.html"><LINK
+REL="NEXT"
+TITLE="How should a formatted man page look?"
+HREF="q3.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Man Page Howto</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="q1.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="q3.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="Q2"
+></A
+>2. How are man pages accessed?</H1
+><P
+>You need to know the precise mechanism for acccessing man
+pages in order to give your man page the right name and install it
+in the right place. Each man page should be categorized in a
+specific section, denoted by a single character. The most common
+sections under Linux, and their human readable names, are:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>Section The human readable name
+   1    User commands that may be started by everyone.
+   2    System calls, that is, functions provided by the kernel.
+   3    Subroutines, that is, library functions.
+   4    Devices, that is, special files in the /dev directory.
+   5    File format descriptions, e.g. /etc/passwd.
+   6    Games, self-explanatory.
+   7    Miscellaneous, e.g. macro packages, conventions.
+   8    System administration tools that only root can execute.
+   9    Another (Linux specific) place for kernel routine documentation.
+   n    (Deprecated) New documentation, that may be moved to a more appropriate section.
+   o    (Deprecated) Old documentation, that may be kept for a grace period.
+   l    (Deprecated) Local documentation referring to this particular system.</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>The name of the man page's source file (the input to the
+formatting system) is the name of the command, function or file
+name, followed by a dot, followed by the section character. If you
+write the documentation on the format of the `passwd' file you
+have to name the source file `passwd.5'. Here we also have an
+example of a file name that is the same as a command name. There
+might be even a library subroutine named passwd. Sectioning is the
+usual way to resolve these ambiguities: The command description is
+found in the file `passwd.1' and the hypothetical library
+subroutine in `passwd.3'.</P
+><P
+>Sometimes additional characters are appended and the file
+name looks for example like `xterm.1x' or `wish.1tk'. The
+intent is to indicate that this is documentation for an X Window
+program or a Tk application, respectively. Some manual browsers can
+make use of this additional information. For example xman will use
+`xterm(x)' and `wish(tk)' in the list of available
+documentation.</P
+><P
+>Please don't use the n, o and l sections; according to
+the File System Standard these sections are deprecated. Stick to
+the numeric sections. Beware of name clashes with existing
+programs, functions or file names. It is certainly a bad idea to
+write yet another editor and call it ed, sed (for smart ed) or red
+(for Rocky's ed). By making sure your program's name is
+unique, you avoid having someone execute your program but read
+someone else's man page, or vice versa.</P
+><P
+>Now we know the name to give our file. The next decision is
+the directory in which it will finally be installed (say, when the
+user runs `<TT
+CLASS="LITERAL"
+>make install</TT
+>' for your package.)
+On Linux, all man pages are below directories listed in the
+environment variable MANPATH. The doc-related tools use MANPATH in
+the same way the shell uses PATH to locate executables. In fact,
+MANPATH has the same format as PATH. Each contains a
+colon-separated list of directories (with the exception that
+MANPATH does not allow empty fields and relative pathnames -- it
+uses absolute names only.) If MANPATH is not set or not exported, a
+default will be used that contains at least the /usr/man directory.
+To speed up the search and to keep directories small, the
+directories specified by MANPATH (the so-called base directories)
+contain a bunch of subdirectories named `man&#60;s&#62;' where
+&#60;s&#62; stands for the one-character section designator
+introduced in the <A
+HREF="q2.html"
+>table above</A
+>. Not all of
+the sections may be represented by a subdirectory because there
+simply is no reason to keep an empty `mano' subdirectory.
+However, there may be directories named `cat&#60;s&#62;',
+`dvi&#60;s&#62;' and `ps&#60;s&#62;' which hold documentation
+that is ready to display or print. More on this later. The only
+other file in any base directory should be a file named
+`whatis'. The purpose and creation of this file will also be
+described under <A
+HREF="q12.html"
+>paragraph 12)</A
+>. The
+safest way to have a man page for section &#60;s&#62; installed in
+the right place is to put it in the directory
+/usr/man/man&#60;s&#62;. A good <TT
+CLASS="LITERAL"
+>Makefile</TT
+>, however,
+will allow the user to chose a base directory, by means of a
+<TT
+CLASS="LITERAL"
+>make</TT
+> variable, MANDIR, say. Most of the GNU
+packages can be configured with the
+<TT
+CLASS="LITERAL"
+>--prefix=/what/ever</TT
+> option. The manuals will
+then be installed under the base directory /what/ever/man. I
+suggest you also provide a way to do something similar.</P
+><P
+>With the advent of the Linux
+File System Standard (FS-Stnd), things became more
+complicated. [Note: the FS-Stnd appears to be replaced
+by the <A
+HREF="http://www.pathname.com/fhs/"
+TARGET="_top"
+>Filesystem Hierarchy
+Standard</A
+>, FHS.] The FS-Stnd 1.2 states that</P
+><P
+>"Provisions must be made in the structure of /usr/man to
+support manual pages which are written in different (or multiple)
+languages."</P
+><P
+>This is achieved by introducing another directory level that
+distinguishes between different languages. Quoting again from
+FS-Stnd 1.2:</P
+><P
+>"This naming of language subdirectories of /usr/man is
+based on Appendix E of the POSIX 1003.1 standard which describes
+the locale identification string -- the most well accepted method
+to describe a cultural environment. The &#60;locale&#62; string is:
+&#60;language&#62;[_&#60;territory&#62;][.&#60;character-set&#62;][,&#60;version&#62;]"</P
+><P
+>(See the FS-Stnd for a few common &#60;locale&#62; strings.)
+According to these guidelines, we have our man pages in
+/usr/man/&#60;locale&#62;/man[1-9lno]. The formatted versions should
+then be in /usr/man/&#60;locale&#62;/cat[1-9lno] of course, otherwise
+we could only provide them for a single locale. HOWEVER, I can not
+recommend switching to that structure at this time. The FS-Stnd 1.2
+also allows that</P
+><P
+>"Systems which use a unique language and code set for
+all manual pages may omit the &#60;locale&#62; substring and store
+all manual pages in &#60;mandir&#62;. For example, systems which only
+have English manual pages coded with ASCII, may store manual pages
+(the <TT
+CLASS="LITERAL"
+>man[1-9]</TT
+> directories) directly in /usr/man.
+(That is the traditional circumstance and arrangement in
+fact.)"</P
+><P
+>I would not switch until all tools (like xman, tkman, info
+and many others that read man pages) can cope with the new
+structure.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="q1.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="q3.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>A few thoughts on documentation</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>How should a formatted man page look?</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,256 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Root over NFS - Another Approach: Setting up the clients</TITLE>
+ <LINK HREF="Diskless-root-NFS-other-HOWTO-4.html" REL=next>
+ <LINK HREF="Diskless-root-NFS-other-HOWTO-2.html" REL=previous>
+ <LINK HREF="Diskless-root-NFS-other-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Diskless-root-NFS-other-HOWTO-4.html">Next</A>
+<A HREF="Diskless-root-NFS-other-HOWTO-2.html">Previous</A>
+<A HREF="Diskless-root-NFS-other-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Setting up the clients</A></H2>
+
+<P>
+<H2><A NAME="ss3.1">3.1 Errata</A>
+</H2>
+
+<P>In order to setup the clients, we have to work on the base system. First, we will make some modifications to the startup scripts
+by hand and second we will boot a workstation with the base system to make sure it works and to polish some details.
+Note that this part is very distribution specific and perhaps some of those described here are not applicable to your case.
+I can only guarantee that this works for SuSE 7.0. Please, feel free to send me distribution specific copies of this page!
+<H2><A NAME="ss3.2">3.2 Fiddling with scripts and files!</A>
+</H2>
+
+<P>After <CODE>init</CODE> is started, it executes a script described in <CODE>/etc/inittab</CODE>. This script has a very spesific job to do:
+Bring the system in a state that other programms can be started. In most distributions I can think of this script does the following:
+<OL>
+<LI> Mounts the <CODE>/proc, /dev/pts </CODE>and <CODE>swap</CODE> filesystems.</LI>
+<LI> Activates raid arrays and fscks the root filesystem.</LI>
+<LI> Adjusts the clock.</LI>
+<LI> Starts the kernel deamon for autoloading of modules.</LI>
+<LI> Executes user defined client scripts.</LI>
+<LI> Set some kernel parameters.</LI>
+</OL>
+
+On most distributions I have checked this script is very well commented and it is possible
+for an experienced user to remove some lines that are not wanted or not applicable during a network boot.
+I 've also noticed that all programms started do not require the <CODE>/usr</CODE> directory to be mounted.
+If you are trying to netboot a host you must do the following modifications to this script:
+<P>
+<UL>
+<LI> Remove all entries that do fsck or initialise raid arrays, and add to the top of the script this
+command : <CODE>mount -o remount,rw /</CODE>  because the client has to have rw access to the root directory when it boots.</LI>
+<LI> Do not let the kernel deamon start until all partitions are mounted</LI>
+<LI> Mount a swap partition. This is described later.</LI>
+<LI> Start the portmapper. If your system has a specific directory for starting bootup scripts,
+place the portmapper startup script there giving it the highest priority possible, for example:
+<CODE>ln -s /etc/rc.d/portmap /etc/rc.d/boot/S01portmap</CODE> if you are using SuSE.</LI>
+<LI> Place the NFS filesystem mounting script in the system specific directory for boot scripts with priority lower
+than the portmapper, for example <CODE>ln -s /etc/rc.d/nfs /etc/rc.d/boot/S02nfs</CODE> for SuSE.</LI>
+<LI> Remove all entries that automount local partitions, and all entries that start an automounter deamon for RedHat.</LI>
+</UL>
+<P>
+<H3>How to setup a swap partition</H3>
+
+<P>This is tricky business! Swapping over NFS is not allowed by the kernel and not functioning either. You cannot use
+<CODE>swapon</CODE> on files that are on an NFS mounted filesystem. We have to do some tricks to enable it:
+<OL>
+<LI> Create the swap file. Its size can be variable but for a machine with 128 MB of RAM a swap size of 40-50 MB
+seems reasonable. The command to create the swap file is: <CODE>dd if=/dev/zero of=/var/swap bs=1k count=Xk</CODE>
+where X stands for the number of MB your swap should be. It is also a necessity to put the swap file under <CODE>/var</CODE>
+as long as it is mounted at boot.</LI>
+<LI> Format the swap file using the <CODE>mkswapfs</CODE> command.</LI>
+<LI> Initialise a loopback device using the swap file. The command is <CODE>losetup /dev/loop0 /var/swap</CODE>.</LI>
+<LI> Mount the loopback device with the command <CODE>mount /dev/loop0 swap</CODE>.</LI>
+</OL>
+
+You have to initialise a swap partition at the very beginning of the boot process.
+So place commands 2-4 somewhere near to the top of the startup script.
+The first command is very time consuming,especially in the case of a loaded network so just copy a swap file in the base system and do not
+delete it when you create directories for each host.
+<P>
+<H3>Modifying <CODE>/etc/fstab</CODE></H3>
+
+<P>The  <CODE>/etc/fstab</CODE>file contains entries for automounting file systems at boot. In our case, we have
+to place the following lines at the end of it:
+<BLOCKQUOTE><CODE>
+<PRE>
+server_IP:/usr/local/linux/base/usr /usr nfs nfsvers=3,wsize=2048,tcp 0  0
+server_IP:/usr/local/linux/base/opt /opt nfs nfsvers=3,wsize=2048,tcp 0  0
+server_IP:/usr/local/linux/base/lib/modules /lib/modules nfs nfsvers=3 wsize=2048,tcp 0  0
+fileserver_IP:/home /home nfs nfsvers=3,wsize=2048,tcp 0  0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Also, do not forget to comment out lines that mount local partitions.
+Save this file as <CODE>/etc/fstab.new</CODE> because it should not be activated yet,
+as long as we have to boot the base system first.
+<H3>Copying password files</H3>
+
+<P>You must provide the system with to files to let the users perform a login. To do this just copy the files
+<CODE>/etc/passwd</CODE> and <CODE>/etc/shadow</CODE> from your file server to the base system.
+Notice that you have to do it every time you add a user to the system, or a user changes
+his/her password, so can best be done by creating a cron job.
+<P>
+<H2><A NAME="ss3.3">3.3 Booting the base system</A>
+</H2>
+
+<P>To boot the base system we have to create a boot disk first.
+Go to the next section and create a boot disk as recommended. Please, change the 'append' line to this one:
+<BLOCKQUOTE><CODE>
+<PRE>
+append init=/sbin/init root=/dev/nfs
+                ip=X:Y:195.251.160.254:255.255.255.0:::'off'
+                nfsroot=Y:/usr/local/linux/base vga=0x318
+
+(Of course, in a sigle line)
+</PRE>
+</CODE></BLOCKQUOTE>
+
+where X stands for an unused IP address in your network and Y for the IP address of the NFS server.
+Of course, you have to export the <CODE>/usr/local/linux/base</CODE> directory from the NFS server with the
+<CODE>rw,no_root_squash</CODE> options.
+Now boot the base system. Everything should work OK, but I don' t think that there is a possibility that you succeeded from the first boot!
+There are many obscure points, that you have forgotten to edit or I have forgotten to mention.
+<P>
+<P>This is the standard method to boot the base system and to add programms or a new kernel to your installation.
+So backup the files you have edited as well as the boot disk image.
+<P>After succeeding to boot the system, you are in a complete linux enviroment.
+Login as root and enjoy a first ride in your newly created system!
+Now comes the hard time...
+You have to disable some services that startup automatically and remove some programms not needed by the users.
+<H2><A NAME="ss3.4">3.4 Configuring the system</A>
+</H2>
+
+<P>Nearly all distributions start these services:
+<UL>
+<LI> <CODE>inetd</CODE>, the Internet superdeamon responsible for starting other deamons like telnet, ftp etc.</LI>
+<LI> <CODE>syslogd</CODE>, the logging deamon. Not needed on a diskless client not needed because all the modifications are done to files easyly replacable.</LI>
+<LI> <CODE>httpd</CODE>, the apache webserver. Not needed for obvious reasons.</LI>
+<LI> <CODE>dhcpclient</CODE>. Needed for automatic aquisition of an IP address. At out case, this is done by the kernel.</LI>
+<LI> <CODE>lpd</CODE>, the line printer deamon. This is needed only when you have a printer connected to a host. In most cases, this is not needed.</LI>
+</UL>
+
+Also, according to your installation, there may be started sshd, nscd, cupsd and other network services not needed on clients.
+To disable these services, remove their entries from the runtime directory under <CODE>/etc/rc.d/X</CODE>.
+There is a more elegant way to do this under SuSE or RedHat, using Yast or Linuxconfig.
+For Yast, go to <CODE>System administration ---> Change configuration file</CODE> and using search locate the entries for every service you want to stop.
+<P>Then, uninstall all these services from the base system. The only service that seems reasonable to me to be left running
+is the NameServer caching deamon, which is able to reduce network traffic a lot.
+<P>Now, you have to edit some files:
+<UL>
+<LI> <CODE>/etc/resolv.conf</CODE> Used to provide a nameserver. Add these
+entries: nameserver xxx.xxx.xxx.xxx and domain xxxxx ,
+replacing x with the correct values.</LI>
+<LI> <CODE>/etc/hosts</CODE> Used to match IP addresses to host names localy. Provide the basic servers' names of
+your network.</LI>
+<LI> <CODE>/etc/nntpserver</CODE> Used to provide a news server. Just append the nameserver 's hostname.</LI>
+<LI> <CODE>/etc/fstab</CODE> Restore the <CODE>fstab.new</CODE> file we have created earlier.</LI>
+</UL>
+<H3>Configuring the language</H3>
+
+<P>Perhaps, you do not leave in the US or the UK, like me, so you have to configure the language.
+This is simply done through the .profile file. Just add the following:
+<CODE>export LANG="X"</CODE>where X is your natural language. Then, download a console font which supports your codepage
+and set, with the help of Yast, the keyboard keymap.
+Copy .profile to <CODE>/etc/skel</CODE> of the file server or to all the users' home directories.
+<H3>The X window system</H3>
+
+<P>If you want to provide a working X enviroment for clients with different graphics hardware,
+you have to use the <CODE>XFBDev</CODE> server. If you followed the instructions on howto create a boot disk,
+you would now be in framebufer mode at 1024x768@16M colors, which is sufficient for use with X windows.
+Now, you have to configure the X server to load the framebuffer driver. SuSE provides an exellent tool for configuring
+X wherher it might be version 3 or 4. It is called <CODE>sax</CODE> for X 3.3.x and <CODE>sax2</CODE> for X 4.x.
+To use XFBDev driver start sax with the <CODE>-s XF86_FBDev</CODE> option and configure the server according to your hardware.
+In case you do not use SuSE, most of the work must be done by hand.
+Create a basic <CODE>/etc/X11/XF86Config</CODE> file using <CODE>xf86config4</CODE>.
+Please choose entries that are as much as possible closer to your needs. Then edit the <CODE>/etc/X11/XF86Config</CODE>.
+This file is devided into sections that start with the keyword 'Section' and end with 'EndSection'.
+Do the following modifications:
+<UL>
+<LI> Section "Files": Add the path to the direcory where you 've put your fonts.</LI>
+<LI> Section "Module": Load the GLX module if you want REALLY SLOW Open GL graphics (Load glx)!</LI>
+<LI> Section "InputDevice, Driver="mouse"": Add the following lines if you want to use a wheel mouse:
+<BLOCKQUOTE><CODE>
+<PRE>
+                Option        "Buttons"       "5"
+                Option        "ZAxisMapping"  "4 5"
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI> Section "Device": Replace everything with the following:
+<BLOCKQUOTE><CODE>
+<PRE>
+                BoardName     "AutoDetected"
+                Driver        "fb"
+                Identifier    "Device[0]"
+                VendorName    "AutoDetected
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI> Section "Modes": Replace everything with the following:
+<BLOCKQUOTE><CODE>
+<PRE>
+                Identifier    "Modes[0]"
+                Modeline        "1024x768" 71.39 1024 1040 1216 1 400 768 768 776 802
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI> Section "Screen": Replace everything with the following
+<BLOCKQUOTE><CODE>
+<PRE>
+                DefaultDepth  16
+                SubSection "Display"
+                        Depth       16
+                        Modes       "1024x768"
+                EndSubSection
+                        Device        "Device[0]"
+                        Identifier    "Screen[0]"
+                        Monitor       "Monitor[0]"
+</PRE>
+</CODE></BLOCKQUOTE>
+</LI>
+<LI> Section "ServerLayout": Replace everything with the following:
+<BLOCKQUOTE><CODE>
+<PRE>
+                Identifier    "Layout[all]"
+                InputDevice   "Keyboard[0]"   "CoreKeyboard"
+                InputDevice   "Mouse[1]"      "CorePointer"
+                Screen        "Screen[0]"
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and then replace the first argument of the InputDevice directives with the identifiers which can be found earlier in the file.</LI>
+</UL>
+
+I thing that it should be a working configuration for framebuffer systems. For further reference take a
+look at the <CODE>XF86Config</CODE> and the <CODE>xf86cfg4</CODE> man pages. You will find a working XF86Config file at Appendix C.
+<P>
+<H3>Configuring network access for KDE2</H3>
+
+<P>KDE is the most extensible, configurable and internet enabled window manager available,
+even if we count some commercial ones that are proud of it!
+To download KDE, ftp to ftp.kde.org and get the rpms for your distribution.
+There, you can also find vanilla sources and other related projects.
+<P>The main configuration to KDE is done through the K Control Center.
+There you can find options for configuring the fonts, colors, backgrounds etc.
+The most important thing you can configure is the LAN browsing deamon that KDE incorporates, <CODE>lisa</CODE>.
+There is also a readme file under <CODE>\$KDE2ROOT/share/apps/lisa</CODE>.
+After you configure lisa, you have to make it (or her?) start in the background every time the computer is started.
+Find the lisa 's configuration file under <CODE>/root</CODE>. Copy it under <CODE>/etc</CODE>.
+Aftewards, place the command <CODE>lisa -c /etc/lisa.conf</CODE> at the <CODE>/etc/rc.d/boot.local</CODE> file,
+or the similar for your installation. Now tell me, which is easiest to search a network Windows or Linux?
+<P>If your users are coming from the Windows world, they are familiar to find programms at the
+damned 'Start' menu. To make their transition easy, edit the KDE menu with the Menu Editor programm and
+add or remove applications there. Then, copy the <CODE>.kde2</CODE> directory from you directory to the <CODE>/etc/skel</CODE> directory
+of your file server. Every new account you create will have access to the menu (and the settings) you have created.
+<P>
+<HR>
+<A HREF="Diskless-root-NFS-other-HOWTO-4.html">Next</A>
+<A HREF="Diskless-root-NFS-other-HOWTO-2.html">Previous</A>
+<A HREF="Diskless-root-NFS-other-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,354 @@
+<HTML
+><HEAD
+><TITLE
+>Changing passwords with rpasswd&#13;</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux NIS(YP)/NYS/NIS+ HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Surviving a Reboot"
+HREF="reboot.html"><LINK
+REL="NEXT"
+TITLE="Common Problems and Troubleshooting NIS
+
+
+"
+HREF="troubleshooting.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux NIS(YP)/NYS/NIS+ HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="reboot.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="troubleshooting.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="RPASSWDD"
+></A
+>13. Changing passwords with rpasswd&#13;</H1
+><P
+>The standard way to change a NIS password is to call
+<B
+CLASS="COMMAND"
+>yppasswd</B
+>, on some systems this is only
+an alias for <B
+CLASS="COMMAND"
+>passwd</B
+>. This commands uses
+the yppasswd protocol and needs a running
+<B
+CLASS="COMMAND"
+>rpc.yppasswdd</B
+> process on the NIS master
+server. The protocol has the disadvantage, that the old
+password will be send in clear text over the network.
+This is not so problematic, if the password change was
+successfull. In this case, the old password is replaced
+with the new one. But if the password change fails, an attacker
+can use the clear password to login as this user.
+Even more worse: If the system administrator changes the
+NIS password for another user, the root password of the NIS
+master server is transfered in clear text over the network.
+And this one will not be changed.</P
+><P
+>One solution is to not use yppasswd for changing the password.
+Instead, a good alternative is the <B
+CLASS="COMMAND"
+>rpasswd</B
+>
+command from the <TT
+CLASS="LITERAL"
+>pwdutils</TT
+> package.</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>  Site            Directory                          File Name
+
+  ftp.kernel.org  /pub/linux/utils/net/NIS           pwdutils-2.3.tar.gz
+  ftp.suse.com    /pub/people/kukuk/pam/pam_pwcheck  pam_pwcheck-2.2.tar.bz2
+  ftp.suse.com    /pub/people/kukuk/pam/pam_unix2    pam_unix2-1.16.tar.bz2</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+><B
+CLASS="COMMAND"
+>rpasswd</B
+> changes passwords for user accounts on
+a remote server over a secure SSL connection. A normal user may
+only change the password for their own account, if the user knows
+the password of the administrator account (in the moment this is
+the root password on the server), he may change the password for
+any account if he calls <B
+CLASS="COMMAND"
+>rpasswd</B
+> with the -a option.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN624"
+></A
+>13.1. Server Configuration&#13;</H2
+><P
+>For the server you need at first certificate, the default filename
+for this is <TT
+CLASS="FILENAME"
+>/etc/rpasswdd.pem</TT
+>. The file can be
+created with the following command:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>openssl req -new -x509 -nodes -days 730 -out /etc/rpasswdd.pem -keyout /etc/rpasswdd.pem</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>A PAM configuration file for <B
+CLASS="COMMAND"
+>rpasswdd</B
+> is needed,
+too. If the NIS accounts are stored in <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>,
+the following is a good starting point for a working configuration:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#%PAM-1.0
+auth     required       pam_unix2.so
+account  required       pam_unix2.so
+password required       pam_pwcheck.so
+password required       pam_unix2.so    use_first_pass use_authtok
+password required       pam_make.so     /var/yp
+session  required       pam_unix2.so</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>If sources for the NIS password maps are stored in another
+location (for example in /etc/yp), the <TT
+CLASS="LITERAL"
+>nisdir</TT
+>
+option of pam_unix2 can be used to find the source files in another place:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#%PAM-1.0
+auth     required       pam_unix2.so
+account  required       pam_unix2.so
+password required       pam_pwcheck.so  nisdir=/etc/yp
+password required       pam_unix2.so    nisdir=/etc/yp use_first_pass use_authtok
+password required       pam_make.so     /var/yp
+session  required       pam_unix2.so</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Now start the <B
+CLASS="COMMAND"
+>rpasswdd</B
+> daemon on the NIS master server.</P
+><P
+>Since the password change is done with PAM modules,
+<B
+CLASS="COMMAND"
+>rpasswdd</B
+> is also able to allow password changes
+for NIS+, LDAP or other services supported by a PAM module.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN642"
+></A
+>13.2. Client Configuration&#13;</H2
+><P
+>On every client only the configuration file
+<TT
+CLASS="FILENAME"
+>/etc/rpasswd.conf</TT
+> which contains the name
+of the server is neded. If the server does not run on the default
+port, the correct port can alse be mentioned here:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># rpasswdd runs on master.example.com
+server master.example.com
+# Port 774 is the default port
+port 774</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="reboot.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="troubleshooting.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Surviving a Reboot</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Common Problems and Troubleshooting NIS
+
+&#13;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,658 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE> GCC Frontend HOWTO: Compiler Tools </TITLE>
+ <LINK HREF="GCC-Frontend-HOWTO-4.html" REL=next>
+ <LINK HREF="GCC-Frontend-HOWTO-2.html" REL=previous>
+ <LINK HREF="GCC-Frontend-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="GCC-Frontend-HOWTO-4.html">Next</A>
+<A HREF="GCC-Frontend-HOWTO-2.html">Previous</A>
+<A HREF="GCC-Frontend-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Compiler Tools </A></H2>
+
+<P>Two tools, Flex and Bison, are provided for the compiler 
+development. If you are having a general idea regarding them you can
+skip the next two sections, since I have got nothing new to say.
+<P>
+<H2><A NAME="ss3.1">3.1 Flex </A>
+</H2>
+
+<P>Flex is a fast lexical analyzer generator. As explained, the
+first phase of building a compiler is lexical analysis. Flex is
+an efficient tool for performing the pattern matching on text.
+In the absence of Flex we will have to write our own routines
+for obtaining tokens from the input text.
+<P>But with flex we can provide the regular expression 
+to be matched and
+the  action to be taken when a perfect match is 
+found. Our file will have an extension .l, which shows that it
+is a valid lex file. The output of the flex is a file called
+lex.yy.c. It has a routine yylex() defined in it. The file, lex.yy.c
+can be compiled
+and linked with the '-lfl' library to produce the executable.
+<P>One or two examples will make the things clearer.
+Create a small file, say lex.l with the following contents.
+<PRE>
+%%
+
+"good"  { printf("bad"); }
+
+%%
+</PRE>
+<P>Produce the executable with the commands 
+<PRE>
+
+lex lex.l  
+cc lex.yy.c -lfl 
+</PRE>
+<P>Run the executable. We find that for each occurrence of
+the string "good", a replacement with the string "bad" is made.
+For any other input, the input is just echoed. We here have our
+first lesson - the default action is to just copy the input to
+the output.
+<P>The general structure of the flex file is
+<P>
+<PRE>
+
+definitions 
+%% 
+rules 
+%% 
+user code 
+</PRE>
+<P>
+<P>The definitions may contain a 'name definition'. For example,
+<PRE>
+
+DIGIT [0-9] 
+</PRE>
+<P>It defines "DIGIT" to be a regular expression, which matches a single
+digit. The main purpose of name definition is to simplify the 
+scanner specification.
+<P>Next is the 'rules' section of the flex file. The general 
+form is 
+<P>
+<PRE>
+pattern action
+</PRE>
+<P>where the pattern may be a regular expression. The action should
+reside on the same line of pattern. The patterns and actions are
+described below.
+<P>In the 'rules' section it is permissible to use variable
+declarations enclosed in %{ }. It should appear before the first
+rule. They are local to the scanning routine. 
+<P>Let us look at an example.
+<PRE>
+
+%{
+#define WHILE 1
+#define IF 2
+%}
+
+%%
+while           {return WHILE; }
+if              {return IF; }
+%%
+
+main()
+{
+        int val;
+        while (val = yylex())
+                printf("%d",val);
+        printf("final =%d\n", val);
+}
+
+</PRE>
+<P>In the above program for the occurrence of "while" and "if",
+the corresponding integer value is printed. At the end, for an 
+EOF, the program terminates by returning zero.  
+<P>
+<H3>Patterns </H3>
+
+<P>Here I have only mentioned about the general patterns, which will
+be required in our compiler construction. For a complete list you
+are encouraged to refer the manual page.
+<P>
+<PRE>
+
+
+`x'             match the character x.
+`.'             any character except the newline.
+`[xyz]'         either an `x' or a `y' or a `z'.
+`[a-z]'         either an `a' or a `b' ... or a `z'.
+`[^A-Z]'        any character except an uppercase letter.
+`r*'            zero or more r's.
+`r+'            one or more r's.
+`r?'            zero or one r's.
+`{name}'        the expansion of the "name" description.
+                (As explained above).
+`\x'            if x is an `a', `b', `f', `n', `r', `t' or `v'
+                then the ANSI C representation of \x. Otherwise
+                a literal `x'.
+`\0'            the NULL character.
+`(r)'           match an r.
+                parentheses to override precedence.
+`rs'            concatenation of r and s.
+`r|s'           either an r or an s
+</PRE>
+<P>
+<P>The regular expressions mentioned above are arranged in the
+decreasing order of precedence. The topmost one has the highest
+precedence. In case
+of any confusion you can make use of parentheses to explicitly
+show what you mean.
+<P>Generally, the first question that will be coming in our mind
+will be - What happens when multiple matches are found. In that case
+the scanner chooses the one with the maximum length. That is,
+if we have a file,
+<PRE>
+
+%%
+
+"ab"            {printf("first"); }
+"abc"           {printf("second"); }
+
+%%
+</PRE>
+<P>and we are providing the input "abcd" then the two possibilities are
+"firstcd" and "secondd". The scanner prefers only the second.
+<P>But consider the case when the lengths are same. Then the
+rule given first in the file will get preference over the other.
+<P>Once the match is clearly defined then the corresponding
+action provided can be executed. The text corresponding to the
+match is available in 'yytext' and its length in 'yyleng', 
+both global values. It is better to avoid local names starting with 
+'yy' because of its extensive use by the scanner and parser. 
+Its avoidance also contributes to better readability.
+<P>
+<PRE>
+
+%%
+
+[0-9]+  {printf("The value of first yytext is %s\n",yytext);}
+[a-z]+  {printf("The value of sec yytext is %s\n",yytext);}
+
+%%
+</PRE>
+<P>
+<H3>Actions </H3>
+
+<P>We find that for each pattern given in the lex file it
+has an associated action. The action can be any arbitrary C code.
+It is possible to use the constructs like 'return' to return a
+value to the caller of yylex. In our compiler we need only
+simple actions, which can be understood by anyone having some
+knowledge with the C language.
+<P>The above mentioned details are more than enough for
+our compiler. For the beginners it is highly recommended to try
+out the various examples and check the different variations of
+the regular expressions. Before proceeding to the next section
+you should have a basic idea regarding the Flex.
+<P>
+<H2><A NAME="ss3.2">3.2 Bison </A>
+</H2>
+
+<P>Once we get used with the lexical analyzer, we are ready
+to meet its best companion - the parser generator, Bison. Given
+a description for an LALR(1) context-free grammar, it is
+the duty of Bison to generate a C program to parse that grammar.
+As explained, the second stage of compiler construction is 
+parsing. We are supplied with the tokens from  the lex. We have to
+define a grammar for a language and see whether the given input
+is a valid one. 
+<P>Before proceeding let us look what a context free grammar 
+is and what  we mean by terminals and nonterminals.
+<P>A context free grammar is a finite set of nonterminals, each
+of which represents a language. The language represented by the 
+nonterminals is defined recursively in terms of each other and
+with the help of primitive symbols called terminals.
+<P>Thus in simple words terminals are those which can't be
+further subdivided whereas  nonterminals are formed from the grouping
+of smaller constructs. It is possible to subdivide the nonterminals.
+<P>As an example, consider the grammar
+<P>Note: I haven't used the bison syntax in this example.
+<PRE>
+
+A -&gt; Ab 
+A -&gt; b 
+</PRE>
+<P>It denotes all the strings having only one or more b's. Here
+A is a nonterminal because it can be divided further using the given 
+productions. But b is a terminal symbol because it is not possible 
+to further divide it. 
+<P>Suppose we are given a string "bbb". We have to check whether
+it is accepted by the above productions. Assume the start symbol is
+'A'. 
+<P> 
+<PRE>
+A -&gt; Ab      {rule -1}
+  -&gt; Abb     {rule -1}
+  -&gt; bbb     {rule -2} and thus accepted.
+</PRE>
+ 
+<P>In Bison, generally the terminal symbols are represented in
+uppercase Ex := NUM (say, for a number) or by using character 
+literal as in the case of '+'. As we expect, the nonterminals are
+represented by using lowercase letter. Ex := exp. (We'll obey this
+rule  when we switch to Bison examples. ).
+<P>Flex and Bison work with perfect mutual understanding. A Bison grammar
+rule may say that "an expression is made of a number followed
+by a plus sign followed again by a number". The flex whenever
+sees a number informs the bison that it has found a
+number. That is it informs the presence of a token to the parser.
+<P>The grammar rule is only concerned whether the given input
+obeys the rules. Suppose we are given a terminal symbol NUM. The
+grammar rules no longer bother whether we are having a value 1
+as NUM or whether the value is 100. For the grammar all the 
+numbers are just the terminal symbols NUM. But we may be
+certainly interested in the value of NUM. Here comes the importance
+of 'Semantic Values' and 'Semantic Actions'. 
+<P>Associated with each grammar rule  the parser allows us to
+define certain actions. For the above  example, 
+<P> 
+<PRE>
+A -&gt; b { printf("We have found a `b'\n"); }
+</PRE>
+<P>In most cases the actions may not be simple as the
+above one. Suppose we are implementing a small calculator, the 
+semantic action may be to perform an addition operation.
+<P>The terminals and nonterminals present in the 
+grammar can have an associated value. The value is extracted using
+the symbol '$n' where n is an integer. A rule can have a semantic 
+value. ( Actually it is the value of the nonterminal represented
+by that rule).
+It is defined by using the symbol '$$'.
+<P>For example,
+<P> 
+<PRE>
+
+exp: exp '+' exp        {$$ = $1 + $3;}
+</PRE>
+
+which stands for exp -&gt; exp '+' exp. The contents of{ } denote
+the semantic action. The semantic actions are generally made of 
+C statements.
+<P>In the above example, consider the right hand side of the
+production. The first exp is denoted by '$1'. The terminal symbol
+'+' is represented by '$2' and the last exp is denoted by '$3'.
+We find here that it is possible for a terminal symbol like
+'+' to have no associated semantic value. The value associated 
+with the grammar is '$$' which is the sum of the first and third
+token.
+<P>Suppose we are also having a rule,
+<P> 
+<PRE>
+
+exp: NUM        {$$ = $1;}
+</PRE>
+ 
+<P>Let the given input be '1 + 2'. Then the tokens 1 and 2
+will match the NUM. The semantic value of the rule exp: exp '+' 
+exp would be 3 due to the corresponding semantic action.
+<P>
+<P>
+<H3>Bison Grammar File </H3>
+
+<P>The general form of a bison parser file is 
+<P>
+<PRE>
+
+%{
+C DECLARATIONS
+%}
+
+BISON DECLARATIONS
+
+%%
+GRAMMAR RULES
+%%
+
+ADDITIONAL C CODE
+</PRE>
+ 
+<P>The C declarations generally contain the #include's and other
+declarations. The bison declarations handle the terminals and 
+nonterminals. The  productions explained in the above section form 
+the Grammar rules. Additional C code contains the rest of the
+programs used (if needed).
+<P>The ideas will be  clearer with an example. Consider a 
+small grammar capable of taking lines of expressions and 
+returning their values.
+<P>The lexical file, lex.l is given. No explanations are given for
+the file. In case of any doubt refer the  Flex section.
+<P> 
+<PRE>
+
+%{
+#include"parse.tab.h"
+#include&lt;stdio.h&gt;
+%}
+%%
+[0-9]+                  {yylval=atoi(yytext);return NUM;}
+"+"                     {return '+';}
+"*"                     {return '*';}
+"-"                     {return '-';}
+"\n"                    {return '\n';}
+"/"                     {return '/';}
+%%
+</PRE>
+<P>
+<P> 
+The parser file, parse.y is also given.
+<P> 
+<PRE>
+
+%{
+#include&lt;stdio.h&gt;
+%}
+
+%token NUM
+%left '+' '-'
+%left '*' '/'
+
+%start line 
+
+%%
+
+line:   
+       /* empty */ 
+     |line exp '\n' {printf("%d\n",$2);}
+     | error '\n';
+
+exp:      exp '+' exp {$$ = $1 + $3;}
+        | exp '*' exp {$$ = $1 * $3;}
+        | exp '-' exp {$$ = $1 - $3;}
+        | exp '/' exp { if ($3 == 0)
+                                $$ = 0;
+                        else
+                                $$ = $1/$3;}
+        | NUM          {$$ = $1;};
+%%
+
+yyerror()
+{
+        printf("Error detected in parsing\n");
+}
+
+main()
+{
+        yyparse();
+}
+</PRE>
+ 
+<P>Let us explore the program line by line. Also let us look
+how the program works with the lexical file.
+<P>The C declaration part is simple. Here we are using only 
+stdio.h. If required other header files can also be included.
+The second part of the bison file consists of the bison declarations.
+Every terminals that are used in the file have to be 
+declared here. Implicit terminals such as a character literal 
+needn't be mentioned. Here we are only dealing with a single 
+terminal called NUM. Others are character literals such as
+'\n', '+' etc. 
+<PRE>
+%token NUM 
+</PRE>
+<P>completes the declaration.
+<P>In the expression we will be handling a number of
+operators such as '+', '-', '*' and '/'. The different operators
+are having different precedence. (For example, '/' will be having 
+more precedence than the '+'. '+' and '-' have the same 
+precedence). Also the operators will be having different 
+associativity. All the operators in our code are
+left associative. This information is passed to the parser
+with the following  declarations 
+<P> 
+<PRE>
+%left  -&gt;  for left associative.
+%right -&gt;  for right associative.
+</PRE>
+<P>The order in which the declarations are made defines the
+precedence. Higher the line number, higher will be the precedence.
+If we are declaring "%left '/'" under "%left '+'", the '/' will
+have higher precedence. As expected declarations on same line
+denote equal precedence.
+<P>"%start" gives information to the parser about the start
+symbol. If not defined the first production is taken as the
+starting one.
+<P>Now let us move on to the Grammar rules. The first rule
+states that a line can be empty. No semantic actions are 
+associated with that. The second rule 
+<P> 
+<PRE>
+line:   line exp '\n' {printf("%d\n",$2); }
+</PRE>
+ 
+<P>is the important one. It says that a line can be an expression
+followed by a newline. The left recursion used in the rule is
+just a technique used to parse multiple lines. You can avoid it
+if you are interested in parsing only a single line. The semantic
+action associated with the above rule is to print the value of the
+expression.
+<P>  
+The rule - line : error '\n' will be explained later.
+<P>The rules for expression are simple. It just suggests
+that an expression can be an expression followed by any given
+operator and an expression. The rule exp: NUM provides a way
+to move out of the recursive rules. The semantic actions are just
+to perform the various operations.
+<P>The last section of the bison file defines the other C
+declarations. We have included only two functions. The main function
+just invokes the parser; and yyerror routine prints the error
+message. The function yyerror is invoked whenever the parser
+meets a parse error. The rule 
+<PRE>
+line: error '\n'
+</PRE>
+<P>is included
+to detect the error and consider the error as just another
+rule. If we are not including the production, the parser will
+terminate as soon as it meets an error. The nonterminal 'error'
+is implicitly declared in the parser and we can use them without
+any declaration.
+<P>Let us now look at the working of the parser and scanner.
+Suppose we provide the input "1+2". The scanner returns the token
+NUM whenever it finds a number. Also the value is stored in the
+global variable 'yylval' of the scanner. The parser checks whether
+the input is a valid one (according to the rules provided) and if
+it is, the corresponding actions are performed with the semantic
+values supplied.
+<P>But the problem is that the terminal NUM was declared only
+in the parser file. It has to be used in the lexical file. The
+problem is avoided by using the command 
+<P>
+<PRE>
+
+bison -d parse.y 
+</PRE>
+<P>It causes the creation of the file parse.tab.h, which 
+includes all the required declarations. We can include it in the 
+lexer.
+<P>Test and understand the working of the scanner and parser.
+Create the files given above and produce the executable with the
+following commands
+<P>
+<PRE>
+lex lex.l
+bison -d parse.y
+cc parse.tab.c lex.yy.c -lfl
+</PRE>
+ 
+<P>The above mentioned example is a simple one capable of
+recognizing only simple lines of expressions. But what we are
+going to deal is a compiler creation for a small programming 
+language. Although the basic ideas are same, we have to acquire
+more understanding about the parser to work with a programming
+language. Keeping this in mind let us look at another example.
+<P>We create a new language with the following constructs - 
+variable declarations, assignments and print statements. The lexical
+file is more or less same as the old one. But the parser file is
+different. The two files are given - lex.l and parse.y.
+<P>
+<PRE>
+lex.l
+
+%{
+#include"parse.tab.h"
+#include&lt;stdio.h&gt;
+#include&lt;string.h&gt;
+%}
+%%
+
+[0-9]+                  {yylval.val=atoi(yytext);return NUM;}
+"print"                 {return PRINT;}
+"declare"               {return DECL;}
+[a-z]([0-9]|[a-z])*     {yylval.str= strdup(yytext);return NAME;}
+"+"                     {return '+';}
+"*"                     {return '*';}
+"-"                     {return '-';}
+"\n"                    {return '\n';}
+"/"                     {return '/';}
+"="                     {return '=';}
+
+%%
+</PRE>
+<P>
+<PRE>
+parse.y
+
+%{
+#include&lt;stdio.h&gt;
+#include&lt;string.h&gt;
+#include&lt;stdlib.h&gt;
+
+        struct node{
+                char *name;
+                int value;
+        };
+        static struct node* sym_table[100];
+%}
+%union{
+        char *str;
+        int val;
+}
+
+%token &lt;val&gt; NUM
+%token &lt;str&gt; NAME
+%token PRINT    
+%token DECL
+%left '+' '-'
+%left '*' '/'
+
+%type &lt;val&gt; exp
+
+%start input 
+
+%%
+input: /* empty */
+        | input line ;
+
+line:   
+       exp '\n'          {}
+     | DECL NAME '\n'    {return_value($2);}    
+     | NAME '=' exp '\n' {assign_value($1,$3);}
+     | PRINT NAME '\n'   {printf("%d\n",return_value($2));}
+     | error ;
+
+exp:      exp '+' exp {$$ = $1 + $3;}
+        | exp '*' exp {$$ = $1 * $3;}
+        | exp '-' exp {$$ = $1 - $3;}
+        | exp '/' exp { if ($3 == 0)
+                                $$ = 0;
+                        else
+                                $$ = $1/$3;}
+        | NUM         {$$ = $1;}
+        | NAME        {$$ = return_value($1);}; 
+%%
+
+yyerror()
+{
+        printf("Error detected in parsing\n");
+}
+
+int assign_value(char *s,int symvalue)
+{
+        char *symname;
+        int len,i;
+        len=strlen(s) + 1;
+        symname=malloc(sizeof(char *) * len);
+        strcpy(symname,s);
+        for(i=0;sym_table[i];i++)
+                if(!strcmp(symname,sym_table[i]-&gt;name)){
+                        sym_table[i]-&gt;value=symvalue;
+                        return symvalue;
+                }
+        sym_table[i]=malloc(sizeof(struct node));
+        sym_table[i]-&gt;name=symname;
+        sym_table[i]-&gt;value=symvalue;
+        return symvalue;
+}
+
+int return_value(char *s)
+{
+        char *symname;
+        int len,i;
+        len=strlen(s) + 1;
+        symname=malloc(sizeof(char *) * len);
+        strcpy(symname,s);
+        for(i=0;sym_table[i];i++)
+                if(!strcmp(symname,sym_table[i]-&gt;name))
+                        return sym_table[i]-&gt;value;
+        sym_table[i]=malloc(sizeof(struct node));
+        sym_table[i]-&gt;name=symname;
+        sym_table[i]-&gt;value=0;
+        return 0;
+}
+
+main()
+{
+        yyparse();
+}
+        
+</PRE>
+ 
+<P>In the parser file we find a new declaration %union. It is
+used to define the entire list of possible types. In the first 
+example we had to work with only integers. But here the values 
+can have more than one type. This information is passed through
+%union declaration. Since more than one type exists, the 
+type information has to be specified for all
+the terminals and nonterminals whose semantic values are used in 
+the grammar rules. It is shown in angle brackets. In the 
+example we are making use of semantic values of NAME and NUM
+but not of PRINT and DECL. Similar changes are also made in
+the lexical file for 'yylval'.
+<P>
+<PRE>
+%type &lt;val> exp
+</PRE>
+<P>is used to define the nonterminal and to specify the type.
+<P>The rest of the file is easy to understand. Whenever
+we see a new identifier we insert it into the symbol table. For
+new identifiers the initial value is made to be zero. Assignment
+statements cause the specified value to be stored in the symbol
+table. Two functions - assign_value and return_value are used 
+for the symbol table manipulations.
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<HR>
+<A HREF="GCC-Frontend-HOWTO-4.html">Next</A>
+<A HREF="GCC-Frontend-HOWTO-2.html">Previous</A>
+<A HREF="GCC-Frontend-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

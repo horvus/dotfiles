@@ -1,0 +1,120 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Modem-HOWTO: Configuring the Serial Driver (high-level) "stty"</TITLE>
+ <LINK HREF="Modem-HOWTO-8.html" REL=next>
+ <LINK HREF="Modem-HOWTO-6.html" REL=previous>
+ <LINK HREF="Modem-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Modem-HOWTO-8.html">Next</A>
+<A HREF="Modem-HOWTO-6.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="config_stty"></A> <A NAME="s7">7.</A> <A HREF="Modem-HOWTO.html#toc7">Configuring the Serial Driver (high-level) "stty"</A></H2>
+
+<H2><A NAME="ss7.1">7.1</A> <A HREF="Modem-HOWTO.html#toc7.1">Introduction</A>
+</H2>
+
+<P>This configuring is normally done by your communications program
+such as wvdial.  It may do much of it without even letting you know what
+it's done.  In olden days it was done with the "stty" utility.  If you
+set something manually with stty, the communications program may
+change the setting to something else so it's usually best to just let
+the communications program handle it.  See 
+<A HREF="#stty_">What is stty ?</A></P>
+
+<H2><A NAME="ss7.2">7.2</A> <A HREF="Modem-HOWTO.html#toc7.2">Hardware flow control (RTS/CTS)</A>
+</H2>
+
+<P> See 
+<A HREF="Modem-HOWTO-4.html#flow_control">Flow Control</A> for an explanation of
+it.  You should always use hardware flow control if possible.  Your
+communication program or "<CODE>getty</CODE>" should have an option for
+setting it (and hopefully it's enabled by default).  It needs to be
+set both inside your modem (by an init string or default) and in the
+device driver.  Your communication program should set both of these
+(if you configure it right).</P>
+<P>If none of the above will fully enable hardware flow control.  Then
+you must do it yourself.  For the modem, make sure that it's either
+done by the init string or is on by default.  If you need to tell the
+device driver to do it is best done on startup by putting it in a file
+that runs at boot-time.  See the subsection 
+<A HREF="Modem-HOWTO-10.html#sets_boot_time">Boot-time Configuration</A> You need to add the following to such
+a file for each serial port (example is ttyS2) you want to enable
+hardware flow control on:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+stty -F /dev/ttyS2 crtscts
+or
+stty crtscts &lt; /dev/ttyS2
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>If you want to see if flow control is enabled do the following:  In
+minicom (or the like) type AT&amp;V (or ATI4 on 3Com modems) to see
+how the modem is configured and look for &amp;K3 (or &amp;H1 on 3Com
+modems) which means hardware flow control.  Then without exiting the
+communications program (such as minicom) see if the device driver
+knows about it by typing: stty -F /dev/ttyS2 -a.   Look for "crtscts"
+(without a disabling minus sign).  Remember that communication
+programs change these settings so you may want to check them after you
+have started up your communication program.</P>
+
+<H2><A NAME="ss7.3">7.3</A> <A HREF="Modem-HOWTO.html#toc7.3">Speed Settings </A>
+</H2>
+
+<P> Besides flow control there is speed.  See 
+<A HREF="Modem-HOWTO-14.html#speed_">What Speed Should I Use with My Modem</A>.  There's also are
+parity and bits-per-byte settings.  Normally the port is set by the
+communications program at 8N1 (8-bits per byte, No parity, and 1 stop
+bit).  If you're running PPP then you must use 8N1.  So if you get a
+complaint that it's not 8-bit clean then it's likely not 8N1 like it
+should be.</P>
+
+<H2><A NAME="ss7.4">7.4</A> <A HREF="Modem-HOWTO.html#toc7.4">Ignore CD Setting: clocal</A>
+</H2>
+
+<P>Normally a CD (Carrier Detect) signal (on the CD wire for an
+external modem) is required before a serial port can be opened.  But
+if stty has negated clocal (-clocal), then the port requires CD
+raised for the port to open and remain open.  Actually, a skilled
+programmer can write the program in such a way as to force the port to
+open even when CD and clocal say not to.  So if stty shows -clocal
+then there might be a problem with opening the port.  But for dial-in,
+in some cases you may want -clocal so that when the remote modem stops
+sending a carrier and CD drops, the port will close and terminate all
+processes running on it.</P>
+<P>One way to keep CD raised is to send  "AT&amp;C" to the modem so that
+CD from the modem will always be on.  CD always-on is fine for
+dial-out but for dial-in, the CD signal is sometimes (but rarely) used
+to detected an incoming call.</P>
+<P>clocal may be asserted by default in recent serial drivers.  Minicom
+raises clocal automatically when it starts up so there is no problem
+with it opening the port.  But it restores the clocal setting to it's
+original when you exit minicom.  But version 6.0.192 of Kermit hung
+when I set -clocal and tried to "set line ...".  </P>
+
+<H2><A NAME="stty_"></A> <A NAME="ss7.5">7.5</A> <A HREF="Modem-HOWTO.html#toc7.5">What is stty ? </A>
+</H2>
+
+<P> <CODE>stty</CODE> is something like setserial but it sets the speed (baud
+rate), hardware flow control,  and other parameters of a serial port.
+Typing "stty -F /dev/ttyS2 -a" should show you how ttyS2 is
+configured.  Most of the stty settings are for things that you never
+need to use with modems.  Many of the setting are only needed for
+Text-Terminals (and some are only needed for antique terminals of the
+1970s).  Your communication package should automatically set up the
+several settings needed for modems.  For this reason you normally don't
+need to use stty so it's not covered much in this Modem-HOWTO.  But
+stty is sometimes useful for trouble-shooting.   More is said about
+stty in the Serial-HOWTO or Text-Terminal-HOWTO..</P>
+
+<HR>
+<A HREF="Modem-HOWTO-8.html">Next</A>
+<A HREF="Modem-HOWTO-6.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

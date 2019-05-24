@@ -1,0 +1,461 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Bitmore indepth version</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Masquerading Made Simple HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Summary: (I like doing summaries first)"
+HREF="summary.html"><LINK
+REL="NEXT"
+TITLE="Post-install Instructions"
+HREF="post-install.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Masquerading Made Simple HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="summary.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="post-install.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INDEPTH"
+></A
+>3. Bitmore indepth version</H1
+><P
+>    Compiling the kernel: (Use a 2.4.x kernel or greater)
+   </P
+><P
+>    You need the following support in the kernel:
+   </P
+><P
+></P
+><UL
+><LI
+><P
+>      Under Networking Options
+     </P
+><P
+></P
+><UL
+><LI
+><P
+>	Network packet filtering  (CONFIG_NETFILTER)
+       </P
+></LI
+></UL
+></LI
+><LI
+><P
+>      Under Networking Options-&#62;Netfilter Configuration
+     </P
+><P
+></P
+><UL
+><LI
+><P
+>	Connection tracking (CONFIG_IP_NF_CONNTRACK)
+       </P
+></LI
+><LI
+><P
+>	FTP Protocol support (CONFIG_IP_NF_FTP)
+       </P
+></LI
+><LI
+><P
+>	IP tables support (CONFIG_IP_NF_IPTABLES)
+       </P
+></LI
+><LI
+><P
+>   
+	Connection state match support (CONFIG_IP_NF_MATCH_STATE)
+       </P
+></LI
+><LI
+><P
+>	Packet filtering (CONFIG_IP_NF_FILTER)
+       </P
+><P
+></P
+><UL
+><LI
+><P
+>	  REJECT target support (CONFIG_IP_NF_TARGET_REJECT)
+	 </P
+></LI
+></UL
+></LI
+><LI
+><P
+>	Full NAT (CONFIG_IP_NF_NAT)
+       </P
+><P
+></P
+><UL
+><LI
+><P
+>	  MASQUERADE target support (CONFIG_IP_NF_TARGET_MASQUERADE)
+	 </P
+></LI
+><LI
+><P
+>	  REDIRECT target support (CONFIG_IP_NF_TARGET_REDIRECT)
+	 </P
+></LI
+></UL
+></LI
+><LI
+><P
+>	Packet mangling (CONFIG_IP_NF_MANGLE)
+       </P
+></LI
+><LI
+><P
+>	LOG target support (CONFIG_IP_NF_TARGET_LOG)
+       </P
+></LI
+></UL
+></LI
+></UL
+><P
+>    First, if the iptable and masq modules are not compiled into the kernel and
+    not installed, but do exist as modules, we need to install them.
+    If you insmod ipt_MASQUERADE it will load ip_tables, ip_conntrack and
+    iptable_nat.
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>modprobe ipt_MASQERADE</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    Now either your Intranet is large, or you're just trying to get two or three
+    machines to work on the internet - it doesn't make much difference either way.
+   </P
+><P
+>    Okay, I'm assuming that you have no other rules, so do:
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -F; iptables -t nat -F; iptables -t mangle -F</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    If you get an error saying can't find iptables, go find it and install it. 
+    If it says no such table 'nat', recompile the kernel with nat support.  If
+    it says no such table as 'mangle', don't worry about it, it's not necessary
+    for MASQ'ing.  If it says iptables is incompatible with your kernel, go get &#62; 2.4
+    and compile that with iptables support.
+   </P
+><P
+>    Then if you have a static ip do (e.g. network card not using DHCP):
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to 123.12.23.43</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    or for dynamic (e.g. a modem - you have to call a number first):
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    Then finally to tell the kernel yes, you really do want to start forwarding
+    packets:  (This only needs to be done once per reboot - but dosen't hurt to
+    do it lots)
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>echo 1 &#62; /proc/sys/net/ipv4/ip_forward</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    Once you have checked this all works (See under Post-install) only allow
+    masquerading from the internal network - you don't want to allow people on
+    the internet to use it after all :)   
+   </P
+><P
+>    First, allow any existing connections, or anything related (e.g. ftp server
+    connecting back to you)
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    If this gives an error, then you most likely don't have state tracking in
+    the kernel - go recompile. Then allow new connections only from our 
+    intranet (local/internal network). Replace the ppp0 with eth0 or 
+    whatever your <EM
+>external</EM
+> device is. (The ! means anything but)
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -A INPUT -m state --state NEW -i ! ppp0 -j ACCEPT</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    And now deny everything else:
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -P INPUT DROP</B
+>   #only if the first two are succesful</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>    If either of the first two rules failed, then this last rule with prevent
+    the masquerading from working at all.  To undo this rule do 
+    "<B
+CLASS="COMMAND"
+>iptables -P INPUT ACCEPT</B
+>".
+   </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="summary.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="post-install.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Summary: (I like doing summaries first)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Post-install Instructions</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

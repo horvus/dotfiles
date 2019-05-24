@@ -1,0 +1,573 @@
+<HTML>
+<HEAD>
+
+<TITLE>
+ Linux DPT Hardware RAID HOWTO </title>
+</TITLE>
+</HEAD>
+<BODY BGCOLOR=white>
+
+<HR>
+<H1> Linux DPT Hardware RAID HOWTO </H1>
+
+<H2>Ram Samudrala <CODE>(me@ram.org)</CODE> </H2> v1.62,  August 4, 2004 
+<P><HR>
+<EM>How to set up hardware RAID under Linux. This HOWTO is now limited to
+making small changes from version 1.6.</EM>
+<HR>
+<P>
+<H2><A NAME="toc1">1.</A> <A HREF="#s1">Introduction</A></H2>
+
+<P>
+<H2><A NAME="toc2">2.</A> <A HREF="#s2">Supported controllers</A></H2>
+
+<UL>
+<LI><A HREF="#ss2.1">2.1 DPT controllers</A>
+<LI><A HREF="#ss2.2">2.2 ICP vortex controllers</A>
+</UL>
+<P>
+<H2><A NAME="toc3">3.</A> <A HREF="#s3">What hardware should be used?</A></H2>
+
+<UL>
+<LI><A HREF="#ss3.1">3.1 Controller type</A>
+<LI><A HREF="#ss3.2">3.2 Enclosure type</A>
+</UL>
+<P>
+<H2><A NAME="toc4">4.</A> <A HREF="#s4">Installation</A></H2>
+
+<UL>
+<LI><A HREF="#ss4.1">4.1 Installing and configuring the hardware</A>
+<LI><A HREF="#ss4.2">4.2 Configuring the kernel </A>
+<LI><A HREF="#ss4.3">4.3 Bootup messages </A>
+</UL>
+<P>
+<H2><A NAME="toc5">5.</A> <A HREF="#s5">Usage</A></H2>
+
+<UL>
+<LI><A HREF="#ss5.1">5.1 fdisk, mke2fs, mount, etc.</A>
+<LI><A HREF="#ss5.2">5.2 Hot swapping </A>
+<LI><A HREF="#ss5.3">5.3 Performance </A>
+</UL>
+<P>
+<H2><A NAME="toc6">6.</A> <A HREF="#s6">Features in the EATA DMA driver</A></H2>
+
+<P>
+<H2><A NAME="toc7">7.</A> <A HREF="#s7">Troubleshooting</A></H2>
+
+<UL>
+<LI><A HREF="#ss7.1">7.1 Upon bootup, no SCSI hosts are detected</A>
+<LI><A HREF="#ss7.2">7.2 RAID configuration shows up as N different disks</A>
+<LI><A HREF="#ss7.3">7.3 Machine/controller is shut down in the middle of a format</A>
+<LI><A HREF="#ss7.4">7.4 SCSI_ABORT_BUSY errors produced during initial filesystem format</A>
+<LI><A HREF="#ss7.5">7.5 If all fails...</A>
+</UL>
+<P>
+<H2><A NAME="toc8">8.</A> <A HREF="#s8">References </A></H2>
+
+<P>
+<H2><A NAME="toc9">9.</A> <A HREF="#s9">Acknowledgements </A></H2>
+
+<HR>
+<H2><A NAME="s1">1.</A> <A HREF="#toc1">Introduction</A></H2>
+
+<P> This document describes how to set up SCSI hardware RAID, focusing
+mainly on host-based adapters from DPT, though the principles applied
+here are fairly general. 
+<P> Use the information below at your own risk.  I disclaim all
+responsibility for anything you may do after reading this HOWTO. The
+latest version of this HOWTO will always be available at 
+<A HREF="http://www.ram.org/computing/linux/dpt_raid.html">http://www.ram.org/computing/linux/dpt_raid.html</A>. 
+<P> For the purposes of this HOWTO, I am assuming you have only a
+Linux system running. Also, note that I've only tried this out with
+the DPT Smartcache IV PM2144UW and PM3334UW controllers, with DPT
+(SmartRAID tower) and Wetex enclosures, and I have no experience with
+other setups. So things may be different for your setup. 
+<HR>
+<H2><A NAME="s2">2.</A> <A HREF="#toc2">Supported controllers</A></H2>
+
+<P> One well-supported host-based hardware RAID controller (i.e, a
+controller for which there exists a driver under Linux) is one that is
+made by 
+<A HREF="http://www.dpt.com">DPT</A>. However, there
+exist other host-based and SCSI-to-SCSI controllers which may work
+under Linux.  These include the ones made by 
+<A HREF="http://www.syred.com">Syred</A>, 
+<A HREF="http://www.icp-vortex.com">ICP-Vortex</A>, and 
+<A HREF="http://www.mylex.com">BusLogic</A>.  See the 
+<A HREF="http://linas.org/linux/raid.html">RAID solutions for Linux page</A> for more info. 
+<P> If, in the future, there is support for other controllers, I will
+do my best to incorporate that information into this HOWTO. Please
+send me any such information you think is appropriate for this
+HOWTO. 
+<H2><A NAME="ss2.1">2.1 DPT controllers</A>
+</H2>
+
+<P> This document is currently DPT-oriented.  Essentially all the
+SmartRAID IV controllers are supported. 
+<H2><A NAME="ss2.2">2.2 ICP vortex controllers</A>
+</H2>
+
+<P> ICP vortex has a complete line of disk array controllers which
+support Linux.  The ICP driver is in the Linux kernel since version
+2.0.31. All major Linux Distributors S.u.S.e., LST Power Linux, Caldera
+and Red Hat support the ICP controllers as boot/installation
+controllers. The RAID system can easily be configured with their
+ROMSETUP (you do not have to boot MS-DOS for configuration!). 
+<P> With the monitoring utility GDTMON it is possible to manage the
+complete ICP RAID system during operation (check transfer rates, set
+parameters for the controller and hard disks, exchange defective hard
+disks, etc.).  Currently available are: 1 and 2 channel wide and ultra
+SCSI controller for RAID 0 and RAID 1 1, 2, 3 and 5 chn. wide and
+ultra SCSI controller for RAID 0, 1, 4, 5 and 10 1 and 2 channel wide
+and ultra2 LVDS SCSI controller for RAID 0 and RAID 1 1, 2, 3 and 5
+chn. wide and ultra2 LVDS SCSI controller for RAID 0, 1, 4, 5 and 10 1
+and 2 port Fibre Channel controllers for RAID 0, 1, 4, 5 and 10 Pretty
+soon there will be also 64-bit controllers available. 
+<P> ICP is transitioning the entry-level RS series from Ultra2 SCSI to
+Ultra160 SCSI.  The drivers, firmware, features, capabilities etc
+remain the same.  They are still 32 Bit cards with the i960RS
+processor working at 100MHz.  The only difference is they will work at
+Ultra160 (data transfer rate of 160MB/sec) rather than Ultra2 (data
+transfer of 80MB/sec). 
+<P> Effective immediately, the GDT7523RN units will become GDT8523RZ
+and the GDT7623RN units will become GDT8623RZ.  The transition from
+33MHz on the PCI bus to 66MHz represents a huge potential performance
+increase.  The new cards will have the new Intel 80303 "Zion"
+processor, allowing bus master transfer rates of up to 528MB/sec, and
+will take up to 256MB of ECC RAM on PC133 SDRAM Dimms.  
+<HR>
+<H2><A NAME="s3">3.</A> <A HREF="#toc3">What hardware should be used?</A></H2>
+
+<H2><A NAME="ss3.1">3.1 Controller type</A>
+</H2>
+
+<P> Given all these options, if you're looking for a RAID solution,
+you need to think carefully about what you want.  Depending on what
+you want to do, and which RAID level you wish to use, some cards may
+be better than others.  SCSI-to-SCSI adapters may not be as good as
+host-based adapters, for example.  Michael Neuffer (
+<A HREF="mailto:neuffer@uni-mainz.de">neuffer@uni-mainz.de</A>), the author of the EATA-DMA
+driver, has a nice discussion about this on his 
+<A HREF="http://www.uni-mainz.de/~neuffer/scsi/">Linux High Performance SCSI and RAID page</A>. 
+<H2><A NAME="ss3.2">3.2 Enclosure type</A>
+</H2>
+
+<P> The enclosure type affects the hot swap-ability of the drive, the
+warning systems (i.e., whether there will be indication of failure,
+and whether you will know which drive has failed), and what kind of
+treatment your drive receives (for example, redundant cooling and
+power supplies).  We used the DPT supplied enclosures which work
+extremely well, but they are expensive.  
+<HR>
+<H2><A NAME="s4">4.</A> <A HREF="#toc4">Installation</A></H2>
+
+<H2><A NAME="ss4.1">4.1 Installing and configuring the hardware</A>
+</H2>
+
+<P> Refer to the instruction manual to install the card and the
+drives. For DPT, since a storage manager for Linux doesn't exist yet,
+you need to create a MS-DOS-formatted disk with the system on it
+(usually created using the command "format /s" at the MS-DOS prompt).
+You will also be using the DPT storage manager for MS-DOS (available
+from 
+<A HREF="http://www.adaptec.com">the Adaptec website</A>),
+which you should probably make a copy of for safety. 
+<P> Once the hardware is in place, boot using the DOS system
+disk. Replace the DOS disk with the storage manager. And invoke the
+storage manager using the command: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+a:\ dptmgr
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Wait a minute or so, and you'll get a nice menu of options.  Configure
+the set of disks as a hardware RAID (single logical array). Choose
+"other" as the operating system. 
+<P> The MS-DOS storage manager is a lot easier to use with a mouse,
+and so you might want to have a mouse driver on the initial system
+disk you create. 
+<P> Technically, it should be possible to run the SCO storage manager
+under Linux, but it may be more trouble than its worth.  It's probably
+more easier to run the MS-DOS storage manager under Linux. 
+<H2><A NAME="ss4.2">4.2 Configuring the kernel </A>
+</H2>
+
+<P> You will need to configure the kernel with SCSI support and the
+appropriate low level driver.  See the 
+<A HREF="http://sunsite.unc.edu/mdw/HOWTO/Kernel-HOWTO.html">Kernel HOWTO</A> for information on how to compile the kernel. Once you choose
+"yes" for SCSI support, in the low level drivers section, select the
+driver of your choice (EATA DMA or EATA ISA/EISA/PCI for most EATA DMA
+compliant (DPT) cards, EATA PIO for the very old PM2001 and PM2012A
+from DPT).  Most drivers, including the EATA DMA and EATA ISA/EISA/PCI
+drivers, should be available in recent kernel versions.  
+<P> Once you have the kernel compiled, reboot, and if you've set up
+everything correctly, you should see the driver recognising the RAID
+as a single SCSI disk. If you use RAID-5, you will see the size of
+this disk to be 2/3 of the actual disk space available. 
+<H2><A NAME="ss4.3">4.3 Bootup messages </A>
+</H2>
+
+<P> The messages you see upon bootup if you're using the EATA DMA
+driver should look something like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+EATA (Extended Attachment) driver version: 2.59b
+developed in co-operation with DPT
+(c) 1993-96 Michael Neuffer, mike@i-Connect.Net
+Registered HBAs:
+HBA no. Boardtype    Revis  EATA Bus  BaseIO IRQ DMA Ch ID Pr QS  S/G IS
+scsi0 : PM2144UW     v07L.Y 2.0c PCI  0xef90  11 BMST 1  7  N  64 252 Y
+scsi0 : EATA (Extended Attachment) HBA driver
+scsi : 1 host.
+  Vendor: DPT       Model: RAID-5            Rev: 07LY
+  Type:   Direct-Access                      ANSI SCSI revision: 02
+Detected scsi disk sda at scsi0, channel 0, id 8, lun 0
+scsi0: queue depth for target 8 on channel 0 set to 64
+scsi : detected 1 SCSI disk total.
+SCSI device sda: hdwr sector= 512 bytes. Sectors= 35591040 [17378 MB] [17.4 GB]
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>(The above display is for a setup with a single DPT SCSI controller,
+configured as RAID-5, with three disks of 9 GB each.) 
+<P> The messages you see upon bootup if you're using the EATA
+ISA/EISA/PCI driver should look something like this: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+aic7xxx: &lt;Adaptec AHA-294X SCSI host adapter> at PCI 15
+aic7xxx: BIOS enabled, IO Port 0x7000, IO Mem 0x3100000, IRQ 15, Revision B
+aic7xxx: Single Channel, SCSI ID 7, 16/16 SCBs, QFull 16, QMask 0x1f
+EATA0: address 0x7010 in use, skipping probe.
+EATA0: 2.0C, PCI 0x7410, IRQ 11, BMST, SG 252, MB 64, tc:y, lc:y, mq:62.
+EATA0: wide SCSI support enabled, max_id 16, max_lun 8.
+EATA0: SCSI channel 0 enabled, host target ID 6.
+EATA/DMA 2.0x: Copyright (C) 1994-1997 Dario Ballabio.
+scsi0 : Adaptec AHA274x/284x/294x (EISA/VLB/PCI-Fast SCSI) 4.1.1/3.2.1
+scsi1 : EATA/DMA 2.0x rev. 3.11.00 
+scsi : 2 hosts.
+scsi0: Scanning channel A for devices.
+  Vendor: IBM OEM   Model: DFHSS2F           Rev: 1818
+  Type:   Direct-Access                      ANSI SCSI revision: 02
+Detected scsi disk sda at scsi0, channel 0, id 0, lun 0
+  Vendor: SEAGATE   Model: ST41650       TX  Rev: DG01
+  Type:   Direct-Access                      ANSI SCSI revision: 02
+Detected scsi disk sdb at scsi1, channel 0, id 0, lun 0
+  Vendor: TEAC      Model: FC-1     GF   00  Rev: RV L
+  Type:   Direct-Access                      ANSI SCSI revision: 01 CCS
+Detected scsi removable disk sdc at scsi1, channel 0, id 3, lun 0
+  Vendor: SONY      Model: CD-ROM CDU-541    Rev: 2.6a
+  Type:   CD-ROM                             ANSI SCSI revision: 02
+Detected scsi CD-ROM sr0 at scsi1, channel 0, id 5, lun 0
+EATA0: scsi1, channel 0, id 0, lun 0, cmds/lun 21, sorted, tagged.
+EATA0: scsi1, channel 0, id 3, lun 0, cmds/lun 21, sorted.
+EATA0: scsi1, channel 0, id 5, lun 0, cmds/lun 21, sorted.
+scsi : detected 1 SCSI cdrom 3 SCSI disks total.
+SCSI device sda: hdwr sector= 512 bytes. Sectors= 4404489 [2150 MB] [2.2 GB]
+SCSI device sdb: hdwr sector= 512 bytes. Sectors= 2779518 [1357 MB] [1.4 GB]
+SCSI device sdc: hdwr sector= 256 bytes. Sectors= 4160 [1 MB] [0.0 GB]
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>(The above display is for a setup with two SCSI controllers, DPT
+PM3224W and and Adaptec AHA2940.) 
+<HR>
+<H2><A NAME="s5">5.</A> <A HREF="#toc5">Usage</A></H2>
+
+<H2><A NAME="ss5.1">5.1 fdisk, mke2fs, mount, etc.</A>
+</H2>
+
+<P> You can now start treating the RAID as a regular disk. The first
+thing you'll need to do is partition the disk (using fdisk).  You'll
+then need to set up an ext2 filesystem.  This can be done
+by running the command:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+% mkfs -t ext2 /dev/sdxN
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>where /dev/sdxN is the name of the SCSI partition.  Once you do this,
+you'll be able to mount the partitions and use them as you would any
+other disk (including adding entries in /etc/fstab).  
+<H2><A NAME="ss5.2">5.2 Hot swapping </A>
+</H2>
+
+<P> We first tried to test hot swapping by removing a drive and putting
+it back in the DPT-supplied enclosure/tower (which you buy for an
+additional cost).  Before we could carry this out to completion, one
+of the disks failed (as I write this, the beeping is driving me
+crazy). Even though one of the disks failed, all the data on the RAID
+drive was accessible. 
+<P> Instead of replacing the drive, we just went through the motions
+of hot swapping and put the same drive back in.  The drive rebuilt
+itself and everything turned out okay.  During the time the disk had
+filed, and during the rebuilding process, all the data was
+accessible. Though it should be noted that if another disk had failed,
+we'd have been in serious trouble.  
+<H2><A NAME="ss5.3">5.3 Performance </A>
+</H2>
+
+<P> Here's the output of the Bonnie program, on a 2144 UW with 9x3=17
+GB RAID 5 setup, using the EATA DMA driver. The RAID is on a dual
+processor Pentium Pro machine running Linux 2.0.33. For comparison,
+the Bonnie results for the IDE drive on that machine are also given.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+           -------Sequential Output-------- ---Sequential Input--  --Random--            
+           -Per Char- --Block--- -Rewrite-- -Per Char- --Block---  --Seeks---            
+        MB K/sec %CPU K/sec %CPU K/sec %CPU K/sec %CPU K/sec %CPU   /sec  %CPU 
+RAID   100  9210 96.8  1613  5.9   717  5.8  3797 36.1 90931 96.8 4648.2 159.2 
+IDE    100  3277 32.0  6325 23.5  2627 18.3  4818 44.8 59697 88.0  575.9  16.3
+</PRE>
+</CODE></BLOCKQUOTE>
+<P> Some people have disputed the above timings (and rightly so---I've
+been unable to try it out on our machines since they're completely loaded)
+because the size of the file used may have led to it being cached
+(resulting in an unusually good performance report).  Here are some
+timings with a 3344 UW controller:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        -------Sequential Output-------- ---Sequential Input-- --Random--
+        -Per Char- --Block--- -Rewrite-- -Per Char- --Block--- --Seeks---
+     MB K/sec %CPU K/sec %CPU K/sec %CPU K/sec %CPU K/sec %CPU  /sec %CPU
+   1000  1714 17.2  1689  6.0  1200  5.7  5263 40.2  7023 12.1  51.3 2.2
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>And here are some timings on a SCSI-to-SCSI RAID system: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+     -------Sequential Output-------- ---Sequential Input-- --Random--
+     -Per Char- --Block--- -Rewrite-- -Per Char- --Block--- --Seeks---
+MB   K/sec %CPU K/sec %CPU K/sec %CPU K/sec %CPU K/sec %CPU /sec %CPU
+64   7465 100.0 70287 98.7 37012 97.7 8074 99.2 *****100.3 ***** 196.6
+128  7289 99.3  67595 98.5 35294 98.6 7792 97.6 *****100.3 ***** 195.8
+256  7222 98.8  44844 69.6 16096 51.8 5787 72.7 ***** 99.8 ***** 85.2
+512  7138 98.4  13871 23.2 7888  29.3 7183 89.3 16488 27.2 1585. 11.5
+1024 6908 95.8  12270 21.5 7161  25.4 7373 90.4 16527 28.2 123.8 1.8
+2047 6081 84.1  12664 22.6 7191  25.6 7289 89.5 16573 28.5 75.0  1.2
+
+***** results exceed column width (> 100 MB/sec, > 10000 seeks/sec)
+
+host:   Dual PII 400 MHz, 2 x U2W, 512 MB RAM, no internal disks
+RAID:   IFT 3102 UA 128 MB Cache, RAID-5, 6 x 9 GB
+OS:     SuSE Linux 6.0 with Kernel 2.2.3
+</PRE>
+</CODE></BLOCKQUOTE>
+<HR>
+<H2><A NAME="s6">6.</A> <A HREF="#toc6">Features in the EATA DMA driver</A></H2>
+
+<P> This section describes some of the commands available under Linux
+to check on the RAID configuration.  Again, while references to the
+eata_dma driver is made, this can be used to check up on any
+driver. 
+<P> To see the configuration for your driver, type: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+% cat /proc/scsi/eata_dma/N
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>where N is the host id for the controller.  You should see something
+like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+EATA (Extended Attachment) driver version: 2.59b
+queued commands:         353969
+processed interrupts:    353969
+
+scsi0 : HBA PM2144UW
+Firmware revision: v07L.Y
+Hardware Configuration:
+IRQ: 11, level triggered
+DMA: BUSMASTER
+CPU: MC68020 20MHz
+Base IO : 0xef90
+Host Bus: PCI
+SCSI Bus: WIDE Speed: 10MB/sec.
+SCSI channel expansion Module: not present
+SmartRAID hardware: present.
+    Type: integrated
+    Max array groups:              7
+    Max drives per RAID 0 array:   7
+    Max drives per RAID 3/5 array: 7
+Cache Module: present.
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<BLOCKQUOTE><CODE>
+<PRE>
+    Type: 0
+    Bank0: 16MB without ECC
+    Bank1: 0MB without ECC
+    Bank2: 0MB without ECC
+    Bank3: 0MB without ECC
+Timer Mod.: present
+NVRAM     : present
+SmartROM  : enabled
+Alarm     : on
+Host&lt;-&gt;Disk command statistics:
+         Reads:      Writes:
+    1k:           0            0
+    2k:           0            0
+    4k:           0            0
+    8k:           0            0
+   16k:           0            0
+   32k:           0            0
+   64k:           0            0
+  128k:           0            0
+  256k:           0            0
+  512k:           0            0
+ 1024k:           0            0
+&gt;1024k:           0            0
+Sum   :           0            0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P> To get advanced command statistics, type: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+% echo "eata_dma latency" > /proc/scsi/eata_dma/N
+</PRE>
+</CODE></BLOCKQUOTE>
+<P> Then you can do a:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+% cat /proc/scsi/eata_dma/N
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>to get more detailed statistics. 
+<P> To turn off advanced command statistics, type: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+% echo "eata_dma nolatency" > /proc/scsi/eata_dma/N
+</PRE>
+</CODE></BLOCKQUOTE>
+<HR>
+<H2><A NAME="s7">7.</A> <A HREF="#toc7">Troubleshooting</A></H2>
+
+<H2><A NAME="ss7.1">7.1 Upon bootup, no SCSI hosts are detected</A>
+</H2>
+
+<P> This could be due to several reasons, but it's probably because
+the appropriate driver is not configured in the kernel. Check and make
+sure the appropriate driver (EATA-DMA or EATA ISA/EISA/PCI for most
+DPT cards) is configured. 
+<H2><A NAME="ss7.2">7.2 RAID configuration shows up as N different disks</A>
+</H2>
+
+<P> The RAID has not been configured properly.  If you're using a DPT
+storage manager, you need to configure the RAID disks as a single
+logical array.  Michael Neuffer (
+<A HREF="mailto:neuffer@uni-mainz.de">neuffer@uni-mainz.de</A>) writes: "When you configure
+the controller with the SM start it with the parameter /FW0 and/or
+select Solaris as OS. This will cause the array setup to be managed
+internally by the controller." 
+<H2><A NAME="ss7.3">7.3 Machine/controller is shut down in the middle of a format</A>
+</H2>
+
+<P> As stated in the DPT manual, this is clearly a no-no and might
+require the disks to be returned to the manufacturer, since the DPT
+Storage Manager might not be able format it. However, you might be
+able to perform a low level format on it, using a program supplied by
+DPT, called clfmt in their utilities page. Read the
+instructions after unzipping the clfmt.zip file on how to use it (and
+use it wisely). Once you do the low level format, you might be able to
+treat the disks like new. Use this program carefully!  
+<H2><A NAME="ss7.4">7.4 SCSI_ABORT_BUSY errors produced during initial filesystem format</A>
+</H2>
+
+<P> When you do a <CODE>mke2fs</CODE> on the SCSI drive, you may see errors
+of the form:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+scsi: aborting command due to timeout : pid xxx, scsi0, channel 0, id
+2, lun 0
+write (10) xx xx xx xx xx xx xx xx xx
+eata_abort called pid xxx target: 2 lun: 0 reason: 3
+Returning: SCSI_ABORT_BUSY
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>and this might end up causing the machine to freeze.  I (and many
+others) have been able to fix this problem by simply reading one or
+two hundred MB from the RAID array with <CODE>dd</CODE> like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+% dd if=/dev/sdX of=/dev/null bs=1024k count=128
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P> During a format, a fast rush of requests for chunks of memory that
+is directly accessible is made, and sometimes the memory manager
+cannot deliver it on time anymore.  The <CODE>dd</CODE> is a workaround
+that will simply create the requests sequentially instead of one huge
+heap at once like the format tends to create it. 
+<H2><A NAME="ss7.5">7.5 If all fails...</A>
+</H2>
+
+<P> Read the SCSI-HOWTO again.  Check the cabling and the termination.
+Try a different machine if you have access to one.  The most common
+cause of problems with SCSI devices and drivers is because of faulty
+or misconfigured hardware.  Finally, you can post to the various
+newsgroups or e-mail me, and I'll do my best to get back to you. 
+<HR>
+<H2><A NAME="references"></A> <A NAME="s8">8.</A> <A HREF="#toc8">References </A></H2>
+
+<P> The following documents may prove useful to you as you set up
+RAID:
+<P>
+<UL>
+<LI> 
+<A HREF="http://www.dpt.com/library/library.html">DPT Technology Library</A></LI>
+<LI> 
+<A HREF="http://www.uni-mainz.de/~neuffer/scsi/dpt/index.html">EATA-DMA homepage</A></LI>
+<LI> 
+<A HREF="http://sunsite.unc.edu/mdw/HOWTO/Disk-HOWTO.html">Linux Disk HOWTO</A></LI>
+<LI> 
+<A HREF="http://sunsite.unc.edu/mdw/HOWTO/Kernel-HOWTO.html">Linux Kernel HOWTO</A></LI>
+<LI> 
+<A HREF="http://sunsite.unc.edu/mdw/HOWTO/SCSI-HOWTO.html">Linux SCSI HOWTO</A></LI>
+<LI> 
+<A HREF="http://www.nyx.net/~sgjoen/disk.html">Multi Disk System Tuning HOWTO</A></LI>
+<LI> 
+<A HREF="http://linas.org/linux/raid.html">RAID Solutions for Linux</A></LI>
+</UL>
+<HR>
+<H2><A NAME="s9">9.</A> <A HREF="#toc9">Acknowledgements </A></H2>
+
+<P> The following people have been helpful in getting this HOWTO
+done: 
+<P>
+<UL>
+<LI> Andreas Koepf (
+<A HREF="mailto:A_Koepf@icp-vortex.com">A_Koepf@icp-vortex.com</A>)</LI>
+<LI> Boris Fain (
+<A HREF="mailto:fain@zen.stanford.edu">fain@zen.stanford.edu</A>)</LI>
+<LI> Dario Ballabio (
+<A HREF="mailto:Dario_Ballabio@milano.europe.dg.com">Dario_Ballabio@milano.europe.dg.com</A>)</LI>
+<LI> Heiko Rommel (
+<A HREF="mailto:Heiko.Rommel@Uni-Bielefeld.DE">Heiko.Rommel@Uni-Bielefeld.DE</A>)</LI>
+<LI> Jos Vos (
+<A HREF="mailto:jos@xos.nl">jos@xos.nl</A>)</LI>
+<LI> Michael Neuffer (
+<A HREF="mailto:neuffer@uni-mainz.de">neuffer@uni-mainz.de</A>)</LI>
+<LI> Ralph Wallace (
+<A HREF="mailto:rwallace@rwallace.interaccess.com">rwallace@rwallace.interaccess.com</A>)</LI>
+<LI> Russell Brown (
+<A HREF="mailto:russell@lutton.lls.com ">russell@lutton.lls.com</A>)</LI>
+<LI> Syunsuke Ogata (
+<A HREF="mailto:Syunsuke_Ogata@appear.ne.jp">Syunsuke_Ogata@appear.ne.jp</A>)</LI>
+<LI> Tom Brown (
+<A HREF="mailto:tbrown@baremetal.com">tbrown@baremetal.com</A>)</LI>
+</UL>
+<HR>
+</BODY>
+</HTML>

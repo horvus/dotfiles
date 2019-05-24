@@ -1,0 +1,363 @@
+<HTML
+><HEAD
+><TITLE
+>Flow control in Linux kernel</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Remote Serial Console HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Bugs and annoyances"
+HREF="bugs.html"><LINK
+REL="PREVIOUS"
+TITLE="Bugs and annoyances"
+HREF="bugs.html"><LINK
+REL="NEXT"
+TITLE="Red Hat Linux
+   7.1 and SysVinit"
+HREF="bugs-rhl71.html"></HEAD
+><BODY
+CLASS="SECTION"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Remote Serial Console HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="bugs.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Appendix A. Bugs and annoyances</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="bugs-rhl71.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECTION"
+><H1
+CLASS="SECTION"
+><A
+NAME="BUGS-KERNELP"
+></A
+>A.1. Flow control in <SPAN
+CLASS="SYSTEMITEM"
+>Linux</SPAN
+> kernel</H1
+><P
+>The Linux kernel can be asked to do
+   <SPAN
+CLASS="ACRONYM"
+>CTS</SPAN
+>/<SPAN
+CLASS="ACRONYM"
+>RTS</SPAN
+> flow control using
+   the <TT
+CLASS="LITERAL"
+>r</TT
+> option on the <TT
+CLASS="LITERAL"
+>console=</TT
+>
+   parameter.  For example, a serial link at 9600bps with 8 data bits,
+   no parity and <SPAN
+CLASS="ACRONYM"
+>CTS</SPAN
+>/<SPAN
+CLASS="ACRONYM"
+>RTS</SPAN
+> flow
+   control is configured as shown in <A
+HREF="bugs-kernelp.html#BUGS-KERNELP-CONFIG"
+>Figure A-1</A
+>.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="BUGS-KERNELP-CONFIG"
+></A
+><P
+><B
+>Figure A-1. A kernel <TT
+CLASS="LITERAL"
+>console</TT
+> parameter with
+    <SPAN
+CLASS="ACRONYM"
+>CTS</SPAN
+>/<SPAN
+CLASS="ACRONYM"
+>RTS</SPAN
+> flow control</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>console=9600n8r</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Because the Linux kernel only ever sends data,
+   <SPAN
+CLASS="ACRONYM"
+>CTS</SPAN
+>/<SPAN
+CLASS="ACRONYM"
+>RTS</SPAN
+> flow control is
+   implemented by checking that Clear to Send is not asserted.  The
+   code which does is found in
+   <TT
+CLASS="FILENAME"
+>/usr/src/linux/drivers/char/serial.c</TT
+>, the
+   relevant portion can be seen in <A
+HREF="bugs-kernelp.html#BUGS-KERNELP-SERIALC"
+>Figure A-2</A
+>.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="BUGS-KERNELP-SERIALC"
+></A
+><P
+><B
+>Figure A-2. Kernel source code for console
+    <SPAN
+CLASS="ACRONYM"
+>CTS</SPAN
+>/<SPAN
+CLASS="ACRONYM"
+>RTS</SPAN
+> flow control</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>static inline void wait_for_xmitr(struct async_struct *info)
+{
+&#8230;
+  /* Wait for flow control if necessary */
+  if (info-&#62;flags &#38; ASYNC_CONS_FLOW) {
+    tmout = 1000000;
+    while (--tmout &#38;&#38;
+           ((serial_in(info, UART_MSR) &#38; UART_MSR_CTS) == 0));
+  }       
+}</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The loop driven by the <TT
+CLASS="VARNAME"
+>tmout</TT
+> value of
+   1000000 results in a wait of about one second for the
+   <SPAN
+CLASS="ACRONYM"
+>CTS</SPAN
+> line to become asserted.</P
+><P
+>This code ignores the status of the <SPAN
+CLASS="ACRONYM"
+>RS-232</SPAN
+>
+   Data Set Ready and Data Carrier Detect status lines.  This has a
+   number of consequences.</P
+><P
+></P
+><UL
+><LI
+><P
+>If the <SPAN
+CLASS="ACRONYM"
+>RS-232</SPAN
+> cable is unplugged or the
+     terminal server port is idle then the code waits for
+     <SPAN
+CLASS="ACRONYM"
+>CTS</SPAN
+> to be asserted for about one second for
+     every character written to the console.  So the huge number of
+     characters written to the console when booting a machine can
+     result in a very long wait for a reboot.</P
+></LI
+><LI
+><P
+>Clear to Send is only validly asserted if Data Carrier
+     Detect and Data Set Ready are asserted.  The code should allow
+     for an unpowered device which allows <SPAN
+CLASS="ACRONYM"
+>CTS</SPAN
+> to float.</P
+></LI
+><LI
+><P
+>After looping one million times, if Clear to Send is not
+     assrted then the character is sent in any case.  Thus the kernel
+     cannot be used on multidrop <SPAN
+CLASS="ACRONYM"
+>RS-232</SPAN
+> lines.  The
+     character should be dropped instead.</P
+></LI
+><LI
+><P
+>The character is sent even if Data Carrier Detect is not
+     asserted.  Thus the attached modem may be in command mode.  This
+     results in a security flaw if an attacker can get arbitrary text
+     placed in a console messages.  As many console messages contain
+     error text derived from user events, it would not be too
+     difficult to place <B
+CLASS="COMMAND"
+>AT&#38;F</B
+> in a console
+     message and unprogram the modem's auto-answer
+     configuration.</P
+></LI
+></UL
+><P
+>As a result of these bugs this <I
+CLASS="CITETITLE"
+>HOWTO</I
+>
+   no longer recommends the use of kernel-level flow control.  The
+   author has a kernel patch which fixes all current-reported bugs and
+   is attempting to get that patch integrated into the mainline
+   kernel.  Once the kernel bugs are corrected this
+   <I
+CLASS="CITETITLE"
+>HOWTO</I
+> will once again recommend kernel-level
+   flow control.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="bugs.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="bugs-rhl71.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Bugs and annoyances</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="bugs.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><SPAN
+CLASS="PRODUCTNAME"
+>Red Hat <SPAN
+CLASS="SYSTEMITEM"
+>Linux</SPAN
+></SPAN
+>
+   <SPAN
+CLASS="PRODUCTNUMBER"
+>7.1</SPAN
+> and SysVinit</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,476 @@
+<HTML
+><HEAD
+><TITLE
+>Configuringthe NetworkingHardware</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Resolving Host Names"
+HREF="x-087-2-issues.resolving.html"><LINK
+REL="NEXT"
+TITLE="Kernel Configuration"
+HREF="x-087-2-hardware.kernel.config.html"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-issues.resolving.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-hardware.kernel.config.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="X-087-2-HARDWARE"
+>Chapter 3. Configuringthe NetworkingHardware</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>3.1. <A
+HREF="x-087-2-hardware.kernel.config.html"
+>Kernel Configuration</A
+></DT
+><DD
+><DL
+><DT
+>3.1.1. <A
+HREF="x-087-2-hardware.kernel.config.html#AEN2131"
+>Kernel Options in Linux 2.0 and Higher</A
+></DT
+><DT
+>3.1.2. <A
+HREF="x-087-2-hardware.kernel.config.html#AEN2187"
+>Kernel Networking Options in Linux 2.0.0 and Higher</A
+></DT
+></DL
+></DD
+><DT
+>3.2. <A
+HREF="x-087-2-hwconfig.tour.html"
+>A Tour of Linux Network Devices</A
+></DT
+><DT
+>3.3. <A
+HREF="x-087-2-hardware.drivers.ethernet.html"
+>Ethernet Installation</A
+></DT
+><DT
+>3.4. <A
+HREF="x-087-2-hardware.drivers.plip.html"
+>The PLIP Driver</A
+></DT
+><DT
+>3.5. <A
+HREF="x-087-2-hardware.drivers.slip.html"
+>The PPP and SLIP Drivers</A
+></DT
+><DT
+>3.6. <A
+HREF="x-087-2-hardware.other.html"
+>Other Network Types</A
+></DT
+></DL
+></DIV
+><P
+>We've been talking quite a bit about network interfaces and general
+TCP/IP issues, but we haven't really covered what happens when the
+&#8220;networking code&#8221; in the kernel accesses a piece of
+hardware.  In order to describe this accurately, we have to talk a
+little about the concept of interfaces and drivers.</P
+><P
+>First, of course, there's the hardware itself, for example an
+Ethernet, FDDI or Token Ring card: this is a slice of Epoxy cluttered
+with lots of tiny chips with strange numbers on them, sitting in a
+slot of your PC. This is what we generally call a physical device.</P
+><P
+>&#13; For you to
+use a network card, special functions have to be present in your Linux
+kernel that understand the particular way this device is accessed. The
+software that implements these functions is called a <I
+CLASS="EMPHASIS"
+>device
+driver</I
+>. Linux has device drivers for many different types
+of network interface cards: ISA, PCI, MCA, EISA, Parallel port, PCMCIA,
+and more recently, USB.</P
+><P
+>But what do we mean when we say a driver &#8220;handles&#8221; a device? Let's
+consider an Ethernet card. The driver has to be able to communicate with the
+peripheral's on-card logic somehow: it has to send commands and data to the
+card, while the card should deliver any data received to the driver.</P
+><P
+>In IBM-style personal computers, this communication takes place through a
+cluster of I/O addresses that are mapped to registers on the card and/or
+through shared or direct memory transfers. All commands and data the kernel
+sends to the card have to go to these addresses. I/O and memory addresses are
+generally described by providing the starting or
+<I
+CLASS="EMPHASIS"
+>base address</I
+>. Typical base addresses for ISA bus Ethernet
+cards are <TT
+CLASS="LITERAL"
+>0x280</TT
+> or <TT
+CLASS="LITERAL"
+>0x300</TT
+>. PCI bus
+network cards generally have their I/O address automatically assigned.</P
+><P
+>Usually you don't have to worry about any hardware issues such as the
+base address because the kernel makes an attempt at boot time to
+detect a card's location. This is called <I
+CLASS="EMPHASIS"
+>auto
+probing</I
+>, which means that the kernel reads several memory
+or I/O locations and compares the data it reads there with what it
+would expect to see if a certain network card were installed at that
+location. However, there may be network cards it cannot detect
+automatically; this is sometimes the case with cheap network cards
+that are not-quite clones of standard cards from other
+manufacturers. Also, the kernel will normally attempt to detect only
+one network device when booting. If you're using more than one card,
+you have to tell the kernel about the other cards explicitly.</P
+><P
+>&#13;Another parameter that you might have to tell the kernel about is the
+interrupt request line. Hardware components usually interrupt the
+kernel when they need to be taken care of&#8212;for example, when data
+has arrived or a special condition occurs. In an ISA bus PC,
+interrupts may occur on one of 15 interrupt channels numbered 0, 1,
+and 3 through 15. The interrupt number assigned to a hardware
+component is called its <I
+CLASS="EMPHASIS"
+>interrupt request
+number</I
+> (IRQ).<A
+NAME="X-087-2-FNHW01"
+HREF="#FTN.X-087-2-FNHW01"
+>[1]</A
+>&#13;</P
+><P
+>&#13;
+As described in <A
+HREF="x-087-2-issues.html"
+>Chapter 2</A
+>, the kernel accesses a piece
+of network hardware through a software construct called an 
+<I
+CLASS="EMPHASIS"
+>interface</I
+>.
+Interfaces offer an abstract set of functions that are the same across all
+types of hardware, such as sending or receiving a datagram.</P
+><P
+>&#13; Interfaces are identified by means of
+names. In many other Unix-like operating systems, the network
+interface is implemented as a special device file in the
+<TT
+CLASS="FILENAME"
+>/dev/</TT
+> directory. If you type the <TT
+CLASS="LITERAL"
+>ls -las
+/dev/</TT
+> command, you will see what these device files look
+like. In the file permissions (second) column you will see that device
+files begin with a letter rather than the hyphen seen for normal
+files. This character indicates the device type. The most common
+device types are <TT
+CLASS="LITERAL"
+>b</TT
+>, which indicates the device is a
+<I
+CLASS="EMPHASIS"
+>block</I
+> device and handles whole blocks of data
+with each read and write, and <TT
+CLASS="LITERAL"
+>c</TT
+>, which indicates
+the device is a <I
+CLASS="EMPHASIS"
+>character</I
+> device and handles data
+one character at a time. Where you would normally see the file length
+in the <B
+CLASS="COMMAND"
+>ls</B
+> output, you instead see two numbers,
+called the major and minor device numbers. These numbers indicate the
+actual device with which the device file is associated.</P
+><P
+>Each device driver registers a unique major number with the kernel.
+Each <I
+CLASS="EMPHASIS"
+>instance</I
+> of that device registers a unique
+minor number for that major device. The <TT
+CLASS="LITERAL"
+>tty</TT
+>
+interfaces,&#8201;<TT
+CLASS="FILENAME"
+>/dev/tty*</TT
+>, are a character
+mode device indicated by the &#8220;<TT
+CLASS="LITERAL"
+>c</TT
+>&#8221;, and
+each have a major number of <TT
+CLASS="LITERAL"
+>4</TT
+>, but
+<TT
+CLASS="FILENAME"
+>/dev/tty1</TT
+> has a minor number of
+<TT
+CLASS="LITERAL"
+>1</TT
+>, and <TT
+CLASS="FILENAME"
+>/dev/tty2</TT
+> has a minor
+number of <TT
+CLASS="LITERAL"
+>2</TT
+>. Device files are very useful for
+many types of devices, but can be clumsy to use when trying to find an
+unused device to open.</P
+><P
+>Linux interface names are defined internally in the kernel and are not
+device files in the <TT
+CLASS="FILENAME"
+>/dev</TT
+> directory. Some typical
+device names are listed later in <A
+HREF="x-087-2-hwconfig.tour.html"
+>Section 3.2</A
+>.&#8221; The assignment of interfaces to
+devices usually depends on the order in which devices are
+configured. For instance, the first Ethernet card installed will
+become <TT
+CLASS="FILENAME"
+>eth0</TT
+>, and the next will be
+<TT
+CLASS="FILENAME"
+>eth1</TT
+>. SLIP interfaces are handled differently
+from others because they are assigned dynamically. Whenever a SLIP
+connection is established, an interface is assigned to the serial
+port.</P
+><P
+><A
+HREF="x-087-2-hardware.html#X-087-2-HARDWARE.FIG.DRIVERS"
+>Figure 3-1</A
+> illustrates the relationship
+between the hardware, device drivers, and interfaces.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-HARDWARE.FIG.DRIVERS"
+></A
+><P
+><B
+>Figure 3-1. The relationship between drivers, interfaces, and hardware</B
+></P
+><P
+><IMG
+SRC="lag2_0301.jpg"></P
+></DIV
+><P
+>When booting, the kernel displays the devices it detects and the
+interfaces it installs. The following is an excerpt from typical
+boot messages:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+> .
+ .  This processor honors the WP bit even when in supervisor mode./ 
+    Good. 
+Swansea University Computer Society NET3.035 for Linux 2.0 
+NET3: Unix domain sockets 0.13 for Linux NET3.035.
+Swansea University Computer Society TCP/IP for NET3.034 
+IP Protocols: IGMP,ICMP, UDP, TCP 
+Swansea University Computer Society IPX 0.34 for NET3.035 
+IPX Portions Copyright (c) 1995 Caldera, Inc.
+Serial driver version 4.13 with no serial options enabled 
+tty00 at 0x03f8 (irq = 4) is a 16550A
+tty01 at 0x02f8 (irq = 3) is a 16550A
+CSLIP: code copyright 1989 Regents of the University of California 
+PPP: Version 2.2.0 (dynamic channel allocation) 
+PPP Dynamic channel allocation code copyright 1995 Caldera, Inc. 
+PPP line discipline registered.  
+eth0: 3c509 at 0x300 tag 1, 10baseT port, address 00 a0 24 0e e4 e0,/ 
+    IRQ 10.
+3c509.c:1.12 6/4/97 becker@cesdis.gsfc.nasa.gov 
+Linux Version 2.0.32 (root@perf) (gcc Version 2.7.2.1) 
+#1 Tue Oct 21 15:30:44 EST 1997
+ .
+ .</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This example shows that the kernel has been compiled with TCP/IP
+enabled, and it includes drivers for SLIP, CSLIP, and PPP. The third
+line from the bottom says that a 3C509 Ethernet card was detected and
+installed as interface <TT
+CLASS="FILENAME"
+>eth0</TT
+>. If you have some
+other type of network card&#8212;perhaps a D-Link pocket adaptor, for
+example&#8212;the kernel will usually print a line starting with its
+device name&#8212;<TT
+CLASS="FILENAME"
+>dl0</TT
+> in the D-Link
+example&#8212;followed by the type of card detected. If you have a
+network card installed but don't see any similar message, the kernel
+is unable to detect your card properly. This situation will be
+discussed later in the section &#8220;Ethernet Autoprobing.&#8221;</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNHW01"
+HREF="x-087-2-hardware.html#X-087-2-FNHW01"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> IRQs 2 and
+9 are the same because the IBM PC design has two cascaded interrupt
+processors with eight IRQs each; the secondary processor is connected
+to IRQ 2 of the primary one.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-issues.resolving.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-hardware.kernel.config.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Resolving Host Names</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Kernel Configuration</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

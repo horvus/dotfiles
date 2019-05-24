@@ -1,0 +1,299 @@
+<HTML
+><HEAD
+><TITLE
+>Setting up Proxy ARP with subnetting </TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.56"><LINK
+REL="HOME"
+TITLE="ProxyARP Subnetting HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="How Proxy ARP with subnetting works "
+HREF="how.html"><LINK
+REL="NEXT"
+TITLE="Other alternatives to Proxy ARP with subnetting"
+HREF="alternatives.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>ProxyARP Subnetting HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="how.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="alternatives.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SETUP"
+>4. Setting up Proxy ARP with subnetting</A
+></H1
+><P
+>I set up Proxy ARP with subnetting on a Linux kernel version 2.0.30 machine, but I am told that the code works right back to some kernel version in the 1.2.x era.</P
+><P
+>The first thing to note is that the ARP code is in two parts: the part inside the kernel that sends and receives ARP requests and responses and updates the ARP cache etc.; and other part is the <B
+CLASS="COMMAND"
+>arp</B
+>(8) command that allows the super user to modify the ARP cache manually and anyone to examine it.</P
+><P
+>The first problem I had was that the <B
+CLASS="COMMAND"
+>arp</B
+>(8) command that came with my Slackware 3.1 distribution was ancient (1994 era!!!) and didn't communicate with the kernel arp code correctly at all (mainly evidenced by the strange output that it gave for "<B
+CLASS="COMMAND"
+>arp</B
+> -a").</P
+><P
+>The <B
+CLASS="COMMAND"
+>arp</B
+>(8) command in "net-tools-1.33a" available from a variety of places, including (from the <TT
+CLASS="FILENAME"
+>README</TT
+> file that came with it) <A
+HREF="ftp://ftp.linux.org.uk:/pub/linux/Networking/base/"
+TARGET="_top"
+>ftp.linux.org.uk:/pub/linux/Networking/base/</A
+> works properly and includes new man pages that explain stuff a lot better than the older arp(8) man page.</P
+><P
+>Armed with a decent <B
+CLASS="COMMAND"
+>arp</B
+>(8) command, all the changes I made were in the <TT
+CLASS="FILENAME"
+>/etc/rc.d/rc.inet1</TT
+> script (for Slackware - probably different for other flavours). First of all, we need to change the broadcast address, network number and netmask of eth0:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>NETMASK=255.255.255.240 # for a 4-bit host part
+NETWORK=x.y.z.64        # our new network number (replace x.y.z with your net)
+BROADCAST=x.y.z.79      # in my case</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Then a line needs to be added to configure the second Ethernet port (after any module loading that might be required to load the driver code):</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>/sbin/ifconfig eth1 (name on net 1) broadcast (x.y.z.255) netmask 255.255.255.0</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Then we add a route for the new interface:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>/sbin/route add -net (x.y.z.0) netmask 255.255.255.0</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>And you will probably need to change the default gateway to the one for network 1.</P
+><P
+>At this point, it is appropriate to add the Proxy ARP entry:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>/sbin/arp -i eth1 -Ds ${NETWORK} eth1 netmask ${NETMASK} pub</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This tells ARP to add a static entry (the s) to the cache for network ${NETWORK}. The -D tells ARP to use the same hardware address as interface eth1 (the second eth1), thus saving us from having to look up the hardware address for eth1 and hardcoding it in. The netmask option tells ARP that we want to use subnetting (ie. Proxy for all (IP number) &#38; ${NETMASK} == ${NETWORK} &#38; ${NETMASK}). The pub option tells ARP to publish this ARP entry, ie. it is a Proxy entry, so respond on behalf of these IP numbers. The -i eth1 option tells ARP to only respond to requests that come in on interface eth1.</P
+><P
+>Hopefully, at this point, when the machine is rebooted, all the machines on network 0 will appear to be on network 1. You can check that the Proxy ARP with subnetting entry has been correctly installed on machine A. On my machine (names changed to protect the innocent) it is:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>bash$ /sbin/arp -an
+Address                 HWtype  HWaddress           Flags Mask            Iface
+x.y.z.1                 ether   00:00:0C:13:6F:17   C     *               eth1
+x.y.z.65                ether   00:40:05:49:77:01   C     *               eth0
+x.y.z.67                ether   08:00:20:0B:79:47   C     *               eth0
+x.y.z.5                 ether   00:00:3B:80:18:E5   C     *               eth1
+x.y.z.64                ether   00:40:96:20:CD:D2   CMP   255.255.255.240 eth1</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Alternatively, you can examine the <TT
+CLASS="FILENAME"
+>/proc/net/arp</TT
+> file with eg. <B
+CLASS="COMMAND"
+>cat</B
+>(1).</P
+><P
+>The last line is the proxy entry for the subnet. The CMP flags indicate that it is a static (Manually entered) entry and that it is to be Published. The entry is only going to reply to ARP requests on eth1 where the requested IP number, once masked, matches the network number, also masked. Note that <B
+CLASS="COMMAND"
+>arp</B
+>(8) has automatically determined the hardware address of eth1 and inserted this for the address to use (the -Ds option).</P
+><P
+>Likewise, it is probably prudent to check that the routing table has been set up correctly. Here is mine (again, the names are changed to protect the innocent):</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>#/bin/netstat -rn
+Kernel routing table
+Destination     Gateway         Genmask         Flags Metric Ref Use    Iface
+x.y.z.64        0.0.0.0         255.255.255.240 U     0      0       71 eth0
+x.y.z.0         0.0.0.0         255.255.255.0   U     0      0      389 eth1
+127.0.0.0       0.0.0.0         255.0.0.0       U     0      0        7 lo
+0.0.0.0         x.y.z.1         0.0.0.0         UG    1      0      573 eth1</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Alternatively, you can examine the <TT
+CLASS="FILENAME"
+>/proc/net/route</TT
+> file with eg. <B
+CLASS="COMMAND"
+>cat</B
+>(1).</P
+><P
+>Note that the first entry is a proper subset of the second, but the routing table has ranked them in netmask order, so the eth0 entry will be checked before the eth1 entry.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="how.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="alternatives.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>How Proxy ARP with subnetting works</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Other alternatives to Proxy ARP with subnetting</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

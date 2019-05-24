@@ -1,0 +1,810 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>The Solution</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="C++ dlopen mini HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="The Problem"
+HREF="theproblem.html"><LINK
+REL="NEXT"
+TITLE="Source Code"
+HREF="source.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>C++ dlopen mini HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="theproblem.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="source.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="thesolution"
+></A
+>3. The Solution</H1
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="externC"
+></A
+>3.1. <TT
+CLASS="literal"
+>extern "C"</TT
+></H2
+><P
+>C++ has a special keyword to declare a function with C
+        bindings: <TT
+CLASS="literal"
+>extern "C"</TT
+>. A function declared
+        as <TT
+CLASS="literal"
+>extern "C"</TT
+> uses the function name as
+        symbol name, just as a C function. For that reason, only
+        non-member functions can be declared as <TT
+CLASS="literal"
+>extern
+        "C"</TT
+>, and they cannot be overloaded.</P
+><P
+>Although there are severe limitations, <TT
+CLASS="literal"
+>extern
+        "C"</TT
+> functions are very useful because they can be
+        dynamically loaded using <TT
+CLASS="function"
+>dlopen</TT
+> just like
+        a C function.</P
+><P
+>This does <EM
+>not</EM
+> mean that functions
+        qualified as <TT
+CLASS="literal"
+>extern "C"</TT
+> cannot contain C++
+        code. Such a function is a full-featured C++ function which
+        can use C++ features and take any type of argument.</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="loadingfunctions"
+></A
+>3.2. Loading Functions</H2
+><P
+>In C++ functions are loaded just like in C, with
+        <TT
+CLASS="function"
+>dlsym</TT
+>. The functions you want to load
+        must be qualified as <TT
+CLASS="literal"
+>extern "C"</TT
+> to avoid
+        the symbol name being mangled.</P
+><DIV
+CLASS="example"
+><A
+NAME="AEN162"
+></A
+><P
+><B
+>Example 1. Loading a Function</B
+></P
+><P
+>main.cpp:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#include &#60;iostream&#62;
+#include &#60;dlfcn.h&#62;
+
+int main() {
+    using std::cout;
+    using std::cerr;
+
+    cout &#60;&#60; "C++ dlopen demo\n\n";
+
+    // open the library
+    cout &#60;&#60; "Opening hello.so...\n";
+    void* handle = dlopen("./hello.so", RTLD_LAZY);
+    
+    if (!handle) {
+        cerr &#60;&#60; "Cannot open library: " &#60;&#60; dlerror() &#60;&#60; '\n';
+        return 1;
+    }
+    
+    // load the symbol
+    cout &#60;&#60; "Loading symbol hello...\n";
+    typedef void (*hello_t)();
+
+    // reset errors
+    dlerror();
+    hello_t hello = (hello_t) dlsym(handle, "hello");
+    const char *dlsym_error = dlerror();
+    if (dlsym_error) {
+        cerr &#60;&#60; "Cannot load symbol 'hello': " &#60;&#60; dlsym_error &#60;&#60;
+            '\n';
+        dlclose(handle);
+        return 1;
+    }
+    
+    // use it to do the calculation
+    cout &#60;&#60; "Calling hello...\n";
+    hello();
+    
+    // close the library
+    cout &#60;&#60; "Closing library...\n";
+    dlclose(handle);
+}</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>hello.cpp:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#include &#60;iostream&#62;
+
+extern "C" void hello() {
+    std::cout &#60;&#60; "hello" &#60;&#60; '\n';
+}
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The function <TT
+CLASS="function"
+>hello</TT
+> is defined in
+        <TT
+CLASS="filename"
+>hello.cpp</TT
+>as <TT
+CLASS="literal"
+>extern
+          "C"</TT
+>; it is loaded in <TT
+CLASS="filename"
+>main.cpp</TT
+>
+        with the <TT
+CLASS="function"
+>dlsym</TT
+> call. The function must be
+        qualified as <TT
+CLASS="literal"
+>extern "C"</TT
+> because otherwise
+        we wouldn't know its symbol name.</P
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>There are two different forms of the
+          <TT
+CLASS="literal"
+>extern "C"</TT
+> declaration: <TT
+CLASS="literal"
+>extern
+            "C"</TT
+> as used above, and <TT
+CLASS="literal"
+>extern "C" {
+            &#8230; }</TT
+> with the declarations between the
+          braces. The first (inline) form is a declaration with extern
+          linkage and with C language linkage; the second only affects
+          language linkage. The following two declarations are thus
+          equivalent:
+          
+          <DIV
+CLASS="informalexample"
+><A
+NAME="AEN180"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>extern "C" int foo;
+extern "C" void bar();
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+            and
+          <DIV
+CLASS="informalexample"
+><A
+NAME="AEN182"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>extern "C" {
+     extern int foo;
+     extern void bar();
+}</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+
+          As there is no difference between an
+          <TT
+CLASS="literal"
+>extern</TT
+> and a
+          non-<TT
+CLASS="literal"
+>extern</TT
+> <EM
+>function</EM
+>
+          declaration, this is no problem as long as you are not
+          declaring any variables. If you declare
+          <EM
+>variables</EM
+>, keep in mind that
+
+          <DIV
+CLASS="informalexample"
+><A
+NAME="AEN188"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>extern "C" int foo;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+            and
+          <DIV
+CLASS="informalexample"
+><A
+NAME="AEN190"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>extern "C" {
+    int foo;
+}</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+          
+          are <EM
+>not</EM
+> the same thing.</P
+><P
+>For further clarifications, refer to
+          [<SPAN
+CLASS="citation"
+>ISO14882</SPAN
+>], 7.5, with special attention
+          to paragraph 7, or to [<SPAN
+CLASS="citation"
+>STR2000</SPAN
+>],
+          paragraph 9.2.4.</P
+><P
+>Before doing fancy things with extern variables, peruse
+          the documents listed in the <A
+HREF="seealso.html"
+>see
+          also</A
+> section.</P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="loadingclasses"
+></A
+>3.3. Loading Classes</H2
+><P
+>Loading classes is a bit more difficult because we need
+        an <EM
+>instance</EM
+> of a class, not just a
+        pointer to a function.</P
+><P
+>We cannot create the instance of the class using
+        <TT
+CLASS="literal"
+>new</TT
+> because the class is not defined in the
+        executable, and because (under some circumstances) we don't
+        even know its name.</P
+><P
+>The solution is achieved through polymorphism. We define a
+        base, <EM
+>interface</EM
+> class with virtual
+        members <EM
+>in the executable</EM
+>, and a derived,
+        <EM
+>implementation</EM
+> class <EM
+>in the
+          module</EM
+>. Generally the interface class is
+        abstract (a class is abstract if it has pure virtual
+        functions).</P
+><P
+>As dynamic loading of classes is generally used for
+        plug-ins &#8212; which must expose a clearly defined interface
+        &#8212; we would have had to define an interface and derived
+        implementation classes anyway.</P
+><P
+>Next, while still in the module,  we define two additional helper
+        functions, known as <EM
+>class factory
+	    functions</EM
+>. One of these functions creates an instance of 
+	the class and returns a pointer to it. The other function takes a
+        pointer to a class created by the factory and destroys
+        it. These two functions are qualified as <TT
+CLASS="literal"
+>extern
+          "C"</TT
+>.</P
+><P
+>To use the class from the module, load the two factory
+        functions using <TT
+CLASS="function"
+>dlsym</TT
+> just <A
+HREF="thesolution.html#loadingfunctions"
+>as we loaded the the hello
+        function</A
+>; then, we can create and destroy as many
+        instances as we wish.</P
+><DIV
+CLASS="example"
+><A
+NAME="AEN216"
+></A
+><P
+><B
+>Example 2. Loading a Class</B
+></P
+><P
+>Here we use a generic <TT
+CLASS="classname"
+>polygon</TT
+>
+          class as interface and the derived class
+          <TT
+CLASS="classname"
+>triangle</TT
+> as implementation.</P
+><P
+>main.cpp:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#include "polygon.hpp"
+#include &#60;iostream&#62;
+#include &#60;dlfcn.h&#62;
+
+int main() {
+    using std::cout;
+    using std::cerr;
+
+    // load the triangle library
+    void* triangle = dlopen("./triangle.so", RTLD_LAZY);
+    if (!triangle) {
+        cerr &#60;&#60; "Cannot load library: " &#60;&#60; dlerror() &#60;&#60; '\n';
+        return 1;
+    }
+
+    // reset errors
+    dlerror();
+    
+    // load the symbols
+    create_t* create_triangle = (create_t*) dlsym(triangle, "create");
+    const char* dlsym_error = dlerror();
+    if (dlsym_error) {
+        cerr &#60;&#60; "Cannot load symbol create: " &#60;&#60; dlsym_error &#60;&#60; '\n';
+        return 1;
+    }
+    
+    destroy_t* destroy_triangle = (destroy_t*) dlsym(triangle, "destroy");
+    dlsym_error = dlerror();
+    if (dlsym_error) {
+        cerr &#60;&#60; "Cannot load symbol destroy: " &#60;&#60; dlsym_error &#60;&#60; '\n';
+        return 1;
+    }
+
+    // create an instance of the class
+    polygon* poly = create_triangle();
+
+    // use the class
+    poly-&#62;set_side_length(7);
+        cout &#60;&#60; "The area is: " &#60;&#60; poly-&#62;area() &#60;&#60; '\n';
+
+    // destroy the class
+    destroy_triangle(poly);
+
+    // unload the triangle library
+    dlclose(triangle);
+}</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>polygon.hpp:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#ifndef POLYGON_HPP
+#define POLYGON_HPP
+
+class polygon {
+protected:
+    double side_length_;
+
+public:
+    polygon()
+        : side_length_(0) {}
+
+    virtual ~polygon() {}
+
+    void set_side_length(double side_length) {
+        side_length_ = side_length;
+    }
+
+    virtual double area() const = 0;
+};
+
+// the types of the class factories
+typedef polygon* create_t();
+typedef void destroy_t(polygon*);
+
+#endif</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>triangle.cpp:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#include "polygon.hpp"
+#include &#60;cmath&#62;
+
+class triangle : public polygon {
+public:
+    virtual double area() const {
+        return side_length_ * side_length_ * sqrt(3) / 2;
+    }
+};
+
+
+// the class factories
+
+extern "C" polygon* create() {
+    return new triangle;
+}
+
+extern "C" void destroy(polygon* p) {
+    delete p;
+}
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>There are a few things to note when loading classes:</P
+><P
+></P
+><UL
+><LI
+><P
+>You must provide <EM
+>both</EM
+> a creation
+            and a destruction function; you must
+            <EM
+>not</EM
+> destroy the instances using
+            <TT
+CLASS="literal"
+>delete</TT
+> from inside the executable, but
+            always pass it back to the module. This is due to the fact
+            that in C++ the operators <TT
+CLASS="literal"
+>new</TT
+> and
+            <TT
+CLASS="literal"
+>delete</TT
+> may be overloaded; this would
+            cause a non-matching <TT
+CLASS="literal"
+>new</TT
+> and
+            <TT
+CLASS="literal"
+>delete</TT
+> to be called, which could cause
+            anything from nothing to memory leaks and segmentation
+            faults. The same is true if different standard libraries
+            are used to link the module and the executable.</P
+></LI
+><LI
+><P
+>The destructor of the interface class should be
+            virtual in any case.  There <EM
+>might</EM
+> be
+            very rare cases where that would not be necessary, but it
+            is not worth the risk, because the additional overhead can
+            generally be ignored.</P
+><P
+>If your base class needs no destructor, define an
+            empty (and <TT
+CLASS="literal"
+>virtual</TT
+>) one anyway;
+            otherwise you <EM
+>will have problems</EM
+>
+            sooner or later; I can guarantee you that.  You can read
+            more about this problem in the comp.lang.c++ FAQ at <A
+HREF="http://www.parashift.com/c++-faq-lite/"
+TARGET="_top"
+>http://www.parashift.com/c++-faq-lite/</A
+>, in
+            section 20.</P
+></LI
+></UL
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="theproblem.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="source.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Problem</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Source Code</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

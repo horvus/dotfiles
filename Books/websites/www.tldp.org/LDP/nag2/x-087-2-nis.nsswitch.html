@@ -1,0 +1,472 @@
+<HTML
+><HEAD
+><TITLE
+>Choosing the Right Maps</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Network Information System"
+HREF="x-087-2-nis.html"><LINK
+REL="PREVIOUS"
+TITLE="Setting Up an NIS Client with GNU libc"
+HREF="x-087-2-nis.yp.html"><LINK
+REL="NEXT"
+TITLE="Using the passwd and group Maps"
+HREF="x-087-2-nis.passwd.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.yp.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. The Network Information System</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.passwd.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NIS.NSSWITCH"
+>13.7. Choosing the Right Maps</A
+></H1
+><P
+>&#13;
+Having made sure you can reach the NIS server, you have to decide which
+configuration files to replace or augment with NIS maps. Commonly, you
+will want to use NIS maps for the host and password lookup functions. The
+former is especially useful if you do not have the BIND name service. The
+password lookup lets all users log into their accounts from any system in the
+NIS domain; this usually goes along with sharing a central
+<TT
+CLASS="FILENAME"
+>/home</TT
+> directory among all hosts via NFS. The password
+map is explained detail in the next section. </P
+><P
+>Other maps, like <TT
+CLASS="FILENAME"
+>services.byname</TT
+>, don't provide such
+dramatic gains, but do save you some editing work. The
+<TT
+CLASS="FILENAME"
+>services.byname</TT
+> map is valuable if you install
+any network applications that use a service name not in the standard
+<TT
+CLASS="FILENAME"
+>services</TT
+> file.</P
+><P
+>Generally, you want to have some choice of when a lookup function uses the
+local files, when it queries the NIS server, and when it uses other servers 
+such as DNS. GNU libc allows you to configure the order in which a function
+accesses these services. This is controlled through the
+<TT
+CLASS="FILENAME"
+>/etc/nsswitch.conf</TT
+> file, which stands for
+<I
+CLASS="EMPHASIS"
+>Name Service Switch</I
+>, but of course isn't limited to
+the name service. For any of the data lookup functions supported by GNU libc,
+the file contains a line naming the services to use.</P
+><P
+>&#13;The right order of services depends on the type of data each service is 
+offering. It is unlikely that the <TT
+CLASS="FILENAME"
+>services.byname</TT
+> map 
+will contain entries differing from those in the local 
+<TT
+CLASS="FILENAME"
+>services</TT
+> file; it will only contain additional entries. 
+So it appears reasonable to query the local files first and check NIS only 
+if the service name isn't found. Hostname information, on the other hand, 
+may change very frequently, so DNS or the NIS server should always have the 
+most accurate account, while the local <TT
+CLASS="FILENAME"
+>hosts</TT
+> file is 
+only kept as a backup if DNS and NIS should fail. For hostnames, therefore, 
+you normally want to check the local file last.</P
+><P
+> 
+ 
+ 
+The following example shows how to force <TT
+CLASS="FUNCTION"
+>gethostbyname</TT
+>
+and <TT
+CLASS="FUNCTION"
+>gethostbyaddr</TT
+> to look in NIS and DNS before the
+<TT
+CLASS="FILENAME"
+>hosts</TT
+> file and how to have the
+<TT
+CLASS="FUNCTION"
+>getservbyname</TT
+> function look in the local files before
+querying NIS. These resolver functions will try each of the listed services 
+in turn; if a lookup succeeds, the result is returned; otherwise, they will 
+try the next service in the list. The file setting for these priorities is:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># small sample /etc/nsswitch.conf
+#
+hosts:     nis dns files 
+services:  files nis</PRE
+></TD
+></TR
+></TABLE
+><P
+>The following is a complete list of services and locations that may be used 
+with an entry in the <TT
+CLASS="FILENAME"
+>nsswitch.conf</TT
+> file. The actual maps,
+files, servers, and objects queried depend on the entry name. The 
+following can appear to the right of a colon: </P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>nis</SPAN
+></DT
+><DD
+><P
+>Use the current domain NIS server. The location of the server queried
+is configured in the <TT
+CLASS="FILENAME"
+>yp.conf</TT
+> file, as shown in the
+previous section.  For the <SPAN
+CLASS="SYSTEMITEM"
+>hosts</SPAN
+> entry,
+the <TT
+CLASS="FILENAME"
+>hosts.byname</TT
+> and <TT
+CLASS="FILENAME"
+>hosts.byaddr</TT
+> 
+maps are queried.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>nisplus</SPAN
+> or
+<SPAN
+CLASS="SYSTEMITEM"
+>nis+</SPAN
+></DT
+><DD
+><P
+>Use the NIS+ server for this domain. The location of the server is obtained
+from the <TT
+CLASS="FILENAME"
+>/etc/nis.conf</TT
+> file.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>dns</SPAN
+></DT
+><DD
+><P
+>Use the DNS name server. This service type is useful only with the
+<SPAN
+CLASS="SYSTEMITEM"
+>hosts</SPAN
+> entry. The name servers queried
+are still determined by the standard <TT
+CLASS="FILENAME"
+>resolv.conf</TT
+> file.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>files</SPAN
+></DT
+><DD
+><P
+>Use the local file, such as the <TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+> file for the
+<SPAN
+CLASS="SYSTEMITEM"
+>hosts</SPAN
+> entry.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>compat</SPAN
+></DT
+><DD
+><P
+>Be compatible with older file formats. This option can be used when either 
+NYS or glibc 2.x is used for NIS or NIS+ lookups. While these versions 
+normally can't interpret older NIS entries in <TT
+CLASS="FILENAME"
+>passwd</TT
+> 
+and <TT
+CLASS="FILENAME"
+>group</TT
+> files, 
+<SPAN
+CLASS="SYSTEMITEM"
+>compat</SPAN
+> option allows them to work with 
+those formats.</P
+></DD
+><DT
+><SPAN
+CLASS="SYSTEMITEM"
+>db</SPAN
+></DT
+><DD
+><P
+>Look up the information from DBM files located in the
+<TT
+CLASS="FILENAME"
+>/var/db</TT
+> directory. The corresponding NIS map name is used for that file.</P
+></DD
+></DL
+></DIV
+><P
+>Currently, the NIS support in GNU libc caters to the following
+<TT
+CLASS="FILENAME"
+>nsswitch.conf</TT
+> databases:
+<SPAN
+CLASS="SYSTEMITEM"
+>aliases</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>ethers.group</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>hosts</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>netgroup</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>network</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>passwd</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>protocols</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>publickey</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>rpc</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>services</SPAN
+>, and
+<SPAN
+CLASS="SYSTEMITEM"
+>shadow</SPAN
+>.
+More entries are likely to be added.</P
+><P
+><A
+HREF="x-087-2-nis.nsswitch.html#X-087-2-NIS.FIG.SWITCH"
+>Example 13-2</A
+> shows a more complete example that
+introduces another feature of <TT
+CLASS="FILENAME"
+>nsswitch.conf</TT
+>. The
+<SPAN
+CLASS="SYSTEMITEM"
+>[NOTFOUND=return]</SPAN
+> keyword in the
+<SPAN
+CLASS="SYSTEMITEM"
+>hosts</SPAN
+> entry tells the NIS client to
+return if the desired item couldn't be found in the NIS or DNS database. That
+is, the NIS client will continue searching the local files
+<I
+CLASS="EMPHASIS"
+>only</I
+> if calls to the NIS and DNS servers fail for some
+other reason. The local files will then be used only at boot time and as a
+backup when the NIS server is down.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-NIS.FIG.SWITCH"
+></A
+><P
+><B
+>Example 13-2. Sample nsswitch.conf File</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/nsswitch.conf
+#
+hosts:      nis dns [NOTFOUND=return] files
+networks:   nis [NOTFOUND=return] files
+services:   files nis
+protocols:  files nis
+rpc:        files nis</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>GNU libc provides some other actions that are described in the
+<TT
+CLASS="FILENAME"
+>nsswitch</TT
+> manpage.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.yp.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.passwd.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Setting Up an NIS Client with GNU libc</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Using the passwd and group Maps</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

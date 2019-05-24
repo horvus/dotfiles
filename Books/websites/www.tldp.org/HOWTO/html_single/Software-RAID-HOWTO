@@ -1,0 +1,2607 @@
+<HTML>
+<HEAD>
+
+<TITLE>
+Software-RAID-HOWTO
+</TITLE>
+</HEAD>
+<BODY BGCOLOR=white>
+
+<HR>
+<H1>The Software-RAID HOWTO</H1>
+
+<H2>Jakob &Oslash;stergaard <CODE>
+<A HREF="mailto:jakob@unthought.net">jakob@unthought.net</A></CODE>
+and Emilio Bueso <CODE>
+<A HREF="mailto:bueso@vives.org">bueso@vives.org</A></CODE></H2>v.1.1.1 2010-03-06
+<HR>
+<EM><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></EM>
+<HR>
+<P>This HOWTO describes how to use Software RAID under Linux. It
+addresses a specific version of the Software RAID layer, namely the
+0.90 RAID layer made by Ingo Molnar and others. This is the RAID layer
+that is the standard in Linux-2.4, and it is the version that is also
+used by Linux-2.2 kernels shipped from some vendors. The 0.90 RAID
+support is available as patches to Linux-2.0 and Linux-2.2, and is by
+many considered far more stable that the older RAID support already in
+those kernels.
+</P>
+
+
+
+<P>
+<H2><A NAME="toc1">1.</A> <A HREF="#s1">Introduction</A></H2>
+
+<UL>
+<LI><A NAME="toc1.1">1.1</A> <A HREF="#ss1.1">Disclaimer</A>
+<LI><A NAME="toc1.2">1.2</A> <A HREF="#ss1.2">What is RAID?</A>
+<LI><A NAME="toc1.3">1.3</A> <A HREF="#ss1.3">Terms</A>
+<LI><A NAME="toc1.4">1.4</A> <A HREF="#ss1.4">The RAID levels</A>
+<LI><A NAME="toc1.5">1.5</A> <A HREF="#ss1.5">Requirements</A>
+</UL>
+<P>
+<H2><A NAME="toc2">2.</A> <A HREF="#s2">Why RAID?</A></H2>
+
+<UL>
+<LI><A NAME="toc2.1">2.1</A> <A HREF="#ss2.1">Device and filesystem support</A>
+<LI><A NAME="toc2.2">2.2</A> <A HREF="#ss2.2">Performance</A>
+<LI><A NAME="toc2.3">2.3</A> <A HREF="#ss2.3">Swapping on RAID</A>
+<LI><A NAME="toc2.4">2.4</A> <A HREF="#ss2.4">Why mdadm?</A>
+</UL>
+<P>
+<H2><A NAME="toc3">3.</A> <A HREF="#s3">Devices</A></H2>
+
+<UL>
+<LI><A NAME="toc3.1">3.1</A> <A HREF="#ss3.1">Spare disks</A>
+<LI><A NAME="toc3.2">3.2</A> <A HREF="#ss3.2">Faulty disks</A>
+</UL>
+<P>
+<H2><A NAME="toc4">4.</A> <A HREF="#s4">Hardware issues</A></H2>
+
+<UL>
+<LI><A NAME="toc4.1">4.1</A> <A HREF="#ss4.1">IDE Configuration</A>
+<LI><A NAME="toc4.2">4.2</A> <A HREF="#ss4.2">Hot Swap</A>
+</UL>
+<P>
+<H2><A NAME="toc5">5.</A> <A HREF="#s5">RAID setup</A></H2>
+
+<UL>
+<LI><A NAME="toc5.1">5.1</A> <A HREF="#ss5.1">General setup</A>
+<LI><A NAME="toc5.2">5.2</A> <A HREF="#ss5.2">Downloading and installing the RAID tools</A>
+<LI><A NAME="toc5.3">5.3</A> <A HREF="#ss5.3">Downloading and installing mdadm </A>
+<LI><A NAME="toc5.4">5.4</A> <A HREF="#ss5.4">Linear mode</A>
+<LI><A NAME="toc5.5">5.5</A> <A HREF="#ss5.5">RAID-0</A>
+<LI><A NAME="toc5.6">5.6</A> <A HREF="#ss5.6">RAID-1</A>
+<LI><A NAME="toc5.7">5.7</A> <A HREF="#ss5.7">RAID-4</A>
+<LI><A NAME="toc5.8">5.8</A> <A HREF="#ss5.8">RAID-5</A>
+<LI><A NAME="toc5.9">5.9</A> <A HREF="#ss5.9">The Persistent Superblock</A>
+<LI><A NAME="toc5.10">5.10</A> <A HREF="#ss5.10">Chunk sizes</A>
+<LI><A NAME="toc5.11">5.11</A> <A HREF="#ss5.11">Options for mke2fs</A>
+</UL>
+<P>
+<H2><A NAME="toc6">6.</A> <A HREF="#s6">Detecting, querying and testing</A></H2>
+
+<UL>
+<LI><A NAME="toc6.1">6.1</A> <A HREF="#ss6.1">Detecting a drive failure</A>
+<LI><A NAME="toc6.2">6.2</A> <A HREF="#ss6.2">Querying the arrays status</A>
+<LI><A NAME="toc6.3">6.3</A> <A HREF="#ss6.3">Simulating a drive failure</A>
+<LI><A NAME="toc6.4">6.4</A> <A HREF="#ss6.4">Simulating data corruption</A>
+<LI><A NAME="toc6.5">6.5</A> <A HREF="#ss6.5">Monitoring RAID arrays</A>
+</UL>
+<P>
+<H2><A NAME="toc7">7.</A> <A HREF="#s7">Tweaking, tuning and troubleshooting</A></H2>
+
+<UL>
+<LI><A NAME="toc7.1">7.1</A> <A HREF="#ss7.1"><CODE>raid-level</CODE> and <CODE>raidtab</CODE></A>
+<LI><A NAME="toc7.2">7.2</A> <A HREF="#ss7.2">Autodetection</A>
+<LI><A NAME="toc7.3">7.3</A> <A HREF="#ss7.3">Booting on RAID</A>
+<LI><A NAME="toc7.4">7.4</A> <A HREF="#ss7.4">Root filesystem on RAID</A>
+<LI><A NAME="toc7.5">7.5</A> <A HREF="#ss7.5">Making the system boot on RAID</A>
+<LI><A NAME="toc7.6">7.6</A> <A HREF="#ss7.6">Converting a non-RAID RedHat System to run on Software RAID</A>
+<LI><A NAME="toc7.7">7.7</A> <A HREF="#ss7.7">Sharing spare disks between different arrays</A>
+<LI><A NAME="toc7.8">7.8</A> <A HREF="#ss7.8">Pitfalls</A>
+</UL>
+<P>
+<H2><A NAME="toc8">8.</A> <A HREF="#s8">Reconstruction</A></H2>
+
+<UL>
+<LI><A NAME="toc8.1">8.1</A> <A HREF="#ss8.1">Recovery from a multiple disk failure</A>
+</UL>
+<P>
+<H2><A NAME="toc9">9.</A> <A HREF="#s9">Performance</A></H2>
+
+<UL>
+<LI><A NAME="toc9.1">9.1</A> <A HREF="#ss9.1">RAID-0</A>
+<LI><A NAME="toc9.2">9.2</A> <A HREF="#ss9.2">RAID-0 with TCQ</A>
+<LI><A NAME="toc9.3">9.3</A> <A HREF="#ss9.3">RAID-5</A>
+<LI><A NAME="toc9.4">9.4</A> <A HREF="#ss9.4">RAID-10</A>
+<LI><A NAME="toc9.5">9.5</A> <A HREF="#ss9.5">Fresh benchmarking tools</A>
+</UL>
+<P>
+<H2><A NAME="toc10">10.</A> <A HREF="#s10">Related tools</A></H2>
+
+<UL>
+<LI><A NAME="toc10.1">10.1</A> <A HREF="#ss10.1">RAID resizing and conversion</A>
+<LI><A NAME="toc10.2">10.2</A> <A HREF="#ss10.2">Backup</A>
+</UL>
+<P>
+<H2><A NAME="toc11">11.</A> <A HREF="#s11">Partitioning RAID / LVM on RAID</A></H2>
+
+<UL>
+<LI><A NAME="toc11.1">11.1</A> <A HREF="#ss11.1">Partitioning RAID devices</A>
+<LI><A NAME="toc11.2">11.2</A> <A HREF="#ss11.2">LVM on RAID</A>
+</UL>
+<P>
+<H2><A NAME="toc12">12.</A> <A HREF="#s12">Credits</A></H2>
+
+<P>
+<H2><A NAME="toc13">13.</A> <A HREF="#s13">Changelog</A></H2>
+
+<UL>
+<LI><A NAME="toc13.1">13.1</A> <A HREF="#ss13.1">Version 1.1</A>
+</UL>
+<HR>
+<H2><A NAME="s1">1.</A> <A HREF="Software-RAID-HOWTO.html#toc1">Introduction</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>This HOWTO describes the "new-style" RAID present in the 2.4 and 2.6
+kernel series only. It does <EM>not</EM> describe the "old-style" RAID
+functionality present in 2.0 and 2.2 kernels.</P>
+<P>The home site for this HOWTO is 
+<A HREF="http://unthought.net/Software-RAID.HOWTO/">http://unthought.net/Software-RAID.HOWTO/</A>, where updated
+versions appear first.  The howto was originally written by Jakob
+&Oslash;stergaard based on a large number of emails between the author
+and Ingo Molnar 
+<A HREF="mailto:mingo@chiara.csoma.elte.hu">(mingo@chiara.csoma.elte.hu)</A> -- one of the RAID developers --,
+the linux-raid mailing list 
+<A HREF="mailto:linux-raid@vger.rutgers.edu">(linux-raid@vger.kernel.org)</A> and various other people. Emilio Bueso
+<A HREF="mailto:bueso@vives.org">(bueso@vives.org)</A>
+co-wrote the 1.0 version.</P>
+<P>If you want to use the new-style RAID with 2.0 or 2.2 kernels, you
+should get a patch for your kernel, from 
+<A HREF="http://people.redhat.com/mingo/">http://people.redhat.com/mingo/</A> The standard 2.2 kernels does
+not have direct support for the new-style RAID described in this
+HOWTO.  Therefore these patches are needed.  <EM>The old-style RAID
+support in standard 2.0 and 2.2 kernels is buggy and lacks several
+important features present in the new-style RAID software.</EM></P>
+<P>Some of the information in this HOWTO may seem trivial, if you know
+RAID all ready. Just skip those parts.</P>
+
+
+<H2><A NAME="ss1.1">1.1</A> <A HREF="Software-RAID-HOWTO.html#toc1.1">Disclaimer</A>
+</H2>
+
+<P>The mandatory disclaimer:</P>
+<P>All information herein is presented "as-is", with no warranties
+expressed nor implied.  If you lose all your data, your job, get hit
+by a truck, whatever, it's not my fault, nor the developers'.  Be
+aware, that you use the RAID software and this information at your own
+risk!  There is no guarantee whatsoever, that any of the software, or
+this information, is in any way correct, nor suited for any use
+whatsoever. Back up all your data before experimenting with
+this. Better safe than sorry.</P>
+
+
+<H2><A NAME="ss1.2">1.2</A> <A HREF="Software-RAID-HOWTO.html#toc1.2">What is RAID?</A>
+</H2>
+
+<P>In 1987, the University of California Berkeley, published an article entitled
+<A HREF="http://www-2.cs.cmu.edu/~garth/RAIDpaper/Patterson88.pdf">A Case for Redundant Arrays of Inexpensive Disks (RAID)</A>.
+This article described various types of disk arrays, referred to by the
+acronym RAID. The basic idea of RAID was to combine multiple small,
+independent disk drives into an array of disk drives which yields performance
+exceeding that of a Single Large Expensive Drive (SLED). Additionally,
+this array of drives appears to the computer as a single logical storage
+unit or drive.</P>
+<P>The Mean Time Between Failure (MTBF) of the array will be equal to the
+MTBF of an individual drive, divided by the number of drives in the array.
+Because of this, the MTBF of an array of drives would be too low for many
+application requirements. However, disk arrays can be made fault-tolerant
+by redundantly storing information in various ways.</P>
+<P>Five types of array architectures, RAID-1 through RAID-5, were defined by
+the Berkeley paper, each providing disk fault-tolerance and each offering
+different trade-offs in features and performance. In addition to these five
+redundant array architectures, it has become popular to refer to a
+non-redundant array of disk drives as a RAID-0 array.</P>
+<P>Today some of the original RAID levels (namely level 2 and 3) are only
+used in very specialized systems (and in fact not even supported by
+the Linux Software RAID drivers). Another level, "linear" has emerged,
+and especially RAID level 0 is often combined with RAID level 1.</P>
+
+<H2><A NAME="ss1.3">1.3</A> <A HREF="Software-RAID-HOWTO.html#toc1.3">Terms</A>
+</H2>
+
+<P>In this HOWTO the word "RAID" means "Linux Software RAID". This HOWTO
+does not treat any aspects of Hardware RAID. Furthermore, it does not
+treat any aspects of Software RAID in other operating system kernels.</P>
+<P>When describing RAID setups, it is useful to refer to the number of
+disks and their sizes. At all times the letter <B>N</B> is used to
+denote the number of active disks in the array (not counting
+spare-disks). The letter <B>S</B> is the size of the smallest drive
+in the array, unless otherwise mentioned. The letter <B>P</B> is
+used as the performance of one disk in the array, in MB/s. When used,
+we assume that the disks are equally fast, which may not always be
+true in real-world scenarios.</P>
+<P>Note that the words "device" and "disk" are supposed to mean about
+the same thing.  Usually the devices that are used to build a RAID
+device are partitions on disks, not necessarily entire disks.  But
+combining several partitions on one disk usually does not make sense,
+so the words devices and disks just mean "partitions on different disks".</P>
+
+
+<H2><A NAME="ss1.4">1.4</A> <A HREF="Software-RAID-HOWTO.html#toc1.4">The RAID levels</A>
+</H2>
+
+<P>Here's a short description of what is supported in the Linux RAID
+drivers. Some of this information is absolutely basic RAID info, but
+I've added a few notices about what's special in the Linux
+implementation of the levels.  You can safely skip this section if you
+know RAID already.</P>
+<P>The current RAID drivers in Linux supports the following
+levels:
+<UL>
+<LI><B>Linear mode</B>
+<UL>
+<LI>Two or more disks are combined into one physical device. The
+disks are "appended" to each other, so writing linearly to the RAID
+device will fill up disk 0 first, then disk 1 and so on. The disks
+does not have to be of the same size. In fact, size doesn't matter at
+all here :)</LI>
+<LI>There is no redundancy in this level. If one disk crashes you
+will most probably lose all your data.  You can however be lucky to
+recover some data, since the filesystem will just be missing one large
+consecutive chunk of data.</LI>
+<LI>The read and write performance will not increase for single
+reads/writes. But if several users use the device, you may be lucky
+that one user effectively is using the first disk, and the other user
+is accessing files which happen to reside on the second disk. If that
+happens, you will see a performance gain.</LI>
+</UL>
+</LI>
+<LI><B>RAID-0</B>
+<UL>
+<LI>Also called "stripe" mode. The devices should (but need not)
+have the same size. Operations on the array will be split on the
+devices; for example, a large write could be split up as 4 kB to disk
+0, 4 kB to disk 1, 4 kB to disk 2, then 4 kB to disk 0 again, and so
+on. If one device is much larger than the other devices, that extra
+space is still utilized in the RAID device, but you will be accessing
+this larger disk alone, during writes in the high end of your RAID
+device. This of course hurts performance.  </LI>
+<LI>Like linear, there is no redundancy in this level either. Unlike
+linear mode, you will not be able to rescue any data if a drive
+fails. If you remove a drive from a RAID-0 set, the RAID device will
+not just miss one consecutive block of data, it will be filled with
+small holes all over the device. e2fsck or other filesystem recovery
+tools will probably not be able to recover much from such a device.</LI>
+<LI>The read and write performance will increase, because reads and
+writes are done in parallel on the devices. This is usually the main
+reason for running RAID-0. If the busses to the disks are fast enough,
+you can get very close to N*P MB/sec.</LI>
+</UL>
+</LI>
+<LI><B>RAID-1</B>
+<UL>
+<LI>This is the first mode which actually has redundancy. RAID-1 can be
+used on two or more disks with zero or more spare-disks. This mode maintains
+an exact mirror of the information on one disk on the other
+disk(s). Of Course, the disks must be of equal size. If one disk is
+larger than another, your RAID device will be the size of the
+smallest disk.</LI>
+<LI>If up to N-1 disks are removed (or crashes), all data are still intact. If
+there are spare disks available, and if the system (eg. SCSI drivers
+or IDE chipset etc.) survived the crash, reconstruction of the mirror
+will immediately begin on one of the spare disks, after detection of
+the drive fault.</LI>
+<LI>Write performance is often worse than on a single
+device, because identical copies of the data written must be sent to
+every disk in the array. With large RAID-1 arrays this can be a real
+problem, as you may saturate the PCI bus with these extra copies. This
+is in fact one of the very few places where Hardware RAID solutions
+can have an edge over Software solutions - if you use a hardware RAID
+card, the extra write copies of the data will not have to go over the
+PCI bus, since it is the RAID controller that will generate the extra
+copy. Read performance is good, especially if you have multiple
+readers or seek-intensive workloads. The RAID code employs a rather
+good read-balancing algorithm, that will simply let the disk whose
+heads are closest to the wanted disk position perform the read
+operation. Since seek operations are relatively expensive on modern
+disks (a seek time of 6 ms equals a read of 123 kB at 20 MB/sec),
+picking the disk that will have the shortest seek time does actually
+give a noticeable performance improvement.</LI>
+</UL>
+</LI>
+<LI><B>RAID-4</B>
+<UL>
+<LI>This RAID level is not used very often. It can be used on three
+or more disks. Instead of completely mirroring the information, it
+keeps parity information on one drive, and writes data to the other
+disks in a RAID-0 like way.  Because one disk is reserved for parity
+information, the size of the array will be (N-1)*S, where S is the
+size of the smallest drive in the array. As in RAID-1, the disks should either
+be of equal size, or you will just have to accept that the S in the
+(N-1)*S formula above will be the size of the smallest drive in the
+array.</LI>
+<LI>If one drive fails, the parity
+information can be used to reconstruct all data.  If two drives fail,
+all data is lost.</LI>
+<LI>The reason this level is not more frequently used, is because
+the parity information is kept on one drive. This information must be
+updated <EM>every</EM> time one of the other disks are written
+to. Thus, the parity disk will become a bottleneck, if it is not a lot
+faster than the other disks.  However, if you just happen to have a
+lot of slow disks and a very fast one, this RAID level can be very useful.</LI>
+</UL>
+</LI>
+<LI><B>RAID-5</B>
+<UL>
+<LI>This is perhaps the most useful RAID mode when one wishes to combine
+a larger number of physical disks, and still maintain some
+redundancy. RAID-5 can be used on three or more disks, with zero or
+more spare-disks. The resulting RAID-5 device size will be (N-1)*S,
+just like RAID-4. The big difference between RAID-5 and -4 is, that
+the parity information is distributed evenly among the participating
+drives, avoiding the bottleneck problem in RAID-4.</LI>
+<LI>If one of the disks fail, all data are still intact, thanks to the
+parity information. If spare disks are available, reconstruction will
+begin immediately after the device failure.  If two disks fail
+simultaneously, all data are lost. RAID-5 can survive one disk
+failure, but not two or more.</LI>
+<LI>Both read and write performance usually increase, but can be hard to
+predict how much. Reads are similar to RAID-0 reads, writes can be
+either rather expensive (requiring read-in prior to write, in order to
+be able to calculate the correct parity information), or similar to
+RAID-1 writes. The write efficiency depends heavily on the amount of
+memory in the machine, and the usage pattern of the array. Heavily
+scattered writes are bound to be more expensive.</LI>
+</UL>
+</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss1.5">1.5</A> <A HREF="Software-RAID-HOWTO.html#toc1.5">Requirements</A>
+</H2>
+
+<P>This HOWTO assumes you are using Linux 2.4 or later. However, it is
+possible to use Software RAID in late 2.2.x or 2.0.x Linux kernels
+with a matching RAID patch and the 0.90 version of the raidtools. Both
+the patches and the tools can be found at 
+<A HREF="http://people.redhat.com/mingo/">http://people.redhat.com/mingo/</A>. The RAID patch, the raidtools
+package, and the kernel should all match as close as possible. At
+times it can be necessary to use older kernels if raid patches are not
+available for the latest kernel.</P>
+<P>If you use and recent GNU/Linux distribution based on the 2.4 kernel
+or later, your system most likely already has a matching version of
+the raidtools for your kernel.</P>
+
+
+
+<HR>
+<H2><A NAME="s2">2.</A> <A HREF="Software-RAID-HOWTO.html#toc2">Why RAID?</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>There can be many good reasons for using RAID. A few are; the ability
+to combine several physical disks into one larger "virtual" device,
+performance improvements, and redundancy.</P>
+<P>It is, however, very important to understand that RAID is not a
+substitute for good backups. Some RAID levels will make your systems
+immune to data loss from single-disk failures, but RAID will not allow
+you to recover from an accidental <CODE>"rm -rf /"</CODE>. RAID will also
+not help you preserve your data if the server holding the RAID itself
+is lost in one way or the other (theft, flooding, earthquake, Martian
+invasion etc.)</P>
+<P>RAID will generally allow you to keep systems up and running, in case
+of common hardware problems (single disk failure). It is <B>not</B>
+in itself a complete data safety solution. This is very important to
+realize.</P>
+
+<H2><A NAME="ss2.1">2.1</A> <A HREF="Software-RAID-HOWTO.html#toc2.1">Device and filesystem support</A>
+</H2>
+
+<P>Linux RAID can work on most block devices. It doesn't matter whether
+you use IDE or SCSI devices, or a mixture. Some people have also used
+the Network Block Device (NBD) with more or less success.</P>
+<P>Since a Linux Software RAID device is itself a block device, the above
+implies that you can actually <EM>create a RAID of other RAID
+devices</EM>. This in turn makes it possible to support RAID-10
+(RAID-0 of multiple RAID-1 devices), simply by using the RAID-0 and
+RAID-1 functionality together. Other more exotic configurations, such
+a RAID-5 over RAID-5 "matrix" configurations are equally
+supported.</P>
+<P>The RAID layer has absolutely nothing to do with the filesystem
+layer. You can put any filesystem on a RAID device, just like any
+other block device.</P>
+
+
+<H2><A NAME="ss2.2">2.2</A> <A HREF="Software-RAID-HOWTO.html#toc2.2">Performance</A>
+</H2>
+
+<P>Often RAID is employed as a solution to performance problems. While
+RAID can indeed often be the solution you are looking for, it is not a
+silver bullet. There can be many reasons for performance problems, and
+RAID is only the solution to a few of them.</P>
+<P>See Chapter one for a mention of the performance characteristics of
+each level.</P>
+
+
+<H2><A NAME="ss2.3">2.3</A> <A HREF="Software-RAID-HOWTO.html#toc2.3">Swapping on RAID</A>
+</H2>
+
+<P>There's no reason to use RAID for swap performance reasons. The kernel
+itself can stripe swapping on several devices, if you just give them
+the same priority in the <CODE>/etc/fstab</CODE> file.</P>
+<P>A nice <CODE>/etc/fstab</CODE> looks like:
+<PRE>
+/dev/sda2       swap           swap    defaults,pri=1   0 0
+/dev/sdb2       swap           swap    defaults,pri=1   0 0
+/dev/sdc2       swap           swap    defaults,pri=1   0 0
+/dev/sdd2       swap           swap    defaults,pri=1   0 0
+/dev/sde2       swap           swap    defaults,pri=1   0 0
+/dev/sdf2       swap           swap    defaults,pri=1   0 0
+/dev/sdg2       swap           swap    defaults,pri=1   0 0
+</PRE>
+
+This setup lets the machine swap in parallel on seven SCSI devices. No
+need for RAID, since this has been a kernel feature for a long time.</P>
+<P>Another reason to use RAID for swap is high availability.  If you set
+up a system to boot on eg. a RAID-1 device, the system should be able
+to survive a disk crash. But if the system has been swapping on the
+now faulty device, you will for sure be going down.  Swapping on a
+RAID-1 device would solve this problem. </P>
+<P>There has been a lot of discussion about whether swap was stable on
+RAID devices. This is a continuing debate, because it depends highly
+on other aspects of the kernel as well.  As of this writing, it seems
+that swapping on RAID should be perfectly stable, you should however
+stress-test the system yourself until you are satisfied with the
+stability.</P>
+<P>You can set up RAID in a swap file on a filesystem on your RAID
+device, or you can set up a RAID device as a swap partition, as you
+see fit.  As usual, the RAID device is just a block device.</P>
+
+
+<H2><A NAME="ss2.4">2.4</A> <A HREF="Software-RAID-HOWTO.html#toc2.4">Why mdadm?</A>
+</H2>
+
+<P>The classic raidtools are the standard software RAID management
+tool for Linux, so using mdadm is not a must.</P>
+<P>However, if you find raidtools cumbersome or limited, mdadm (multiple
+devices admin) is an extremely useful tool for running RAID systems.
+It can be used as a replacement for the raidtools, or as a supplement. </P>
+<P>The mdadm tool, written by 
+<A HREF="http://www.cse.unsw.edu.au/~neilb/">Neil Brown</A>, a software engineer at the University of
+New South Wales and a kernel developer, is now at version 1.4.0 and
+has proved to be quite stable. There is much positive response on the
+Linux-raid mailing list and mdadm is likely to become widespread in the
+future.</P>
+<P>The main differences between mdadm and raidtools are:</P>
+<P>
+<UL>
+<LI>mdadm can diagnose, monitor and gather detailed information
+about your arrays</LI>
+<LI>mdadm is a single centralized program and not a collection of
+disperse programs, so there's a common syntax for every RAID management
+command</LI>
+<LI>mdadm can perform almost all of its functions without having
+a configuration file and does not use one by default</LI>
+<LI>Also, if a configuration file is needed, mdadm will help with 
+management of it's contents</LI>
+</UL>
+</P>
+
+
+<HR>
+<H2><A NAME="s3">3.</A> <A HREF="Software-RAID-HOWTO.html#toc3">Devices</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>Software RAID devices are so-called "block" devices, like ordinary
+disks or disk partitions. A RAID device is "built" from a number of
+other block devices - for example, a RAID-1 could be built from two
+ordinary disks, or from two disk partitions (on separate disks -
+please see the description of RAID-1 for details on this).</P>
+<P>There are no other special requirements to the devices from which you
+build your RAID devices - this gives you a lot of freedom in designing
+your RAID solution. For example, you can build a RAID from a mix of
+IDE and SCSI devices, and you can even build a RAID from other RAID
+devices (this is useful for RAID-0+1, where you simply construct two
+RAID-1 devices from ordinary disks, and finally construct a RAID-0
+device from those two RAID-1 devices).</P>
+<P>Therefore, in the following text, we will use the word "device" as
+meaning "disk", "partition", or even "RAID device". A "device" in the
+following text simply refers to a "Linux block device". It could be
+anything from a SCSI disk to a network block device. We will commonly
+refer to these "devices" simply as "disks", because that is what they
+will be in the common case.</P>
+<P>However, there are several roles that devices can play in your
+arrays. A device could be a "spare disk", it could have failed and
+thus be a "faulty disk", or it could be a normally working and fully
+functional device actively used by the array.</P>
+<P>In the following we describe two special types of devices; namely the
+"spare disks" and the "faulty disks".</P>
+
+
+<H2><A NAME="ss3.1">3.1</A> <A HREF="Software-RAID-HOWTO.html#toc3.1">Spare disks</A>
+</H2>
+
+<P>Spare disks are disks that do not take part in the RAID set until one
+of the active disks fail.  When a device failure is detected, that
+device is marked as "bad" and reconstruction is immediately started
+on the first spare-disk available.</P>
+<P>Thus, spare disks add a nice extra safety to especially RAID-5 systems
+that perhaps are hard to get to (physically). One can allow the system
+to run for some time, with a faulty device, since all redundancy is
+preserved by means of the spare disk.</P>
+<P>You cannot be sure that your system will keep running after a disk
+crash though. The RAID layer should handle device failures just fine,
+but SCSI drivers could be broken on error handling, or the IDE chipset
+could lock up, or a lot of other things could happen.</P>
+<P>Also, once reconstruction to a hot-spare begins, the RAID layer will
+start reading from all the other disks to re-create the redundant
+information. If multiple disks have built up bad blocks over time, the
+reconstruction itself can actually trigger a failure on one of the
+"good" disks. This will lead to a complete RAID failure. If you do
+frequent backups of the entire filesystem on the RAID array, then it
+is highly unlikely that you would ever get in this situation - this is
+another very good reason for taking frequent backups. Remember, RAID
+is not a substitute for backups.</P>
+
+
+<H2><A NAME="ss3.2">3.2</A> <A HREF="Software-RAID-HOWTO.html#toc3.2">Faulty disks</A>
+</H2>
+
+<P>When the RAID layer handles device failures just fine, crashed disks
+are marked as faulty, and reconstruction is immediately started
+on the first spare-disk available.</P>
+<P>Faulty disks still appear and behave as members of the array. The RAID
+layer just treats crashed devices as inactive parts of the filesystem.</P>
+
+
+
+<HR>
+<H2><A NAME="s4">4.</A> <A HREF="Software-RAID-HOWTO.html#toc4">Hardware issues</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>This section will mention some of the hardware concerns involved when
+running software RAID.</P>
+<P>If you are going after high performance, you should make sure that the
+bus(ses) to the drives are fast enough. You should not have 14 UW-SCSI
+drives on one UW bus, if each drive can give 20 MB/s and the bus can
+only sustain 160 MB/s.  Also, you should only have one device per IDE
+bus. Running disks as master/slave is horrible for performance. IDE is
+really bad at accessing more that one drive per bus.  Of Course, all
+newer motherboards have two IDE busses, so you can set up two disks in
+RAID without buying more controllers. Extra IDE controllers are rather
+cheap these days, so setting up 6-8 disk systems with IDE is easy and
+affordable.</P>
+
+<H2><A NAME="ss4.1">4.1</A> <A HREF="Software-RAID-HOWTO.html#toc4.1">IDE Configuration</A>
+</H2>
+
+<P>It is indeed possible to run RAID over IDE disks. And excellent
+performance can be achieved too. In fact, today's price on IDE drives
+and controllers does make IDE something to be considered, when setting
+up new RAID systems.
+<UL>
+<LI><B>Physical stability:</B> IDE drives has traditionally
+been of lower mechanical quality than SCSI drives. Even today, the
+warranty on IDE drives is typically one year, whereas it is often
+three to five years on SCSI drives.  Although it is not fair to say,
+that IDE drives are per definition poorly made, one should be aware
+that IDE drives of <EM>some</EM> brand <EM>may</EM> fail more often
+that similar SCSI drives. However, other brands use the exact same
+mechanical setup for both SCSI and IDE drives. It all boils down to:
+All disks fail, sooner or later, and one should be prepared for that.</LI>
+<LI><B>Data integrity:</B> Earlier, IDE had no way of assuring
+that the data sent onto the IDE bus would be the same as the data
+actually written to the disk. This was due to total lack of parity,
+checksums, etc.  With the Ultra-DMA standard, IDE drives now do a
+checksum on the data they receive, and thus it becomes highly unlikely
+that data get corrupted. The PCI bus however, does not have parity or
+checksum, and that bus is used for both IDE and SCSI systems.</LI>
+<LI><B>Performance:</B> I am not going to write thoroughly about
+IDE performance here. The really short story is:
+<UL>
+<LI>IDE drives are fast, although they are not (as of this writing)
+found in 10.000 or 15.000 rpm versions as their SCSI counterparts</LI>
+<LI>IDE has more CPU overhead than SCSI (but who cares?)</LI>
+<LI>Only use <B>one</B> IDE drive per IDE bus, slave disks spoil
+performance</LI>
+</UL>
+</LI>
+<LI><B>Fault survival:</B> The IDE driver usually survives a failing
+IDE device. The RAID layer will mark the disk as failed, and if you
+are running RAID levels 1 or above, the machine should work just fine
+until you can take it down for maintenance.</LI>
+</UL>
+</P>
+<P>It is <B>very</B> important, that you only use <B>one</B> IDE disk
+per IDE bus. Not only would two disks ruin the performance, but the
+failure of a disk often guarantees the failure of the bus, and
+therefore the failure of all disks on that bus.  In a fault-tolerant
+RAID setup (RAID levels 1,4,5), the failure of one disk can be
+handled, but the failure of two disks (the two disks on the bus that
+fails due to the failure of the one disk) will render the array
+unusable. Also, when the master drive on a bus fails, the slave or the
+IDE controller may get awfully confused. One bus, one drive, that's
+the rule.</P>
+<P>There are cheap PCI IDE controllers out there. You often get two or
+four busses for around $80. Considering the much lower price of IDE
+disks versus SCSI disks, an IDE disk array can often be a really nice
+solution if one can live with the relatively low number (around 8
+probably) of disks one can attach to a typical system.</P>
+<P>IDE has major cabling problems when it comes to large arrays. Even if
+you had enough PCI slots, it's unlikely that you could fit much more
+than 8 disks in a system and still get it running without data
+corruption caused by too long IDE cables.</P>
+<P>Furthermore, some of the newer IDE drives come with a restriction that
+they are only to be used a given number of hours per day. These drives
+are meant for desktop usage, and it <B>can</B> lead to severe
+problems if these are used in a 24/7 server RAID environment.</P>
+
+
+<H2><A NAME="ss4.2">4.2</A> <A HREF="Software-RAID-HOWTO.html#toc4.2">Hot Swap</A>
+</H2>
+
+<P>Although hot swapping of drives is supported to some extent, it is
+still not something one can do easily.</P>
+
+<H3>Hot-swapping IDE drives</H3>
+
+<P><B>Don't !</B> IDE doesn't handle hot swapping at all.  Sure, it may
+work for you, if your IDE driver is compiled as a module (only
+possible in the 2.2 series of the kernel), and you re-load it after
+you've replaced the drive.  But you may just as well end up with a
+fried IDE controller, and you'll be looking at a lot more down-time
+than just the time it would have taken to replace the drive on a
+downed system.</P>
+<P>The main problem, except for the electrical issues that can destroy
+your hardware, is that the IDE bus must be re-scanned after disks are
+swapped. While newer Linux kernels do support re-scan of an IDE bus
+(with the help of the hdparm utility), re-detecting partitions is
+still something that is lacking.  If the new disk is 100% identical to
+the old one (wrt. geometry etc.), it <EM>may</EM> work, but really,
+you are walking the bleeding edge here.</P>
+
+<H3>Hot-swapping SCSI drives</H3>
+
+<P>Normal SCSI hardware is not hot-swappable either. It <B>may</B>
+however work. If your SCSI driver supports re-scanning the bus, and
+removing and appending devices, you may be able to hot-swap
+devices. However, on a normal SCSI bus you probably shouldn't unplug
+devices while your system is still powered up. But then again, it may
+just work (and you may end up with fried hardware).</P>
+<P>The SCSI layer <B>should</B> survive if a disk dies, but not all
+SCSI drivers handle this yet. If your SCSI driver dies when a disk
+goes down, your system will go with it, and hot-plug isn't really
+interesting then.</P>
+
+<H3>Hot-swapping with SCA</H3>
+
+<P>With SCA, it is possible to hot-plug devices. Unfortunately, this is
+not as simple as it should be, but it is both possible and safe.</P>
+<P>Replace the RAID device, disk device, and host/channel/id/lun numbers
+with the appropriate values in the example below:</P>
+<P>
+<UL>
+<LI>Dump the partition table from the drive, if it is still
+readable: 
+<PRE>
+sfdisk -d /dev/sdb > partitions.sdb
+</PRE>
+</LI>
+<LI>Remove the drive to replace from the array:
+<PRE>
+raidhotremove /dev/md0 /dev/sdb1
+</PRE>
+</LI>
+<LI>Look up the Host, Channel, ID and Lun of the drive to replace,
+by looking in 
+<PRE>
+/proc/scsi/scsi
+</PRE>
+</LI>
+<LI>Remove the drive from the bus:
+<PRE>
+echo "scsi remove-single-device 0 0 2 0" > /proc/scsi/scsi
+</PRE>
+</LI>
+<LI>Verify that the drive has been correctly removed, by looking in
+<PRE>
+/proc/scsi/scsi
+</PRE>
+</LI>
+<LI>Unplug the drive from your SCA bay, and insert a new drive</LI>
+<LI>Add the new drive to the bus: 
+<PRE>
+echo "scsi add-single-device 0 0 2 0" > /proc/scsi/scsi
+</PRE>
+
+(this should spin up the drive as well)</LI>
+<LI>Re-partition the drive using the previously dumped partition
+table: 
+<PRE>
+sfdisk /dev/sdb &lt; partitions.sdb
+</PRE>
+</LI>
+<LI>Add the drive to your array:
+<PRE>
+raidhotadd /dev/md0 /dev/sdb2
+</PRE>
+</LI>
+</UL>
+</P>
+<P>The arguments to the "scsi remove-single-device" commands
+are: Host, Channel, Id and Lun. These numbers are found in the
+"/proc/scsi/scsi" file.</P>
+<P>The above steps have been tried and tested on a system with IBM SCA
+disks and an Adaptec SCSI controller. If you encounter problems or
+find easier ways to do this, please discuss this on the linux-raid
+mailing list.</P>
+
+
+
+<HR>
+<H2><A NAME="s5">5.</A> <A HREF="Software-RAID-HOWTO.html#toc5">RAID setup</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+
+<H2><A NAME="ss5.1">5.1</A> <A HREF="Software-RAID-HOWTO.html#toc5.1">General setup</A>
+</H2>
+
+<P>This is what you need for any of the RAID levels:
+<UL>
+<LI>A kernel. Preferably a kernel from the 2.4 series. Alternatively
+a 2.0 or 2.2 kernel with the RAID patches applied.</LI>
+<LI>The RAID tools.</LI>
+<LI>Patience, Pizza, and your favorite caffeinated beverage.</LI>
+</UL>
+</P>
+<P>All of this is included as standard in most GNU/Linux distributions
+today.</P>
+<P>If your system has RAID support, you should have a file called
+<CODE>/proc/mdstat</CODE>.  Remember it, that file is your friend. If you do not have
+that file, maybe your kernel does not have RAID support. See what the
+contains, by doing a <CODE>cat </CODE><CODE>/proc/mdstat</CODE>. It should tell you that
+you have the right RAID personality (eg. RAID mode) registered, and
+that no RAID devices are currently active.</P>
+<P>Create the partitions you want to include in your RAID set.</P>
+
+
+<H2><A NAME="ss5.2">5.2</A> <A HREF="Software-RAID-HOWTO.html#toc5.2">Downloading and installing the RAID tools</A>
+</H2>
+
+<P>The RAID tools are included in almost every major Linux distribution.</P>
+<P><EM>IMPORTANT:</EM>
+If using Debian Woody (3.0) or later, you can install the package by
+running
+<PRE>
+apt-get install raidtools2
+</PRE>
+
+This <CODE>raidtools2</CODE> is a modern version of the old <CODE>raidtools</CODE>
+package, which doesn't support the persistent-superblock and parity-algorithm
+settings.</P>
+
+
+
+<H2><A NAME="ss5.3">5.3</A> <A HREF="Software-RAID-HOWTO.html#toc5.3">Downloading and installing mdadm </A>
+</H2>
+
+<P>You can download the most recent mdadm tarball at 
+<A HREF="http://www.cse.unsw.edu.au/~neilb/source/mdadm/">http://www.cse.unsw.edu.au/~neilb/source/mdadm/</A>.
+Issue a nice <CODE>make install</CODE> to compile and then 
+install mdadm and its documentation, manual pages and
+example files.
+<PRE>
+tar xvf ./mdadm-1.4.0.tgz
+cd mdadm-1.4.0.tgz
+make install
+</PRE>
+
+If using an RPM-based distribution, you can download and install
+the package file found at
+<A HREF="http://www.cse.unsw.edu.au/~neilb/source/mdadm/RPM">http://www.cse.unsw.edu.au/~neilb/source/mdadm/RPM</A>.
+<PRE>
+rpm -ihv mdadm-1.4.0-1.i386.rpm  
+</PRE>
+
+If using Debian Woody (3.0) or later, you can install the package by
+running
+<PRE>
+apt-get install mdadm
+</PRE>
+
+Gentoo has this package available in the portage tree. There you can
+run
+<PRE>
+emerge mdadm
+</PRE>
+
+Other distributions may also have this package available. Now, let's
+go mode-specific.</P>
+
+
+<H2><A NAME="ss5.4">5.4</A> <A HREF="Software-RAID-HOWTO.html#toc5.4">Linear mode</A>
+</H2>
+
+<P>Ok, so you have two or more partitions which are not necessarily the
+same size (but of course can be), which you want to append to
+each other.</P>
+<P>Set up the <CODE>/etc/raidtab</CODE> file to describe your
+setup. I set up a raidtab for two disks in linear mode, and the file
+looked like this:</P>
+<P>
+<PRE>
+raiddev /dev/md0
+        raid-level      linear
+        nr-raid-disks   2
+        chunk-size      32
+        persistent-superblock 1
+        device          /dev/sdb6
+        raid-disk       0
+        device          /dev/sdc5
+        raid-disk       1
+</PRE>
+
+Spare-disks are not supported here.  If a disk dies, the array dies
+with it. There's no information to put on a spare disk.</P>
+<P>You're probably wondering why we specify a <CODE>chunk-size</CODE> here
+when linear mode just appends the disks into one large array with no
+parallelism. Well, you're completely right, it's odd. Just put in some
+chunk size and don't worry about this any more.</P>
+<P>Ok, let's create the array. Run the command
+<PRE>
+  mkraid /dev/md0
+</PRE>
+</P>
+<P>This will initialize your array, write the persistent superblocks, and
+start the array.</P>
+<P>If you are using mdadm, a single command like
+<PRE>
+   mdadm --create --verbose /dev/md0 --level=linear --raid-devices=2 /dev/sdb6 /dev/sdc5
+</PRE>
+
+should create the array. The parameters talk for themselves.
+The output might look like this
+<PRE>
+  mdadm: chunk size defaults to 64K
+  mdadm: array /dev/md0 started.
+</PRE>
+</P>
+<P>Have a look in <CODE>/proc/mdstat</CODE>. You should see that the array is running.</P>
+<P>Now, you can create a filesystem, just like you would on any other
+device, mount it, include it in your <CODE>/etc/fstab</CODE> and so on.</P>
+
+
+<H2><A NAME="ss5.5">5.5</A> <A HREF="Software-RAID-HOWTO.html#toc5.5">RAID-0</A>
+</H2>
+
+<P>You have two or more devices, of approximately the same size, and you 
+want to combine their storage capacity and also combine their
+performance by accessing them in parallel.</P>
+<P>Set up the <CODE>/etc/raidtab</CODE> file to describe your configuration. An
+example raidtab looks like:
+<PRE>
+raiddev /dev/md0
+        raid-level      0
+        nr-raid-disks   2
+        persistent-superblock 1
+        chunk-size     4
+        device          /dev/sdb6
+        raid-disk       0
+        device          /dev/sdc5
+        raid-disk       1
+</PRE>
+
+Like in Linear mode, spare disks are not supported here either. RAID-0
+has no redundancy, so when a disk dies, the array goes with it.</P>
+<P>Again, you just run 
+<PRE>
+  mkraid /dev/md0
+</PRE>
+
+to initialize the array. This should initialize the superblocks and
+start the raid device.  Have a look in <CODE>/proc/mdstat</CODE> to see what's
+going on. You should see that your device is now running.</P>
+<P>/dev/md0 is now ready to be formatted, mounted, used and abused.</P>
+
+
+<H2><A NAME="ss5.6">5.6</A> <A HREF="Software-RAID-HOWTO.html#toc5.6">RAID-1</A>
+</H2>
+
+<P>You have two devices of approximately same size, and you want the two
+to be mirrors of each other. Eventually you have more devices, which
+you want to keep as stand-by spare-disks, that will automatically
+become a part of the mirror if one of the active devices break.</P>
+<P>Set up the <CODE>/etc/raidtab</CODE> file like this:
+<PRE>
+raiddev /dev/md0
+        raid-level      1
+        nr-raid-disks   2
+        nr-spare-disks  0
+        persistent-superblock 1
+        device          /dev/sdb6
+        raid-disk       0
+        device          /dev/sdc5
+        raid-disk       1
+</PRE>
+
+If you have spare disks, you can add them to the end of the device
+specification like
+<PRE>
+        device          /dev/sdd5
+        spare-disk      0
+</PRE>
+
+Remember to set the <CODE>nr-spare-disks</CODE> entry correspondingly.</P>
+<P>Ok, now we're all set to start initializing the RAID. The mirror must
+be constructed, eg. the contents (however unimportant now, since the
+device is still not formatted) of the two devices must be
+synchronized.</P>
+<P>Issue the
+<PRE>
+  mkraid /dev/md0
+</PRE>
+
+command to begin the mirror initialization.</P>
+<P>Check out the <CODE>/proc/mdstat</CODE> file. It should tell you that the /dev/md0
+device has been started, that the mirror is being reconstructed, and
+an ETA of the completion of the reconstruction.</P>
+<P>Reconstruction is done using idle I/O bandwidth. So, your system
+should still be fairly responsive, although your disk LEDs should be
+glowing nicely.</P>
+<P>The reconstruction process is transparent, so you can actually use the
+device even though the mirror is currently under reconstruction.</P>
+<P>Try formatting the device, while the reconstruction is running. It
+will work.  Also you can mount it and use it while reconstruction is
+running. Of Course, if the wrong disk breaks while the reconstruction
+is running, you're out of luck.</P>
+
+
+<H2><A NAME="ss5.7">5.7</A> <A HREF="Software-RAID-HOWTO.html#toc5.7">RAID-4</A>
+</H2>
+
+<P><B>Note!</B> I haven't tested this setup myself. The setup below is
+my best guess, not something I have actually had up running. If you
+use RAID-4, please write to the 
+<A HREF="mailto:jakob@unthought.net">author</A> and share
+your experiences.</P>
+<P>You have three or more devices of roughly the same size, one device is
+significantly faster than the other devices, and you want to combine
+them all into one larger device, still maintaining some redundancy
+information.
+Eventually you have a number of devices you wish to use as
+spare-disks.</P>
+<P>Set up the <CODE>/etc/raidtab</CODE> file like this:
+<PRE>
+raiddev /dev/md0
+        raid-level      4
+        nr-raid-disks   4
+        nr-spare-disks  0
+        persistent-superblock 1
+        chunk-size      32
+        device          /dev/sdb1
+        raid-disk       0
+        device          /dev/sdc1
+        raid-disk       1
+        device          /dev/sdd1
+        raid-disk       2
+        device          /dev/sde1
+        raid-disk       3
+</PRE>
+
+If we had any spare disks, they would be inserted in a similar way,
+following the raid-disk specifications;
+<PRE>
+        device         /dev/sdf1
+        spare-disk     0
+</PRE>
+
+as usual.</P>
+<P>Your array can be initialized with the
+<PRE>
+   mkraid /dev/md0
+</PRE>
+
+command as usual.</P>
+<P>You should see the section on special options for mke2fs before
+formatting the device.</P>
+
+
+<H2><A NAME="ss5.8">5.8</A> <A HREF="Software-RAID-HOWTO.html#toc5.8">RAID-5</A>
+</H2>
+
+<P>You have three or more devices of roughly the same size, you want to
+combine them into a larger device, but still to maintain a degree of
+redundancy for data safety. Eventually you have a number of devices to
+use as spare-disks, that will not take part in the array before
+another device fails.</P>
+<P>If you use N devices where the smallest has size S, the size of the
+entire array will be (N-1)*S. This "missing" space is used for
+parity (redundancy) information.  Thus, if any disk fails, all data
+stay intact. But if two disks fail, all data is lost.</P>
+<P>Set up the <CODE>/etc/raidtab</CODE> file like this:
+<PRE>
+raiddev /dev/md0
+        raid-level      5
+        nr-raid-disks   7
+        nr-spare-disks  0
+        persistent-superblock 1
+        parity-algorithm        left-symmetric
+        chunk-size      32
+        device          /dev/sda3
+        raid-disk       0
+        device          /dev/sdb1
+        raid-disk       1
+        device          /dev/sdc1
+        raid-disk       2
+        device          /dev/sdd1
+        raid-disk       3
+        device          /dev/sde1
+        raid-disk       4
+        device          /dev/sdf1
+        raid-disk       5
+        device          /dev/sdg1
+        raid-disk       6
+</PRE>
+
+If we had any spare disks, they would be inserted in a similar way,
+following the raid-disk specifications;
+<PRE>
+        device         /dev/sdh1
+        spare-disk     0
+</PRE>
+
+And so on.</P>
+<P>A chunk size of 32 kB is a good default for many general purpose
+filesystems of this size. The array on which the above raidtab is
+used, is a 7 times 6 GB = 36 GB (remember the (n-1)*s = (7-1)*6 = 36)
+device. It holds an ext2 filesystem with a 4 kB block size.  You could
+go higher with both array chunk-size and filesystem block-size if your
+filesystem is either much larger, or just holds very large files.</P>
+<P>Ok, enough talking. You set up the <CODE>/etc/raidtab</CODE>, so let's see if it
+works. Run the 
+<PRE>
+  mkraid /dev/md0
+</PRE>
+
+command, and see what happens.  Hopefully your disks start working
+like mad, as they begin the reconstruction of your array. Have a look
+in <CODE>/proc/mdstat</CODE> to see what's going on.</P>
+<P>If the device was successfully created, the reconstruction process has
+now begun.  Your array is not consistent until this reconstruction
+phase has completed. However, the array is fully functional (except
+for the handling of device failures of course), and you can format it
+and use it even while it is reconstructing.</P>
+<P>See the section on special options for mke2fs before formatting the
+array.</P>
+<P>Ok, now when you have your RAID device running, you can always stop it
+or re-start it using the
+<PRE>
+  raidstop /dev/md0
+</PRE>
+
+or
+<PRE>
+  raidstart /dev/md0
+</PRE>
+
+commands.</P>
+<P>With mdadm you can stop the device using
+<PRE>
+  mdadm -S /dev/md0
+</PRE>
+
+and re-start it with 
+<PRE>
+  mdadm -R /dev/md0
+</PRE>
+
+Instead of putting these into init-files and rebooting a zillion times
+to make that work, read on, and get autodetection running.</P>
+
+
+<H2><A NAME="ss5.9">5.9</A> <A HREF="Software-RAID-HOWTO.html#toc5.9">The Persistent Superblock</A>
+</H2>
+
+<P>Back in "The Good Old Days" (TM), the raidtools would read your
+<CODE>/etc/raidtab</CODE> file, and then initialize the array.  However, this would
+require that the filesystem on which <CODE>/etc/raidtab</CODE> resided was
+mounted. This is unfortunate if you want to boot on a RAID.</P>
+<P>Also, the old approach led to complications when mounting filesystems
+on RAID devices. They could not be put in the <CODE>/etc/fstab</CODE> file as usual,
+but would have to be mounted from the init-scripts.</P>
+<P>The persistent superblocks solve these problems. When an array is
+initialized with the <CODE>persistent-superblock</CODE> option in the
+<CODE>/etc/raidtab</CODE> file, a special superblock is written in the beginning of
+all disks participating in the array. This allows the kernel to read
+the configuration of RAID devices directly from the disks involved,
+instead of reading from some configuration file that may not be
+available at all times.</P>
+<P>You should however still maintain a consistent <CODE>/etc/raidtab</CODE> file, since
+you may need this file for later reconstruction of the array.</P>
+<P>The persistent superblock is mandatory if you want auto-detection of
+your RAID devices upon system boot. This is described in the
+<B>Autodetection</B> section.</P>
+
+
+<H2><A NAME="ss5.10">5.10</A> <A HREF="Software-RAID-HOWTO.html#toc5.10">Chunk sizes</A>
+</H2>
+
+<P>The chunk-size deserves an explanation.  You can never write
+completely parallel to a set of disks. If you had two disks and wanted
+to write a byte, you would have to write four bits on each disk,
+actually, every second bit would go to disk 0 and the others to disk
+1. Hardware just doesn't support that.  Instead, we choose some
+chunk-size, which we define as the smallest "atomic" mass of data
+that can be written to the devices.  A write of 16 kB with a chunk
+size of 4 kB, will cause the first and the third 4 kB chunks to be
+written to the first disk, and the second and fourth chunks to be
+written to the second disk, in the RAID-0 case with two disks.  Thus,
+for large writes, you may see lower overhead by having fairly large
+chunks, whereas arrays that are primarily holding small files may
+benefit more from a smaller chunk size.</P>
+<P>Chunk sizes must be specified for all RAID levels, including linear
+mode. However, the chunk-size does not make any difference for linear
+mode.</P>
+<P>For optimal performance, you should experiment with the value, as well
+as with the block-size of the filesystem you put on the array.</P>
+<P>The argument to the chunk-size option in <CODE>/etc/raidtab</CODE> specifies the
+chunk-size in kilobytes. So "4" means "4 kB".</P>
+
+<H3>RAID-0</H3>
+
+<P>Data is written "almost" in parallel to the disks in the
+array. Actually, <CODE>chunk-size</CODE> bytes are written to each disk,
+serially.</P>
+<P>If you specify a 4 kB chunk size, and write 16 kB to an array of three
+disks, the RAID system will write 4 kB to disks 0, 1 and 2, in
+parallel, then the remaining 4 kB to disk 0.</P>
+<P>A 32 kB chunk-size is a reasonable starting point for most arrays. But
+the optimal value depends very much on the number of drives involved,
+the content of the file system you put on it, and many other factors.
+Experiment with it, to get the best performance.</P>
+
+<H3>RAID-0 with ext2</H3>
+
+<P>The following tip was contributed by 
+<A HREF="mailto:michael@freenet-ag.de">michael@freenet-ag.de</A>:</P>
+<P>There is more disk activity at the beginning of ext2fs block groups.
+On a single disk, that does not matter, but it can hurt RAID0, if all
+block groups happen to begin on the same disk.  Example:</P>
+<P>With 4k stripe size and 4k block size, each block occupies one stripe.
+With two disks, the stripe-#disk-product is 2*4k=8k.  The default
+block group size is 32768 blocks, so all block groups start on disk 0,
+which can easily become a hot spot, thus reducing overall performance.
+Unfortunately, the block group size can only be set in steps of 8 blocks
+(32k when using 4k blocks), so you can not avoid the problem by adjusting
+the block group size with the -g option of mkfs(8).</P>
+<P>If you add a disk, the stripe-#disk-product is 12, so the first block
+group starts on disk 0, the second block group starts on disk 2 and the
+third on disk 1.  The load caused by disk activity at the block group
+beginnings spreads over all disks.</P>
+<P>In case you can not add a disk, try a stripe size of 32k.  The
+stripe-#disk-product is 64k.  Since you can change the block group size
+in steps of 8 blocks (32k), using a block group size of 32760 solves
+the problem.</P>
+<P>Additionally, the block group boundaries should fall on stripe boundaries.
+That is no problem in the examples above, but it could easily happen
+with larger stripe sizes.</P>
+
+<H3>RAID-1</H3>
+
+<P>For writes, the chunk-size doesn't affect the array, since all data
+must be written to all disks no matter what.  For reads however, the
+chunk-size specifies how much data to read serially from the
+participating disks.  Since all active disks in the array
+contain the same information, the RAID layer has complete freedom in
+choosing from which disk information is read - this is used by the
+RAID code to improve average seek times by picking the disk best
+suited for any given read operation.</P>
+
+<H3>RAID-4</H3>
+
+<P>When a write is done on a RAID-4 array, the parity information must be
+updated on the parity disk as well.</P>
+<P>The chunk-size affects read performance in the same way as in RAID-0,
+since reads from RAID-4 are done in the same way.</P>
+
+<H3>RAID-5</H3>
+
+<P>On RAID-5, the chunk size has the same meaning for reads as for
+RAID-0. Writing on RAID-5 is a little more complicated: When a chunk
+is written on a RAID-5 array, the corresponding parity chunk must be
+updated as well. Updating a parity chunk requires either
+<UL>
+<LI>The original chunk, the new chunk, and the old parity block</LI>
+<LI>Or, all chunks (except for the parity chunk) in the stripe</LI>
+</UL>
+
+The RAID code will pick the easiest way to update each parity chunk as
+the write progresses. Naturally, if your server has lots of memory
+and/or if the writes are nice and linear, updating the parity chunks
+will only impose the overhead of one extra write going over the bus
+(just like RAID-1). The parity calculation itself is extremely
+efficient, so while it does of course load the main CPU of the system,
+this impact is negligible. If the writes are small and scattered all
+over the array, the RAID layer will almost always need to read in all
+the untouched chunks from each stripe that is written to, in order to
+calculate the parity chunk. This will impose extra bus-overhead and
+latency due to extra reads.</P>
+<P>A reasonable chunk-size for RAID-5 is 128 kB, but as always, you may
+want to experiment with this.</P>
+<P>Also see the section on special options for mke2fs.  This affects
+RAID-5 performance.</P>
+
+
+<H2><A NAME="ss5.11">5.11</A> <A HREF="Software-RAID-HOWTO.html#toc5.11">Options for mke2fs</A>
+</H2>
+
+<P>There is a special option available when formatting RAID-4 or -5
+devices with mke2fs. The <CODE>-R stride=nn</CODE> option will allow
+mke2fs to better place different ext2 specific data-structures in an
+intelligent way on the RAID device.</P>
+<P>If the chunk-size is 32 kB, it means, that 32 kB of consecutive data
+will reside on one disk. If we want to build an ext2 filesystem with 4
+kB block-size, we realize that there will be eight filesystem blocks
+in one array chunk. We can pass this information on the mke2fs
+utility, when creating the filesystem:
+<PRE>
+  mke2fs -b 4096 -R stride=8 /dev/md0
+</PRE>
+</P>
+<P>RAID-{4,5} performance is severely influenced by this option. I am
+unsure how the stride option will affect other RAID levels. If anyone
+has information on this, please send it in my direction.</P>
+<P>The ext2fs blocksize <I>severely</I> influences the performance of
+the filesystem. You should always use 4kB block size on any filesystem
+larger than a few hundred megabytes, unless you store a very large
+number of very small files on it.</P>
+
+
+
+<HR>
+<H2><A NAME="s6">6.</A> <A HREF="Software-RAID-HOWTO.html#toc6">Detecting, querying and testing</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>This section is about life with a software RAID system, that's 
+communicating with the arrays and tinkertoying them.</P>
+<P>Note that when it comes to md devices manipulation, you should always
+remember that you are working with entire filesystems. So, although
+there could be some redundancy to keep your files alive, you must
+proceed with caution.</P>
+
+
+<H2><A NAME="ss6.1">6.1</A> <A HREF="Software-RAID-HOWTO.html#toc6.1">Detecting a drive failure</A>
+</H2>
+
+<P>No mistery here. It's enough with a quick look to the standard log and
+stat files to notice a drive failure.</P>
+<P>It's always a must for <CODE>/var/log/messages</CODE> to fill screens with
+tons of error messages, no matter what happened. But, when it's about
+a disk crash, huge lots of kernel errors are reported. 
+Some nasty examples, for the masochists,
+<PRE>
+   kernel: scsi0 channel 0 : resetting for second half of retries. 
+   kernel: SCSI bus is being reset for host 0 channel 0. 
+   kernel: scsi0: Sending Bus Device Reset CCB #2666 to Target 0 
+   kernel: scsi0: Bus Device Reset CCB #2666 to Target 0 Completed 
+   kernel: scsi : aborting command due to timeout : pid 2649, scsi0, channel 0, id 0, lun 0 Write (6) 18 33 11 24 00 
+   kernel: scsi0: Aborting CCB #2669 to Target 0 
+   kernel: SCSI host 0 channel 0 reset (pid 2644) timed out - trying harder 
+   kernel: SCSI bus is being reset for host 0 channel 0. 
+   kernel: scsi0: CCB #2669 to Target 0 Aborted 
+   kernel: scsi0: Resetting BusLogic BT-958 due to Target 0 
+   kernel: scsi0: *** BusLogic BT-958 Initialized Successfully *** 
+</PRE>
+
+Most often, disk failures look like these,
+<PRE>
+   kernel: sidisk I/O error: dev 08:01, sector 1590410 
+   kernel: SCSI disk error : host 0 channel 0 id 0 lun 0 return code = 28000002 
+</PRE>
+
+or these
+<PRE>
+   kernel: hde: read_intr: error=0x10 { SectorIdNotFound }, CHS=31563/14/35, sector=0
+   kernel: hde: read_intr: status=0x59 { DriveReady SeekComplete DataRequest Error }
+</PRE>
+
+And, as expected, the classic <CODE>/proc/mdstat</CODE> look will also reveal problems,
+<PRE>
+   Personalities : [linear] [raid0] [raid1] [translucent]
+   read_ahead not set
+   md7 : active raid1 sdc9[0] sdd5[8] 32000 blocks [2/1] [U_]
+</PRE>
+
+Later on this section we will learn how to monitor RAID with mdadm so we 
+can receive alert reports about disk failures. Now it's time to learn more 
+about <CODE>/proc/mdstat</CODE> interpretation.</P>
+
+
+<H2><A NAME="ss6.2">6.2</A> <A HREF="Software-RAID-HOWTO.html#toc6.2">Querying the arrays status</A>
+</H2>
+
+<P>You can always take a look at <CODE>/proc/mdstat</CODE>. It won't hurt. Let's learn
+how to read the file. For example,
+<PRE>
+              Personalities : [raid1]
+              read_ahead 1024 sectors
+              md5 : active raid1 sdb5[1] sda5[0]
+                    4200896 blocks [2/2] [UU]
+
+              md6 : active raid1 sdb6[1] sda6[0]
+                    2104384 blocks [2/2] [UU]
+
+              md7 : active raid1 sdb7[1] sda7[0]
+                    2104384 blocks [2/2] [UU]
+
+              md2 : active raid1 sdc7[1] sdd8[2] sde5[0]
+                    1052160 blocks [2/2] [UU]
+
+              unused devices: none
+</PRE>
+
+To identify the spare devices, first look for the [#/#] value on a line.
+The first number is the number of a complete raid device as defined.
+Lets say it is "n".
+The raid role numbers [#] following each device indicate its
+role, or function, within the raid set. Any device with "n" or
+higher are spare disks. 0,1,..,n-1 are for the working array.</P>
+<P>Also, if you have a failure, the failed device will be marked with (F)
+after the [#]. The spare that replaces this device will be the device
+with the lowest role number n or higher that is not marked (F). Once the
+resync operation is complete, the device's role numbers are swapped.</P>
+<P>The order in which the devices appear in the <CODE>/proc/mdstat</CODE> output
+means nothing.</P>
+<P>Finally, remember that you can always use raidtools or mdadm to 
+check the arrays out.
+<PRE>
+        mdadm --detail /dev/mdx
+        lsraid -a /dev/mdx
+</PRE>
+
+These commands will show spare and failed disks loud and clear.</P>
+
+
+<H2><A NAME="ss6.3">6.3</A> <A HREF="Software-RAID-HOWTO.html#toc6.3">Simulating a drive failure</A>
+</H2>
+
+<P>If you plan to use RAID to get fault-tolerance, you may also want to
+test your setup, to see if it really works.  Now, how does one
+simulate a disk failure?</P>
+<P>The short story is, that you can't, except perhaps for putting a fire
+axe thru the drive you want to "simulate" the fault on.  You can never
+know what will happen if a drive dies. It may electrically take the
+bus it is attached to with it, rendering all drives on that bus
+inaccessible. I have never heard of that happening though, but it is
+entirely possible. The drive may also just report a read/write fault
+to the SCSI/IDE layer, which in turn makes the RAID layer handle this
+situation gracefully.  This is fortunately the way things often go.</P>
+<P>Remember, that you must be running RAID-{1,4,5} for your array to be
+able to survive a disk failure.  Linear- or RAID-0 will fail completely
+when a device is missing.</P>
+
+
+<H3>Force-fail by hardware</H3>
+
+<P>If you want to simulate a drive failure, you can just plug out the drive.
+You should do this with the power off. If you are interested in testing
+whether your data can survive with a disk less than the usual number,
+there is no point in being a hot-plug cowboy here. Take the system
+down, unplug the disk, and boot it up again.</P>
+<P>Look in the syslog, and look at <CODE>/proc/mdstat</CODE> to see how the RAID is
+doing. Did it work?</P>
+<P>Faulty disks should appear marked with an <CODE>(F)</CODE> if you look at 
+<CODE>/proc/mdstat</CODE>. 
+Also, users of mdadm should see the device state as <CODE>faulty</CODE>.</P>
+<P>When you've re-connected the disk again (with the power off, of
+course, remember), you can add the "new" device to the RAID again,
+with the raidhotadd command.</P>
+
+
+<H3>Force-fail by software</H3>
+
+<P>Newer versions of raidtools come with a <CODE>raidsetfaulty</CODE> command.
+By using <CODE>raidsetfaulty</CODE> you can just simulate a drive failure without
+unplugging things off.</P>
+<P>Just running the command
+<PRE>
+    raidsetfaulty /dev/md1 /dev/sdc2
+</PRE>
+
+should be enough to fail the disk /dev/sdc2 of the array /dev/md1.
+If you are using mdadm, just type
+<PRE>
+    mdadm --manage --set-faulty /dev/md1 /dev/sdc2
+</PRE>
+
+Now things move up and fun appears. First, you should see something
+like the first line of this on your system's log. Something like the
+second line will appear if you have spare disks configured.
+<PRE>
+    kernel: raid1: Disk failure on sdc2, disabling device. 
+    kernel: md1: resyncing spare disk sdb7 to replace failed disk
+</PRE>
+
+Checking <CODE>/proc/mdstat</CODE> out will show the degraded array. If there was a
+spare disk available, reconstruction should have started.</P>
+<P>Another fresh utility in newest raidtools is <CODE>lsraid</CODE>. Try with
+<PRE>
+    lsraid -a /dev/md1
+</PRE>
+
+users of mdadm can run the command
+<PRE>
+    mdadm --detail /dev/md1
+</PRE>
+
+and enjoy the view.</P>
+<P>Now you've seen how it goes when a device fails. Let's fix things up.</P>
+<P>First, we will remove the failed disk from the array. Run the command
+<PRE>
+    raidhotremove /dev/md1 /dev/sdc2
+</PRE>
+
+users of mdadm can run the command
+<PRE>
+    mdadm /dev/md1 -r /dev/sdc2
+</PRE>
+
+Note that <CODE>raidhotremove</CODE> cannot pull a disk out of a running array.
+For obvious reasons, only crashed disks are to be hotremoved from an 
+array (running raidstop and unmounting the device won't help).</P>
+<P>Now we have a /dev/md1 which has just lost a device. This could be
+a degraded RAID or perhaps a system in the middle of a reconstruction
+process. We wait until recovery ends before setting things back to normal.</P>
+<P>So the trip ends when we send /dev/sdc2 back home. 
+<PRE>
+    raidhotadd /dev/md1 /dev/sdc2
+</PRE>
+
+As usual, you can use mdadm instead of raidtools. This should be the
+command
+<PRE>
+    mdadm /dev/md1 -a /dev/sdc2
+</PRE>
+
+As the prodigal son returns to the array, we'll see it becoming an active
+member of /dev/md1 if necessary. If not, it will be marked as an spare disk.
+That's management made easy.</P>
+
+
+<H2><A NAME="ss6.4">6.4</A> <A HREF="Software-RAID-HOWTO.html#toc6.4">Simulating data corruption</A>
+</H2>
+
+<P>RAID (be it hardware- or software-), assumes that if a write to a disk
+doesn't return an error, then the write was successful. Therefore, if
+your disk corrupts data without returning an error, your data
+<EM>will</EM> become corrupted.  This is of course very unlikely to
+happen, but it is possible, and it would result in a corrupt
+filesystem.</P>
+<P>RAID cannot and is not supposed to guard against data corruption on
+the media. Therefore, it doesn't make any sense either, to purposely
+corrupt data (using <CODE>dd</CODE> for example) on a disk to see how the
+RAID system will handle that.  It is most likely (unless you corrupt
+the RAID superblock) that the RAID layer will never find out about the
+corruption, but your filesystem on the RAID device will be corrupted.</P>
+<P>This is the way things are supposed to work.  RAID is not a guarantee
+for data integrity, it just allows you to keep your data if a disk
+dies (that is, with RAID levels above or equal one, of course).</P>
+
+
+<H2><A NAME="ss6.5">6.5</A> <A HREF="Software-RAID-HOWTO.html#toc6.5">Monitoring RAID arrays</A>
+</H2>
+
+<P>You can run mdadm as a daemon by using the follow-monitor mode.
+If needed, that will make mdadm send email alerts to the system
+administrator when arrays encounter errors or fail. Also, follow mode
+can be used to trigger contingency commands if a disk fails, like
+giving a second chance to a failed disk by removing and reinserting it,
+so a non-fatal failure could be automatically solved.</P>
+<P>Let's see a basic example.
+Running
+<PRE>
+   mdadm --monitor --mail=root@localhost --delay=1800 /dev/md2
+</PRE>
+
+should release a mdadm daemon to monitor /dev/md2.
+The delay parameter means that polling will be done in intervals of
+1800 seconds. Finally, critical events and fatal errors should be
+e-mailed to the system manager. That's RAID monitoring made easy.</P>
+<P>Finally, the <CODE>--program</CODE> or <CODE>--alert</CODE> parameters
+specify the program to be run whenever an event is detected.</P>
+<P>Note that the mdadm daemon will never exit once it decides that
+there are arrays to monitor, so it should normally be run in the
+background. Remember that your are running a daemon, not a
+shell command.</P>
+<P>Using mdadm to monitor a RAID array is simple and effective. However,
+there are fundamental problems with that kind of monitoring - what
+happens, for example, if the mdadm daemon stops?  In order to overcome
+this problem, one should look towards "real" monitoring
+solutions. There is a number of free software, open source, and
+commercial solutions available which can be used for Software RAID
+monitoring on Linux. A search on 
+<A HREF="http://freshmeat.net">FreshMeat</A> should return a good number of matches.</P>
+
+
+<HR>
+<H2><A NAME="s7">7.</A> <A HREF="Software-RAID-HOWTO.html#toc7">Tweaking, tuning and troubleshooting</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+
+<H2><A NAME="ss7.1">7.1</A> <A HREF="Software-RAID-HOWTO.html#toc7.1"><CODE>raid-level</CODE> and <CODE>raidtab</CODE></A>
+</H2>
+
+<P>Some GNU/Linux distributions, like RedHat 8.0 and possibly others,
+have a bug in their init-scripts, so that they will fail to start up
+RAID arrays on boot, if your <CODE>/etc/raidtab</CODE> has spaces or tabs before the
+<CODE>raid-level</CODE> keywords.</P>
+<P>The simple workaround for this problem is to make sure that the
+<CODE>raid-level</CODE> keyword appears in the very beginning of the
+lines, without any leading spaces of any kind.</P>
+
+<H2><A NAME="ss7.2">7.2</A> <A HREF="Software-RAID-HOWTO.html#toc7.2">Autodetection</A>
+</H2>
+
+<P>Autodetection allows the RAID devices to be automatically recognized
+by the kernel at boot-time, right after the ordinary partition
+detection is done. </P>
+<P>This requires several things:
+<OL>
+<LI>You need autodetection support in the kernel. Check this</LI>
+<LI>You must have created the RAID devices using persistent-superblock</LI>
+<LI>The partition-types of the devices used in the RAID must be set to
+<B>0xFD</B>  (use fdisk and set the type to "fd")</LI>
+</OL>
+</P>
+<P>NOTE: Be sure that your RAID is NOT RUNNING before changing the
+partition types.  Use <CODE>raidstop /dev/md0</CODE> to stop the device.</P>
+<P>If you set up 1, 2 and 3 from above, autodetection should be set
+up. Try rebooting.  When the system comes up, cat'ing <CODE>/proc/mdstat</CODE>
+should tell you that your RAID is running.</P>
+<P>During boot, you could see messages similar to these:
+<PRE>
+ Oct 22 00:51:59 malthe kernel: SCSI device sdg: hdwr sector= 512
+  bytes. Sectors= 12657717 [6180 MB] [6.2 GB]
+ Oct 22 00:51:59 malthe kernel: Partition check:
+ Oct 22 00:51:59 malthe kernel:  sda: sda1 sda2 sda3 sda4
+ Oct 22 00:51:59 malthe kernel:  sdb: sdb1 sdb2
+ Oct 22 00:51:59 malthe kernel:  sdc: sdc1 sdc2
+ Oct 22 00:51:59 malthe kernel:  sdd: sdd1 sdd2
+ Oct 22 00:51:59 malthe kernel:  sde: sde1 sde2
+ Oct 22 00:51:59 malthe kernel:  sdf: sdf1 sdf2
+ Oct 22 00:51:59 malthe kernel:  sdg: sdg1 sdg2
+ Oct 22 00:51:59 malthe kernel: autodetecting RAID arrays
+ Oct 22 00:51:59 malthe kernel: (read) sdb1's sb offset: 6199872
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdb1,1>
+ Oct 22 00:51:59 malthe kernel: (read) sdc1's sb offset: 6199872
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdc1,2>
+ Oct 22 00:51:59 malthe kernel: (read) sdd1's sb offset: 6199872
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdd1,3>
+ Oct 22 00:51:59 malthe kernel: (read) sde1's sb offset: 6199872
+ Oct 22 00:51:59 malthe kernel: bind&lt;sde1,4>
+ Oct 22 00:51:59 malthe kernel: (read) sdf1's sb offset: 6205376
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdf1,5>
+ Oct 22 00:51:59 malthe kernel: (read) sdg1's sb offset: 6205376
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdg1,6>
+ Oct 22 00:51:59 malthe kernel: autorunning md0
+ Oct 22 00:51:59 malthe kernel: running: &lt;sdg1>&lt;sdf1>&lt;sde1>&lt;sdd1>&lt;sdc1>&lt;sdb1>
+ Oct 22 00:51:59 malthe kernel: now!
+ Oct 22 00:51:59 malthe kernel: md: md0: raid array is not clean --
+  starting background reconstruction 
+</PRE>
+
+This is output from the autodetection of a RAID-5 array that was not
+cleanly shut down (eg. the machine crashed).  Reconstruction is
+automatically initiated.  Mounting this device is perfectly safe,
+since reconstruction is transparent and all data are consistent (it's
+only the parity information that is inconsistent - but that isn't
+needed until a device fails).</P>
+<P>Autostarted devices are also automatically stopped at shutdown.  Don't
+worry about init scripts.  Just use the /dev/md devices as any other
+/dev/sd or /dev/hd devices.</P>
+<P>Yes, it really is that easy.</P>
+<P>You may want to look in your init-scripts for any raidstart/raidstop
+commands. These are often found in the standard RedHat init
+scripts. They are used for old-style RAID, and has no use in new-style
+RAID with autodetection. Just remove the lines, and everything will be
+just fine.</P>
+
+
+<H2><A NAME="ss7.3">7.3</A> <A HREF="Software-RAID-HOWTO.html#toc7.3">Booting on RAID</A>
+</H2>
+
+<P>There are several ways to set up a system that mounts it's root
+filesystem on a RAID device. Some distributions allow for RAID setup
+in the installation process, and this is by far the easiest way to
+get a nicely set up RAID system.</P>
+<P>Newer LILO distributions can handle RAID-1 devices, and thus the
+kernel can be loaded at boot-time from a RAID device. LILO will
+correctly write boot-records on all disks in the array, to allow
+booting even if the primary disk fails.</P>
+<P>If you are using grub instead of LILO, then just start grub and configure 
+it to use the second (or third, or fourth...) disk in the RAID-1 array you 
+want to boot off as its root device and run setup. And that's all.</P>
+<P>For example, on an array consisting of /dev/hda1 and /dev/hdc1 where
+both partitions should be bootable you should just do this:</P>
+<P>
+<PRE>
+grub
+grub>device (hd0) /dev/hdc
+grub>root (hd0,0)       
+grub>setup (hd0)
+</PRE>
+</P>
+<P>Some users have experienced problems with this, reporting that although
+booting with one drive connected worked, booting with <EM>both</EM> 
+two drives failed.
+Nevertheless, running the described procedure with both disks fixed
+the problem, allowing the system to boot from either single drive or 
+from the RAID-1</P>
+<P>Another way of ensuring that your system can always boot is, to create
+a boot floppy when all the setup is done. If the disk on which the
+<CODE>/boot</CODE> filesystem resides dies, you can always boot from the
+floppy. On RedHat and RedHat derived systems, this can be accomplished
+with the <CODE>mkbootdisk</CODE> command.</P>
+
+
+<H2><A NAME="ss7.4">7.4</A> <A HREF="Software-RAID-HOWTO.html#toc7.4">Root filesystem on RAID</A>
+</H2>
+
+<P>In order to have a system booting on RAID, the root filesystem (/)
+must be mounted on a RAID device. Two methods for achieving this is
+supplied bellow. The methods below assume that you install on a normal
+partition, and then - when the installation is complete - move the
+contents of your non-RAID root filesystem onto a new RAID
+device. Please not that this is no longer needed in general, as most
+newer GNU/Linux distributions support installation on RAID devices
+(and creation of the RAID devices during the installation process).
+However, you may still want to use the methods below, if you are
+migrating an existing system to RAID.</P>
+
+<H3>Method 1</H3>
+
+<P>This method assumes you have a spare disk you can install the system
+on, which is not part of the RAID you will be configuring.</P>
+<P>
+<UL>
+<LI>First, install a normal system on your extra disk.</LI>
+<LI>Get the kernel you plan on running, get the raid-patches and the
+tools, and make your system boot with this new RAID-aware
+kernel. Make sure that RAID-support is <B>in</B> the kernel, and is
+not loaded as modules.</LI>
+<LI>Ok, now you should configure and create the RAID you plan to use
+for the root filesystem. This is standard procedure, as described
+elsewhere in this document.</LI>
+<LI>Just to make sure everything's fine, try rebooting the system to
+see if the new RAID comes up on boot. It should.</LI>
+<LI>Put a filesystem on the new array (using
+<CODE>mke2fs</CODE>), and mount it under /mnt/newroot</LI>
+<LI>Now, copy the contents of your current root-filesystem (the
+spare disk) to the new root-filesystem (the array). There are lots of
+ways to do this, one of them is
+<PRE>
+ cd /
+ find . -xdev | cpio -pm /mnt/newroot
+</PRE>
+
+another way to copy everything from / to /mnt/newroot could be
+<PRE>
+  cp -ax / /mnt/newroot
+</PRE>
+</LI>
+<LI>You should modify the <CODE>/mnt/newroot/etc/fstab</CODE> file to
+use the correct device (the <CODE>/dev/md?</CODE> root device) for the
+root filesystem.</LI>
+<LI>Now, unmount the current <CODE>/boot</CODE> filesystem, and mount
+the boot device on <CODE>/mnt/newroot/boot</CODE> instead. This is
+required for LILO to run successfully in the next step.</LI>
+<LI>Update <CODE>/mnt/newroot/etc/lilo.conf</CODE> to point to the right
+devices. The boot device must still be a regular disk (non-RAID
+device), but the root device should point to your new RAID. When
+done, run 
+<PRE>
+ lilo -r /mnt/newroot
+</PRE>
+This LILO run should
+complete 
+with no errors.</LI>
+<LI>Reboot the system, and watch everything come up as expected  :)</LI>
+</UL>
+</P>
+<P>If you're doing this with IDE disks, be sure to tell your BIOS that
+all disks are "auto-detect" types, so that the BIOS will allow your
+machine to boot even when a disk is missing.</P>
+
+<H3>Method 2</H3>
+
+<P>This method requires that your kernel and raidtools understand the
+<CODE>failed-disk</CODE> directive in the <CODE>/etc/raidtab</CODE> file - if you are
+working on a really old system this may not be the case, and you will
+need to upgrade your tools and/or kernel first.</P>
+<P>You can <B>only</B> use this method on RAID levels 1 and above, as
+the method uses an array in "degraded mode" which in turn is only
+possible if the RAID level has redundancy. The idea is to install a
+system on a disk which is purposely marked as failed in the RAID, then
+copy the system to the RAID which will be running in degraded mode,
+and finally making the RAID use the no-longer needed "install-disk",
+zapping the old installation but making the RAID run in non-degraded
+mode.</P>
+<P>
+<UL>
+<LI>First, install a normal system on one disk (that will later
+become part of your RAID). It is important that this disk (or
+partition) is not the smallest one. If it is, it will not be possible
+to add it to the RAID later on!</LI>
+<LI>Then, get the kernel, the patches, the tools etc. etc. You know
+the drill. Make your system boot with a new kernel that has the RAID
+support you need, compiled into the kernel.</LI>
+<LI>Now, set up the RAID with your current root-device as the
+<CODE>failed-disk</CODE> in the <CODE><CODE>/etc/raidtab</CODE></CODE> file. Don't put the
+<CODE>failed-disk</CODE> as the first disk in the <CODE>raidtab</CODE>, that will give
+you problems with starting the RAID. Create the RAID, and put a
+filesystem on it.
+If using mdadm, you can create a degraded array just by running
+something like <CODE>mdadm -C /dev/md0 --level raid1 --raid-disks 2 missing /dev/hdc1</CODE>, note the <CODE>missing</CODE> parameter.</LI>
+<LI>Try rebooting and see if the RAID comes up as it should</LI>
+<LI>Copy the system files, and reconfigure the system to use the
+RAID as root-device, as described in the previous section.</LI>
+<LI>When your system successfully boots from the RAID, you can
+modify the <CODE><CODE>/etc/raidtab</CODE></CODE> file to include the previously
+<CODE>failed-disk</CODE> as a normal <CODE>raid-disk</CODE>. Now,
+<CODE>raidhotadd</CODE> the disk to your RAID.</LI>
+<LI>You should now have a system that can boot from a non-degraded
+RAID.</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss7.5">7.5</A> <A HREF="Software-RAID-HOWTO.html#toc7.5">Making the system boot on RAID</A>
+</H2>
+
+<P>For the kernel to be able to mount the root filesystem, all support
+for the device on which the root filesystem resides, must be present
+in the kernel. Therefore, in order to mount the root filesystem on a
+RAID device, the kernel <EM>must</EM> have RAID support.</P>
+<P>The normal way of ensuring that the kernel can see the RAID device is
+to simply compile a kernel with all necessary RAID support compiled
+in. Make sure that you compile the RAID support <EM>into</EM> the
+kernel, and <EM>not</EM> as loadable modules. The kernel cannot load a 
+module (from the root filesystem) before the root filesystem is
+mounted.</P>
+<P>However, since RedHat-6.0 ships with a kernel that has new-style RAID
+support as modules, I here describe how one can use the standard
+RedHat-6.0 kernel and still have the system boot on RAID.</P>
+
+<H3>Booting with RAID as module</H3>
+
+<P>You will have to instruct LILO to use a RAM-disk in order to achieve
+this. Use the <CODE>mkinitrd</CODE> command to create a ramdisk containing 
+all kernel modules needed to mount the root partition. This can be
+done as:
+<PRE>
+ mkinitrd --with=&lt;module&gt; &lt;ramdisk name&gt; &lt;kernel&gt;
+</PRE>
+
+For example:
+<PRE>
+ mkinitrd --preload raid5 --with=raid5 raid-ramdisk 2.2.5-22
+</PRE>
+</P>
+<P>This will ensure that the specified RAID module is present at
+boot-time, for the kernel to use when mounting the root device.</P>
+
+<H3>Modular RAID on Debian GNU/Linux after move to RAID</H3>
+
+<P>Debian users may encounter problems using an initrd to mount their
+root filesystem from RAID, if they have migrated a standard non-RAID
+Debian install to root on RAID.</P>
+<P>If your system fails to mount the root filesystem on boot (you will
+see this in a "kernel panic" message), then the problem may be that
+the initrd filesystem does not have the necessary support to mount the
+root filesystem from RAID.</P>
+<P>Debian seems to produce its <CODE>initrd.img</CODE> files on the
+assumption that the root filesystem to be mounted is the current one.
+This will usually result in a kernel panic if the root filesystem is
+moved to the raid device and you attempt to boot from that device
+using the same initrd image.  The solution is to use the
+<CODE>mkinitrd</CODE> command but specifying the proposed new root
+filesystem.  For example, the following commands should create and set
+up the new initrd on a Debian system:
+<PRE>
+% mkinitrd -r /dev/md0 -o /boot/initrd.img-2.4.22raid
+% mv /initrd.img /initrd.img-nonraid
+% ln -s /boot/initrd.img-raid /initrd.img"
+</PRE>
+</P>
+
+<H2><A NAME="ss7.6">7.6</A> <A HREF="Software-RAID-HOWTO.html#toc7.6">Converting a non-RAID RedHat System to run on Software RAID</A>
+</H2>
+
+<P>This section was written and contributed by Mark Price, IBM. The text
+has undergone minor changes since his original work.</P>
+<P><B>Notice:</B> the following information is provided "AS IS" with no
+representation or warranty of any kind either express or implied. You
+may use it freely at your own risk, and no one else will be liable for
+any damages arising out of such usage.</P>
+
+<H3>Introduction</H3>
+
+<P>The technote details how to convert a linux system with non RAID devices to
+run with a Software RAID configuration.</P>
+
+<H3>Scope</H3>
+
+<P>This scenario was tested with Redhat 7.1, but should be applicable to any
+release which supports Software RAID (md) devices.</P>
+
+<H3>Pre-conversion example system</H3>
+
+<P>The test system contains two SCSI disks, sda and sdb both of of which are the
+same physical size. As part of the test setup, I configured both disks to have
+the same partition layout, using fdisk to ensure the number of blocks for each
+partition was identical.
+<PRE>
+DEVICE      MOUNTPOINT  SIZE        DEVICE      MOUNTPOINT  SIZE
+/dev/sda1   /           2048MB      /dev/sdb1               2048MB
+/dev/sda2   /boot       80MB        /dev/sdb2               80MB
+/dev/sda3   /var/       100MB       /dev/sdb3               100MB
+/dev/sda4   SWAP        1024MB      /dev/sdb4   SWAP        1024MB
+</PRE>
+
+In our basic example, we are going to set up a simple RAID-1 Mirror, which
+requires only two physical disks.</P>
+
+<H3>Step-1 - boot rescue cd/floppy</H3>
+
+<P>The redhat installation CD provides a rescue mode which boots into linux from
+the CD and mounts any filesystems it can find on your disks.</P>
+<P>At the lilo prompt type
+<PRE>
+    lilo: linux rescue
+</PRE>
+</P>
+<P>With the setup described above, the installer may ask you which disk your root
+filesystem in on, either sda or sdb. Select sda.</P>
+<P>The installer will mount your filesytems in the following way.
+<PRE>
+DEVICE      MOUNTPOINT  TEMPORARY MOUNT POINT
+/dev/sda1   /           /mnt/sysimage
+/dev/sda2   /boot       /mnt/sysimage/boot
+/dev/sda3   /var        /mnt/sysimage/var
+/dev/sda6   /home       /mnt/sysimage/home
+</PRE>
+</P>
+<P><B>Note</B>: - Please bear in mind other distributions may mount
+your filesystems on different mount points, or may require you
+to mount them by hand.</P>
+
+<H3>Step-2 - create a <CODE>/etc/raidtab</CODE> file</H3>
+
+<P>Create the file /mnt/sysimage/etc/raidtab (or wherever your real /etc file
+system has been mounted.</P>
+<P>For our test system, the raidtab file would like like this.
+<PRE>
+raiddev /dev/md0
+    raid-level              1
+    nr-raid-disks           2
+    nr-spare-disks          0
+    chunk-size              4
+    persistent-superblock   1
+    device                  /dev/sda1
+    raid-disk               0
+    device                  /dev/sdb1
+    raid-disk               1
+
+raiddev /dev/md1
+    raid-level              1
+    nr-raid-disks           2
+    nr-spare-disks          0
+    chunk-size              4
+    persistent-superblock   1
+    device                  /dev/sda2
+    raid-disk               0
+    device                  /dev/sdb2
+    raid-disk               1
+
+raiddev /dev/md2
+    raid-level              1
+    nr-raid-disks           2
+    nr-spare-disks          0
+    chunk-size              4
+    persistent-superblock   1
+    device                  /dev/sda3
+    raid-disk               0
+    device                  /dev/sdb3
+    raid-disk               1
+</PRE>
+</P>
+<P><B>Note:</B> - It is important that the devices are in the correct
+order. ie. that <CODE>/dev/sda1</CODE> is <CODE>raid-disk 0</CODE> and
+not <CODE>raid-disk 1</CODE>. This instructs the md driver to sync
+from <CODE>/dev/sda1</CODE>, if it were the other way around it
+would sync from <CODE>/dev/sdb1</CODE> which would destroy your
+filesystem.</P>
+<P>Now copy the raidtab file from your real root filesystem to the current root
+filesystem.
+<PRE>
+(rescue)# cp /mnt/sysimage/etc/raidtab /etc/raidtab
+</PRE>
+</P>
+
+<H3>Step-3 - create the md devices</H3>
+
+<P>There are two ways to do this, copy the device files from /mnt/sysimage/dev
+or use mknod to create them. The md device, is a (b)lock device with major
+number 9.
+<PRE>
+(rescue)# mknod /dev/md0 b 9 0
+(rescue)# mknod /dev/md1 b 9 1
+(rescue)# mknod /dev/md2 b 9 2
+</PRE>
+</P>
+
+<H3>Step-4 - unmount filesystems</H3>
+
+<P>In order to start the raid devices, and sync the drives, it is necessary to
+unmount all the temporary filesystems.
+<PRE>
+(rescue)# umount /mnt/sysimage/var
+(rescue)# umount /mnt/sysimage/boot
+(rescue)# umount /mnt/sysimage/proc
+(rescue)# umount /mnt/sysimage
+</PRE>
+
+Please note, you may not be able to umount
+<CODE>/mnt/sysimage</CODE>. This problem can be caused by the rescue
+system - if you choose to manually mount your filesystems instead of
+letting the rescue system do this automatically, this problem should
+go away.</P>
+
+<H3>Step-5 - start raid devices</H3>
+
+<P>Because there are filesystems on /dev/sda1, /dev/sda2 and /dev/sda3 it is
+necessary to force the start of the raid device.
+<PRE>
+(rescue)# mkraid --really-force /dev/md2
+</PRE>
+</P>
+<P>You can check the completion progress by cat'ing the <CODE>/proc/mdstat</CODE> file. It
+shows you status of the raid device and percentage left to sync.</P>
+<P>Continue with /boot and /
+<PRE>
+(rescue)# mkraid --really-force /dev/md1
+(rescue)# mkraid --really-force /dev/md0
+</PRE>
+</P>
+<P>The md driver syncs one device at a time.</P>
+
+<H3>Step-6 - remount filesystems</H3>
+
+<P>Mount the newly synced filesystems back into the /mnt/sysimage mount points.
+<PRE>
+(rescue)# mount /dev/md0 /mnt/sysimage
+(rescue)# mount /dev/md1 /mnt/sysimage/boot
+(rescue)# mount /dev/md2 /mnt/sysimage/var
+</PRE>
+</P>
+
+<H3>Step-7 - change root</H3>
+
+<P>You now need to change your current root directory to your real root file
+system.
+<PRE>
+(rescue)# chroot /mnt/sysimage
+</PRE>
+</P>
+
+<H3>Step-8 - edit config files</H3>
+
+<P>You need to configure lilo and <CODE>/etc/fstab</CODE> appropriately to boot from and mount
+the md devices.</P>
+<P><B>Note:</B> - The boot device MUST be a non-raided device. The root
+device is your new md0 device.  eg.
+<PRE>
+boot=/dev/sda
+map=/boot/map
+install=/boot/boot.b
+prompt
+timeout=50
+message=/boot/message
+linear
+default=linux
+
+image=/boot/vmlinuz
+    label=linux
+    read-only
+    root=/dev/md0
+</PRE>
+</P>
+<P>Alter <CODE><CODE>/etc/fstab</CODE></CODE>
+<PRE>
+/dev/md0               /                       ext3    defaults        1 1
+/dev/md1               /boot                   ext3    defaults        1 2
+/dev/md2               /var                    ext3    defaults        1 2
+/dev/sda4              swap                    swap    defaults        0 0
+</PRE>
+</P>
+
+<H3>Step-9 - run LILO</H3>
+
+<P>With the <CODE>/etc/lilo.conf</CODE> edited to reflect the new
+<CODE>root=/dev/md0</CODE> and with <CODE>/dev/md1</CODE> mounted as
+<CODE>/boot</CODE>, we can now run <CODE>/sbin/lilo -v</CODE> on the chrooted
+filesystem.</P>
+
+<H3>Step-10 - change partition types</H3>
+
+<P>The partition types of the all the partitions on ALL Drives which are used by
+the md driver must be changed to type 0xFD.</P>
+<P>Use fdisk to change the partition type, using option 't'.
+<PRE>
+(rescue)# fdisk /dev/sda
+(rescue)# fdisk /dev/sdb
+</PRE>
+</P>
+<P>Use the 'w' option after changing all the required partitions to save the
+partion table to disk.</P>
+
+<H3>Step-11 - resize filesystem</H3>
+
+<P>When we created the raid device, the physical partion became slightly smaller
+because a second superblock is stored at the end of the partition. If you
+reboot the system now, the reboot will fail with an error indicating the
+superblock is corrupt.</P>
+<P>Resize them prior to the reboot, ensure that the all md based filesystems
+are unmounted except root, and remount root read-only.
+<PRE>
+(rescue)# mount / -o remount,ro
+</PRE>
+</P>
+<P>You will be required to fsck each of the md devices. This is the reason for
+remounting root read-only. The -f flag is required to force fsck to check a
+clean filesystem.
+<PRE>
+(rescue)# e2fsck -f /dev/md0
+</PRE>
+</P>
+<P>This will generate the same error about inconsistent sizes and possibly
+corrupted superblock.Say N to 'Abort?'.
+<PRE>
+(rescue)# resize2fs /dev/md0
+</PRE>
+</P>
+<P>Repeat for all <CODE>/dev/md</CODE> devices.</P>
+
+<H3>Step-12 - checklist</H3>
+
+<P>The next step is to reboot the system, prior to doing this run through the
+checklist below and ensure all tasks have been completed.
+<UL>
+<LI>All devices have finished syncing. Check <CODE>/proc/mdstat</CODE></LI>
+<LI><CODE><CODE>/etc/fstab</CODE></CODE> has been edited to reflect the changes to the device names.</LI>
+<LI><CODE>/etc/lilo.conf</CODE> has beeb edited to reflect root device change.</LI>
+<LI><CODE>/sbin/lilo</CODE> has been run to update the boot loader.</LI>
+<LI>The kernel has both SCSI and RAID(MD) drivers built into the kernel.</LI>
+<LI>The partition types of all partitions on disks that are part of an md device
+have been changed to 0xfd.</LI>
+<LI>The filesystems have been fsck'd and resize2fs'd.</LI>
+</UL>
+</P>
+
+<H3>Step-13 - reboot</H3>
+
+<P>You can now safely reboot the system, when the system comes up it will
+auto discover the md devices (based on the partition types).</P>
+<P>Your root filesystem will now be mirrored.</P>
+
+
+<H2><A NAME="ss7.7">7.7</A> <A HREF="Software-RAID-HOWTO.html#toc7.7">Sharing spare disks between different arrays</A>
+</H2>
+
+<P>When running mdadm in the follow/monitor mode you can make different
+arrays share spare disks. That will surely make you save storage space without
+losing the comfort of fallback disks.</P>
+<P>In the world of software RAID, this is a brand new never-seen-before feature:
+for securing things to the point of spare disk areas, you just have to provide
+one single idle disk for a bunch of arrays.</P>
+<P>With mdadm is running as a daemon, you have an agent polling arrays at regular
+intervals. Then, as a disk fails on an array without a spare disk, mdadm removes
+an available spare disk from another array and inserts it into the array with the
+failed disk. The reconstruction process begins now in the degraded array as usual.</P>
+<P>To declare shared spare disks, just use the <CODE>spare-group</CODE> parameter
+when invoking mdadm as a daemon.</P>
+
+
+<H2><A NAME="ss7.8">7.8</A> <A HREF="Software-RAID-HOWTO.html#toc7.8">Pitfalls</A>
+</H2>
+
+<P>Never NEVER <B>never</B> re-partition disks that are part of a running
+RAID. If you must alter the partition table on a disk which is a part
+of a RAID, stop the array first, then repartition.</P>
+<P>It is easy to put too many disks on a bus. A normal Fast-Wide SCSI bus
+can sustain 10 MB/s which is less than many disks can do alone
+today. Putting six such disks on the bus will of course not give you
+the expected performance boost. It is becoming equally easy to
+saturate the PCI bus - remember, a normal 32-bit 33 MHz PCI bus has a
+theoretical maximum bandwidth of around 133 MB/sec, considering
+command overhead etc. you will see a somewhat lower real-world
+transfer rate. Some disks today has a throughput in excess of 30
+MB/sec, so just four of those disks will actually max out your PCI
+bus! When designing high-performance RAID systems, be sure to take the
+whole I/O path into consideration - there are boards with more PCI
+busses, with 64-bit and 66 MHz busses, and with PCI-X.</P>
+<P>More SCSI controllers will only give you extra performance, if the
+SCSI busses are nearly maxed out by the disks on them.  You will not
+see a performance improvement from using two 2940s with two old SCSI
+disks, instead of just running the two disks on one controller.</P>
+<P>If you forget the persistent-superblock option, your array may not
+start up willingly after it has been stopped.  Just re-create the
+array with the option set correctly in the raidtab. Please note that
+this will destroy the information on the array!</P>
+<P>If a RAID-5 fails to reconstruct after a disk was removed and
+re-inserted, this may be because of the ordering of the devices in the
+raidtab. Try moving the first "device ..." and "raid-disk ..."
+pair to the bottom of the array description in the raidtab file.</P>
+
+
+
+<HR>
+<H2><A NAME="s8">8.</A> <A HREF="Software-RAID-HOWTO.html#toc8">Reconstruction</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>If you have read the rest of this HOWTO, you should already have a pretty
+good idea about what reconstruction of a degraded RAID involves. Let us
+summarize: 
+<UL>
+<LI>Power down the system</LI>
+<LI>Replace the failed disk</LI>
+<LI>Power up the system once again.</LI>
+<LI>Use <CODE>raidhotadd /dev/mdX /dev/sdX</CODE> to re-insert the disk
+in the array</LI>
+<LI>Have coffee while you watch the automatic reconstruction running</LI>
+</UL>
+
+And that's it.</P>
+<P>Well, it usually is, unless you're unlucky and your RAID has been
+rendered unusable because more disks than the ones redundant
+failed. This can actually happen if a number of disks reside on the
+same bus, and one disk takes the bus with it as it crashes. The other
+disks, however fine, will be unreachable to the RAID layer, because
+the bus is down, and they will be marked as faulty.  On a RAID-5 where
+you can spare one disk only, loosing two or more disks can be fatal.</P>
+<P>The following section is the explanation that Martin Bene gave to me,
+and describes a possible recovery from the scary scenario outlined
+above. It involves using the <CODE>failed-disk</CODE> directive in your
+<CODE>/etc/raidtab</CODE> (so for people running patched 2.2 kernels, this will only
+work on kernels 2.2.10 and later).</P>
+
+<H2><A NAME="ss8.1">8.1</A> <A HREF="Software-RAID-HOWTO.html#toc8.1">Recovery from a multiple disk failure</A>
+</H2>
+
+<P>The scenario is:
+<UL>
+<LI>A controller dies and takes two disks offline at the same time,</LI>
+<LI>All disks on one scsi bus can no longer be reached if a disk dies,</LI>
+<LI>A cable comes loose...</LI>
+</UL>
+
+In short: quite often you get a <EM>temporary</EM> failure of several
+disks at once; afterwards the RAID superblocks are out of sync and you
+can no longer init your RAID array.</P>
+<P>If using mdadm, you could first try to run:
+<PRE>
+  mdadm --assemble --force
+</PRE>
+
+If not, there's one thing left: rewrite the RAID superblocks by 
+<CODE>mkraid --force</CODE></P>
+<P>To get this to work, you'll need to have an up to date <CODE>/etc/raidtab</CODE> - if
+it doesn't <B>EXACTLY</B> match devices and ordering of the original
+disks this will not work as expected, but <B>will most likely
+completely obliterate whatever data you used to have on your
+disks</B>.</P>
+<P>Look at the sylog produced by trying to start the array, you'll see the
+event count for each superblock; usually it's best to leave out the disk
+with the lowest event count, i.e the oldest one.</P>
+<P>If you <CODE>mkraid</CODE> without <CODE>failed-disk</CODE>, the recovery
+thread will kick in immediately and start rebuilding the parity blocks
+- not necessarily what you want at that moment.</P>
+<P>With <CODE>failed-disk</CODE> you can specify exactly which disks you want
+to be active and perhaps try different combinations for best
+results. BTW, only mount the filesystem read-only while trying this
+out... This has been successfully used by at least two guys I've been in
+contact with.</P>
+
+
+
+<HR>
+<H2><A NAME="s9">9.</A> <A HREF="Software-RAID-HOWTO.html#toc9">Performance</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>This section contains a number of benchmarks from a real-world system
+using software RAID. There is some general information about benchmarking
+software too.</P>
+<P>Benchmark samples were done with the <CODE>bonnie</CODE> program, and at all
+times on files twice- or more the size of the physical RAM in the machine.</P>
+<P>The benchmarks here <EM>only</EM> measures input and output bandwidth
+on one large single file.  This is a nice thing to know, if it's
+maximum I/O throughput for large reads/writes one is interested in.
+However, such numbers tell us little about what the performance would
+be if the array was used for a news spool, a web-server, etc. etc.
+Always keep in mind, that benchmarks numbers are the result of running
+a "synthetic" program. Few real-world programs do what
+<CODE>bonnie</CODE> does, and although these I/O numbers are nice to look
+at, they are not ultimate real-world-appliance performance
+indicators. Not even close.</P>
+<P>For now, I only have results from my own machine. The setup is:
+<UL>
+<LI>Dual Pentium Pro 150 MHz</LI>
+<LI>256 MB RAM (60 MHz EDO)</LI>
+<LI>Three IBM UltraStar 9ES 4.5 GB, SCSI U2W</LI>
+<LI>Adaptec 2940U2W</LI>
+<LI>One IBM UltraStar 9ES 4.5 GB, SCSI UW</LI>
+<LI>Adaptec 2940 UW</LI>
+<LI>Kernel 2.2.7 with RAID patches</LI>
+</UL>
+</P>
+<P>The three U2W disks hang off the U2W controller, and the UW disk off
+the UW controller.</P>
+<P>It seems to be impossible to push much more than 30 MB/s thru the SCSI
+busses on this system, using RAID or not. My guess is, that because
+the system is fairly old, the memory bandwidth sucks, and thus limits
+what can be sent thru the SCSI controllers.</P>
+
+<H2><A NAME="ss9.1">9.1</A> <A HREF="Software-RAID-HOWTO.html#toc9.1">RAID-0</A>
+</H2>
+
+<P><B>Read</B> is <B>Sequential block input</B>, and <B>Write</B>
+is <B>Sequential block output</B>. File size was 1GB in all
+tests. The tests where done in single-user mode. The SCSI driver was
+configured not to use tagged command queuing.</P>
+<P>
+<BR><CENTER>
+<TABLE BORDER><TR><TD>
+Chunk size </TD><TD> Block size </TD><TD> Read kB/s </TD><TD> Write kB/s </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+4k </TD><TD> 1k </TD><TD> 19712 </TD><TD> 18035 </TD></TR><TR><TD>
+4k </TD><TD> 4k </TD><TD> 34048 </TD><TD> 27061 </TD></TR><TR><TD>
+8k </TD><TD> 1k </TD><TD> 19301 </TD><TD> 18091 </TD></TR><TR><TD>
+8k </TD><TD> 4k </TD><TD> 33920 </TD><TD> 27118 </TD></TR><TR><TD>
+16k </TD><TD> 1k </TD><TD> 19330 </TD><TD> 18179 </TD></TR><TR><TD>
+16k </TD><TD> 2k </TD><TD> 28161 </TD><TD> 23682 </TD></TR><TR><TD>
+16k </TD><TD> 4k </TD><TD> 33990 </TD><TD> 27229 </TD></TR><TR><TD>
+32k </TD><TD> 1k </TD><TD> 19251 </TD><TD> 18194 </TD></TR><TR><TD>
+32k </TD><TD> 4k </TD><TD> 34071 </TD><TD> 26976
+</TD></TR></TABLE>
+</CENTER><BR>
+</P>
+<P>>From this it seems that the RAID chunk-size doesn't make that much
+of a difference. However, the ext2fs block-size should be as large as
+possible, which is 4kB (eg. the page size) on IA-32.</P>
+
+<H2><A NAME="ss9.2">9.2</A> <A HREF="Software-RAID-HOWTO.html#toc9.2">RAID-0 with TCQ</A>
+</H2>
+
+<P>This time, the SCSI driver was configured to use tagged command
+queuing, with a queue depth of 8. Otherwise, everything's the same as
+before.</P>
+<P>
+<BR><CENTER>
+<TABLE BORDER><TR><TD>
+Chunk size </TD><TD> Block size </TD><TD> Read kB/s </TD><TD> Write kB/s </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+32k </TD><TD> 4k </TD><TD> 33617 </TD><TD> 27215
+</TD></TR></TABLE>
+</CENTER><BR>
+</P>
+<P>No more tests where done. TCQ seemed to slightly increase write
+performance, but there really wasn't much of a difference at all.</P>
+
+<H2><A NAME="ss9.3">9.3</A> <A HREF="Software-RAID-HOWTO.html#toc9.3">RAID-5</A>
+</H2>
+
+<P>The array was configured to run in RAID-5 mode, and similar tests
+where done.</P>
+<P>
+<BR><CENTER>
+<TABLE BORDER><TR><TD>
+Chunk size </TD><TD> Block size </TD><TD> Read kB/s </TD><TD> Write kB/s </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+8k </TD><TD> 1k </TD><TD> 11090 </TD><TD> 6874 </TD></TR><TR><TD>
+8k </TD><TD> 4k </TD><TD> 13474 </TD><TD> 12229 </TD></TR><TR><TD>
+32k </TD><TD> 1k </TD><TD> 11442 </TD><TD> 8291 </TD></TR><TR><TD>
+32k </TD><TD> 2k </TD><TD> 16089 </TD><TD> 10926 </TD></TR><TR><TD>
+32k </TD><TD> 4k </TD><TD> 18724 </TD><TD> 12627
+</TD></TR></TABLE>
+</CENTER><BR>
+</P>
+<P>Now, both the chunk-size and the block-size seems to actually make a
+difference.</P>
+
+<H2><A NAME="ss9.4">9.4</A> <A HREF="Software-RAID-HOWTO.html#toc9.4">RAID-10</A>
+</H2>
+
+<P>RAID-10 is "mirrored stripes", or, a RAID-1 array of two RAID-0
+arrays. The chunk-size is the chunk sizes of both the RAID-1 array and
+the two RAID-0 arrays. I did not do test where those chunk-sizes
+differ, although that should be a perfectly valid setup.</P>
+<P>
+<BR><CENTER>
+<TABLE BORDER><TR><TD>
+Chunk size </TD><TD> Block size </TD><TD> Read kB/s </TD><TD> Write kB/s </TD></TR><TR><TD>
+</TD></TR><TR><TD>
+32k </TD><TD> 1k </TD><TD> 13753 </TD><TD> 11580 </TD></TR><TR><TD>
+32k </TD><TD> 4k </TD><TD> 23432 </TD><TD> 22249
+</TD></TR></TABLE>
+</CENTER><BR>
+</P>
+<P>No more tests where done. The file size was 900MB, because the four
+partitions involved where 500 MB each, which doesn't give room for a
+1G file in this setup (RAID-1 on two 1000MB arrays).</P>
+
+
+<H2><A NAME="ss9.5">9.5</A> <A HREF="Software-RAID-HOWTO.html#toc9.5">Fresh benchmarking tools</A>
+</H2>
+
+<P>To check out speed and performance of your RAID systems, do NOT use hdparm.
+It won't do real benchmarking of the arrays.</P>
+<P>Instead of hdparm, take a look at the tools described here: IOzone and Bonnie++.</P>
+<P>
+<A HREF="http://www.iozone.org/">IOzone</A> is a small, versatile 
+and modern tool to use. It benchmarks file I/O performance for <CODE>read, write, re-read, re-write, read backwards, read strided, fread, fwrite, random read, pread, mmap, aio_read</CODE> and <CODE>aio_write</CODE> operations.
+Don't worry, it can run on any of the ext2, ext3, reiserfs, JFS, or XFS 
+filesystems in OSDL STP.</P>
+<P>You can also use IOzone to show throughput performance as a function of
+number of processes and number of disks used in a filesystem, something
+interesting when it's about RAID striping.</P>
+<P>Although documentation for IOzone is available in Acrobat/PDF, PostScript, nroff, 
+and MS Word formats, we are going to cover here a nice example of IOzone in action: 
+<PRE>
+iozone -s 4096 
+</PRE>
+
+This would run a test using a 4096KB file size.</P>
+<P>And this is an example of the output quality IOzone gives
+<PRE>
+        File size set to 4096 KB
+        Output is in Kbytes/sec
+        Time Resolution = 0.000001 seconds.
+        Processor cache size set to 1024 Kbytes.
+        Processor cache line size set to 32 bytes.
+        File stride size set to 17 * record size.
+                                                            random  random    bkwd  record  stride            
+              KB  reclen   write rewrite    read    reread    read   write    read rewrite    read   fwrite frewrite   fread  freread
+            4096       4   99028  194722   285873   298063  265560  170737  398600  436346  380952    91651   127212  288309   292633
+</PRE>
+
+Now you just need to know about the feature that makes IOzone useful for RAID
+benchmarking: the file operations involving RAID are the <CODE>read strided</CODE>.
+The example above shows a 380.952Kb/sec. for the <CODE>read strided</CODE>, so you
+can go figure.</P>
+
+<P>
+<A HREF="http://www.coker.com.au/bonnie++/">Bonnie++</A> seems to be more targeted at benchmarking single drives that
+at RAID, but it can test more than 2Gb of storage on 32-bit machines, and tests 
+for file <CODE>creat, stat, unlink</CODE> operations.</P>
+
+
+
+<HR>
+<H2><A NAME="s10">10.</A> <A HREF="Software-RAID-HOWTO.html#toc10">Related tools</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>While not described in this HOWTO, some useful tools for Software-RAID
+systems have been developed.</P>
+
+<H2><A NAME="ss10.1">10.1</A> <A HREF="Software-RAID-HOWTO.html#toc10.1">RAID resizing and conversion</A>
+</H2>
+
+<P>It is not easy to add another disk to an existing array. A tool to
+allow for just this operation has been developed, and is available
+from 
+<A HREF="http://unthought.net/raidreconf">http://unthought.net/raidreconf</A>. The tool will
+allow for conversion between RAID levels, for example converting a
+two-disk RAID-1 array into a four-disk RAID-5 array.  It will also
+allow for chunk-size conversion, and simple disk adding.</P>
+<P>Please note that this tool is not really "production ready". It seems
+to have worked well so far, but it is a rather time-consuming process
+that, if it fails, will absolutely guarantee that your data will be
+irrecoverably scattered over your disks. <B>You absolutely
+<EM>must</EM> keep good backups prior to experimenting with this
+tool</B>.</P>
+
+<H2><A NAME="ss10.2">10.2</A> <A HREF="Software-RAID-HOWTO.html#toc10.2">Backup</A>
+</H2>
+
+<P>Remember, RAID is no substitute for good backups. No amount of
+redundancy in your RAID configuration is going to let you recover week
+or month old data, nor will a RAID survive fires, earthquakes, or
+other disasters.</P>
+<P>It is imperative that you protect your data, not just with RAID, but
+with <EM>regular</EM> good backups. One excellent system for such
+backups, is the 
+<A HREF="http://www.amanda.org">Amanda</A>
+backup system.</P>
+
+
+<HR>
+<H2><A NAME="s11">11.</A> <A HREF="Software-RAID-HOWTO.html#toc11">Partitioning RAID / LVM on RAID</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>RAID devices cannot be partitioned, like ordinary disks can. This can
+be a real annoyance on systems where one wants to run, for example,
+two disks in a RAID-1, but divide the system onto multiple different
+filesystems. A horror example could look like:
+<PRE>
+# df -h
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/md2              3.8G  640M  3.0G  18% /
+/dev/md1               97M   11M   81M  12% /boot
+/dev/md5              3.8G  1.1G  2.5G  30% /usr
+/dev/md6              9.6G  8.5G  722M  93% /var/www
+/dev/md7              3.8G  951M  2.7G  26% /var/lib
+/dev/md8              3.8G   38M  3.6G   1% /var/spool
+/dev/md9              1.9G  231M  1.5G  13% /tmp
+/dev/md10             8.7G  329M  7.9G   4% /var/www/html
+</PRE>
+</P>
+
+<H2><A NAME="ss11.1">11.1</A> <A HREF="Software-RAID-HOWTO.html#toc11.1">Partitioning RAID devices</A>
+</H2>
+
+<P>If a RAID device could be partitioned, the administrator could simply
+have created one single <CODE>/dev/md0 device</CODE> device, partitioned
+it as he usually would, and put the filesystems there. Instead, with
+today's Software RAID, he must create a RAID-1 device for every single
+filesystem, even though there are only two disks in the system.</P>
+<P>There have been various patches to the kernel which would allow
+partitioning of RAID devices, but none of them have (as of this
+writing) made it into the kernel. In short; it is not currently
+possible to partition a RAID device - but luckily there <EM>is</EM>
+another solution to this problem.</P>
+
+<H2><A NAME="ss11.2">11.2</A> <A HREF="Software-RAID-HOWTO.html#toc11.2">LVM on RAID</A>
+</H2>
+
+<P>The solution to the partitioning problem is LVM, Logical Volume
+Management. LVM has been in the stable Linux kernel series for a long
+time now - LVM2 in the 2.6 kernel series is a further improvement over
+the older LVM support from the 2.4 kernel series. While LVM has
+traditionally scared some people away because of its complexity, it
+really is something that an administrator could and should consider if
+he wishes to use more than a few filesystems on a server.</P>
+<P>We will not attempt to describe LVM setup in this HOWTO, as there
+already is a fine HOWTO for exactly this purpose. A small example of a
+RAID + LVM setup will be presented though. Consider the <CODE>df</CODE>
+output below, of such a system:
+<PRE>
+# df -h
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/md0              942M  419M  475M  47% /
+/dev/vg0/backup        40G  1.3M   39G   1% /backup
+/dev/vg0/amdata       496M  237M  233M  51% /var/lib/amanda
+/dev/vg0/mirror        62G   56G  2.9G  96% /mnt/mirror
+/dev/vg0/webroot       97M  6.5M   85M   8% /var/www
+/dev/vg0/local        2.0G  458M  1.4G  24% /usr/local
+/dev/vg0/netswap      3.0G  2.1G 1019M  67% /mnt/netswap
+</PRE>
+
+<EM>"What's the difference"</EM> you might ask... Well, this system
+has only two RAID-1 devices - one for the root filesystem, and one
+that cannot be seen on the <CODE>df</CODE> output - this is because
+<CODE>/dev/md1</CODE> is used as a "physical volume" for LVM. What this
+means is, that <CODE>/dev/md1</CODE> acts as "backing store" for all
+"volumes" in the "volume group" named <CODE>vg0</CODE>.</P>
+<P>All this "volume" terminology is explained in the LVM HOWTO - if you
+do not completely understand the above, there is no need to worry -
+the details are not particularly important right now (you will need to
+read the LVM HOWTO anyway if you want to set up LVM). What matters is
+the benefits that this setup has over the many-md-devices setup:
+<UL>
+<LI>No need to reboot just to add a new filesystem (this would
+otherwise be required, as the kernel cannot re-read the partition
+table from the disk that holds the root filesystem, and
+re-partitioning would be required in order to create the new RAID
+device to hold the new filesystem)</LI>
+<LI>Resizing of filesystems: LVM supports hot-resizing of volumes
+(with RAID devices resizing is difficult and time consuming - but if
+you run LVM on top of RAID, all you need in order to resize a
+filesystem is to resize the volume, not the underlying RAID
+device). With a filesystem such as XFS, you can even resize the
+filesystem without un-mounting it first (!) Ext3 does not (as of
+this writing) support hot-resizing, you can, however, resize the
+filesystem without rebooting, you just need to un-mount it
+first.</LI>
+<LI>Adding new disks: Need more storage?  Easy! Simply insert two
+new disks in your system, create a RAID-1 on top of them, make your
+new <CODE>/dev/md2</CODE> device a physical volume and add it to your
+volume group. That's it! You now have more free space in your volume
+group for either growing your existing logical volumes, or for adding
+new ones.</LI>
+</UL>
+</P>
+<P>All in all - for servers with many filesystems, LVM (and LVM2) is
+definitely a <EM>fairly simple</EM> solution which should be
+considered for use on top of Software RAID. Read on in the LVM HOWTO
+if you want to learn more about LVM.</P>
+
+<HR>
+<H2><A NAME="s12">12.</A> <A HREF="Software-RAID-HOWTO.html#toc12">Credits</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>The following people contributed to the creation of this
+documentation:
+<UL>
+<LI>Mark Price and IBM</LI>
+<LI>Steve Boley of Dell</LI>
+<LI>Damon Hoggett</LI>
+<LI>Ingo Molnar</LI>
+<LI>Jim Warren</LI>
+<LI>Louis Mandelstam</LI>
+<LI>Allan Noah</LI>
+<LI>Yasunori Taniike</LI>
+<LI>Martin Bene</LI>
+<LI>Bennett Todd</LI>
+<LI>Kevin Rolfes</LI>
+<LI>Darryl Barlow</LI>
+<LI>Brandon Knitter</LI>
+<LI>Hans van Zijst</LI>
+<LI>Matthew Mcglynn</LI>
+<LI>Jimmy Hedman</LI>
+<LI>Tony den Haan</LI>
+<LI>The Linux-RAID mailing list people</LI>
+<LI>The ones I forgot, sorry :)</LI>
+</UL>
+</P>
+<P>Please submit corrections, suggestions etc. to the author. It's the
+only way this HOWTO can improve.</P>
+
+<HR>
+<H2><A NAME="s13">13.</A> <A HREF="Software-RAID-HOWTO.html#toc13">Changelog</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<H2><A NAME="ss13.1">13.1</A> <A HREF="Software-RAID-HOWTO.html#toc13.1">Version 1.1</A>
+</H2>
+
+<P>
+<UL>
+<LI>New sub-section: "Downloading and installing the RAID tools"</LI>
+<LI>Grub support at section "Booting on RAID"</LI>
+<LI>Mention LVM on top of RAID</LI>
+<LI>Other minor corrections.</LI>
+</UL>
+</P>
+
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux ADSM Mini-Howto: Installing the ADSM client</TITLE>
+ <LINK HREF="ADSM-Backup-4.html" REL=next>
+ <LINK HREF="ADSM-Backup-2.html" REL=previous>
+ <LINK HREF="ADSM-Backup.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="ADSM-Backup-4.html">Next</A>
+<A HREF="ADSM-Backup-2.html">Previous</A>
+<A HREF="ADSM-Backup.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Installing the ADSM client</A></H2>
+
+<P>The SCO binary is supplied as three tar files, or disks.  Change to
+the root directory, set your umask according to your policies, and
+unpack them from there (as root).  In your Directory /tmp, you will
+find an installation script; execute that.
+<P>You will then have to hand-edit <CODE>/usr/adsm/dsm.sys</CODE> and
+<CODE>/usr/adsm/dsm.opt</CODE>.
+In <CODE>dsm.sys</CODE>, important lines to specify are:
+<DL>
+<DT><B>Servername</B><DD><P>The name of the server
+<DT><B>TCPServeraddress</B><DD><P>The fully qualified host name of the server
+<DT><B>NODename</B><DD><P>Your own hostname
+</DL>
+
+In <CODE>dsm.opt</CODE>, you will have to specify
+<DL>
+<DT><B>Server</B><DD><P>As before
+<DT><B>Followsymbolic</B><DD><P>Wether or not to follow symbolic links (not a good idea, in general)
+<DT><B>SUbdir</B><DD><P>Wether to back up subdirectories (you usually want that)
+<DT><B>domain</B><DD><P>The file systems to back up
+</DL>
+<P>You will then have to create a SCO-compatible <CODE>/etc/mnttab</CODE>
+from your <CODE>/etc/fstab</CODE>.  You can use the following Perl script,
+<CODE>fstab2mnttab</CODE>, for this.
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/usr/bin/perl
+
+$mnttab_struct = "a32 a32 I L";
+
+open(MTAB, "/etc/mtab") || die "Cannot open /etc/mtab: $!\n";
+open(MNTTAB, ">/etc/mnttab") || die "Cannot open /etc/mnttab: $!\n";
+
+while(&lt;MTAB>) {
+    next if /pid/;
+    chop;
+    /^(\S*)\s(\S*)\s(\S*)\s.*$/;
+    $device = $1;
+    $mountpt = $2;
+    $fstype = $3;
+    if($fstype ne "nfs" &amp;&amp; $fstype ne "proc") {
+        $mnttab_rec =
+            pack($mnttab_struct, $device, $mountpt, 0x9d2f, time());
+        syswrite(MNTTAB, $mnttab_rec, 72);
+        print "Made entry for: $device $mountpt $fstype\n";
+    }
+}
+
+close(MNTTAB);
+exit 0;
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+You do not need to install any shared libraries for these clients;
+everything is linked statically.
+<HR>
+<A HREF="ADSM-Backup-4.html">Next</A>
+<A HREF="ADSM-Backup-2.html">Previous</A>
+<A HREF="ADSM-Backup.html#toc3">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,333 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Modified hotplug input.agent /etc/hotplug/input.agent</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="XFree Local Multi-User HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Experimental Backstreet Ruby configuration Script/ Service"
+HREF="app_ruby_init.html"><LINK
+REL="PREVIOUS"
+TITLE=" The ruby_init service /etc/init.d/ruby_init"
+HREF="app_ruby_init_service.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>XFree Local Multi-User HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="app_ruby_init_service.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Appendix D. Experimental Backstreet Ruby configuration Script/ Service</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="app_ruby_init_input_agent"
+></A
+>D.4. Modified hotplug input.agent <TT
+CLASS="filename"
+>/etc/hotplug/input.agent</TT
+></H1
+><P
+>This <TT
+CLASS="filename"
+>/etc/hotplug/input.agent</TT
+> is modified to use the global configuration file.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#!/bin/sh
+# Please place this file /etc/hotplug
+#
+# input-specific hotplug policy agent.
+#
+# Kernel Input params are:
+#       
+#       ACTION=add
+#       PHYS=pysical location of device
+#       NAME=Name of the device
+#
+# HISTORY:
+#       15-Sep-2003     modified to use single configuration file
+#                       /etc/sysconfig/ruby.conf by me :-)
+#                       (Svetoslav Slavtchev)
+#                       added handling for multimedia keys
+#                       but doesn't work as expected :(
+#       15-JUN-2003     removed paste
+#       07-MAY-2003     remake by Aivils Stoss
+#                       /proc manipulation added
+#                       parse kbd.conf event.conf mouse.conf.
+#                       create necessary symbolic links
+#       28-SEP-2002     Initial version from Andreas Schuldei
+#                        andreas (at) schuldei.org 
+#
+cd /etc/hotplug
+. hotplug.functions
+DEBUG=yes export DEBUG
+ 
+RUBY_CONF="/etc/sysconfig/ruby.conf"
+
+setup_kbd ()
+{
+    while read VT_NUM PHYS_PATTERN NAME_PATTERN
+    do
+        if [ `echo "$VT_NUM" | grep "^#"` ]; then
+            continue;
+        fi
+        if [ `echo "$PHYS" | grep $PHYS_PATTERN 2&#62;/dev/null` ]; then
+            VT=`echo "$VT_NUM" | sed 's/VT//' | awk '{printf "%02d", $0}'`
+            if [ -d /proc/bus/console/$VT ]; then
+                echo "$PHYS" &#62; "/proc/bus/console/$VT/keyboard"
+                debug_mesg "Input device $NAME on $PHYS mapping as secondary to VT$VT"
+                return;
+	    else
+		debug_mesg "Trying to configure keyboard for VT$VT , but not enough VT's available"
+	    fi
+        fi
+    done
+    debug_mesg "Found no fitting VT"
+}
+
+
+setup_mm_keys ()
+{
+    while read VT_NUM PHYS_PATTERN NAME_PATTERN
+    do
+        if [ `echo "$VT_NUM" | grep "^#"` ]; then
+            continue;
+        fi
+        if [ `echo "$PHYS" | grep $PHYS_PATTERN 2&#62;/dev/null` ]; then
+            VT=`echo "$VT_NUM" | sed 's/VT//' | awk '{printf "%02d", $0}'`
+            if [ -d /proc/bus/console/$VT ]; then
+                echo "+$PHYS" &#62; "/proc/bus/console/$VT/keyboard"
+                debug_mesg "Input device $NAME on $PHYS mapping as secondary to VT$VT"
+                return;
+	    else
+		debug_mesg "Trying to configure keyboard for VT$VT , but not enough VT's available"
+	    fi
+        fi
+    done
+    debug_mesg "Found no fitting VT"
+}
+
+setup_event ()
+{
+    while read SYM_LINK PHYS_PATTERN NAME_PATTERN
+    do
+        if [ `echo "$SYM_LINK" | grep "^#"` ]; then
+            continue;
+        fi
+        if [ `echo "$PHYS" | grep $PHYS_PATTERN 2&#62;/dev/null` ]; then
+            case $ACTION in
+            add)
+                cd /dev/input
+                rm -f $SYM_LINK
+                ln -s $DEV_EVENT $SYM_LINK
+                debug_mesg "Input event device $NAME on $PHYS linked to $SYM_LINK"
+            ;;
+            remove)
+                rm -f /dev/input/$SYM_LINK
+                debug_mesg "Input event device link $SYM_LINK removed"
+            ;;
+            esac
+            return;
+        fi
+    done
+    debug_mesg "Found no fitting event device"
+}
+
+setup_mouse ()
+{
+    while read SYM_LINK PHYS_PATTERN NAME_PATTERN
+    do
+        if [ `echo "$SYM_LINK" | grep "^#"` ]; then
+            continue;
+        fi
+        if [ `echo "$PHYS" | grep $PHYS_PATTERN 2&#62;/dev/null` ]; then
+            case $ACTION in
+            add)
+                cd /dev/input
+                rm -f $SYM_LINK
+                ln -s $DEV_MOUSE $SYM_LINK
+                debug_mesg "Input mouse device $NAME on $PHYS linked to $SYM_LINK"
+            ;;
+            remove)
+                rm -f /dev/input/$SYM_LINK
+                debug_mesg "Input mouse device link $SYM_LINK removed"
+            ;;
+            esac
+            return;
+        fi
+    done
+    debug_mesg "Found no fitting mouse device"
+}
+
+setup_input ()
+{
+    if [ -n "$DEV_KBD" ]; then
+        sed -n "/keyboard devices/,/config/p" $RUBY_CONF	| setup_kbd 
+        sed -n "/multimedia keys/,/config/p" $RUBY_CONF		| setup_mm_keys
+    fi
+    if [ -n "$DEV_EVENT" ]; then
+        sed -n "/event devices/,/config/p" $RUBY_CONF		| setup_event 
+    fi
+    if [ -n "$DEV_MOUSE" ]; then
+        sed -n "/mouse devices/,/config/p" $RUBY_CONF		| setup_mouse  
+    fi
+}
+
+if [ "$ACTION" = "" ]; then
+    mesg Bad input agent invocation
+    exit 1
+fi
+
+DEV_HANDLERS=`grep -E 'Phys|Handlers' /proc/bus/input/devices | \
+    awk '{ if(count == 0) { printf("%s\t",$0); count++; } else { print $0; count=0; } }' | \
+    grep $PHYS | awk -F\t '{print $2}' | sed 's/^.*=//'`
+
+DEV_EVENT=`echo $DEV_HANDLERS | \
+            awk -F" " '{for(n=1;$n;n=n+1) if($n ~ /event/) print $n}'`
+DEV_MOUSE=`echo $DEV_HANDLERS | \
+            awk -F" " '{for(n=1;$n;n=n+1) if($n ~ /mouse/) print $n}'`
+DEV_KBD=`echo $DEV_HANDLERS | \
+            awk -F" " '{for(n=1;$n;n=n+1) if($n ~ /kbd/) print $n}'`
+
+#
+# What to do with this input device event?
+#
+case "$ACTION" in
+
+add)
+    setup_input
+    ;;
+remove)
+    #setup_input
+    ;;
+*)
+    debug_mesg "Input '$ACTION' event not supported"
+    return 1
+    ;;
+
+esac
+      
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="app_ruby_init_service.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The ruby_init service <TT
+CLASS="filename"
+>/etc/init.d/ruby_init</TT
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="app_ruby_init.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

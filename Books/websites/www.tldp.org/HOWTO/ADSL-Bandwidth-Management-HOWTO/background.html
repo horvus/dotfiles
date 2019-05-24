@@ -1,0 +1,367 @@
+<HTML
+><HEAD
+><TITLE
+>Background</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="ADSL Bandwidth Management HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="intro.html"><LINK
+REL="NEXT"
+TITLE="How it Works"
+HREF="how-it-works.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>ADSL Bandwidth Management HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="how-it-works.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BACKGROUND"
+></A
+>2. Background</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN65"
+></A
+>2.1. Prerequisites</H2
+><P
+>The method outlined in this document should work in other Linux configurations
+      however it remains untested in any configuration but the following:</P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: disc"
+><P
+>Red Hat Linux 7.3</P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>2.4.18-5 Kernel with QoS Support fully enabled (modules OK) and including
+                the following kernel patches (which may eventually be included in later kernels):
+                <P
+></P
+><UL
+><LI
+STYLE="list-style-type: disc"
+><P
+>                      HTB queue - <A
+HREF="http://luxik.cdi.cz/~devik/qos/htb/"
+TARGET="_top"
+>http://luxik.cdi.cz/~devik/qos/htb/</A
+>
+                    </P
+><P
+>                      Note: it has been reported that kernels since version 2.4.18-3 shipped with Mandrake (8.1, 8.2)
+                      have already been patched for HTB.
+                    </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>                      IMQ device - <A
+HREF="http://luxik.cdi.cz/~patrick/imq/"
+TARGET="_top"
+>http://luxik.cdi.cz/~patrick/imq/</A
+>
+                    </P
+></LI
+></UL
+>
+          </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>iptables v1.2.6a or later (version of iptables distributed with Red Hat 7.3 is missing the length module)</P
+></LI
+></UL
+><TABLE
+CLASS="SIDEBAR"
+BORDER="1"
+CELLPADDING="5"
+><TR
+><TD
+><DIV
+CLASS="SIDEBAR"
+><A
+NAME="AEN83"
+></A
+><P
+></P
+><P
+>Note: Previous versions of this document specified a method of bandwidth control that
+      involved patching the existing sch_prio queue.  It was found later that this patch was
+      entirely unnecessary.  Regardless, the newer methods outlined in this document will give you
+      better results (although at the writing of this document <EM
+>2</EM
+> kernel patches are
+      now necessary. :)  Happy patching.)</P
+><P
+></P
+></DIV
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN86"
+></A
+>2.2. Layout</H2
+><P
+>In order to keep things simple, all references to network devices and 
+      configuration in this document will be with respect to the following
+      network layout diagram:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>               &#60;-- 128kbit/s      --------------     &#60;-- 10Mbit --&#62;
+  Internet &#60;--------------------&#62; | ADSL Modem | &#60;--------------------
+                1.5Mbit/s --&#62;     --------------                     |
+                                                                     | eth0
+                                                                     V
+                                                         -----------------
+                                                         |               |
+                                                         | Linux Router  |
+                                                         |               |
+                                                         -----------------
+                                                          | .. | eth1..ethN
+                                                          |    |
+                                                          V    V
+                   
+                                                       Local Network
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN90"
+></A
+>2.3. Packet Queues</H2
+><P
+>Packet queues are buckets that hold data for a network device when it
+      can't be immediately sent.  Most packet queues use a FIFO (first in, first out)
+      discipline unless they've been specially configured to do otherwise.  What this
+      means is that when the packet queue for a device is completely full, the packet
+      most recently placed in the queue will be sent over the device only after all
+      the other packets in the queue at that time have been sent.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN93"
+></A
+>2.3.1. The Upstream</H3
+><P
+>With an ADSL modem, bandwidth is asymmetric with 1.5Mbit/s typical downstream
+        and 128kbit/sec typical upstream.  Although this is the line speed, the interface
+        between the Linux Router PC and the ADSL modem is typically at or above 10Mbit/s.
+        If the interface to the Local Network
+        is also 10Mbit/s, there will typically be NO QUEUING at the router when packets are sent from
+        the Local Network to the Internet.  Packets are sent out eth0 as fast
+        as they are received from the Local Network.  Instead, packets are queued at the ADSL
+        modem since they are arriving at 10Mbit/s and only being sent at 128kbit/s.  Eventually
+        the packet queue at the ADSL modem will become full and any more packets sent to it
+        will be silently dropped.  TCP is designed to handle this and will adjust it's transmit
+        window size accordingly to take full advantage of the available bandwidth.</P
+><P
+>While packet queues combined with TCP result in the most effective use of bandwidth,
+        large FIFO queues can increase the latency for interactive traffic.</P
+><P
+>Another type of queue that is somewhat like FIFO is an n-band priority queue.  However,
+        instead of having just one queue that packets line up in,  the n-band priority queue has
+        n FIFO queues which packets are placed in by their classification.  Each queue has a priority
+        and packets are always dequeued from the highest priority queue that contains packets.
+        Using this discipline FTP packets can be placed in a lower priority queue than telnet
+        packets so that even during an FTP upload, a single telnet packet will jump the queue and be
+        sent immediately.</P
+><P
+>This document has been revised to use a new queue in linux called the Hierarchical Token Bucket (HTB).
+        The HTB queue is much like the n-band queue described above, but it has the capability to
+        limit the rate of traffic in each class.  In addition to this, it has the ability to set up classes of traffic
+        beneath other classes creating a hierarchy of classes.  Fully describing HTB is beyond the scope
+        of this document, but more information can be found at <A
+HREF="http://www.lartc.org"
+TARGET="_top"
+>http://www.lartc.org</A
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN100"
+></A
+>2.3.2. The Downstream</H3
+><P
+>Traffic coming inbound on your ADSL modem is queued in much the same way as outbound traffic,
+        however the queue resides at your ISP.  Because of this, you probably don't have direct control of how
+        packets are queued or which types of traffic get preferential treatment.  The only way to keep your
+        latency low here is to make sure that people don't send you data too fast.  Unfortunately, there's no
+        way to directly control the speed at which packets arrive, but since a majority of your traffic is
+        most likely TCP, there are some ways to slow down the senders:</P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: disc"
+><P
+>            Intentionally drop inbound packets - TCP is designed to take full advantage of the available bandwidth
+            while also avoiding congestion of the link.  This means that during a bulk data transfer TCP
+            will send more and more data until eventually a packet is dropped.  TCP detects this and reduces
+            it's transmission window.  This cycle continues throughout the transfer and assures data is moved
+            as quickly as possible.
+          </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>            Manipulate the advertised receive window - During a TCP transfer, the receiver sends back a
+            continuous stream of acknowledgment (ACK) packets.  Included in the ACK packets is a window
+            size advertisement which states the maximum amount of unacknowledged data the receiver should
+            send.  By manipulating the window size of outbound ACK packets we can intentionally slow down
+            the sender.  At the moment there is no (free) implementation for this type of flow-control on
+            Linux (however I may be working on one!).  
+          </P
+></LI
+></UL
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="how-it-works.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>How it Works</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

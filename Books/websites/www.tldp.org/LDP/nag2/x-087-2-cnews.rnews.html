@@ -1,0 +1,404 @@
+<HTML
+><HEAD
+><TITLE
+>Delivering News</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="C News"
+HREF="x-087-2-cnews.html"><LINK
+REL="PREVIOUS"
+TITLE="C News"
+HREF="x-087-2-cnews.html"><LINK
+REL="NEXT"
+TITLE="Installation"
+HREF="x16700.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-cnews.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 21. C News</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x16700.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-CNEWS.RNEWS"
+>21.1. Delivering News</A
+></H1
+><P
+>&#13;
+ 
+ 
+ 
+
+Articles can be fed to C News in several ways. When a local user posts
+an article, the newsreader usually hands it to the
+<B
+CLASS="COMMAND"
+>inews</B
+> command, which completes the header
+information. News from remote sites, be it a single article or a whole
+batch, is given to the <B
+CLASS="COMMAND"
+>rnews</B
+> command, which stores
+it in the <TT
+CLASS="FILENAME"
+>/var/spool/news/in.coming</TT
+> directory,
+from where it will be picked up at a later time by
+<B
+CLASS="COMMAND"
+>newsrun</B
+>. With any of these two techniques, however,
+the article will eventually be handed to the
+<B
+CLASS="COMMAND"
+>relaynews</B
+> command.</P
+><P
+>&#13;
+
+
+
+
+
+For each article, the <B
+CLASS="COMMAND"
+>relaynews</B
+> command first checks if the
+article has already been seen at the local site by looking up the message ID
+in the <TT
+CLASS="FILENAME"
+>history</TT
+> file. Duplicate articles are dropped.
+Then <B
+CLASS="COMMAND"
+>relaynews</B
+> looks at the <TT
+CLASS="LITERAL"
+>Newsgroups:</TT
+>
+header line to find out if the local site requests articles from any of these
+groups.  If it does, and the newsgroup is listed in the
+<TT
+CLASS="FILENAME"
+>active</TT
+> file, <B
+CLASS="COMMAND"
+>relaynews</B
+> tries to store
+the article in the corresponding directory in the news spool area. If this
+directory does not exist, it is created. The article's message ID is then 
+logged to the <TT
+CLASS="FILENAME"
+>history</TT
+> file.  Otherwise,
+<B
+CLASS="COMMAND"
+>relaynews</B
+> drops the article.</P
+><P
+>&#13;Sometimes <B
+CLASS="COMMAND"
+>relaynews</B
+> fails to store an incoming
+article because a group to which it has been posted is not listed in
+your <TT
+CLASS="FILENAME"
+>active</TT
+> file. In this case, the article is moved to the <SPAN
+CLASS="SYSTEMITEM"
+>junk</SPAN
+>
+group.<A
+NAME="X-087-2-FNCN01"
+HREF="#FTN.X-087-2-FNCN01"
+>[1]</A
+>
+<B
+CLASS="COMMAND"
+>relaynews</B
+> also checks for stale or misdated articles
+and reject them. Incoming batches that fail for any other reason are moved
+to <TT
+CLASS="FILENAME"
+>/var/spool/news/in.coming/bad</TT
+>, and an error message
+is logged.</P
+><P
+>After this, the article is relayed to all other sites that request news
+from these groups, using the transport specified for each particular site. To
+make sure an article isn't sent to a site that has already seen it, each
+destination site is checked against the article's <TT
+CLASS="LITERAL"
+>Path:</TT
+>
+header field, which contains the list of sites the article has traversed so
+far, written in the UUCP-style bang-path source-routing style described in
+<A
+HREF="x-087-2-mail.html"
+>Chapter 17</A
+>. If the destination site's name does not
+appear in this list, the article is sent to it.</P
+><P
+>&#13;
+C News is commonly used to relay news between UUCP sites, although it is
+also possible to use it in an NNTP environment. To deliver news to a remote
+UUCP site, either in single articles or whole batches, <B
+CLASS="COMMAND"
+>uux</B
+>
+is used to execute the <B
+CLASS="COMMAND"
+>rnews</B
+> command on the remote site and
+feed the article or batch to it on standard input.
+Refer to <A
+HREF="x-087-2-uucp.html"
+>Chapter 16</A
+>, for more information on UUCP.</P
+><P
+>&#13;
+Batching is the term used to describe sending large bundles of
+individual articles all in one transmission. When batching is
+enabled for a given site, C News does not send any incoming article
+immediately; instead, it appends its path name to a file, usually called
+<TT
+CLASS="FILENAME"
+>out.going/site/togo</TT
+>. Periodically, a program is executed
+from a <B
+CLASS="COMMAND"
+>crontab</B
+> entry by the <B
+CLASS="COMMAND"
+>cron</B
+> program,
+which reads this file and bundles all of the listed articles into one or more
+file, optionally compressing them and sending them to <B
+CLASS="COMMAND"
+>rnews</B
+>
+at the remote site.<A
+NAME="X-087-2-FNCN02"
+HREF="#FTN.X-087-2-FNCN02"
+>[2]</A
+>&#13;</P
+><P
+><A
+HREF="x-087-2-cnews.rnews.html#X-087-2-CNEWS.FIG.FLOW"
+>Figure 21-1</A
+> shows the news flow through
+<B
+CLASS="COMMAND"
+>relaynews</B
+>. Articles may be relayed to the local site
+(denoted by <SPAN
+CLASS="SYSTEMITEM"
+>ME</SPAN
+>), to a site named
+<SPAN
+CLASS="SYSTEMITEM"
+>ponderosa</SPAN
+> via email, and a site
+named <SPAN
+CLASS="SYSTEMITEM"
+>moria</SPAN
+>, for which batching is
+enabled.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-CNEWS.FIG.FLOW"
+></A
+><P
+><B
+>Figure 21-1. News flow through relaynews</B
+></P
+><P
+><IMG
+SRC="lag2_2101.jpg"></P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNCN01"
+HREF="x-087-2-cnews.rnews.html#X-087-2-FNCN01"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> There may be a difference
+between the groups that exist at your site and those that your site
+is willing to receive. For example, the subscription list might
+specify <SPAN
+CLASS="SYSTEMITEM"
+>comp.all</SPAN
+>, which
+should send all newsgroups below the <SPAN
+CLASS="SYSTEMITEM"
+>comp</SPAN
+> hierarchy, but at your site you
+might not list several of the <SPAN
+CLASS="SYSTEMITEM"
+>comp</SPAN
+> newsgroups in the
+<TT
+CLASS="FILENAME"
+>active</TT
+> file. Articles posted to those groups will
+be moved to <SPAN
+CLASS="SYSTEMITEM"
+>junk</SPAN
+>.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNCN02"
+HREF="x-087-2-cnews.rnews.html#X-087-2-FNCN02"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Note that this should be the <B
+CLASS="COMMAND"
+>crontab</B
+> of
+<SPAN
+CLASS="SYSTEMITEM"
+>news</SPAN
+>; file permissions will not be 
+mangled.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-cnews.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x16700.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>C News</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-cnews.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Installation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

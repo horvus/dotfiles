@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Tango 2000 HOWTO: TAS and ODBC</TITLE>
+ <LINK HREF="Tango-HOWTO-8.html" REL=next>
+ <LINK HREF="Tango-HOWTO-6.html" REL=previous>
+ <LINK HREF="Tango-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Tango-HOWTO-8.html">Next</A>
+<A HREF="Tango-HOWTO-6.html">Previous</A>
+<A HREF="Tango-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. TAS and ODBC</A></H2>
+
+<P>
+<H2><A NAME="ss7.1">7.1 Solaris</A>
+</H2>
+
+<P>
+<P>Tango for Solaris includes the Merant ODBC driver pack, which Tango can
+use to connect to a wide array of databases, such as Informix, Sybase, Oracle,
+and now Microsoft SQL Server.
+<P>The .odbc.ini file (see below) should be located in the home directory
+of the Tango user account. It can be stored elsewhere, for centralization or
+what not, and located using an environment variable called ODBCINI.
+<H2><A NAME="ss7.2">7.2 Linux</A>
+</H2>
+
+<P>
+<P>Tango 2000 for Linux includes the iODBC driver manager, and a Pervasive.SQL
+driver is included with Pervasive.SQL for Linux. It will also work with Postgres
+SQL and MySQL drivers. Other drivers are available at 
+<A HREF="http://www.unixodbc.com">http://www.unixodbc.com</A> and 
+<A HREF="http://www.iodbc.org">http://www.iodbc.org</A><P>The .odbc.ini file (see below) should be located in /usr/local/tango/etc/odbc.ini
+which can be symlinked to /usr/local/psql/etc/odbc.ini if both are installed.
+<H2><A NAME="ss7.3">7.3 The odbc.ini Configuration File</A>
+</H2>
+
+<P>
+<P>The drivers are controlled by an ini file called .odbc.ini (note the leading
+period; it's a hidden file on Solaris.) 
+<P>The file contains a list of Data Source Names followed by a definition
+section. It is a standard INI file format. So long as the DSN name used by
+a TAF is listed in this file, and the database schema is the same as the one
+on the development machine, the database access will work transparently.
+<P>Here is an example of a .odbc.ini file containing a single DSN called MyOracleDatabase,
+which is pointing to an Oracle database with a TNS name of 'LocalOracleDatabase'.
+<PRE>
+[ODBC Data Sources]
+MyOracleDatabase=
+</PRE>
+
+<PRE>
+[MyOracleDatabase]
+Driver=/opt/PVSWtango/odbc/lib/VQor815.so
+ServerName=LocalOracleDatabase
+</PRE>
+<P>All entries will have, at minimum, a Driver line; this points to a .so
+shared object which is the actual ODBC driver. There will be other lines dependant
+on the driver itself; server configuration, special flags, that sort of thing.
+Refer to the readmes and to the odbchelp.pdf file (on Solaris) or to specific
+driver documentation for those settings, as well as any environment settings
+required.
+<P>Note that ODBC drivers still often require database specific Client software;
+for example, the ODBC Oracle drivers require the same Oracle OCI client software
+that Tango requires for a native Oracle connection. Sybase client software
+must be installed for the Sybase ODBC driver to function, and so on. Again,
+see the odbchelp.pdf file, or driver documentation for specifics.
+<P>Anybody who would like to write small crib notes on configuring specific
+databases to work with Tango for Solaris or Linux through ODBC, feel free and
+send them to me and they'll be included in this HOWTO, with full credit of
+course.
+<H2><A NAME="ss7.4">7.4 Solaris, ODBC and Oracle</A>
+</H2>
+
+<P>
+<P>Certain versions of the Oracle client are missing key functionality that
+the Oracle ODBC drivers require, as well as the Tango native Oracle drivers.
+<P>The easiest way to check for this condition is to use the 'ivtestlib' program
+to attempt to load the Oracle ODBC driver. Become the Tango user, and move
+to $TANGO_HOME/lib. Look for a driver with 'or7' for Oracle 7, or 'or8'
+for Oracle 8. Depending on your version of Tango, the full name might be 'IVor714.so'
+or 'VQor714.so'. The last number before the .so is the ODBC version. 
+<P>Once you have this file name, move one directory up, and then go into the
+'bin' directory. There, execute the 'ivtestlib' program with the file name
+as an argument.
+<HR>
+<PRE>
+$ cd $TANGO_HOME/odbc/lib
+$ ls *or8*
+VQor814.so
+$ cd ../bin
+$ ./ivtestlib ../lib/VQor814.so
+Load of ../lib/VQor814.so successful, qehandle is 0xFF24120
+</PRE>
+<HR>
+<P>If the Oracle drivers need to be patched, you'll see a long message ending
+in the fact that there is an 'undefined symbol slpmprodstab'. This will prevent
+Tango Oracle Native connections from working as well as ODBC. In the $TANGO_HOME/odbc/src/oracle
+directory is a readme.ora file and two scripts, one for Oracle 7 and the other
+for Oracle 8. The readme file details the creation of a new 'libclntsh.so'
+file, which is the main Oracle client library. In a nutshell, make sure you
+have ORACLE_HOME defined, and run the appropriate script for your version of
+Oracle. This will create the .so file and place it, by default, into $TANGO_HOME/odbc/lib.
+Then, make sure that that path appears in your LD_LIBRARY_PATH before any references
+to $ORACLE_HOME/lib does. You can also move the libclntsh.so file to
+your $ORACLE_HOME/lib directory, or create a link between $ORACLE_HOME/lib/libclntsh.so
+and the one you just created; the preexisting libclntsh.so is a link to another
+library anyway.
+<HR>
+<A HREF="Tango-HOWTO-8.html">Next</A>
+<A HREF="Tango-HOWTO-6.html">Previous</A>
+<A HREF="Tango-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

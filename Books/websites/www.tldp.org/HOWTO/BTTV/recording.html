@@ -1,0 +1,461 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Recording Video and Sound with Bttv</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The BTTV HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Cards and Features by Manufacturer"
+HREF="mfgr.html"><LINK
+REL="NEXT"
+TITLE="Enabling The FM Radio for Radio-Equipped Cards"
+HREF="fm.html"></HEAD
+><BODY
+CLASS="APPENDIX"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The BTTV HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="mfgr.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="fm.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="APPENDIX"
+><H1
+CLASS="APPENDIX"
+><A
+NAME="RECORDING"
+></A
+>D. Recording Video and Sound with Bttv</H1
+><P
+>In addition to the applications referenced in <A
+HREF="apps.html"
+>Section 5</A
+>, recording 
+can be managed from the command line. The issues discussed here with regard 
+to sound capture deal only with the default kernel-2.6 and higher sound system:
+the <A
+HREF="http://www.alsa-project.org/"
+TARGET="_top"
+>Advanced Linux Sound Architecture</A
+>.</P
+><P
+>The easy part is grabbing the video, for which we will use <B
+CLASS="COMMAND"
+>streamer</B
+>, 
+available with the <A
+HREF="http://linux.bytesex.org/xawtv/"
+TARGET="_top"
+>Xawtv suite</A
+>. 
+Sound is another matter, however. You will need to access your mixer settings 
+using <B
+CLASS="COMMAND"
+>amixer</B
+>, the ALSA command-line mixer that should be 
+available in the ALSA-tools package available from your Linux distributor. 
+See <B
+CLASS="COMMAND"
+>man amixer</B
+> to follow the command line options. </P
+><P
+>Your recording can be managed either using your primary soundcard if you have 
+your Bt8x8 audio output connected to a mixer conduit that allows for capture 
+(e.g. the 4-pin analog CDROM input slot), or the Bt8x8 card itself using the 
+<B
+CLASS="COMMAND"
+>btaudio</B
+> module. The following steps utilize the latter. 
+First, identify the individual cards on your system (requires <TT
+CLASS="FILENAME"
+>/proc</TT
+> filesystem):
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $ cat /proc/asound/pcm
+   00-00: Intel ICH : NVidia CK8S : playback 1 : capture 1
+   00-01: Intel ICH - MIC ADC : NVidia CK8S - MIC ADC : capture 1
+   00-02: Intel ICH - IEC958 : NVidia CK8S - IEC958 : playback 1
+   01-00: Bt87x Digital : Bt87x Digital : capture 1
+   01-01: Bt87x Analog : Bt87x Analog : capture 1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+The first column indicates the system numbering of your available sound devices, i.e., 
+card 0 is the soundcard and card 01, or 1, is the Bt8x8.</P
+><P
+>Next, identify the mixer controls for the Bt8x8 card.
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $ amixer -c 1 controls
+   numid=3,iface=MIXER,name='Capture Source'
+   numid=2,iface=MIXER,name='Capture Boost'
+   numid=1,iface=MIXER,name='Capture Volume'</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+Then identify the item settings of each:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $ amixer -c 1 cget name='Capture Source'
+   numid=3,iface=MIXER,name='Capture Source'
+   ; type=ENUMERATED,access=rw---,values=1,items=3
+   ; Item #0 'TV Tuner'
+   ; Item #1 'FM'
+   ; Item #2 'Mic/Line'
+   : values=1
+
+   $ amixer -c 1 cget name='Capture Boost'
+   numid=2,iface=MIXER,name='Capture Boost'
+   ; type=BOOLEAN,access=rw---,values=1
+   values=on
+
+   $ amixer -c 1 cget name='Capture Volume'
+   numid=1,iface=MIXER,name='Capture Volume'
+   ; type=INTEGER,access=rw---,values=1,min=0,max=15,step=0
+   : values=0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>    
+Use <B
+CLASS="COMMAND"
+>cset</B
+> for the capture source:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $ amixer -c 1 cset name='Capture Source' 0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+...and to set the volume:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $ amixer -c 1 cset name="Capture Volume' 15</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+...and you should be ready.</P
+><P
+>Now try to record something:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>   $ streamer -p 4 -t 1:00 -r 24 -q -o test.avi -j 90 -f mjpeg -F mono16</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+...and you should be recording a sound-enabled avi file. Press [Ctrl]-C to 
+cancel early. Next step is to automate the recording for your very own 
+home-brewed <SPAN
+CLASS="TRADEMARK"
+>Tivo</SPAN
+>&#8482;!</P
+><P
+>I offer the following script as an example program for automating recording; 
+you can copy and paste it into a file and make it executable (<B
+CLASS="COMMAND"
+>chmod 
+u+x record-tv.sh</B
+>).</P
+><DIV
+CLASS="WARNING"
+><P
+></P
+><TABLE
+CLASS="WARNING"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This script (and any
+recording from your Bttv device for that matter) generates extremely large 
+files, on the order of several GB per hour, so be sure you have lots of free 
+disk space available.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+> #!/bin/bash 
+ # ================= record-tv.sh  ============================
+ # = copyright 2003 by Greg Watson  gwatsonATlinuxlogin.com   =
+ # = GPL2 License, minor modifications by Howard Shane        =
+ # = hshaneATaustin.rr.com , under same license               =
+ # = usage record-tv.sh prefix-filename record-time channel   =
+ # = Example:  ./record-tv.sh enterprise 61:00 20             =
+ # ============================================================
+ # Version 0.9
+ # Last Mod: Wed Feb 20 11:27 CST 2005
+
+ # Output directory
+ OUTPUT=$HOME/vcr
+ # Streamer location
+ STREAMER=/usr/bin/streamer
+ # Alsa Mixer
+ AMIXER=/usr/bin/amixer
+ # v4lctl path
+ V4LCTL=/usr/bin/v4lctl
+ # Capture Volume to ensure sound is recorded (80%)
+ CAPTURE_VOLUME=100
+
+ # Tvtime settings file for color/brightness/contrast values
+ TVTIME=$HOME/.tvtime/tvtime.xml
+
+ # End of Config
+ ###############
+
+ # check if I'm running TV, if so just exit
+ if [ `ps -C tvtime | grep -c tvtime` -gt 0 ]; then
+         echo "TVtime is running, aborting recording."
+         exit
+ fi
+ 
+ # If the filename prefix wasn't given, set it to 'recording'
+ if [ -z $1 ]; then
+         PREFIX="recording"
+ else
+         PREFIX=$1
+ fi
+ 
+ # if time is blank, record for 30 minutes
+ if [ -z $2 ]; then
+         TIME="30:00"
+ else
+         TIME=$2
+ fi
+ 
+ if [ ! -z $3 ]; then
+         $V4LCTL setchannel $3
+ fi
+ 
+ # Check for vcr dir
+ if [ ! -x $OUTPUT ]; then
+         mkdir $OUTPUT
+ fi
+         
+ DATE=`date +%m-%d-%Y-%H:%M`
+ 
+ # Set the AC97 volume to 0 (so we don't hear the sounds)
+ # Get mixer values first
+ PLAY_VOL=`$AMIXER -c 0 cget name='Master Playback Volume' | grep : | sed 's/^.*=\([^,]*\).*$/\1/'`
+ CAP_VOL=`$AMIXER -c 0 cget name='PCM Playback Volume' | grep : | sed 's/^.*=\([^,]*\).*$/\1/'`
+ #  
+ $AMIXER -c 0 -q cset name='CD Playback Volume' 100
+ $AMIXER -c 0 -q cset name='Capture Volume' 1
+ 
+ # if tvtime.xml is set, then grab settings out of it
+ if [ -f $TVTIME ]; then
+         CONTRAST=`cat ${TVTIME} | grep DefaultContrast | sed 's/^.*value="\([^"]*\).*$/\1/'`
+         BRIGHTNESS=`cat ${TVTIME} | grep DefaultBrightness | sed 's/^.*value="\([^"]*\).*$/\1/'`
+         COLOR=`cat ${TVTIME} | grep DefaultColour | sed 's/^.*value="\([^"]*\).*$/\1/'`
+         HUE=`cat ${TVTIME} | grep DefaultHue | sed 's/^.*value="\([^"]*\).*$/\1/'`
+ 
+         $V4LCTL bright ${BRIGHTNESS}% color ${COLOR}% contrast ${CONTRAST}% hue ${HUE}%
+ fi
+ 
+ $STREAMER -p 4 -q -t ${TIME} -r 24 -q -o ${OUTPUT}/${PREFIX}-${DATE}-${TIME}.avi -j 90 -f mjpeg -F mono16
+ 
+ # Sometimes streamer doesn't always re-mute audio, mute it again just to be sure
+ $V4LCTL volume mute on
+ 
+ # Restore volumes
+ $AMIXER -q cset name='Master Playback Volume' $PLAY_VOL
+ $AMIXER -q cset name='PCM Playback Volume' $CAP_VOL
+ #
+ # EOF
+ </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+ </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="mfgr.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="fm.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Cards and Features by Manufacturer</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Enabling The FM Radio for Radio-Equipped Cards</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,987 @@
+<HTML
+><HEAD
+><TITLE
+>HSF</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Conexant/Rockwell modem HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="HCF chipset based modems"
+HREF="hcf.html"><LINK
+REL="NEXT"
+TITLE="License"
+HREF="fdl-app.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Conexant/Rockwell modem HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="hcf.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="fdl-app.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="HSF">5. HSF</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="HSF-HISTORY">5.1. History</H2
+><P
+>&#13;A HSF driver first appeared out of the blue in mid-2000 when Olitec released unto the world a binary only driver for their Olitec PCI modem for 2.2.14 kernel, it wasn't long before someone realized that the Olitec modem was based on the Rockwell/Conexant HSF Chipset. Inquiries to Olitec revealed that the driver should work with any HSF chipset as there was nothing in the driver that was specific to the Olitec modems. Many people tried to get the driver to work with non-Olitec modem unfortunately without success, however a few months later and after many hours of work by many people trying a variety of tricks to get the driver to work, several people managed to stumble across the solution. It was a simple one line change to file which solved the problem and the world was left with a working HSF driver, at the time it only worked on 2.2.14 Kernels and Olitec had refused to release the source code to let others try to get it to work with other kernels.&#13;</P
+><P
+>&#13;A few months later Olitec released the driver for 2.2.16 and 2.2.17 kernels, this kept the HSF winmodem community satisfied until we came to the day when the 2.4 kernel was released. None of the previous drivers appeared to work with the 2.4 kernel and this caused problems for all those who wanted to upgrade and also for the large number of new users who were using 2.4.* kernel based distributions such as Mandrake 8 and RedHat 7.1. Not a word had been heard out of Olitec since the 2.4 kernel was released, but Conexant had announced that they intended to develop a Linux driver. After many months of waiting for a 2.4.* driver Marc Boucher decided to something about it and wrote a wrapper which allowed an old version of the driver to be used with 2.4.* kernels.&#13;</P
+><P
+>&#13;That's where we are now, Marc's wrapper is still in experimental development stage but it works and many people are using it to connect to the internet under Linux.&#13;</P
+><P
+>&#13;From the history you'll understand why the next section has to be split into two sections one for 2.2.14 - 2.2.18 kernels and one for 2.4.* kernels. If you don't know what kernel version you have you can find out by using the '<B
+CLASS="COMMAND"
+>uname -r</B
+>' command at the console window before proceeding to the appropriate section of this HOWTO.&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="KERNEL14-18">5.2. Kernel 2.2.14 - 18</H2
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="REQUIREMENTS">5.2.1. Requirements</H3
+><P
+>&#13;	Having either a 2.2.14, 2.2.16 or 2.2.17 kernel.
+
+
+
+	It has been reported that the driver for 2.2.17 kernels also works with 2.2.18 kernels.&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="HSF-GETTING-IDS">5.2.2. Getting IDs</H3
+><P
+>&#13;	To get the modem to work you'll need to get the Vendor ID and Device ID. The easiest way to do this is to use the command "<B
+CLASS="COMMAND"
+>less /proc/pci</B
+>" and scroll until you find the PCI card which has a vendor ID of either 14F1 (Conexant) or 127A (Rockwell) and note the Device ID.&#13;</P
+><P
+>&#13;	You'll need to make an %HSFModem% line.&#13;</P
+><P
+>&#13;	Copy down the following line somewhere,&#13;</P
+><P
+>&#13;	%HSFModem%  = ModemX, PCI\VEN_XXXX&#38;DEV_YYYY&#38;SUBSYS_YYYYXXXX&#13;</P
+><P
+>&#13;	Replacing the XXXX's with your Vendor ID and the YYYY's with your Device ID, so if your Vendor ID is 127A and Device ID is 2015 your line would be,&#13;</P
+><P
+>&#13;	%HSFModem%  = ModemX, PCI\VEN_127A&#38;DEV_2015&#38;SUBSYS_2015127A&#13;</P
+><P
+>You'll need to use this line later on to allow the driver to detect your modem, the next steps you need to take vary slightly depending on what kernel you have so you'll need to refer to the appropriate section depending on whether your kernel version is <A
+HREF="hsf.html#KERNEL-14"
+>2.2.14</A
+>, <A
+HREF="hsf.html#KERNEL-16"
+>2.2.16</A
+> or <A
+HREF="hsf.html#KERNEL-17"
+>2.2.17</A
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNEL-14">5.2.3. If you have a 2.2.14 kernel</H3
+><P
+></P
+><P
+><B
+>Installing a HSF driver on a 2.2.14 kernel</B
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;        Download the file HSF_V1.01.02_K2.2.14-5.0.tar, it can be obtained from <A
+HREF="http://www.olitec.com/pub/HSF_V1.01.02_K2.2.14-5.0.tar"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>Olitec's site</I
+></A
+> or the 
+
+	<A
+HREF="ftp://ftp.dina.kvl.dk/pub/Staff/Thomas.S.Iversen/linmodems_drivers/olitec/HSF_V1.01.02_K2.2.14-5.0.tar"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>mirror</I
+></A
+>.&#13;</P
+></LI
+><LI
+><P
+>Copy it to your home directory </P
+></LI
+><LI
+><P
+>In a console window change to your home directory</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>cd ~</B
+></P
+></LI
+><LI
+><P
+>Decompress the file</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>tar xzvf HSF_V1.01.02_K2.2.14-5.0.tar</B
+></P
+></LI
+><LI
+><P
+>Enter into the drivers directory</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>cd pci_56k_v2</B
+></P
+></LI
+><LI
+><P
+>Load up the lin_hsf.inf file in your favorite text editor, under the section [generic] you'll see a few of lines like "%HSFModem%  = ModemX, PCI\VEN_127A&#38;DEV_1025&#38;SUBSYS_1025127A" under theses lines add your own %HSFModem% line which you made earlier.</P
+></LI
+><LI
+><P
+>Switch to root</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>su</B
+></P
+></LI
+><LI
+><P
+>Run the ins_all script to install the driver</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>./ins_all</B
+></P
+></LI
+></OL
+><P
+>You will now be able to access the internet by telling your dial-up software that your modem is located at /dev/modem.</P
+><P
+>The ins_all will only temporarily load the modem driver and the modem driver will be removed when you reboot. So if you re
+
+	boot you will need to run the ./ins_all program to reload the driver, if you reboot on a regular basis you may want to set the .
+
+	/ins_all command to automatically run every time your computer loads up.
+
+	</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNEL-16">5.2.4. If you have a 2.2.16 kernel</H3
+><P
+></P
+><P
+><B
+>Installing a HSF driver on a 2.2.16 kernel</B
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;	Download the file PCI_56K_V2_K2.2.16.tar.gz, it can be obtained from <A
+HREF="http://www.olitec.com/pub/PCI_56K_V2_K2.2.16.tar.gz"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>Olitec's site</I
+></A
+> or the 
+
+<A
+HREF="ftp://ftp.dina.kvl.dk/pub/Staff/Thomas.S.Iversen/linmodems_drivers/olitec/PCI_56K_V2_K2.2.16.tar.gz"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>Mirror</I
+></A
+>.
+
+	</P
+></LI
+><LI
+><P
+>Copy it to your home directory </P
+></LI
+><LI
+><P
+>In a console window change to your home directory</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>cd ~</B
+></P
+></LI
+><LI
+><P
+>Decompress the file</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>tar xzvf PCI_56K_V2_K2.2.16.tar.gz</B
+></P
+></LI
+><LI
+><P
+>Enter into the drivers directory</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>cd pci_56k_v2_k2.2.16</B
+></P
+></LI
+><LI
+><P
+>Load up the lin_hsf.inf file in your favorite text editor, under the section [generic] you'll see a few of lines like "%HSFModem%  = ModemX, PCI\VEN_127A&#38;DEV_1025&#38;SUBSYS_1025127A" under theses lines add your own %HSFModem% line which you made earlier.</P
+></LI
+><LI
+><P
+>Switch to root</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>su</B
+></P
+></LI
+><LI
+><P
+>Run the ins_all script to install the driver</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>./ins_all</B
+></P
+></LI
+></OL
+><P
+>You will now be able to access the internet by telling your dial-up software that your modem is located at /dev/modem.</P
+><P
+>The ins_all will only temporarily load the modem driver and the modem driver will be removed when you reboot. So if you reboot you will need to run the ./ins_all program to reload the driver, if you reboot on a regular basis you may want to set the ./ins_all command to automatically run every time your computer loads up.&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNEL-17">5.2.5. If you have a 2.2.17 or 2.2.18 kernel</H3
+><P
+></P
+><P
+><B
+>Installing a HSF driver on a 2.2.17 or 2.2.18 kernel</B
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;Download the file PCI_56K_V2_K2.2.17.tar.gz , it can be obtained from <A
+HREF="http://www.olitec.com/pub/PCI_56K_V2_K2.2.17.tar.gz"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>Olitec's site</I
+></A
+> or the 
+
+	<A
+HREF="ftp://ftp.dina.kvl.dk/pub/Staff/Thomas.S.Iversen/linmodems_drivers/olitec/PCI_56K_V2_K2.2.17.tar.gz"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>Mirror</I
+></A
+>.
+
+	</P
+></LI
+><LI
+><P
+>Copy it to your home directory </P
+></LI
+><LI
+><P
+>In a console window change to your home directory</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>cd ~</B
+></P
+></LI
+><LI
+><P
+>Decompress the file</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>tar xzvf PCI_56K_V2_K2.2.17.tar.gz</B
+></P
+></LI
+><LI
+><P
+>Enter into the drivers directory</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>cd pci_56k_v2_k2.2.17</B
+></P
+></LI
+><LI
+><P
+>Load up the lin_hsf.inf file in your favorite text editor, under the section [generic] you'll see a few of lines like "%HSFModem%  = ModemX, PCI\VEN_127A&#38;DEV_1025&#38;SUBSYS_1025127A" under theses lines add your own %HSFModem% line which you made earlier.</P
+></LI
+><LI
+><P
+>Switch to root</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>su</B
+></P
+></LI
+><LI
+><P
+>Run the ins_all script to install the driver</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>./ins_all</B
+></P
+></LI
+></OL
+><P
+>&#13;	You will now be able to access the internet by telling your dial-up software that your modem is located at /dev/modem.&#13;</P
+><P
+>&#13;	The ins_all will only temporarily load the modem driver and the modem driver will be removed when you reboot. So if you reboot you will need to run the ./ins_all program to reload the driver, if you reboot on a regular basis you may want to set the ./ins_all command to automatically run every time your computer loads up.&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="KERNEL4-SERIES">5.3. Kernel 2.4.*</H2
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="HSF-24-REQUIREMENTS">5.3.1. Requirements</H3
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>&#13;You need a 2.4.* kernel which does not have SMP support.&#13;</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>&#13;	You will also need to have your kernel source available, if you don't have them installed already you can probably find them on your distributions CD.&#13;</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>&#13;At least version 2.4.0 of ppp (you can find what version of ppp you have installed by using the command <B
+CLASS="COMMAND"
+>pppd --version</B
+>)&#13;</P
+></LI
+></UL
+><P
+>To get the modem working under a 2.4.* kernel you'll need to use the driver intended for 2.2.17 kernels alongside Marc Boucher's hsfcompat wrapper program which lets the driver work with 2.4.* kernels. At the time of writing the hsfcompat driver is on version 1.0d and is still experimental and may cause problem with your system. However I haven't seen anyone have any problem from using the wrapper. For the latest details see <A
+HREF="http://www.mbsi.ca/hsfcompat/"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>hsfcompat's homepage</I
+></A
+>.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><P
+><B
+>Files you'll need to download:</B
+></P
+><DL
+><DT
+><TT
+CLASS="FILENAME"
+>hsfcompat_24-1.0d.tar.gz</TT
+></DT
+><DD
+><P
+>&#13;Main download site:&#13;</P
+><P
+>&#13;<A
+HREF="http://www.mbsi.ca/hsfcompat/hsfcompat_24-1.0d.tar.gz"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>http://www.mbsi.ca/hsfcompat/hsfcompat_24-1.0d.tar.gz</I
+></A
+></P
+><P
+></P
+></DD
+><DT
+><TT
+CLASS="FILENAME"
+>PCI_56K_V2_K2.2.17.tar.gz</TT
+></DT
+><DD
+><P
+>Main download site:</P
+><P
+><A
+HREF="http://www.olitec.com/pub/PCI_56K_V2_K2.2.17.tar.gz"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>http://www.olitec.com/pub/PCI_56K_V2_K2.2.17.tar.gz</I
+></A
+></P
+><P
+>Mirrored at:</P
+><P
+>&#13;<A
+HREF="ftp://ftp.dina.kvl.dk/pub/Staff/Thomas.S.Iversen/linmodems_drivers/olitec/PCI_56K_V2_K2.2.17.tar.gz"
+TARGET="_top"
+><I
+CLASS="CITETITLE"
+>ftp://ftp.dina.kvl.dk/pub/Staff/Thomas.S.Iversen/linmodems_drivers/olitec/PCI_56K_V2_K2.2.17.tar.gz</I
+></A
+></P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="HSF-24-INSTALLING">5.3.2. Installing</H3
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Copy the <TT
+CLASS="FILENAME"
+>hsfcompat_24-1.0d.tar.gz</TT
+> file to your home directory</P
+></LI
+><LI
+><P
+>In a console window change to your home directory</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>cd ~</B
+></P
+></LI
+><LI
+><P
+>Extract the hcfcompat program by using:</P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>tar xzvf <TT
+CLASS="FILENAME"
+>hsfcompat_24-1.0d.tar.gz</TT
+></B
+></P
+></LI
+><LI
+><P
+>&#13;Copy the <TT
+CLASS="FILENAME"
+>PCI_56K_V2_K2.2.17.tar.gz</TT
+> file into the <TT
+CLASS="FILENAME"
+>hsfcompat_24-1.0d</TT
+> directory.&#13;</P
+></LI
+><LI
+><P
+>Extract the driver by using: </P
+><P
+>&#13;<TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>tar xzvf <TT
+CLASS="FILENAME"
+>PCI_56K_V2_K2.2.17.tar.gz</TT
+></B
+>&#13;</P
+></LI
+><LI
+><P
+>&#13;Load up the file <TT
+CLASS="FILENAME"
+>Makefile</TT
+> (Found in the <TT
+CLASS="FILENAME"
+>hsfcompat_24-1.0d</TT
+> directory) in a text editor and scroll down to the line which reads SBINDIR=/usr/sbin and replace <TT
+CLASS="FILENAME"
+>/usr/sbin</TT
+> with the location of your system bin directory, then scroll down to the line which reads KERNELSRC=/usr/src/linux and replace <TT
+CLASS="FILENAME"
+>/usr/src/linux</TT
+> with the location of your kernel source files.&#13;</P
+></LI
+><LI
+><P
+>Switch to superuser (root) by using: </P
+><P
+><TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>su</B
+>
+
+&#13;</P
+></LI
+><LI
+><P
+>&#13;In the <TT
+CLASS="FILENAME"
+>hsfcompat_24-1.0d</TT
+> directory compile hsfcompat by using:</P
+><P
+>&#13;<TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+>
+
+<B
+CLASS="COMMAND"
+>&#13;make</B
+>&#13;</P
+></LI
+><LI
+><P
+>Install the driver by running:
+
+<TT
+CLASS="PROMPT"
+>[user@localhost]$ </TT
+><B
+CLASS="COMMAND"
+>make <TT
+CLASS="PARAMETER"
+><I
+>install</I
+></TT
+></B
+>&#13;</P
+></LI
+><LI
+><P
+>&#13;	Follow the on-screen instruction which explain how to load the driver into memory and how to have this done automatically.&#13;</P
+></LI
+></OL
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="FAQ">5.4. Troubleshooting FAQ</H2
+><DIV
+CLASS="QANDASET"
+><DL
+><DT
+>5.4.1. <A
+HREF="hsf.html#AEN463"
+>&#13;When running ./ins_all I get a kernel mismatch error ?&#13;</A
+></DT
+><DT
+>5.4.2. <A
+HREF="hsf.html#AEN471"
+>&#13;When I try to run ./ins_all I get the error "bash: ./ins_all No such file or directory."</A
+></DT
+><DT
+>5.4.3. <A
+HREF="hsf.html#AEN477"
+>&#13;When installing the driver when it tries to load <TT
+CLASS="FILENAME"
+>myserial.o</TT
+> I get a segmentation fault ?&#13;</A
+></DT
+><DT
+>5.4.4. <A
+HREF="hsf.html#AEN483"
+>&#13;When trying to dial my ISP I get "No Carrier" error ?&#13;</A
+></DT
+><DT
+>5.4.5. <A
+HREF="hsf.html#AEN493"
+>&#13;When running ./ins_alI get the error "No matching INF file is found for SoftK56 PCI device" ?&#13;</A
+></DT
+><DT
+>5.4.6. <A
+HREF="hsf.html#AEN497"
+>&#13;On my Laptop the driver seemed to install fine but I can't access my modem on /dev/modem ?&#13;</A
+></DT
+></DL
+><DIV
+CLASS="QANDAENTRY"
+><DIV
+CLASS="QUESTION"
+><P
+><A
+NAME="AEN463"><B
+>5.4.1. </B
+>
+When running ./ins_all I get a kernel mismatch error ?&#13;</P
+></DIV
+><DIV
+CLASS="ANSWER"
+><P
+><B
+> </B
+>
+This means that the driver thinks that you don't have the appropriate kernel version, if you have a variant of the kernel (such as the one that has non-standard name) then you can still get the driver to work by loading up the file <TT
+CLASS="FILENAME"
+>ins_all</TT
+> in a text editor and replacing all of the '<B
+CLASS="COMMAND"
+>insmod -m</B
+>' commands with '<B
+CLASS="COMMAND"
+>insmod -f -m</B
+>'.&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="QANDAENTRY"
+><DIV
+CLASS="QUESTION"
+><P
+><A
+NAME="AEN471"><B
+>5.4.2. </B
+>
+When I try to run ./ins_all I get the error "bash: ./ins_all No such file or directory."</P
+></DIV
+><DIV
+CLASS="ANSWER"
+><P
+><B
+> </B
+>
+This error tends to be caused by the script being unable to find C Shell at the location <TT
+CLASS="FILENAME"
+>/bin/csh</TT
+>. If you have C Shell installed in a different location then you should create a symbolic link which points to the correct location. If you don't have you'll need to install it.&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="QANDAENTRY"
+><DIV
+CLASS="QUESTION"
+><P
+><A
+NAME="AEN477"><B
+>5.4.3. </B
+>
+When installing the driver when it tries to load <TT
+CLASS="FILENAME"
+>myserial.o</TT
+> I get a segmentation fault ?&#13;</P
+></DIV
+><DIV
+CLASS="ANSWER"
+><P
+><B
+> </B
+>
+This is caused by your computer trying to get Plug-and-Play to work with your modem. You can stop it doing this by going to your BIOS and setting an option which tells it not to do that. The settings name varies from BIOS to BIOS but is normally something like PnP OS.&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="QANDAENTRY"
+><DIV
+CLASS="QUESTION"
+><P
+><A
+NAME="AEN483"><B
+>5.4.4. </B
+>
+When trying to dial my ISP I get "No Carrier" error ?&#13;</P
+></DIV
+><DIV
+CLASS="ANSWER"
+><P
+><B
+> </B
+>
+It has been reported that making the following changes to your configuration will work:
+
+
+
+<P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;Replace the command ATZ with ATZX3&#13;</P
+></LI
+><LI
+><P
+>&#13;Replace the command ATDT with ATX3DT&#13;</P
+></LI
+></OL
+>&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="QANDAENTRY"
+><DIV
+CLASS="QUESTION"
+><P
+><A
+NAME="AEN493"><B
+>5.4.5. </B
+>
+When running ./ins_alI get the error "No matching INF file is found for SoftK56 PCI device" ?&#13;</P
+></DIV
+><DIV
+CLASS="ANSWER"
+><P
+><B
+> </B
+></P
+>his occurs when the driver can't find the correct %HSFModem% line in the lin_hsf.inf line, go back through the instructions and make sure that you didn't make a mistake when making or entering the the %HSFModem% line.&#13;</DIV
+></DIV
+><DIV
+CLASS="QANDAENTRY"
+><DIV
+CLASS="QUESTION"
+><P
+><A
+NAME="AEN497"><B
+>5.4.6. </B
+>
+On my Laptop the driver seemed to install fine but I can't access my modem on /dev/modem ?&#13;</P
+></DIV
+><DIV
+CLASS="ANSWER"
+><P
+><B
+> </B
+>
+This is often caused by the modem's device number clashing with that of PCMCIA, you can check if this is the case by entering the command,</P
+><P
+>[user@localhost]$ <B
+CLASS="COMMAND"
+>ls -l /dev/ | grep 254</B
+></P
+><P
+>You'll see the hsf0 device listed with the major number of 254, if any other device also has the major number of 254 it means there is a clash. You can fix this problem by loading up the ins_all file and change the line which reads "mknod /dev/cnxt c 254 64" to "mknod /dev/cnxt c 253 64".&#13;</P
+></DIV
+></DIV
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="hcf.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="fdl-app.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>HCF chipset based modems</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>License</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

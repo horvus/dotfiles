@@ -1,0 +1,195 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Boot + Root + Raid + Lilo : Software Raid mini-HOWTO: Bootable Raid</TITLE>
+ <LINK HREF="Boot+Root+Raid+LILO-4.html" REL=next>
+ <LINK HREF="Boot+Root+Raid+LILO-2.html" REL=previous>
+ <LINK HREF="Boot+Root+Raid+LILO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Boot+Root+Raid+LILO-4.html">Next</A>
+<A HREF="Boot+Root+Raid+LILO-2.html">Previous</A>
+<A HREF="Boot+Root+Raid+LILO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Bootable Raid</A></H2>
+
+<P>I'm not going to cover the fundamentals of setting up raid0/1/5 on
+Linux, that is covered in detail elsewhere. The problem I will address is
+setting up raid on root and making it bootable with <B>standard</B> LILO. The
+documentation that comes with the LILO sources (not the man pages) and with
+the raidtools-0.90, covers the details of booting and boot parameters as
+well as general raid setup - respectively.
+<P>
+<P>There are two scenarios which are covered here. Set up of bootable root raid
+and the conversion of an existing non-raid system to bootable root raid 
+without data loss.
+<P>
+<H2><A NAME="ss3.1">3.1 Booting RAID 1 with standard LILO</A>
+</H2>
+
+<P>To make the boot information redundant and easy to maintain, set up a small
+RAID1 and mount it on the <B>/boot</B> directory of your
+system disk. LILO does not know about device 0x9?? and can not find the
+information at boot time because the raid sub system is not active
+then. As a simple work around, you can pass LILO the geometry information of
+the drive(s) and from that, LILO can determine the position of the information
+needed to load the kernel even though it is on the RAID1 partition. This is
+because the RAID1 partition is the same as a standard partition but with a
+raid super-block written at the end. The boot raid set should fall with 
+the first 1024
+mbytes of the disk drive. In theory the start of the raid partition could
+fall anywhere in the 1024 megs, but in practice I was unable to get it to
+work unless the boot-raid started at the first block of the set. This is
+probably because of something dumb that I did, but it was not worth
+following up at the time. Since then I've simply set up all my systems with
+the boot-raid set as the first partition. I have root raid system configurations
+with bootable RAID1 mounted on <B>/boot</B> with root raid sets as 
+follows: RAID1, RAID5, RAID10 &amp; RAID1-10 ( 1 mirror + 1 raid0 set). 
+The last has a very peculiar lilo file pair since none of the disk geometries 
+are the same, however, the principals are the same for the initial boot
+process. The RAID10 and RAID1-10 root mounts require the use of
+<I>initrd</I> to mount root after the boot process has taken place.
+See the appendices for the configuration files for all of these example
+systems.
+<P>
+<P>A conventional LILO config file stripped down looks like this:
+<P>
+<PRE>
+# lilo.conf - assumes drive less than 1024
+        boot = /dev/hda
+        delay = 40               # extra, but nice
+        vga = normal             # not normally needed
+        image = /bzImage
+        root = /dev/hda1
+        read-only
+        label = Linux
+</PRE>
+<P>
+<P>A raid LILO config file pair would look like this:
+<P>
+<PRE>
+# lilo.conf.hda - primary ide master
+        disk=/dev/md0
+        bios=0x80
+        sectors=63
+        heads=16
+        cylinders=39770
+        partition=/dev/md1
+        start=63
+        boot=/dev/hda
+        map=/boot/map
+        install=/boot/boot.b
+        image=/boot/bzImage
+        root=/dev/md0
+        read-only
+        label=LinuxRaid
+
+# ---------------------
+
+# lilo.conf.hdc - secondary ide master
+        disk=/dev/md0
+        bios=0x80                # see note below
+        sectors=63
+        heads=16
+        cylinders=39770
+        partition=/dev/md1
+        start=63
+        boot=/dev/hdc            # this is the other disk
+        map=/boot/map
+        install=/boot/boot.b
+        image=/boot/bzImage
+        root=/dev/md0
+        read-only
+        label=LinuxRaid
+</PRE>
+<P># BIOS=line -- if your bios is smart enough (most are not) to detect that
+that the first disk is missing or failed and will automatically boot from the second disk,
+then <B>bios=81</B> would be the appropriate entry here. This is more
+common with SCSI bios than IDE bios. I simply plan on relocating the drive
+so it will replace the dead drive C: in the event of failure of the primary
+boot drive.
+<P>
+<P>The geometry information for the drive can be obtained from fdisk with the
+command:
+<P>
+<PRE>
+fdisk -ul (little L)
+fdisk -ul /dev/hda
+
+Disk /dev/hda: 16 heads, 63 sectors, 39770 cylinders
+Units = sectors of 1 * 512 bytes
+
+   Device Boot    Start       End    Blocks   Id  System
+/dev/hda1            63     33263     16600+  fd  Linux raid autodetect
+/dev/hda2         33264    443519    205128   82  Linux swap
+/dev/hda3        443520  40088159  19822320   fd  Linux raid autodetect
+
+* note the listing of the START of each partition
+</PRE>
+<P>
+<H2><A NAME="ss3.2">3.2 Detailed explaination of lilo.conf for raid boot</A>
+</H2>
+
+<P>The raid lilo.conf file above, commented in detail for each entry.
+<P>
+<PRE>
+# lilo.conf.hda - primary ide master
+#       the location of the /boot directory that will be
+#       designated below as containing the kernel, map, etc...
+#       note that this is NOT the actual partition containing
+#       the boot image and info, but rather the device
+#       that logically contains this directory.
+#       in this example, /dev/md1 is mounted on /dev/md0/boot
+     disk=/dev/md0
+
+#       tell LILO which bios device to use for boot, i.e. C: drive
+     bios=0x80
+
+#       tell LILO the geometry of the device
+#       this is usually but not always the "logical" 
+#       geometry. Check the /proc file system or watch
+#       the boot messages when the kernel probes for the drive
+#       
+     sectors=63
+     heads=16
+     cylinders=39770
+
+#       this is a dummy entry to make LILO happy so it
+#       will recognize the raid set 0x9?? and then find
+#       the START of the boot sector. To really see
+#       what this was for, read the documentation 
+#       that comes with the LILO source distribution.
+#       This parameter "must" be different than the
+#       disk=  entry above. It can be any other mdx
+#       device, used or unused and need not be the one 
+#       that contains the /boot information
+#       
+     partition=/dev/md1
+
+#       the first sector of the partition containing /boot information
+     start=63
+
+#       the real device that LILO will write the boot information to
+     boot=/dev/hda
+
+#       logically where LILO will put the boot information
+     map=/boot/map
+     install=/boot/boot.b
+
+#       logically where lilo will find the kernel image
+     image=/boot/bzImage
+
+#       standard stuff after this
+#       root may be a raid1/4/5 device
+     root=/dev/md0
+     read-only
+     label=LinuxRaid
+</PRE>
+<P>
+<HR>
+<A HREF="Boot+Root+Raid+LILO-4.html">Next</A>
+<A HREF="Boot+Root+Raid+LILO-2.html">Previous</A>
+<A HREF="Boot+Root+Raid+LILO.html#toc3">Contents</A>
+</BODY>
+</HTML>

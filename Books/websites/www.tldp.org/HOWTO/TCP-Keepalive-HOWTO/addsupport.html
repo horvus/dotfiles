@@ -1,0 +1,655 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Adding support to third-party software</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="TCP Keepalive HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Programming applications"
+HREF="programming.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>TCP Keepalive HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="programming.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="addsupport"
+></A
+>5. Adding support to third-party software</H1
+><P
+>&#13;    Not everyone is a software developer, and not everyone will rewrite software
+    from scratch if it lacks just one feature. Maybe you want to add keepalive
+    support to an existing application because, though the author might not have
+    thought it important, you think it will be useful.
+  </P
+><P
+>&#13;    First, remember what was said about the situations where you need keepalive.
+    Now you'll need to address connection-oriented TCP sockets.
+  </P
+><P
+>&#13;    Since Linux doesn't provide the functionality to enable keepalive support
+    via the kernel itself (as BSD-like operating systems often do), the only way
+    is to perform the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="function"
+>setsockopt
+    </TT
+></SPAN
+>(2)</SPAN
+> call
+    after socket creation. There are two solutions:
+
+    <P
+></P
+><UL
+><LI
+><P
+>source code modification of the original program</P
+></LI
+><LI
+><P
+><SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="function"
+>setsockopt</TT
+>
+        </SPAN
+>(2)</SPAN
+> injection using
+         the library preloading technique</P
+></LI
+></UL
+>
+  </P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="modifysource"
+></A
+>5.1. Modifying source code</H2
+><P
+>&#13;      Remember that keepalive is not program-related, but socket-related, so if
+      you have multiple sockets, you can handle keepalive for each of them
+      separately. The first phase is to understand what the program does and
+      then search the code for each socket in the program. This can be done
+      using <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>grep</B
+></SPAN
+>(1)</SPAN
+>, as follows:
+
+      <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>grep 'socket *(' *.c</B
+></TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+    </P
+><P
+>&#13;      This will more or less show you all sockets in the code. The next step is
+      to select only the right ones: you will need TCP sockets, so look for
+      <TT
+CLASS="constant"
+>PF_INET</TT
+> (or <TT
+CLASS="constant"
+>AF_INET</TT
+>), <TT
+CLASS="constant"
+>&#13;      SOCK_STREAM</TT
+> and <TT
+CLASS="constant"
+>IPPROTO_TCP</TT
+> (or more
+      commonly, <TT
+CLASS="constant"
+>0</TT
+>) in the parameters of your socket list,
+      and remove the non-matching ones.
+    </P
+><P
+>&#13;      Another way to create a socket is through <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+>&#13;      <TT
+CLASS="function"
+>accept</TT
+></SPAN
+>(2)</SPAN
+>. In this case, follow the TCP sockets identified and check
+      if any of these is a listening socket: if positive, keep in mind that
+      <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="function"
+>accept</TT
+></SPAN
+>(2)</SPAN
+> returns a socket descriptor, which
+      must be inserted in your socket list.
+    </P
+><P
+>&#13;      Once you've identified the sockets you can proceed with changes. The most
+      fast &#38; furious patch can be done by simply adding the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="function"
+>setsockopt</TT
+></SPAN
+>(2
+      )</SPAN
+> function just after the socket creation block.
+      Optionally, you may include additional calls in order to set the keepalive
+      parameters if you don't like the system defaults. Please be careful when
+      implementing error checks and handlers for the function, maybe by copying
+      the style from the original code around it. Remember to set the <TT
+CLASS="varname"
+>&#13;      optval</TT
+> to a non-zero value and to initialize the <TT
+CLASS="varname"
+>optlen
+      </TT
+> before invoking the function.
+    </P
+><P
+>&#13;      If you have time or you think it would be really cool, try to add complete
+      keepalive support to your program, including a switch on the command line
+      or a configuration parameter to let the user choose whether or not to use
+      keepalive.
+    </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="libkeepalive"
+></A
+>5.2. <SPAN
+CLASS="application"
+>libkeepalive</SPAN
+>: library preloading</H2
+><P
+>&#13;      There are often cases where you don't have the ability to modify the
+      source code of an application, or when you have to enable keepalive for
+      all your programs, so patching and recompiling everything is not
+      recommended.
+    </P
+><P
+>&#13;      The <SPAN
+CLASS="application"
+>libkeepalive</SPAN
+> project was born to help add
+      keepalive support for applications since the Linux kernel doesn't provide
+      the ability to do the same thing natively (like BSD does). The
+      <SPAN
+CLASS="application"
+>libkeepalive</SPAN
+> project homepage is
+      <A
+HREF="http://libkeepalive.sourceforge.net/"
+TARGET="_top"
+>&#13;      http://libkeepalive.sourceforge.net/</A
+>
+    </P
+><P
+>&#13;      It consists of a shared library that overrides the socket system call in
+      most binaries, without the need to recompile or modify them. The technique
+      is based on the <I
+CLASS="firstterm"
+>preloading</I
+> feature of the
+      <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>ld.so</B
+></SPAN
+>(8)</SPAN
+> loader included in Linux, which
+      allows you to force the loading of shared libraries with higher priority
+      than normal. Programs usually use the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+>&#13;      <TT
+CLASS="function"
+>socket</TT
+></SPAN
+>(2)</SPAN
+> function call located in the <TT
+CLASS="literal"
+>glibc</TT
+>
+      shared library; with <SPAN
+CLASS="application"
+>libkeepalive</SPAN
+> you can wrap
+      it and inject the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="function"
+>setsockopt
+      </TT
+></SPAN
+>(2)</SPAN
+> just
+      after the socket creation, returning a socket with keepalive already set
+      to the main program. Because of the mechanisms used to inject the system
+      call, this doesn't work when the socket function is statically compiled
+      into the binary, as in a program linked with the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>gcc</B
+></SPAN
+>(1
+      )</SPAN
+> flag <TT
+CLASS="option"
+>-static</TT
+>.
+    </P
+><P
+>&#13;      After downloading and installing <SPAN
+CLASS="application"
+>libkeepalive</SPAN
+>,
+      you will able to add keepalive support to your programs without the
+      prerequisite of being <TT
+CLASS="literal"
+>root</TT
+>, simply setting the <TT
+CLASS="envar"
+>&#13;      LD_PRELOAD</TT
+> environment variable before executing the program. By
+      the way, the superuser can also force the preloading with a global
+      configuration, and the users can then decide to turn it off by setting the
+      <TT
+CLASS="envar"
+>KEEPALIVE</TT
+> environment variable to <TT
+CLASS="constant"
+>off</TT
+>.
+    </P
+><P
+>&#13;      The environment is also used to set specific values for keepalive
+      parameters, so you have the ability to handle each program differently,
+      setting <TT
+CLASS="envar"
+>KEEPCNT</TT
+>, <TT
+CLASS="envar"
+>KEEPIDLE</TT
+> and <TT
+CLASS="envar"
+>&#13;      KEEPINTVL</TT
+> before starting the application.
+    </P
+><P
+>&#13;      Here's an example of libkeepalive usage:
+
+      <DIV
+CLASS="informalexample"
+><A
+NAME="AEN390"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;  <TT
+CLASS="prompt"
+>$ </TT
+><TT
+CLASS="userinput"
+><B
+>test</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>SO_KEEPALIVE is OFF</TT
+>
+
+  <TT
+CLASS="prompt"
+>$ </TT
+><TT
+CLASS="userinput"
+><B
+>LD_PRELOAD=libkeepalive.so \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>KEEPCNT=20 \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>KEEPIDLE=180 \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>KEEPINTVL=60 \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>test</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>SO_KEEPALIVE is ON
+  TCP_KEEPCNT   = 20
+  TCP_KEEPIDLE  = 180
+  TCP_KEEPINTVL = 60</TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+    </P
+><P
+>&#13;      And you can use <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>strace</B
+>
+      </SPAN
+>(1)</SPAN
+> to understand what
+      happens:
+    </P
+><DIV
+CLASS="informalexample"
+><A
+NAME="AEN411"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;  <TT
+CLASS="prompt"
+>$ </TT
+><TT
+CLASS="userinput"
+><B
+>strace test</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>execve("test", ["test"], [/* 26 vars */]) = 0
+  [..]
+  open("/lib/libc.so.6", O_RDONLY)        = 3
+  [..]
+  socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+  getsockopt(3, SOL_SOCKET, SO_KEEPALIVE, [0], [4]) = 0
+  close(3)                                = 0
+  [..]
+  _exit(0)                                = ?</TT
+>
+
+  <TT
+CLASS="prompt"
+>$ </TT
+><TT
+CLASS="userinput"
+><B
+>LD_PRELOAD=libkeepalive.so \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>strace test</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>execve("test", ["test"], [/* 27 vars */]) = 0
+  [..]
+  open("/usr/local/lib/libkeepalive.so", O_RDONLY) = 3
+  [..]
+  open("/lib/libc.so.6", O_RDONLY)        = 3
+  [..]
+  open("/lib/libdl.so.2", O_RDONLY)       = 3
+  [..]
+  socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+  setsockopt(3, SOL_SOCKET, SO_KEEPALIVE, [1], 4) = 0
+  setsockopt(3, SOL_TCP, TCP_KEEPCNT, [20], 4) = 0
+  setsockopt(3, SOL_TCP, TCP_KEEPIDLE, [180], 4) = 0
+  setsockopt(3, SOL_TCP, TCP_KEEPINTVL, [60], 4) = 0
+  [..]
+  getsockopt(3, SOL_SOCKET, SO_KEEPALIVE, [1], [4]) = 0
+  [..]
+  getsockopt(3, SOL_TCP, TCP_KEEPCNT, [20], [4]) = 0
+  [..]
+  getsockopt(3, SOL_TCP, TCP_KEEPIDLE, [180], [4]) = 0
+  [..]
+  getsockopt(3, SOL_TCP, TCP_KEEPINTVL, [60], [4]) = 0
+  [..]
+  close(3)                                = 0
+  [..]
+  _exit(0)                                = ?</TT
+>
+    </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+><P
+>&#13;      For more information, visit the <SPAN
+CLASS="application"
+>libkeepalive</SPAN
+>
+      project homepage: <A
+HREF="http://libkeepalive.sourceforge.net/"
+TARGET="_top"
+>&#13;      http://libkeepalive.sourceforge.net/</A
+>
+    </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="programming.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Programming applications</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

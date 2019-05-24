@@ -1,0 +1,1131 @@
+<HTML
+><HEAD
+><TITLE
+>Sendmail</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Majordomo and MajorCool HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="x13.html"><LINK
+REL="NEXT"
+TITLE="Majordomo"
+HREF="x253.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Majordomo and MajorCool HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x13.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x253.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN54"
+>2. Sendmail</A
+></H1
+><P
+>Since Majordomo is responsible for managing E-mail lists, Majordomo relies heavily on a MTA such as Sendmail.  There are other MTA's such as Smail and Qmail out there; however, Sendmail is the oldest and most common.  This section introduces the reader to the areas of Sendmail that are useful or necessary to configure when using Majordomo.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SEC-ALIASES"
+>2.1. Aliases</A
+></H2
+><P
+>The Sendmail aliases file (usually <TT
+CLASS="FILENAME"
+>/etc/aliases</TT
+>) is used for making aliases for E-mail addresses.  For example, once Majordomo is installed, usually an entry in the aliases file reads:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>majordomo-owner:	jarchie</PRE
+></TD
+></TR
+></TABLE
+>
+
+This entry means that all mail addressed to <TT
+CLASS="LITERAL"
+>majordomo-owner@host.com</TT
+> will actually be sent to <TT
+CLASS="LITERAL"
+>jarchie@host.com</TT
+>.  Notice it is unnecessary to append the <TT
+CLASS="LITERAL"
+>@host.com</TT
+> to <TT
+CLASS="LITERAL"
+>jarchie</TT
+> because both users are on the same host.  If it were desired to redirect the message to a different user on a different host, one would have to add the <TT
+CLASS="LITERAL"
+>@host.com</TT
+> portion.  </P
+><P
+>Another type of entry in the aliases file allows E-mail to be redirected to multiple addresses listed in a file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>testlist:		:include:/usr/local/majordomo-1.94.5/lists/testlist</PRE
+></TD
+></TR
+></TABLE
+>
+
+This entry states that any message sent to <TT
+CLASS="LITERAL"
+>testlist@host.com</TT
+> will be redirected to all the addresses listed in the file <TT
+CLASS="FILENAME"
+>/usr/local/majordomo-1.94.5/lists/testlist</TT
+>.  The <TT
+CLASS="FILENAME"
+>testlist</TT
+> file might look something like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>johnarchie@emeraldis.com
+srobirds@yahoo.com
+acreswell@geocities.com</PRE
+></TD
+></TR
+></TABLE
+>
+
+Majordomo is able to add or remove addresses from a list by taking advantage of this feature.  When a <TT
+CLASS="LITERAL"
+>subscribe</TT
+> request is processed, the user's E-mail address is appended to the <TT
+CLASS="FILENAME"
+>testlist</TT
+> file; when an <TT
+CLASS="LITERAL"
+>unsubscribe</TT
+> request is processed, the user's E-mail address is removed from the <TT
+CLASS="FILENAME"
+>testlist</TT
+> file.  One can also add or remove addresses manually simply by editing the file with a text editor such as <B
+CLASS="COMMAND"
+>vi</B
+>.</P
+><P
+>Since Majordomo needs to be able to process commands sent to it via E-mail, Sendmail must be able to execute the Majordomo program and pass the message to it.  This is done by adding another type of entry to the <TT
+CLASS="FILENAME"
+>aliases</TT
+> file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>majordomo:		"|/usr/local/majordomo-1.94.5/wrapper majordomo"</PRE
+></TD
+></TR
+></TABLE
+>
+
+The program <TT
+CLASS="FILENAME"
+>/usr/local/majordomo-1.94.5/wrapper</TT
+> is a wrapper (SUID <TT
+CLASS="LITERAL"
+>majordomo</TT
+> and SGID <TT
+CLASS="LITERAL"
+>majordomo</TT
+> or <TT
+CLASS="LITERAL"
+>daemon</TT
+> depending on the configuration) that runs the Majordomo program.  The quotation marks around the second part of the alias entry are used to tell Sendmail that this part of the entry is all one statement; the quotation marks would be unnecessary if there were not a space between <TT
+CLASS="LITERAL"
+>wrapper</TT
+> and <TT
+CLASS="LITERAL"
+>majordomo</TT
+>.  The <TT
+CLASS="LITERAL"
+>|</TT
+> is known as a "pipe"; it is used to tell Sendmail to send the E-mail to the wrapper via the standard input.  (Since all the wrapper does here is to call <B
+CLASS="COMMAND"
+>majordomo</B
+>, the E-mail is actually being sent to Majordomo.)  The wrapper accepts one parameter--the parameter of the program it is supposed to execute.  (Any parameters after the first will be passed to the program the wrapper is executing.)  For security reasons, the wrapper only executes programs located in the Majordomo directory, <TT
+CLASS="FILENAME"
+>/usr/local/majordomo-1.94.5/</TT
+>.  This restriction prevents a programmer from using the wrapper to run programs that should not have Majordomo privileges.  (For example, <B
+CLASS="COMMAND"
+>wrapper /bin/vi</B
+> would allow any user to edit any Majordomo configuration file.)  When a message is sent to <TT
+CLASS="LITERAL"
+>majordomo@host.com</TT
+>, Sendmail starts up the wrapper which, in turn, starts up <B
+CLASS="COMMAND"
+>majordomo</B
+>, and Sendmail sends the message to the <B
+CLASS="COMMAND"
+>majordomo</B
+> script via the standard input.  Majordomo then extracts the commands out of the message and responds appropriately.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN94"
+>2.2. Editing <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+></A
+></H2
+><P
+>Due to its arcane syntax, <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> is perhaps the most feared of all configuration files.  In the installation of <TT
+CLASS="LITERAL"
+>majordomo</TT
+>, it is not absolutely necessary to edit <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+>; however, a couple of features are extremely useful.  Unless major changes have to be made to <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> (which, thankfully, Majordomo does not require), editing the file is not that difficult.  All that need be done is adding extra lines to the file.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN102"
+>2.2.1. Another Aliases File</A
+></H3
+><P
+>Creating a separate file for the Majordomo aliases, such as <TT
+CLASS="FILENAME"
+>/usr/local/majordomo-1.94.5/majordomo.aliases</TT
+>, is often a good idea.  This can be done rather easily by adding a line to the end of the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>OA/usr/local/majordomo-1.94.5/majordomo.aliases</PRE
+></TD
+></TR
+></TABLE
+>
+
+To have a <TT
+CLASS="FILENAME"
+>/usr/local/majordomo-1.94.5/majordomo.aliases</TT
+>, Sendmail must be able to generate a database (<TT
+CLASS="FILENAME"
+>/usr/local/majordomo-1.94.5/majordomo.aliases.db</TT
+>).  The easiest way to accomplish this is to go ahead and create an empty database for Sendmail to overwrite.
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+>[root@kes majordomo-1.94.5]# </TT
+><TT
+CLASS="USERINPUT"
+><B
+>touch majordomo.aliases.db</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>[root@kes majordomo-1.94.5]# </TT
+><TT
+CLASS="USERINPUT"
+><B
+>chmod 644 majordomo.aliases.db</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+Another method to get around this issue is simply to create the <TT
+CLASS="FILENAME"
+>majordomo.aliases</TT
+> file in the <TT
+CLASS="FILENAME"
+>/etc/</TT
+> directory, rather than the Majordomo home directory.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN117"
+>2.2.2. Undesirable Sendmail Security Features</A
+></H3
+><P
+>For certain setups, some security measures that Sendmail uses can prevent Majordomo from working properly.  Obviously, these security features must be turned off.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="SEC-SENDTRUST"
+>2.2.3. Sendmail Trusted Users</A
+></H3
+><P
+>Sendmail is programmed to make it difficult for people to make "perfect" forgeries of E-mail.  For example, when a user sends a message via SMTP, the source IP address is typically logged, and when a user sends a message by giving it directly to Sendmail and specifying the sender using <B
+CLASS="COMMAND"
+>sendmail -f</B
+>, Sendmail puts a warning message in the header specifying the user who really sent the message.  However, some programs need to be able to send messages masquerading as other users, and having this extra security line appended to the header is annoying.  Sendmail handles this problem by having trusted users.  In order for Majordomo's <B
+CLASS="COMMAND"
+>resend</B
+> script to work properly, <TT
+CLASS="LITERAL"
+>majordomo</TT
+> must be a Sendmail trusted user since the program needs to resend mail from other users.</P
+><P
+>One way to make Majordomo a trusted user is by adding the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Tmajordomo</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="SMRSH"
+>2.2.4. Sendmail Restricted Shell</A
+></H3
+><P
+>If Sendmail is using <B
+CLASS="COMMAND"
+>smrsh</B
+>, then the only programs that can be executed are those under the <TT
+CLASS="FILENAME"
+>/etc/smrsh/</TT
+> directory.  Perhaps the best solution to run the wrapper from the <TT
+CLASS="FILENAME"
+>aliases</TT
+> file is to create a symbolic link from <TT
+CLASS="FILENAME"
+>/etc/smrsh/wrapper</TT
+> to <TT
+CLASS="FILENAME"
+>/usr/local/majordomo-1.94.5/wrapper</TT
+>.
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+>[root@kes smrsh]# </TT
+><TT
+CLASS="USERINPUT"
+><B
+>ln -s /usr/local/majordomo-1.94.5/wrapper wrapper</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+A second solution is to actually move the wrapper into the <TT
+CLASS="FILENAME"
+>/etc/smrsh/</TT
+> directory.
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+>[root@kes smrsh]# </TT
+><TT
+CLASS="USERINPUT"
+><B
+>mv /usr/local/majordomo-1.94.5/wrapper ./</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+If security is not a major concern, the secure shell can be disabled.  One fairly crude method is simply to delete <TT
+CLASS="FILENAME"
+>/usr/sbin/smrsh</TT
+> and copy or link <TT
+CLASS="FILENAME"
+>/bin/sh</TT
+> in its place.
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+>[root@kes sbin]# </TT
+><TT
+CLASS="USERINPUT"
+><B
+>rm -f smrsh</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>[root@kes sbin]# </TT
+><TT
+CLASS="USERINPUT"
+><B
+>ln -s /bin/sh smrsh</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+A better (but more difficult) method is to edit <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+>.  Change the reference from <TT
+CLASS="FILENAME"
+>/usr/sbin/smrsh</TT
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Mprog,		P=/usr/sbin/smrsh, F=lsDFMoqeu9, S=10/30, R=20/40, D=$z:/,
+		T=X-Unix,
+		A=sh -c $u</PRE
+></TD
+></TR
+></TABLE
+>
+
+to <TT
+CLASS="FILENAME"
+>/bin/sh</TT
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Mprog,		P=/bin/sh, F=lsDFMoqeu9, S=10/30, R=20/40, D=$z:/,
+		T=X-Unix,
+		A=sh -c $u</PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="GROUP-PERM"
+>2.2.5. Group Write Permission</A
+></H3
+><P
+>If you plan on having a non-root user add and manage mailing lists, you will need to make the <TT
+CLASS="FILENAME"
+>majordomo.aliases</TT
+> file group writable.  However, Sendmail does not allow this configuration for security reasons (see <A
+HREF="x54.html#SENDMAIL-SECURITY"
+>Section 2.4</A
+>).  To disable this security feature, add the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>O DontBlameSendmail=GroupWritableAliasFile</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file.
+Also, the lists directory must be group writable in order to add a list, but Sendmail will not allow this setup for similar security reasons.  To disable this security feature, adding the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>O DontBlameSendmail=IncludeFileInGroupWritableDirPath</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> configuration file is necessary.</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN165"
+>2.3. Configuring <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> Using the M4 Configuration</A
+></H2
+><P
+>For administrators who do not want to edit the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file directly, it is possible to use M4 to create the file; this section describes how to make the changes discussed in the previous section to the mc file instead of the cf file.</P
+><P
+>The purpose of the M4 configuration is to provide an easy way to create the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file.  The idea is that the created mc file is easier to understand than the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file.  By running the m4 preprocessor, a <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file is generated:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+>[root@kes etc]# </TT
+><TT
+CLASS="USERINPUT"
+><B
+>m4 /etc/sendmail.mc &#62; /etc/sendmail.cf</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN177"
+>2.3.1. Creating Another Aliases File</A
+></H3
+><P
+>Add the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>define(`ALIAS_FILE',`/etc/aliases,/usr/local/majordomo-1.94.5/majordomo.aliases')</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.mc</TT
+> file.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN182"
+>2.3.2. Making Majordomo a Trusted User</A
+></H3
+><P
+>Add the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>define(`confTRUSTED_USERS',`majordomo')</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.mc</TT
+> file.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN187"
+>2.3.3. Disabling Sendmail Secure Shell</A
+></H3
+><P
+>Delete the line that reads
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>FEATURE(smrsh)</PRE
+></TD
+></TR
+></TABLE
+>
+
+in the <TT
+CLASS="FILENAME"
+>sendmail.mc</TT
+> file.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN192"
+>2.3.4. Disabling Security Features</A
+></H3
+><P
+>To disable the group write permission security check on the aliases file, add the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>define(`confDONT_BLAME_SENDMAIL',`GroupWritableAliasFile')</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.mc</TT
+> file.</P
+><P
+>To disable the path write permission security check for the include files, add the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>define(`confDONT_BLAME_SENDMAIL',`IncludeFileInGroupWritableDirPath')</PRE
+></TD
+></TR
+></TABLE
+>
+
+To enable both of these options, use
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>define(`confDONT_BLAME_SENDMAIL',`GroupWritableAliasFile,IncludeFileInGroupWritableDirPath')</PRE
+></TD
+></TR
+></TABLE
+>
+
+Adding the last statement is equivalent to writing
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>O DontBlameSendmail=GroupWritableAliasFile,IncludeFileInGroupWritableDirPath</PRE
+></TD
+></TR
+></TABLE
+>
+
+in <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+>, and this entry is the same as writing the entries on separate lines:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>O DontBlameSendmail=GroupWritableAliasFile
+O DontBlameSendmail=IncludeFileInGroupWritableDirPath</PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SENDMAIL-SECURITY"
+>2.4. Sendmail Security Concerns</A
+></H2
+><P
+>Security is inversely proportional to convenience; the only secure machine is one that cannot be accessed by anyone.  When some of Sendmail's security features are disabled, a machine will inevitably become less secure.  However, it is important to understand the basic security risks in order to determine if the convenience out weighs possible breaches of security.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="GROUP-SECURITY"
+>2.4.1. Consequences of Unsafe Group Writes</A
+></H3
+><P
+>If a user has write permission to access an aliases file, <I
+CLASS="EMPHASIS"
+>she should be a trusted user</I
+>.  By putting an entry into the aliases file (such as the one used to execute <B
+CLASS="COMMAND"
+>wrapper</B
+>) a user can execute any program with the privileges of Sendmail (<TT
+CLASS="LITERAL"
+>daemon</TT
+> or, in older versions, <TT
+CLASS="LITERAL"
+>root</TT
+>).  This gaffe would allow people to remove or change the permissions of files that belong to <TT
+CLASS="LITERAL"
+>daemon</TT
+> (using the <B
+CLASS="COMMAND"
+>rm</B
+> or <B
+CLASS="COMMAND"
+>chmod</B
+> commands in the aliases file).  To some extent, this possibility is avoided by using <B
+CLASS="COMMAND"
+>smrsh</B
+>; however, one must still be careful as to what files are in the <TT
+CLASS="FILENAME"
+>/etc/smrsh/</TT
+> directory.</P
+><P
+>Another important security issue is that the user who can access the aliases file can append or write to files that belong to <TT
+CLASS="LITERAL"
+>daemon</TT
+> by using file redirection (a <TT
+CLASS="LITERAL"
+>&#62;&#62;</TT
+> or <TT
+CLASS="LITERAL"
+>&#62;</TT
+> instead of a <TT
+CLASS="LITERAL"
+>|</TT
+>).  Even so, this breach too can be countered by adding a line to the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file limiting what files can be written to through the aliases file.  Add the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>O SaveFileEnvironment=/path/to/safe/files</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file or add
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>define(`confSAFE_FILE_ENV',`/path/to/safe/files')</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.mc</TT
+> file.
+However, this maneuver only leaves a thin layer of security between the user and <TT
+CLASS="LITERAL"
+>daemon</TT
+>.  A much better idea would be to have the aliases file only writable by root and to create an SUID root program to add and remove the Majordomo related aliases.</P
+><P
+>In the case of include or .forward files, commands or redirections are run as the user who owns  the file.  Therefore, if a file is group writable, a member of the group can execute commands as the user who owns the file.  In other words, any user in the <TT
+CLASS="LITERAL"
+>majordomo</TT
+> group could execute commands as Majordomo.  However, since the <TT
+CLASS="LITERAL"
+>majordomo</TT
+> user is created without a shell, commands or redirections will not be processed in include files owned by <TT
+CLASS="LITERAL"
+>majordomo</TT
+>.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN233"
+>2.4.2. Consequences of Unsafe Group Writable Directory Paths</A
+></H3
+><P
+>If a user has group write permission to a directory, for example <TT
+CLASS="FILENAME"
+>/etc/</TT
+>, the user could simply move any file and create a new one in its place.  An attack might go something like this
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+>[mallory@kes etc]$ </TT
+><TT
+CLASS="USERINPUT"
+><B
+>mv aliases ...</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>[mallory@kes etc]$ </TT
+><TT
+CLASS="USERINPUT"
+><B
+>vi aliases</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+The user can then make her own aliases!  This attack, however, could be prevented by Sendmail's security checking for unsafe group writable paths.  Such an attack also would work with include and .forward files having unsafe paths.</P
+><P
+>In the case of Majordomo, the user in the <TT
+CLASS="LITERAL"
+>majordomo</TT
+> group already has access to the include files, so this does not really compromise security.  However, an administrator should be careful to prevent these undesirable unsafe group writable directory paths from occurring in the future because Sendmail will <I
+CLASS="EMPHASIS"
+>not</I
+> check for them.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN245"
+>2.4.3. Protecting Subscribers' Privacy</A
+></H3
+><P
+>Unfortunately, sophisticated spammers can expand mail lists using the <B
+CLASS="COMMAND"
+>EXPN</B
+> SMTP command.  For this reason, administrators should disable this feature when serving mailing lists.  Add the line
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>O PrivacyOptions=noexpn</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.cf</TT
+> file or
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>define(`confPRIVACY_FLAGS',`noexpn')</PRE
+></TD
+></TR
+></TABLE
+>
+
+to the <TT
+CLASS="FILENAME"
+>sendmail.mc</TT
+> file.</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x13.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x253.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Majordomo</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

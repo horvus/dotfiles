@@ -1,0 +1,399 @@
+<HTML
+><HEAD
+><TITLE
+>Dealing with Other Bandwidth-consuming Protocols Using CBQ</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Bandwidth Limiting HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Installing and Configuring Necessary Software"
+HREF="install.html"><LINK
+REL="NEXT"
+TITLE="Frequently Asked Questions"
+HREF="faq.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Bandwidth Limiting HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="install.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="faq.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="CBQ"
+>4. Dealing with Other Bandwidth-consuming Protocols Using CBQ</A
+></H1
+><P
+>We must remember that our LAN users can spoil our efforts from chapter
+3, if they use Napster, Kazaa or Realaudio. We must also remember that we didn't
+block <TT
+CLASS="FILENAME"
+>ftp</TT
+> traffic in section 3.3.</P
+><P
+>We will achieve it in a different way -- not by limiting downloading directly,
+but rather, indirectly. If our internet device is <TT
+CLASS="LITERAL"
+>ppp0</TT
+>
+and LAN device is <TT
+CLASS="LITERAL"
+>eth0</TT
+>, we will limit outgoing traffic
+on interface <TT
+CLASS="LITERAL"
+>eth0</TT
+>, and thus, limit incoming traffic to <TT
+CLASS="LITERAL"
+>ppp0</TT
+>.</P
+><P
+>To do it, we will get familiar with CBQ and <TT
+CLASS="FILENAME"
+>cbq.init</TT
+>
+script. You can obtain it from <A
+HREF="ftp://ftp.equinox.gu.net/pub/linux/cbq/"
+TARGET="_top"
+>ftp://ftp.equinox.gu.net/pub/linux/cbq/</A
+>. Download <TT
+CLASS="FILENAME"
+>cbq.init-v0.6.2</TT
+> and put it in<TT
+CLASS="FILENAME"
+> /etc/rc.d/</TT
+>.</P
+><P
+>You will also need <TT
+CLASS="FILENAME"
+>iproute2</TT
+> installed. It comes
+with every Linux distribution.</P
+><P
+>Now look in your <TT
+CLASS="FILENAME"
+>/etc/sysconfig/cbq/</TT
+> directory.
+There, you should have an example file, which should work with <TT
+CLASS="FILENAME"
+>cbq.init</TT
+>. If it isn't there, you probably don't have it compiled in your
+kernel nor it isnt't present as modules. Well, in any case, just make that
+directory, put example files provided below, and see
+if it'd work for you.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN235"
+>4.1. FTP</A
+></H2
+><P
+>In chapter 3, we didn't block ftp for two reasons -- so that we could do uploads, 
+and so
+that users with buggy IE5.5 could browse through <TT
+CLASS="FILENAME"
+>ftp</TT
+>
+directories. In all, our web browsers and <TT
+CLASS="FILENAME"
+>ftp</TT
+> programs
+should make downloads via our Squid proxy and <TT
+CLASS="FILENAME"
+>ftp</TT
+> uploads/renaming/deleting
+should be made via IP-masquerade.</P
+><P
+>We create a file called <TT
+CLASS="FILENAME"
+>cbq-10.ftp-network</TT
+> in the <TT
+CLASS="FILENAME"
+>/etc/sysconfig/cbq/</TT
+> directory:</P
+><P
+><B
+CLASS="COMMAND"
+># touch /etc/sysconfig/cbq/cbq-10.ftp-network</B
+></P
+><P
+>We insert the following lines into it:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>DEVICE=eth0,10Mbit,1Mbit
+RATE=15Kbit
+WEIGHT=1Kbit
+PRIO=5
+RULE=:20,192.168.1.0/24
+RULE=:21,192.168.1.0/24</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You will find the description of thses lines in <TT
+CLASS="FILENAME"
+>cbq.init-v0.6.2</TT
+> file.</P
+><P
+>When you start <TT
+CLASS="FILENAME"
+>/etc/rc.d/cbq.init-v0.6.2</TT
+> script,
+it will read your configuration, which is placed in <TT
+CLASS="FILENAME"
+>/etc/sysconfig/cbq/</TT
+>:</P
+><P
+><B
+CLASS="COMMAND"
+># /etc/rc.d/cbq.init-v0.6.2 start</B
+></P
+><P
+>If everything is working, we add <TT
+CLASS="FILENAME"
+>/etc/rc.d/cbq.init-v0.6.2 start</TT
+> to the end of your initializing scripts. Usually, it can
+be <TT
+CLASS="FILENAME"
+>/etc/rc.d/rc.local</TT
+>.</P
+><P
+>Thanks to this command, your server will not send <TT
+CLASS="FILENAME"
+>ftp</TT
+> data
+through <TT
+CLASS="FILENAME"
+>eth0</TT
+> faster than about 15kbits/s, and thus will not
+download <TT
+CLASS="FILENAME"
+>ftp</TT
+> data from the internet faster than 15kbits/s.Your LAN users
+will see that it's more efficient to use Squid proxy for doing <TT
+CLASS="FILENAME"
+>ftp</TT
+> downloads. They will be also able to browse <TT
+CLASS="FILENAME"
+>ftp</TT
+>
+directories using their buggy IE5.5.</P
+><P
+>There is also another bug in IE5.5 - when you right click on a file
+in a <TT
+CLASS="FILENAME"
+>ftp</TT
+> directory then select 'Copy To Folder',
+the file is downloaded not through proxy, but directly through IP-masquerade,
+thus omitting Squid with delay pools.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN266"
+>4.2. Napster, Realaudio, Windows Media and other issues</A
+></H2
+><P
+>Here, the idea is the same as with <TT
+CLASS="FILENAME"
+>ftp</TT
+>; we just
+add another port and set a different speed.</P
+><P
+>We create file called <TT
+CLASS="FILENAME"
+>cbq-50.napster-network</TT
+> in the <TT
+CLASS="FILENAME"
+>/etc/sysconfig/cbq/</TT
+> directory:</P
+><P
+><B
+CLASS="COMMAND"
+># touch /etc/sysconfig/cbq/cbq-50.napsterandlive</B
+></P
+><P
+>Put these lines into that file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>DEVICE=eth0,10Mbit,1Mbit
+RATE=35Kbit
+WEIGHT=3Kbit
+PRIO=5
+#Windows Media Player.
+RULE=:1755,192.168.1.0/24
+#Real Player uses TCP port 554, for UDP it uses different ports,
+#but generally RealAudio in UDP doesn't consume much bandwidth.
+RULE=:554,192.168.1.0/24
+RULE=:7070,192.169.1.0/24
+#Napster uses ports 6699 and 6700, maybe some other?
+RULE=:6699,192.168.1.0/24
+RULE=:6700,192.168.1.0/24
+#Audiogalaxy uses ports from 41000 to as high as probably 41900,
+#there are many of them, so keep in mind I didn't list all of
+#them here. Repeating 900 nearly the same lines would be of course
+#pointless. We will simply cut out ports 410031-41900 using
+#ipchains or iptables.
+RULE=:41000,192.168.1.0/24
+RULE=:41001,192.168.1.0/24
+#continue from 41001 to 41030
+RULE=:41030,192.168.1.0/24
+#Some clever users can connect to SOCKS servers when using Napster,
+#Audiogalaxy etc.; it's also a good idea to do so
+#when you run your own SOCKS proxy
+RULE=:1080,192.168.1.0/24
+#Add any other ports you want; you can easily check and track
+#ports that programs use with IPTraf
+#RULE=:port,192.168.1.0/24</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Don't forget to cut out remaining Audiogalaxy ports (41031-41900), using ipchains
+(kernels 2.2.x or iptables (kernels 2.4.x).</P
+><P
+>Kernels 2.2.x.</P
+><P
+><B
+CLASS="COMMAND"
+>/sbin/ipchains -A input -s 192.168.1.1/24 -d ! 192.168.1.1 41031:41900 
+-p TCP -j REJECT</B
+></P
+><P
+>Kernels 2.4.x.</P
+><P
+><B
+CLASS="COMMAND"
+>/sbin/iptables -A FORWARD -s 192.168.1.1/24 -d ! 192.168.1.1 
+--dport 41031:41900 -p TCP -j REJECT</B
+></P
+><P
+>Don't forget to add a proper line to your initializing scripts.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="install.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="faq.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Installing and Configuring Necessary Software</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Frequently Asked Questions</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

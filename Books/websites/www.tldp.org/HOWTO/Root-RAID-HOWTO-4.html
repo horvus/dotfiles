@@ -1,0 +1,890 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Root RAID HOWTO cookbook: initrd Cookbook for root mounted RAID</TITLE>
+ <LINK HREF="Root-RAID-HOWTO-5.html" REL=next>
+ <LINK HREF="Root-RAID-HOWTO-3.html" REL=previous>
+ <LINK HREF="Root-RAID-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Root-RAID-HOWTO-5.html">Next</A>
+<A HREF="Root-RAID-HOWTO-3.html">Previous</A>
+<A HREF="Root-RAID-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. <I>initrd</I> Cookbook for root mounted RAID</A></H2>
+
+<P>This is the procedure to make an 'initrd' ramdisk with rescue tools for raid.
+<P>Specifically, this document referrs to RAID1 and RAID5 implementations.
+<H2><A NAME="ss4.1">4.1 Security Reminder</A>
+</H2>
+
+<P>The rescue file system may be used stand alone. Should your raid array 
+fail to mount, you are left with the rescue system mounted and running. 
+TAKE THE APPROPRIATE SECURITY PRECAUTIONS!!!
+<P>
+<H2><A NAME="ss4.2">4.2 Build the Kernel and Raid Tools</A>
+</H2>
+
+<P>The first thing that must be done is to patch and build your kernel
+and become familiar with the raid tools. Make sure and include 
+<A HREF="Root-RAID-HOWTO-12.html#Appendix-E">Gadi's raid stop patch</A> in Appendix E.
+Configure, mount and test your raid device(s). The details of how to do this
+are included in the <B>raidtools</B> package and briefly reviewed later in
+this document.
+<P>
+<H2><A NAME="ss4.3">4.3 Build the <I>initrd</I> Rescue and Boot filesystem</A>
+</H2>
+
+<P>I used the <B>Slackware-3.4</B> distribution to build both the Rescue/Boot
+filesystem and the filesystem for the production machine. Any linux
+distribution should work fine. If you use a different distribution, review
+the Slackware specific portion of this procedure and modify it to suit your needs.
+<P>
+<P>I use loadlin to boot the kernel image and ramdisk from a dos partition
+simply because there are oddball devices in my system that have dos
+configuration software. Lilo will work just as well and a small linux
+partition can be used instead containing only the raid/boot files and the
+<B>lilo</B> record.
+<P>For the raid boot/rescue system, 
+I chose to create a minimum ramdisk system using the Slackware 'setup' 
+script followed by installing the 'linuxthreads' package and 'raidtools'
+over the clean Slackware installation on my ramdisk. I used the
+<I><B>identical</B></I> procedure to build the production system. So the
+rescue and production systems are very similar.
+<P>This installation process gives me a 'bare' system 
+(save a copy of the file) to which I overlay
+<P>
+<PRE>
+        /lib/modules/2.x.x......
+        /etc .... with a modified fstab, mdtab, raidX.conf, raidboot.conf
+        /etc/rc.d
+        /dev/md*
+</PRE>
+<P>from my current system to customize it for the particular kernel
+and machine that it is/will-be running on.
+<P>This makes the boot/rescue system the same system that is running
+on the root mounted raid device, just skinnyed down a bit, while 
+allowing the library, etc... revisions to always be current.
+<P>
+<H2><A NAME="ss4.4">4.4 Start the STEP by STEP instructions</A>
+</H2>
+
+<P>From the root home directory (/root):
+<P>
+<PRE>
+        cd /root
+        mkdir raidboot
+        cd raidboot
+</PRE>
+<P>Create a mountpoints to work on
+<P>
+<PRE>
+        mkdir mnt
+        mkdir mnt2
+</PRE>
+<P>
+<P>Make a file large enough to do the file system install. This
+will be a lot larger than the final rescue file system. 
+I chose 24 megs since 16 megs is not large enough 
+<PRE>
+        dd if=/dev/zero of=build bs=1024k count=24
+</PRE>
+
+associate the file with a loop device
+and generate an ext2 file system on the file
+<P>
+<PRE>
+        losetup /dev/loop0 build
+        mke2fs -v -m0 -L initrd /dev/loop0
+        mount /dev/loop0 mnt
+</PRE>
+<H2><A NAME="ss4.5">4.5 Install the distribution - Slackware Specific</A>
+</H2>
+
+<P>
+<A HREF="#threads">...skip Slackware Specific stuff</A>
+and go to next section.
+<P>Now that an empty filesystem is created and mounted, run "setup".
+<P>
+<PRE>
+Specify         /root/raidboot/mnt
+</PRE>
+<P>as the <B>'target'</B>.  The source is whatever you normally install from.
+Select the packages you wish to install and proceed but <B>DO NOT</B> configure.
+<P>Choose 'EXPERT' prompting mode.
+<P>I chose 'A', 'AP, and 'N' installing only the minimum to run the system 
+plus an editor I am familiar with (vi, jed, joe) that is reasonably compact.
+<PRE>
+lqqqqqqqq SELECTING PACKAGES FROM SERIES A (BASE LINUX SYSTEM) qqqqqqqqk
+x lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk x
+x x   [X] aaa_base  Basic filesystem, shell, and utils - REQUIRED    x x
+x x   [X] bash      GNU bash-1.14.7 shell - REQUIRED                 x x
+x x   [X] devs      Device files found in /dev - REQUIRED            x x
+x x   [X] etc       System config files &amp; utilities - REQUIRED       x x
+x x   [X] shadow    Shadow password suite - REQUIRED                 x x
+x x   [ ] ide       Linux 2.0.30 no SCSI (YOU NEED 1 KERNEL)         x x
+x x   [ ] scsi      Linux 2.0.30 with SCSI (YOU NEED 1 KERNEL)       x x
+x x   [ ] modules   Modular Linux device drivers                     x x
+x x   [ ] scsimods  Loadable SCSI device drivers                     x x
+x x   [X] hdsetup   Slackware setup scripts - REQUIRED               x x
+x x   [ ] lilo      Boots Linux (not UMSDOS), DOS, OS/2, etc.        x x
+x x   [ ] bsdlpr    BSD lpr - printer spooling system                x x
+x x   [ ] loadlin   Boots Linux (UMSDOS too!) from MS-DOS            x x
+x x   [ ] pnp       Plug'n'Play configuration tool                   x x
+x x   [ ] umsprogs  Utilities needed to use the UMSDOS filesystem    x x
+x x   [X] sysvinit  System V-like INIT programs - REQUIRED           x x
+x x   [X] bin       GNU fileutils 3.12, elvis, etc. - REQUIRED       x x
+x x   [X] ldso      Dynamic linker/loader - REQUIRED                 x x
+x x   [ ] ibcs2     Runs SCO/SysVr4 binaries                         x x
+x x   [X] less      A text pager utility - REQUIRED                  x x
+x x   [ ] pcmcia    PCMCIA card services support                     x x
+x x   [ ] getty     Getty_ps 2.0.7e - OPTIONAL                       x x
+x x   [X] gzip      The GNU zip compression - REQUIRED               x x
+x x   [X] ps        Displays process info - REQUIRED                 x x
+x x   [X] aoutlibs  a.out shared libs - RECOMMENDED                  x x
+x x   [X] elflibs   The ELF shared C libraries - REQUIRED            x x
+x x   [X] util      Util-linux utilities - REQUIRED                  x x
+x x   [ ] minicom   Serial transfer and modem comm package           x x
+x x   [ ] cpio      The GNU cpio backup/archiving utility            x x
+x x   [X] e2fsbn    Utilities for the ext2 file system               x x
+x x   [X] find      GNU findutils 4.1                                x x
+x x   [X] grep      GNU grep 2.0                                     x x
+x x   [ ] kbd       Change keyboard mappings                         x x
+x x   [X] gpm       Cut and paste text with your mouse               x x
+x x   [X] sh_utils  GNU sh-utils 1.16 - REQUIRED                     x x
+x x   [X] sysklogd  Logs system and kernel messages                  x x
+x x   [X] tar       GNU tar 1.12 - REQUIRED                          x x
+x x   [ ] tcsh      Extended C shell version 6.07                    x x
+x x   [X] txtutils  GNU textutils-1.22 - REQUIRED                    x x
+x x   [ ] zoneinfo  Configures your time zone                        x x
+x mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj x
+</PRE>
+
+From the 'AP series, I use only 'JOE', and editor I like, and 'MC' a
+small and useful file management tool. You choose the utilities you
+will need on your system.
+<PRE>
+lqqqqqqqqq SELECTING PACKAGES FROM SERIES AP (APPLICATIONS) qqqqqqqqqk
+x x     [ ] ispell    The International version of ispell          x x
+x x     [ ] jove      Jonathan's Own Version of Emacs text editor  x x
+x x     [ ] manpgs    More man pages (online documentation)        x x
+x x     [ ] diff      GNU diffutils                                x x
+x x     [ ] sudo      Allow special users limited root access      x x
+x x     [ ] ghostscr  GNU Ghostscript version 3.33                 x x
+x x     [ ] gsfonts1  Ghostscript fonts (part one)                 x x
+x x     [ ] gsfonts2  Ghostscript fonts (part two)                 x x
+x x     [ ] gsfonts3  Ghostscript fonts (part three)               x x
+x x     [ ] jed       JED programmer's editor                      x x
+x x     [X] joe       joe text editor, version 2.8                 x x
+x x     [ ] jpeg      JPEG image compression utilities             x x
+x x     [ ] bc        GNU bc - arbitrary precision math language   x x
+x x     [ ] workbone  a text-based audio CD player                 x x
+x x     [X] mc        The Midnight Commander file manager          x x
+x x     [ ] mt_st     mt ported from BSD - controls tape drive     x x
+x x     [ ] groff     GNU troff document formatting system         x x
+x x     [ ] quota     User disk quota utilities                    x x
+x x     [ ] sc        The 'sc' spreadsheet                         x x
+x x     [ ] texinfo   GNU texinfo documentation system             x x
+x x     [ ] vim       Improved vi clone                            x x
+x x     [ ] ash       A small /bin/sh type shell - 62K             x x
+x x     [ ] zsh       Zsh - a custom *nix shell                    x x
+x mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj x
+</PRE>
+
+From the 'N' package I only loaded TCPIP.  This isn't really necessary, 
+but is very handy and allows access to the network while working on a 
+repair or update with the root raid array dismounted. TCPIP also 
+contains 'biff' which is used by some of the applications in 'A'. If 
+you don't install 'N' you might want to install the biff package anyway.
+<PRE>
+lqqqq SELECTING PACKAGES FROM SERIES N (NETWORK/NEWS/MAIL/UUCP) qqqqqk
+x lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk x
+x x    [ ] apache    Apache WWW (HTTP) server                      x x
+x x    [ ] procmail  Mail delivery/filtering utility               x x
+x x    [ ] dip       Handles SLIP/CSLIP connections                x x
+x x    [ ] ppp       Point-to-point protocol                       x x
+x x    [ ] mailx     The mailx mailer                              x x
+x x    [X] tcpip     TCP/IP networking programs                    x x
+x x    [ ] bind      Berkeley Internet Name Domain server          x x
+x x    [ ] rdist     Remote file distribution utility              x x
+x x    [ ] lynx      Text-based World Wide Web browser             x x
+x x    [ ] uucp      Taylor UUCP 1.06.1 with HDB &amp;&amp; Taylor configs x x
+x x    [ ] elm       Menu-driven user mail program                 x x
+x x    [ ] pine      Pine menu-driven mail program                 x x
+x x    [ ] sendmail  The sendmail mail transport agent             x x
+x x    [ ] metamail  Metamail multimedia mail extensions           x x
+x x    [ ] smailcfg  Extra configuration files for sendmail        x x
+x x    [ ] cnews     Spools and transmits Usenet news              x x
+x x    [ ] inn       InterNetNews news transport system            x x
+x x    [ ] tin       The 'tin' news reader (local or NNTP)         x x
+x x    [ ] trn       'trn' for /var/spool/news                     x x
+x x    [ ] trn-nntp  'trn' for NNTP (install 1 'trn' maximum)      x x
+x x    [ ] nn-spool  'nn' for /var/spool/news                      x x
+x x    [ ] nn-nntp   'nn' for NNTP (install 1 'nn' maximum)        x x
+x x    [ ] netpipes  Network pipe utilities                        x x
+x mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj x
+</PRE>
+
+With the installation complete, say no to everything else (no to all
+configuration requests) and exit the script.
+<P>
+<H2><A NAME="threads"></A> <A NAME="ss4.6">4.6 Install linux <B>pthreads</B></A>
+</H2>
+
+<P>Now you must install the 'linuxthreads-0.71' library.
+I have included this diff for the linuxthreads Makefile rather 
+than explain the details of the
+installation by hand.  Save the original Makefile, apply the diff
+and then:
+<P>
+<PRE>
+        cd /usr/src/linuxthreads-0.71
+  patch
+        make
+        make install
+</PRE>
+<A NAME="thrdiff"></A> <PRE>
+-------------------diff Makefile.old  Makefile.raid-----------------
+2a3,13
+> # If you are building "linuxthreads" for installation on a mount
+> # point which is not the "root" partition, redefine 'BUILDIR' to
+> # the mount point to use as the "root" directory
+> # You may wish to do this if you are building an 'initial ram disk'
+> # such as used with bootable root raid devices.
+> # REQUIRES ldconfig version 1.9.5 or better
+> # do ldconfig -v to check
+> #
+> BUILDIR=/root/raidboot/mnt
+> #BUILDIR=
+> 
+81,82c92,93
+&lt;       install pthread.h $(INCLUDEDIR)/pthread.h
+&lt;       install semaphore.h $(INCLUDEDIR)/semaphore.h
+---
+>       install pthread.h $(BUILDIR)$(INCLUDEDIR)/pthread.h
+>       install semaphore.h $(BUILDIR)$(INCLUDEDIR)/semaphore.h
+84c95
+&lt;       test -f /usr/include/sched.h || install sched.h $(INCLUDEDIR)/sched.h
+---
+>       test -f $(BUILDIR)/usr/include/sched.h || install sched.h $(BUILDIR)$(INCLUDEDIR)/sched.h
+86,89c97,103
+&lt;       install $(LIB) $(LIBDIR)/$(LIB)
+&lt;       install $(SHLIB) $(SHAREDLIBDIR)/$(SHLIB)
+&lt;       rm -f $(LIBDIR)/$(SHLIB0)
+&lt;       ln -s $(SHAREDLIBDIR)/$(SHLIB) $(LIBDIR)/$(SHLIB0)
+---
+>       install $(LIB) $(BUILDIR)$(LIBDIR)/$(LIB)
+>       install $(SHLIB) $(BUILDIR)$(SHAREDLIBDIR)/$(SHLIB)
+>       rm -f $(BUILDIR)$(LIBDIR)/$(SHLIB0)
+>       ln -s $(SHAREDLIBDIR)/$(SHLIB) $(BUILDIR)$(LIBDIR)/$(SHLIB0)
+> ifneq ($(BUILDIR),)
+>       ldconfig -r ${BUILDIR} -n $(SHAREDLIBDIR)
+> else
+91c105,106
+&lt;       cd man; $(MAKE) MANDIR=$(MANDIR) install
+---
+> endif
+>       cd man; $(MAKE) MANDIR=$(BUILDIR)$(MANDIR) install
+</PRE>
+<P>
+<H2><A NAME="ss4.7">4.7 Install Raid Tools</A>
+</H2>
+
+<P>The next step is the installation of the raid tools.
+raidtools-0.42
+<P>You must run the "configure" script to point the Makefile
+at the build directory for the ramdisk files
+<PRE>
+  cd /usr/src/raidtools-0.42
+  configure --sbindir=/root/raidboot/mnt/sbin --prefix=/root/raidboot/mnt/usr
+  make
+  make install
+</PRE>
+
+Now!! the Makefile for install is not quite right so do the following
+to clean up. This will be fixed in future releases so that the re-linking
+will not be necessary.
+<P>
+<BLOCKQUOTE>
+Fix the make install error
+</BLOCKQUOTE>
+<P>The file links specified in the Makefile at 'LINKS' must be removed
+and re-linked to operate properly.
+<PRE>
+        cd /root/raidboot/mnt/sbin
+        ln -fs mdadd mdrun
+        ln -fs mdadd mdstop
+</PRE>
+<P>
+<H2><A NAME="ss4.8">4.8 Remove un-needed directories and files from new filesystem.</A>
+</H2>
+
+<P>Delete the following directories from filesystem 
+(CAUTION DON'T DELETE FROM YOUR RUNNING SYSTEM)
+it's easy to do, guess how I found out!!!
+<PRE>
+        cd /root/raidboot/mnt
+        rm -r home/ftp/*
+        rm -r lost+found
+        rm -r usr/doc
+        rm -r usr/info
+        rm -r usr/local/man
+        rm -r usr/man
+        rm -r usr/openwin
+        rm -r usr/share/locale
+        rm -r usr/X*
+        rm -r var/man
+        rm -r var/log/packages
+        rm -r var/log/setup
+        rm -r var/log/disk_contents
+</PRE>
+<P>
+<H2><A NAME="ss4.9">4.9 Create /dev/md<I>x</I></A>
+</H2>
+
+<P>The last step simply copies the /dev/md* devices from the current file system
+onto the rescue file system.  You could create these with mknode.
+<PRE>
+        cp -a /dev/md* /root/raidboot/mnt/dev
+</PRE>
+<H2><A NAME="ss4.10">4.10 Create a bare filesystem suitable for <I>initrd</I></A>
+</H2>
+
+<P>Now you have a clean re-useable filesystem ready for customization. 
+Once customized, this file system can be used for rescue should the raid
+device(s) become corrupted and the raid tools needed to fix them. It will
+also be used to boot and root-mount the raid device by adding the linuxrc
+file which will be discussed next.
+<P>Copy the file system to a smaller device for the initrd file,
+16 megs should be large enough.
+<P>Create the smaller file system and mount it
+<PRE>
+        cd /root/raidboot
+        dd if=/dev/zero of=bare.fs bs=1024k count=16
+</PRE>
+
+associate the file with a loop device
+and generate a ext2 file system on the file
+<PRE>
+        losetup /dev/loop1 bare.fs
+        mke2fs -v -m0 -L initrd /dev/loop1
+        mount /dev/loop1 mnt2
+</PRE>
+
+Copy the 'build' file system to 'bare.fs'
+<PRE>
+        cp -a mnt/* mnt2
+</PRE>
+
+Save the 'bare.fs' system before customization so later update is easy.
+The 'build' file system is no longer needed and may be deleted.
+<PRE>
+        cd /root/raidboot
+        umount mnt
+        umount mnt2
+        losetup -d /dev/loop0
+        losetup -d /dev/loop1
+        rm build
+        cp bare.fs rescue
+        gzip -9 bare.fs
+</PRE>
+<H3>Create the BOOT/RESCUE <I><B>initrd</B></I> filesystem</H3>
+
+<P>Now copy the system dependent items that match the kernel from the
+development platform, or you can manually modify the files in the
+rescue file system to match your target system.
+<PRE>
+        losetup /dev/loop0 rescue
+        mount /dev/loop0 mnt
+</PRE>
+
+Make sure your etc directory is clean of <CODE>*~</CODE>, core and log files.
+The next 2 commands creates some warning messages, ignore them.
+<PRE>
+        cp -dp /etc/* mnt/etc
+        cp -dp /etc/rc.d/* mnt/etc/rc.d
+
+        mkdir  mnt/lib/modules
+        cp -a  /lib/modules/2.x.x mnt/lib/modules &lt;--- your current 2.x.x
+</PRE>
+<H3><A NAME="corrections"></A> Corrections for the Rescue System </H3>
+
+<P>Edit the following files to correct them for your rescue system. Some file
+names listed below are Slackware specific but have equivalents in other 
+distributions.
+<PRE>
+        cd mnt
+
+Non-network
+        etc/fstab
+        etc/mdtab       should work OK
+Network
+        etc/hosts
+        etc/resolv.conf 
+        etc/hosts.equiv         and related files
+        etc/rc.d/rc.inet1       correct ip#, mask, gateway, etc...
+        etc/rc.d/rc.S           remove entire section on file system status
+                from:
+                        # Test to see if the root partition is read-only
+                to but not including:
+                        # remove /etc/mtab* so that mount will .....
+                                This avoids the annoying warning that
+                                the ramdisk is mounted rw.
+        etc/rc.d/rc.xxxxx       others as required, see later on in this doc
+        root/.rhosts            if present
+        home/xxxx/xxxx          others as required
+
+    WARNING:    The above procedure moves your password and shadow
+                files onto the rescue disk!!!!!
+
+    WARNING:    You may not wish to do this for security reasons.
+</PRE>
+
+Create any directories for mounting /dev/disk... as may be required
+that are unique to your system.  These are the mountpoints for booting
+the system (boot partition and backup boot partition). My system boot from
+dos using <B>loadlin</B>, however linux partition(s) and lilo will work fine.
+My system uses:
+<PRE>
+        cd /root/raidboot/mnt           &lt;--- initrd root
+        mkdir dosa                      dos partition mount point
+        mkdir dosb                      dos mirror mount point
+</PRE>
+
+The rescue file system is complete!
+<P>You will note upon examination of the files in the rescue file
+system, that there are still many files that could be deleted.
+I have not done this since it would overly complicate this 
+procedure and most raid systems have adequate disk and memory.
+If you wish to skinny down the file system, go to it!
+<P>
+<H2><A NAME="ss4.11">4.11 Making 'initrd' boot the RAID device - linuxrc</A>
+</H2>
+
+<P>To make the rescue disk boot the raid device, you need only copy
+the executable script file:
+<P>
+<BLOCKQUOTE>
+<B>linuxrc</B>
+</BLOCKQUOTE>
+<P>to the root of the device.
+<P>The theory of operation for this <B>linuxrc</B> file is discussed in 
+<A HREF="Root-RAID-HOWTO-14.html#Appendix-G">Appendix G, linuxrc theory of operation</A>.
+<P>A very simple and much easier to understand (working) linuxrc is
+included in 
+<A HREF="Root-RAID-HOWTO-11.html#Appendix-D">Appendix D</A>,
+<I>obsolete linuxrc and shutdown scripts</I>. Copy the following text to
+<B>linuxrc</B> and save in your development area.
+<P>
+<A NAME="linuxrc"></A> 
+<PRE>
+ -------------------- linuxrc ----------------------
+#!/bin/sh
+# ver 1.13 3-6-98
+#
+################# BEGIN 'linuxrc' ##################
+#                DEFINE FUNCTIONS                  #
+####################################################
+# Define 'Fault' function in the event something 
+# goes wrong during the execution of 'linuxrc'
+#
+FaultExit () {
+# correct fstab to show '/dev/ram0' for rescue system
+    /bin/cat /etc/fstab | {
+    while read Line
+    do  
+        if [ -z "$( echo ${Line} | /usr/bin/grep md0 )" ]; then
+            echo ${Line}
+        else
+            echo "/dev/ram0 / ext2 defaults 1 1"
+        fi
+    done
+    } > /etc/tmp.$$
+    /bin/mv /etc/tmp.$$ /etc/fstab
+#       point root at /dev/ram0 (the rescue system)
+        echo 0x100>/proc/sys/kernel/real-root-dev
+        /bin/umount /proc
+        exit
+}
+
+# Define 'Warning' procdure to print banner on boot terminal
+#
+Warning () {
+    echo '*********************************'
+    echo -e " $*"
+    echo '*********************************'
+}
+
+# Define 'SplitKernelArg' to help extract 'Raid' related kernel arguments
+SplitKernelArg () { eval $1='$( IFS=,; echo $2)' }
+
+#Define 'SplitConfArgs' to help extract system configuration arguments
+SplitConfArgs () {
+    RaidBootType=$1
+    RaidBootDevice=$2
+    RaidConfigPath=$3
+}
+########################################################
+################### MAIN linuxrc #######################
+########################################################
+# mount the proc file system
+/bin/mount /proc
+
+# Get the boot partition and configuration location from command line
+CMDLINE=`/bin/cat /proc/cmdline`
+for Parameter in $CMDLINE; do
+    Parameter=$( IFS='='; echo ${Parameter} )
+    case $Parameter in
+        Raid*) SplitKernelArg $Parameter;;
+    esac
+done
+
+# check for 'required raid boot'
+if [ -z "${Raid_Conf}" ]; then
+    Warning Kernel command line \'Raid_Conf\' missing
+    FaultExit
+fi
+SplitConfArgs $Raid_Conf
+
+# tmp mount the boot partition
+/bin/mount -t ${RaidBootType} ${RaidBootDevice} /mnt
+
+# get etc files from primary raid system
+pushd /etc
+
+# this will un-tar into 'etc' (see rc.6)
+if [ ! -f /mnt/${RaidConfigPath}/raidboot.etc ]; then
+# bad news, this file should be here
+    Warning required file \'raidboot.etc\' \
+    missing from ${RaidBootDevice}/${RaidConfigPath} \\n \
+    \\tUsing rescue system defaults
+else
+    /bin/tar -xf /mnt/${RaidConfigPath}/raidboot.etc
+fi
+# get 'real' raidboot device for this boot
+# status path, and name of raidX.conf
+if [ ! -f /mnt/${RaidConfigPath}/raidboot.cfg ]; then
+# bad news, this file should be here
+    Warning required file 'raidboot.cfg' \
+    missing from ${RaidBootDevice}/${RaidConfigPath}\\n \
+    \\tUsing rescue system defaults
+# Get the first raidX.conf file name in $RArg1
+    RaidBootDevs=$RaidBootDevice
+    RaidStatusPath=$RaidConfigPath
+    for RaidConfigEtc in $( ls raid*.conf )
+    do break; done
+else
+    {
+    read RaidBootDevs
+    read RaidStatusPath
+    read RaidConfigEtc
+    } &lt; /mnt/${RaidConfigPath}/raidboot.cfg
+
+fi
+popd
+/bin/umount /mnt
+
+# Set a flag in case the raid status file is not found
+#
+RAIDOWN="raidboot.ro not found"
+RAIDREF="raidgood.ref not found"
+echo "Reading md0 shutdown status."
+
+# search for raid shutdown status
+for Device in ${RaidBootDevs}
+do
+#   these filesystem types should be in 'fstab' since
+#   the partitions must be mounted for a clean raid shutdown
+    /bin/mount ${Device} /mnt
+    if [ -f /mnt/${RaidStatusPath}/raidboot.ro ]; then
+        RAIDOWN=`/bin/cat /mnt/${RaidStatusPath}/raidboot.ro`
+        RAIDREF=`/bin/cat /mnt/${RaidStatusPath}/raidgood.ref`
+        /bin/umount /mnt
+        break
+    fi
+    /bin/umount /mnt
+done
+# Test for a clean shutdown with array matching reference
+if [ "${RAIDOWN}" != "${RAIDREF}" ]; then
+    Warning shutdown ERROR ${RAIDOWN}
+    FaultExit
+fi
+
+# The raid array is clean, remove shutdown status files
+for Device in ${RaidBootDevs}
+do
+    /bin/mount ${Device} /mnt
+    /bin/rm -f /mnt/${RaidStatusPath}/raidboot.ro
+    /bin/umount /mnt
+done
+
+# Write a clean superblock on all raid devices
+
+echo "write clean superblocks"
+/sbin/mkraid -f --only-superblock /etc/${RaidConfigEtc}
+
+# Activate raid array(s)
+if [ -z "$Raid_ALT" ]; then
+    /sbin/mdadd -ar
+else
+    /sbin/mdadd $Raid_ALT
+fi
+
+#  If there are errors - BAIL OUT and leave rescue running
+if [ $? -ne 0 ]; then
+   Warning some RAID device has errors
+   FaultExit
+fi
+
+# Everything is fine, let the kernel mount /dev/md0
+# tell the kernel to switch to /dev/md0 as the /root device
+# The 0x900 value is the device number calculated by:
+#  256*major_device_number + minor_device number
+echo "/dev/md0 mounted on root"
+echo 0x900>/proc/sys/kernel/real-root-dev
+# umount /proc to deallocate initrd device ram space
+/bin/umount /proc
+exit
+#------------------ end linuxrc ----------------------
+</PRE>
+
+Add 'linuxrc' to initrd boot device
+<PRE>
+        cd /root/raidboot
+        chmod 777 linuxrc
+        cp -p linuxrc mnt
+</PRE>
+<P>
+<H2><A NAME="modify_shutdown"></A> <A NAME="ss4.12">4.12 Modifying the rc-scripts for SHUTDOWN </A>
+</H2>
+
+<P>To complete the installation, modify the rc scripts to save
+the md status to the real root device when shutdown occurs.
+<PRE>
+In slackware this is rc.0 -> rc.6
+In debian 'bo' this is in both 'halt' and 'reboot'
+
+If you implement this in another distribution, please e-mail
+the instructions and sample files so they can be included here.
+</PRE>
+
+I have modified Bohumil Chalupa's raid stop work-around slightly. His
+original solution is presented in 
+<A HREF="Root-RAID-HOWTO-8.html#Appendix-A">Appendix A</A>.
+<P>Since there are no linux partitions left on the production system except
+<B>md0</B>, the boot partitions are used to store the <B>raidOK readonly</B> status.
+I chose to write a file to each of the duplicate boot partitions containing the
+status of the md array at shutdown and signifying that the
+md device has been remounted RO. This allows the system to be fail safe 
+when any of the hard drives die.
+<P>The shutdown script is modified to call 
+<A HREF="Root-RAID-HOWTO-13.html#Appendix-F">rc.raidown</A> which saves the necessary
+information to successfully reboot and mount the raid device. Examples of 
+shutdown scripts for various linux distributions are shown in
+<A HREF="Root-RAID-HOWTO-9.html#Appendix-B">Appendix B</A>.
+<P>
+<P>To capture the raid array shutdown status insert a call to
+<A HREF="Root-RAID-HOWTO-13.html#Appendix-F">rc.raidown</A>
+after any <B>case</B> statements (if present) but before the actual shutdown
+(kills, status saves, etc...) begins and before the file systems are 
+dismounted.
+<PRE>
+############ Save raid boot and status info ##############
+#
+  if [ -x /etc/rc.d/rc.raidown ]; then
+    /etc/rc.d/rc.raidown
+  fi
+################## end raid boot #########################
+</PRE>
+
+After all the file systems are dismounted (the root file system
+'will not' dismount) but before any powerfail status check add:
+<PRE>
+################ for raid arrays #########################
+# Stop all known raid arrays (except root which won't stop)
+  if [ -x /sbin/mdstop ]; then
+    echo "Stopping raid"
+    /sbin/mdstop -a
+  fi
+##########################################################
+</PRE>
+
+This will cleanly stop all raid devices except root.  Root status
+is passed to the next boot in <B>raidstat.ro</B>.
+<P>
+<P>Copy the rc file to your new raid array, the rescue file system that is
+still mounted on <B>/root/raidboot/mnt</B> and the development system 
+if it is on the same machine. 
+<P>Modify rescue <B>etc/fstab</B> as needed
+and make sure rescue <B>mdtab</B> is correct.
+<P>Now copy the rescue disk to your dos partition and everything should
+be ready to boot the raid device as root.
+<PRE>
+        umount mnt
+        losetup -d /dev/loop0
+        gzip -9 rescue
+</PRE>
+
+Copy rescue.gz to your boot partitions.
+<P>All that remains is to creat the configuration file <B>raidboot.conf</B>
+and test the new file system  by rebooting.
+<P>
+<H2><A NAME="raidboot-conf"></A> <A NAME="ss4.13">4.13 Configuring RAIDBOOT - raidboot.conf </A>
+</H2>
+
+<P>The comments following the example configuration file explain each of the
+three lines. This example file is for a 4 drive raid5 scsii array with 
+duplicate boot partitions on drives sda1 and sdb1. Put the paramaters
+descriptive of your file systems here instead.
+<PRE>
+  /dev/sda1 /dev/sdb1
+  linux
+  raid5.conf
+# comments may only be placed 'after' the three
+# configuration lines.
+#
+# This is 'raidboot.conf'
+#
+# line one, the partition(s) containing the 'initrd' raid-rescue system
+#       It is not necessary to boot from these partitions, however,
+#       since the rescue system will not fit on floppy, it is necessary
+#       to know which partitions are to be used to load the rescue system
+#
+# line two, the path to the raidboot config information
+#       Where the shutdown status, etc... is located at boot time
+#       It does NOT include the mount point information, only 'path'
+#       /mntpoint/'path'
+#
+# line -3-, name of the raid configuration file
+#       Current raid configuration file i.e. raid1.conf, raid5.conf
+</PRE>
+<P>
+<H2><A NAME="ss4.14">4.14 Kernel 'loadlin and lilo' variables for RESCUE and RAID</A>
+</H2>
+
+<P>There are two kernel variables for the RESCUE and RAID system, only the first need
+be specified.
+<UL>
+<LI>Raid_Conf=msdos,/dev/sda1,raidboot
+<BLOCKQUOTE>
+This variable points to raid boot device and configuration file.
+For floppy rescue boot, you may want to specify 
+this on the kernel command line or in the loadlin or lilo boot file
+</BLOCKQUOTE>
+<BLOCKQUOTE>
+format: <CODE>'filesystem-type,device,path-to-config-from-mountpoint'</CODE>
+</BLOCKQUOTE>
+</LI>
+<LI>Raid_ALT=-r,-p5,/dev/md0,/dev/sda3 /dev/sdb3 /dev/sdc3 /dev/sdd3
+<BLOCKQUOTE>
+Alternate mdadd parameters
+necessary when booting with non-redundant raid array. These are the comma
+separated command line parameters for <B>mdadd</B>. Unless they are needed to
+start a failed/non-redundant array, COMMENT OUT OR SPECIFY WITH A 'NULL'.
+</BLOCKQUOTE>
+<BLOCKQUOTE>
+i.e. Raid_ALT=
+</BLOCKQUOTE>
+</LI>
+</UL>
+
+Either of these parameters may be specified in the lilo or loadlin boot parameter
+file or on the loadlin kernel command line. Care must be taken that the maximum 
+line length is not exceeded, however, if the command line is used 
+(128 characters).
+<P>
+<P>When booting with <B>lilo</B>, the parameters are included in the lilo config
+file in the form:
+<PRE>
+append="Raid_Conf=msdos,/dev/sda1,raidboot"
+append="Raid_ALT=-r,-p5,/dev/md0,/dev/sda3 /dev/sdb3 /dev/sdc3 /dev/sdd3"
+</PRE>
+
+See <B>man lilo.conf</B> for more detailed information.
+<P>Since I have some hardware that requires DOS configuration utilities, I
+have a small dos partition on the system.
+Therefore, I used loadlin to boot the raid5 system from the dos
+partition with a mirror (copy) on the companion disk. An identical method is
+used for the raid1 system. The example below uses loadlin, but the procedure
+is very similar for lilo.
+<P>My dos root system contains a small editor among the utilities so I can modify
+the boot parameters of loadlin if necessary, allowing me to reboot the
+linux system on my swap disk while testing.
+<P>The dos system contains this tree for linux"
+<PRE>
+        c:\raidboot.bat
+        c:\raidboot\loadlin.exe
+        c:\raidboot\zimage
+        c:\raidboot\rescue.gz
+        c:\raidboot\raidboot.cfg
+        c:\raidboot\raidboot.etc
+        c:\raidboot\raidgood.ref
+        c:\raidboot\raidstat.ro (only at shutdown)
+</PRE>
+<A NAME="linuxbat"></A> linux.bat contains:
+<PRE>
+---------------------- linux.bat ---------------------------
+echo "Start the LOADLIN process:"
+c:\raidboot\loadlin @c:\raidboot\boot.par
+-------------------- end linux.bat -------------------------
+</PRE>
+
+boot.par contains:
+<PRE>
+        # loadlin boot parameter file
+        #
+        # version 1.02 3-6-98
+
+        # linux kernel image
+        c:\linux\zimage
+
+        # target root device
+        root=/dev/md0
+        #root=/dev/ram0
+        #root=/dev/sdc5
+
+        # mount root device as 'ro'
+        ro
+
+        # size of ram disk
+        ramdisk_size=16384
+
+        # initrd file name
+        initrd=c:\raidboot\rescue.gz
+        #noinitrd
+
+        # memory ends here
+        mem=131072k
+
+        # points to raid boot device, configuration file
+        # for floppy rescue boot, you may want to specify 
+        # this on the command line instead of here
+        # format 'filesystem-type,device,path-to-config-frm_mntpnt'
+        Raid_Conf=msdos,/dev/sda1,raidboot
+
+        # Alternate mdadd parameters
+        # necessary when boot with non-redundant raid
+        # otherwise, COMMENT OUT OR SPECIFY 'NULL'
+        #Raid_ALT=-r,-p5,/dev/md0,/dev/sda3 /dev/sdb3 /dev/sdc3 /dev/sdd3
+
+        # ethernet devices
+        ether=10,0x300,eth0
+
+***** >> NOTE!! the only difference between forcing the rescue system to
+            run and the raid device mounting, is the loadlin parameter
+
+                root=/dev/ram0          for the rescue system
+                root=/dev/md0           for RAID
+
+                With root=/dev/ram0 the RAID device will not mount
+                and the rescue system will run unconditionally.
+</PRE>
+<P>If the RAID array fails, the rescue system is left mounted and running.
+<P>
+<HR>
+<A HREF="Root-RAID-HOWTO-5.html">Next</A>
+<A HREF="Root-RAID-HOWTO-3.html">Previous</A>
+<A HREF="Root-RAID-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

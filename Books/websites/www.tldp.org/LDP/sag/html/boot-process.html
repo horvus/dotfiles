@@ -1,0 +1,414 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>The boot process in closer look</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Boots And Shutdowns"
+HREF="boots-and-shutdowns.html"><LINK
+REL="PREVIOUS"
+TITLE="An overview of boots and shutdowns"
+HREF="boot-overview.html"><LINK
+REL="NEXT"
+TITLE="More about shutdowns"
+HREF="shutdown.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="boot-overview.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. Boots And Shutdowns</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="shutdown.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BOOT-PROCESS"
+></A
+>8.2. The boot process in closer look</H1
+><P
+>When a PC is booted, the BIOS will do various tests to
+	check that everything looks all right, and will then start the actual 
+	booting.  This process is called the <I
+CLASS="GLOSSTERM"
+>power on self test
+	</I
+>, or POST for short.  It will choose a disk
+	drive (typically the first floppy drive, if there is a floppy
+	inserted, otherwise the first hard disk, if one is installed
+	in the computer; the order might be configurable, however)
+	and will then read its very first sector.  This is called the
+	<I
+CLASS="GLOSSTERM"
+>boot sector</I
+>; for a hard disk, it is also
+	called the <I
+CLASS="GLOSSTERM"
+>master boot record</I
+>, since a
+	hard disk can contain several partitions, each with their own
+	boot sectors.</P
+><P
+>The boot sector contains a small program (small enough to
+	fit into one sector) whose responsibility is to read the actual
+	operating system from the disk and start it.  When booting Linux
+	from a floppy disk, the boot sector contains code that just reads
+	the first few hundred blocks (depending on the actual kernel
+	size, of course) to a predetermined place in memory.  On a Linux
+	boot floppy, there is no filesystem, the kernel is just stored
+	in consecutive sectors, since this simplifies the boot process.
+	It is possible, however, to boot from a floppy with a filesystem,
+	by using LILO, the LInux LOader, or GRUB, the GRand Unifying 
+	Bootloader.</P
+><P
+>When booting from the hard disk, the code in the master
+	boot record will examine the partition table (also in the master
+	boot record), identify the active partition (the partition that is
+	marked to be bootable), read the boot sector from that partition,
+	and then start the code in that boot sector.  The code in the
+	partition's boot sector does what a floppy disk's boot sector
+	does: it will read in the kernel from the partition and start it.
+	The details vary, however, since it is generally not useful to
+	have a separate partition for just the kernel image, so the
+	code in the partition's boot sector can't just read the disk
+	in sequential order, it has to find the sectors wherever the
+	filesystem has put them.  There are several ways around this
+	problem, but the most common way is to use  a boot loader like
+	LILO or GRUB.  (The details
+	about how to do this are irrelevant for this discussion, however;
+	see the LILO or GRUB documentation for more information; it is most
+	thorough.)</P
+><P
+>When booting, the bootloader will normally go right ahead
+	and read in and boot the default kernel.  It is also possible
+	to configure the boot loader to be able to boot one of several kernels,
+	or even other operating systems than Linux, and it is possible
+	for the user to choose which kernel or operating system is to
+	be booted at boot time.  LILO, for example, can be configured so that if one
+	holds down the <B
+CLASS="KEYCAP"
+>alt</B
+>, <B
+CLASS="KEYCAP"
+>shift</B
+>, or
+	<B
+CLASS="KEYCAP"
+>ctrl</B
+> key at boot time (when LILO is loaded),
+	LILO will ask what is to be booted and not boot the default
+	right away.  Alternatively, the bootloader can be configured so that it
+	will always ask, with an optional timeout that will cause the
+	default kernel to be booted.</P
+><P
+>It is also possible to give a <I
+CLASS="GLOSSTERM"
+>kernel
+	command line argument</I
+>, after the name of the kernel
+	or operating system.  For a list of possible options you can read
+	<A
+HREF="http://www.tldp.org/HOWTO/BootPrompt-HOWTO.html"
+TARGET="_top"
+> 
+	http://www.tldp.org/HOWTO/BootPrompt-HOWTO.html</A
+>.</P
+><P
+>Booting from floppy and from hard disk have both their
+	advantages, but generally booting from the hard disk is nicer,
+	since it avoids the hassle of playing around with floppies.
+	It is also faster.  Most Linux distributions will setup the bootloader
+	for you during the install process.</P
+><P
+>After the Linux kernel has been read into the memory, by
+	whatever means, and is started for real, roughly the following
+	things happen:
+	
+	<P
+></P
+><UL
+><LI
+><P
+>	The Linux kernel is installed compressed, so it will first
+	uncompress itself.  The beginning of the kernel image
+	contains a small program that does this.
+	</P
+></LI
+><LI
+><P
+>	If you have a super-VGA card that Linux
+	recognizes and that has some special text modes (such as 100
+	columns by 40 rows), Linux asks you which mode
+	you want to use.  During the kernel compilation, it is
+	possible to preset a video mode, so that this is never asked.
+	This can also be done with LILO, GRUB or <B
+CLASS="COMMAND"
+>rdev</B
+>.
+	</P
+></LI
+><LI
+><P
+>	After this, the kernel checks what other hardware there is
+	(hard disks, floppies, network adapters, etc), and configures
+	some of its device drivers appropriately; while it does this,
+	it outputs messages about its findings.  For example, when I
+	boot, I it looks like this:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+>LILO boot:
+Loading linux.
+Console: colour EGA+ 80x25, 8 virtual consoles
+Serial driver version 3.94 with no serial options enabled
+tty00 at 0x03f8 (irq = 4) is a 16450
+tty01 at 0x02f8 (irq = 3) is a 16450
+lp_init: lp1 exists (0), using polling driver
+Memory: 7332k/8192k available (300k kernel code, 384k reserved, 176k 
+data)
+Floppy drive(s): fd0 is 1.44M, fd1 is 1.2M
+Loopback device init
+Warning WD8013 board not found at i/o = 280.
+Math coprocessor using irq13 error reporting.
+Partition check:
+  hda: hda1 hda2 hda3
+VFS: Mounted root (ext filesystem).
+Linux version 0.99.pl9-1 (root@haven) 05/01/93 14:12:20</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	The exact texts are different on different systems, depending
+	on the hardware, the version of Linux being used, and how
+	it has been configured.
+	</P
+></LI
+><LI
+><P
+> Then the kernel will try to mount the root
+	filesystem.  The place is configurable at compilation time,  or
+	any time with <B
+CLASS="COMMAND"
+>rdev</B
+> or the bootloader. The filesystem
+	type is detected automatically.  If the mounting of the root
+	filesystem fails, for example because you didn't remember to
+	include the corresponding filesystem driver in the kernel, the
+	kernel panics and halts the system (there isn't much it can do,
+	anyway).  </P
+><P
+>The root filesystem is usually mounted read-only (this can
+	be set in the same way as the place).  This makes it possible
+	to check the filesystem while it is mounted; it is not a good
+	idea to check a filesystem that is mounted read-write.
+	</P
+></LI
+><LI
+><P
+> After this, the kernel starts
+	the program <B
+CLASS="COMMAND"
+>init</B
+> (located in
+	<TT
+CLASS="FILENAME"
+>/sbin/init</TT
+>) in the background (this will
+	always become process number 1).  <B
+CLASS="COMMAND"
+>init</B
+> does
+	various startup chores.  The exact things it does depends on how
+	it is configured; see <A
+HREF="major-services.html#INIT"
+>Section 2.3.1</A
+> for more information
+	(not yet written).  It will at least start some essential
+	background daemons.  </P
+></LI
+><LI
+><P
+> <B
+CLASS="COMMAND"
+>init</B
+> then switches to
+	multi-user mode, and starts a <B
+CLASS="COMMAND"
+>getty</B
+> for virtual
+	consoles and serial lines.  <B
+CLASS="COMMAND"
+>getty</B
+> is the
+	program which lets people log in via virtual consoles and serial
+	terminals.  <B
+CLASS="COMMAND"
+>init</B
+> may also start some other
+	programs, depending on how it is configured.  </P
+></LI
+><LI
+><P
+> After this, the boot is complete, and the system
+	is up and running normally.  </P
+></LI
+></UL
+>
+    	</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="BOOTLOADERS"
+></A
+>8.2.1. A Word About Bootloaders</H2
+><P
+>TO BE ADDED</P
+><P
+>This section will give an overview of the difference between
+	GRUB and LILO.</P
+><P
+>For more information on LILO, you can read  
+	<A
+HREF="http://www.tldp.org/HOWTO/LILO.html"
+TARGET="_top"
+>	http://www.tldp.org/HOWTO/LILO.html</A
+></P
+><P
+>For more information on GRUB, you can visit  
+	<A
+HREF="http://www.gnu.org/software/grub/grub.html"
+TARGET="_top"
+>	http://www.gnu.org/software/grub/grub.html</A
+></P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="boot-overview.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="shutdown.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>An overview of boots and shutdowns</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="boots-and-shutdowns.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>More about shutdowns</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

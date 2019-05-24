@@ -1,0 +1,1236 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring Remote Loginand Execution</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="ImportantNetwork Features"
+HREF="x-087-2-appl.html"><LINK
+REL="PREVIOUS"
+TITLE="Remote Procedure Call"
+HREF="x-087-2-appl.rpc.html"><LINK
+REL="NEXT"
+TITLE="The Network Information System"
+HREF="x-087-2-nis.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-appl.rpc.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 12. ImportantNetwork Features</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-APPL.REMOTE"
+>12.5. Configuring Remote Loginand Execution</A
+></H1
+><P
+>It's often very useful to execute a command on a remote host and
+have input or output from that command be read from, or written to, a network
+connection.</P
+><P
+>&#13;
+
+
+
+
+The traditional commands used for executing commands on remote hosts are
+<B
+CLASS="COMMAND"
+>rlogin</B
+>, <B
+CLASS="COMMAND"
+>rsh</B
+> and <B
+CLASS="COMMAND"
+>rcp</B
+>.
+We saw an example of the <B
+CLASS="COMMAND"
+>rlogin</B
+> command in <A
+HREF="x-087-2-intro.html"
+>Chapter 1</A
+> in the section <A
+HREF="x-087-2-intro.tcpip.html#X-087-2-INTRO.TCPIP.INTRO"
+>Section 1.2.1</A
+>.&#8221; We briefly discussed the security
+issues associated with it in <A
+HREF="x1392.html#X-087-2-INTRO.SECURITY"
+>Section 1.5.1</A
+>&#8221; and
+suggested <B
+CLASS="COMMAND"
+>ssh</B
+> as a replacement.
+The <B
+CLASS="COMMAND"
+>ssh</B
+> package provides replacements called
+<B
+CLASS="COMMAND"
+>slogin</B
+>, <B
+CLASS="COMMAND"
+>ssh</B
+>, and <B
+CLASS="COMMAND"
+>scp</B
+>.</P
+><P
+>&#13;Each of these commands spawns a shell on the remote host and allows the user
+to execute commands. Of course, the client needs to have an account on the
+remote host where the command is to be executed. Thus, all these commands
+use an authentication process. The <I
+CLASS="EMPHASIS"
+>r</I
+> commands use a simple
+username and password exchange between the hosts with no encryption, so anyone
+listening could easily intercept the passwords. The <B
+CLASS="COMMAND"
+>ssh</B
+>
+command suite provides a higher level of security: it uses a technique 
+called <B
+CLASS="COMMAND"
+>Public Key Cryptography</B
+>, which provides 
+authentication and encryption between the hosts to ensure that
+neither passwords nor session data are easily intercepted by other hosts.</P
+><P
+>&#13;It is possible to relax authentication checks for certain users even further. For
+instance, if you frequently have to log into other machines on your LAN,
+you might want to be admitted without having to type your password every
+time. This was always possible with the <I
+CLASS="EMPHASIS"
+>r</I
+> commands, but the
+<B
+CLASS="COMMAND"
+>ssh</B
+> suite allows you to do this a little more easily. It's
+still not a great idea because it means that if an account on one machine
+is breached, access can be gained to all other accounts that user has
+configured for password-less login, but it is very convenient and people will
+use it.</P
+><P
+>Let's talk about removing the <I
+CLASS="EMPHASIS"
+>r</I
+> commands and getting
+<B
+CLASS="COMMAND"
+>ssh</B
+> to work instead.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN10266"
+>12.5.1. Disabling the r; Commands</A
+></H2
+><P
+>Start by removing the <B
+CLASS="COMMAND"
+>r</B
+> commands if they're
+installed.  The easiest way to disable the old <B
+CLASS="COMMAND"
+>r</B
+>
+commands is to comment out (or remove) their entries in the
+<TT
+CLASS="FILENAME"
+>/etc/inetd.conf</TT
+> file. The relevant entries will
+look something like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># Shell, login, exec and talk are BSD protocols.
+shell    stream  tcp     nowait  root  /usr/sbin/tcpd /usr/sbin/in.rshd
+login    stream  tcp     nowait  root  /usr/sbin/tcpd /usr/sbin/in.rlogind
+exec     stream  tcp     nowait  root  /usr/sbin/tcpd /usr/sbin/in.rexecd</PRE
+></TD
+></TR
+></TABLE
+>
+
+You can comment them by placing a <TT
+CLASS="LITERAL"
+>#</TT
+> character at the start
+of each line, or delete the lines completely. Remember, you need to restart the
+<B
+CLASS="COMMAND"
+>inetd</B
+> daemon for this change to take effect. Ideally, you 
+should remove the daemon programs themselves, too.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN10275"
+>12.5.2. Installing and Configuring ssh</A
+></H2
+><P
+>&#13;
+OpenSSH is a free version of the ssh suite of programs; the Linux port can
+be found at
+<SPAN
+CLASS="SYSTEMITEM"
+>http://violet.ibs.com.au/openssh/</SPAN
+> and in
+most modern Linux distributions.<A
+NAME="X-087-2-FNFE04"
+HREF="#FTN.X-087-2-FNFE04"
+>[1]</A
+>
+We won't describe compilation here; good instructions are included in the
+source. If you can install it from a precompiled package, then it's probably
+wise to do so.</P
+><P
+>There are two parts to an <B
+CLASS="COMMAND"
+>ssh</B
+> session. There is an
+<B
+CLASS="COMMAND"
+>ssh</B
+> client that you need to configure and run on the local
+host and an <B
+CLASS="COMMAND"
+>ssh</B
+> daemon that must be running on the remote
+host.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN10291"
+>12.5.2.1. The ssh daemon</A
+></H3
+><P
+>&#13;
+The <B
+CLASS="COMMAND"
+>sshd</B
+> daemon is the program that listens for network
+connections from <B
+CLASS="COMMAND"
+>ssh</B
+> clients, manages authentication, and
+executes the requested command. It has one main configuration file called
+<TT
+CLASS="FILENAME"
+>/etc/ssh/sshd_config</TT
+> and a special file containing a
+key used by the authentication and encryption processes to represent the host
+end. Each host and each client has its own key.</P
+><P
+>&#13;
+
+
+A utility called <B
+CLASS="COMMAND"
+>ssh-keygen</B
+> is supplied to generate
+a random key. This is usually used once at installation time to
+generate the host key, which the system administrator usually stores
+in a file called <TT
+CLASS="FILENAME"
+>/etc/ssh/ssh_host_key</TT
+>.  Keys can
+be of any length of 512 bits or greater. By default,
+<B
+CLASS="COMMAND"
+>ssh-keygen</B
+> generates keys of 1024 bits in length,
+and most people use the default. To generate a random key, you would
+invoke the <B
+CLASS="COMMAND"
+>ssh-keygen</B
+> command like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ssh-keygen -f /etc/ssh/ssh_host_key</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>You will be prompted to enter a passphrase. However, host keys must not use 
+a passphrase, so just press the return key to leave it blank. The program 
+output will look something like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Generating RSA keys:  ......oooooO...............................oooooO
+Key generation complete.
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /etc/ssh/ssh_host_key
+Your public key has been saved in /etc/ssh/ssh_host_key.pub
+The key fingerprint is:
+1024 3a:14:78:8e:5a:a3:6b:bc:b0:69:10:23:b7:d8:56:82 root@moria</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;
+
+
+
+You will find at the end that two files have been created. The first is 
+called the private key, which must be kept secret and will be in
+<TT
+CLASS="FILENAME"
+>/etc/ssh/ssh_host_key</TT
+>. The second is called the public
+key and is one that you can share; it will be in
+<TT
+CLASS="FILENAME"
+>/etc/ssh/ssh_host_key.pub</TT
+>.</P
+><P
+>Armed with the keys for <B
+CLASS="COMMAND"
+>ssh</B
+> communication, you need to 
+create a configuration file. The <B
+CLASS="COMMAND"
+>ssh</B
+> suite is very 
+powerful and the configuration file
+may contain many options. We'll present a simple example to get you started;
+you should refer to the <B
+CLASS="COMMAND"
+>ssh</B
+> documentation to enable other
+features. The following code shows a safe and minimal
+<B
+CLASS="COMMAND"
+>sshd</B
+> configuration file. The rest of the configuration
+options are detailed in the <B
+CLASS="COMMAND"
+>sshd</B
+>&#8201;(8) manpage:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/ssh/sshd_config
+#
+
+# The IP adddresses to listen for connections on. 0.0.0.0 means all
+# local addresses.
+ListenAddress 0.0.0.0
+
+# The TCP port to listen for connections on. The default is 22.
+Port 22
+
+# The name of the host key file.
+HostKey /etc/ssh/ssh_host_key
+
+# The length of the key in bits.
+ServerKeyBits 1024
+
+# Should we allow root logins via ssh?
+PermitRootLogin no
+
+# Should the ssh daemon check users' home directory and files permissions?
+# are safe before allowing login?
+StrictModes yes
+
+# Should we allow old ~/.rhosts and /etc/hosts.equiv authentication method?
+RhostsAuthentication no
+# Should we allow pure RSA authentication?
+RSAAuthentication yes
+# Should we allow password authentication?
+PasswordAuthentication yes
+
+# Should we allow /etc/hosts.equiv combined with RSA host authentication?
+RhostsRSAAuthentication no
+# Should we ignore ~/.rhosts files?
+IgnoreRhosts yes
+# Should we allow logins to accounts with empty passwords?
+PermitEmptyPasswords no</PRE
+></TD
+></TR
+></TABLE
+><P
+>It's important to make sure the permissions of the configuration files are 
+correct to ensure that system security is maintained. Use the following
+commands:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>chown -R root:root /etc/ssh</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>chmod 755 /etc/ssh</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>chmod 600 /etc/ssh/ssh_host_key</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>chmod 644 /etc/ssh/ssh_host_key.pub</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>chmod 644 /etc/ssh/sshd_config</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The final stage of <B
+CLASS="COMMAND"
+>sshd</B
+> administration daemon is
+to run it. Normally you'd create an <TT
+CLASS="FILENAME"
+>rc</TT
+> file
+for it or add it to an existing one, so that it is automatically executed
+at boot time. The daemon runs standalone and doesn't require any entry in
+the <TT
+CLASS="FILENAME"
+>/etc/inetd.conf</TT
+> file. The daemon must be run as the
+<TT
+CLASS="LITERAL"
+>root</TT
+> user. The syntax is very simple:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/usr/sbin/sshd</PRE
+></TD
+></TR
+></TABLE
+>
+
+The <B
+CLASS="COMMAND"
+>sshd</B
+> daemon will automatically place itself into the
+background when being run. You are now ready to accept <I
+CLASS="EMPHASIS"
+>ssh</I
+>
+connections.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN10359"
+>12.5.2.2. The ssh client</A
+></H3
+><P
+>&#13;
+
+
+There are a number of <B
+CLASS="COMMAND"
+>ssh</B
+> client programs:
+<B
+CLASS="COMMAND"
+>slogin</B
+>, <B
+CLASS="COMMAND"
+>scp</B
+> and <B
+CLASS="COMMAND"
+>ssh</B
+>.
+They each read the same configuration file, usually called
+<TT
+CLASS="FILENAME"
+>/etc/ssh/ssh_config</TT
+>. They each also read configuration
+files from the <TT
+CLASS="FILENAME"
+>.ssh</TT
+> directory in the home directory
+of the user executing them. The most important of these files is the
+<TT
+CLASS="FILENAME"
+>.ssh/config</TT
+> file, which may contain options that override
+those specified in the <TT
+CLASS="FILENAME"
+>/etc/ssh/ssh_config</TT
+> file, the
+<TT
+CLASS="FILENAME"
+>.ssh/identity</TT
+> file, which contains the user's own
+private key, and the corresponding <TT
+CLASS="FILENAME"
+>.ssh/identity.pub</TT
+>
+file, containing the user's public key. Other important files are <TT
+CLASS="FILENAME"
+>.ssh/known_hosts</TT
+> and 
+<TT
+CLASS="FILENAME"
+>.ssh/authorized_keys</TT
+>; we'll talk about those later in <A
+HREF="x-087-2-appl.remote.html#X-087-2-FEATURES.SSH.USING"
+>Section 12.5.2.3</A
+>.&#8221; First, let's create the global
+configuration file and the user key file.</P
+><P
+><TT
+CLASS="FILENAME"
+>/etc/ssh/ssh_config</TT
+> is very similar to the server
+configuration file. Again, there are lots of features you can configure, but
+a minimal configuration looks like that presented in
+<A
+HREF="x-087-2-appl.remote.html#X-087-2-FEATURES.SSH.CONF"
+>Example 12-5</A
+>. The rest of the configuration
+options are detailed in the <B
+CLASS="COMMAND"
+>sshd(8)</B
+> manpage. You can add sections that match
+specific hosts or groups of hosts. The parameter to the
+&#8220;<TT
+CLASS="LITERAL"
+>Host</TT
+>&#8221; statement may be either the full name of
+a host or a wildcard specification, as we've used in our example, to match all
+hosts. We could create an entry that used, for example,
+<TT
+CLASS="LITERAL"
+>Host *.vbrew.com</TT
+> to match any host in the
+<TT
+CLASS="LITERAL"
+>vbrew.com</TT
+> domain.</P
+><DIV
+CLASS="EXAMPLE"
+><A
+NAME="X-087-2-FEATURES.SSH.CONF"
+></A
+><P
+><B
+>Example 12-5. Example ssh Client Configuration File</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># /etc/ssh/ssh_config
+
+# Default options to use when connecting to a remote host
+Host *
+  # Compress the session data?
+  Compression yes
+  # .. using which compression level? (1 - fast/poor, 9 - slow/good)
+  CompressionLevel 6
+
+  # Fall back to rsh if the secure connection fails?
+  FallBackToRsh no
+
+  # Should we send keep-alive messages? Useful if you use IP masquerade
+  KeepAlive yes
+
+  # Try RSA authentication?
+  RSAAuthentication yes
+  # Try RSA authentication in combination with .rhosts authentication?
+  RhostsRSAAuthentication yes</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;We mentioned in the server configuration section that every host and user has a key. The user's key is stored in his or her
+<TT
+CLASS="FILENAME"
+>~/.ssh/indentity</TT
+> file. To generate the key, use the
+same <B
+CLASS="COMMAND"
+>ssh-keygen</B
+> command as we used to generate the
+host key, except this time you do not need to specify the name of the file
+in which you save the key. The <B
+CLASS="COMMAND"
+>ssh-keygen</B
+> defaults to
+the correct location, but it prompts you to enter a filename in case you'd like
+to save it elsewhere. It is sometimes useful to have multiple identity files,
+so <B
+CLASS="COMMAND"
+>ssh</B
+> allows this.
+Just as before, <B
+CLASS="COMMAND"
+>ssh-keygen</B
+> will prompt you to entry a
+passphrase. Passphrases add yet another level of security and are a good idea.
+Your passphrase won't be echoed on the screen when you type it.
+<DIV
+CLASS="WARNING"
+><P
+></P
+><TABLE
+CLASS="WARNING"
+BORDER="1"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="CENTER"
+><B
+>Warning</B
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+><P
+>There is no way to recover a passphrase if you forget it. Make sure it is
+something you will remember, but as with all passwords, make it something
+that isn't obvious, like a proper noun or your name. For a passphrase to 
+be truly effective, it should be between 10 and 30 characters
+long and not be plain English prose. Try to throw in some unusual
+characters. If you forget your passphrase, you will be forced to generate a
+new key.</P
+></TD
+></TR
+></TABLE
+></DIV
+>
+
+
+
+
+You should ask each of your users to run the <B
+CLASS="COMMAND"
+>ssh-keygen</B
+>
+command just once to ensure their key file is created correctly. The
+<B
+CLASS="COMMAND"
+>ssh-keygen</B
+> will create their <TT
+CLASS="FILENAME"
+>~/.ssh/</TT
+>
+directories for them with appropriate permissions and create their private and
+public keys in <TT
+CLASS="FILENAME"
+>.ssh/identity</TT
+> and
+<TT
+CLASS="FILENAME"
+>.ssh/identity.pub</TT
+>, respectively. A sample session
+should look like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>ssh-keygen</B
+></TT
+>
+Generating RSA keys:  .......oooooO..............................
+Key generation complete.
+Enter file in which to save the key (/home/maggie/.ssh/identity): 
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /home/maggie/.ssh/identity.
+Your public key has been saved in /home/maggie/.ssh/identity.pub.
+The key fingerprint is:
+1024 85:49:53:f4:8a:d6:d9:05:d0:1f:23:c4:d7:2a:11:67 maggie@moria
+$</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Now <B
+CLASS="COMMAND"
+>ssh</B
+> is ready to run.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FEATURES.SSH.USING"
+>12.5.2.3. Using ssh</A
+></H3
+><P
+>&#13;We should now have the <B
+CLASS="COMMAND"
+>ssh</B
+> command and it's associated
+programs installed and ready to run. Let's now take a quick look at how to
+run them.</P
+><P
+>&#13;
+
+First, we'll try a remote login to a host. We can use the <B
+CLASS="COMMAND"
+>slogin</B
+> program in much the same way as we used the <B
+CLASS="COMMAND"
+>rlogin</B
+> 
+program in our example earlier in the book. The first time you attempt a 
+connection to a host, the <B
+CLASS="COMMAND"
+>ssh</B
+> client will retrieve the 
+public key of the host and ask you to confirm its identity by prompting you 
+with a shortened version of the public key called a 
+<B
+CLASS="COMMAND"
+>fingerprint</B
+>. </P
+><P
+>The administrator at the remote host should have supplied you in
+advance with its public key fingerprint, which you should add to your 
+<TT
+CLASS="FILENAME"
+>.ssh/known_hosts</TT
+> file. If the remote
+administrator has not supplied you the appropriate key, you can
+connect to the remote host, but <B
+CLASS="COMMAND"
+>ssh</B
+> will warn you
+that it does have a key and prompt you whether you wish to accept the
+one offered by the remote host.  Assuming that you're sure no one is
+engaging in DNS spoofing and you are in fact talking to the correct
+host, answer yes to the prompt.  The relevant key is then stored
+automatically in your <TT
+CLASS="FILENAME"
+>.ssh/known_hosts</TT
+> and you
+will not be prompted for it again. If, on a future connection attempt, 
+the public key retrieved from that host does not match the one that is 
+stored, you will be warned, because this represents a potential security 
+breach.</P
+><P
+>A first-time login to a remote host will look something like:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>slogin vchianti.vbrew.com</B
+></TT
+>
+The authenticity of host 'vchianti.vbrew.com' can't be established.
+Key fingerprint is 1024 7b:d4:a8:28:c5:19:52:53:3a:fe:8d:95:dd:14:93:f5.
+Are you sure you want to continue connecting (yes/no)? <TT
+CLASS="USERINPUT"
+><B
+>yes</B
+></TT
+>
+Warning: Permanently added 'vchianti.vbrew.com,172.16.2.3' to the list of/
+    known hosts.
+maggie@vchianti.vbrew.com's password: 
+Last login: Tue Feb  1 23:28:58 2000 from vstout.vbrew.com
+$</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>You will be prompted for a password, which you should answer with the 
+password belonging to the remote account, not the local one. This password 
+is not echoed when you type it.</P
+><P
+>Without any special arguments, <B
+CLASS="COMMAND"
+>slogin</B
+> will attempt to log in
+with the same userid used on the local machine. You can override this
+using the <TT
+CLASS="LITERAL"
+>-l</TT
+> argument, supplying an alternate login name
+on the remote host. This is what we did in our example earlier in the book.</P
+><P
+>&#13;We can copy files to and from the remote host using the <B
+CLASS="COMMAND"
+>scp</B
+>
+program. Its syntax is similar to the conventional <B
+CLASS="COMMAND"
+>cp</B
+>
+with the exception that you may specify a hostname before a filename, meaning 
+that the file path is on the specified host. The following example illustrates
+<B
+CLASS="COMMAND"
+>scp</B
+> syntax by copying a local file called 
+<TT
+CLASS="FILENAME"
+>/tmp/fred</TT
+> to the <TT
+CLASS="FILENAME"
+>/home/maggie/</TT
+> of 
+the remote host <I
+CLASS="EMPHASIS"
+>chianti.vbrew.com</I
+>:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>scp /tmp/fred vchianti.vbrew.com:/home/maggie/</B
+></TT
+>
+maggie@vchianti.vbrew.com's password:
+fred                 100% |*****************************| 50165   00:01 ETA</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Again, you'll be prompted for a password. The <B
+CLASS="COMMAND"
+>scp</B
+> command 
+displays useful progress messages by default. You can copy a file from a 
+remote host with the same ease; simply specify its hostname and filepath as 
+the source and the local path as the destination. It's even possible to copy 
+a file from a remote host to some other remote host, but it is something you 
+wouldn't normally want to do, because all of the data travels via your host.</P
+><P
+>You can execute commands on remote hosts using the
+<B
+CLASS="COMMAND"
+>ssh</B
+> command. Again, its syntax is very simple. Let's
+have our user <TT
+CLASS="USERINPUT"
+><B
+>maggie</B
+></TT
+> retrieve the root directory of
+the remote host <I
+CLASS="EMPHASIS"
+>vchianti.vbrew.com</I
+>.
+She'd do this with:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>ssh vchianti.vbrew.com ls -CF /</B
+></TT
+>
+maggie@vchianti.vbrew.com's password:
+bin/    console@  dos/     home/    lost+found/  pub@   tmp/  vmlinuz@
+boot/   dev/      etc/     initrd/  mnt/         root/  usr/  vmlinuz.old@
+cdrom/  disk/     floppy/  lib/     proc/        sbin/  var/</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>You can place <B
+CLASS="COMMAND"
+>ssh</B
+> in a command pipeline
+and pipe program input/output to or from it just like any other command,
+except that the input or output is directed to or from the remote host
+via the <B
+CLASS="COMMAND"
+>ssh</B
+> connection. Here is an example of how you might
+use this capability in combination with the <B
+CLASS="COMMAND"
+>tar</B
+> command
+to copy a whole directory with subdirectories and files from a remote host
+to the local host:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>ssh vchianti.vbrew.com "tar cf - /etc/" | tar xvf -</B
+></TT
+>
+maggie@vchianti.vbrew.com's password:
+etc/GNUstep
+etc/Muttrc
+etc/Net
+etc/X11
+etc/adduser.conf
+..
+..</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Here we surrounded the command we will execute with quotation marks to make it
+clear what is passed as an argument to <B
+CLASS="COMMAND"
+>ssh</B
+> and what is used
+by the local shell. This command executes the <B
+CLASS="COMMAND"
+>tar</B
+>
+command on the remote host to archive the <TT
+CLASS="FILENAME"
+>/etc/</TT
+> directory
+and write the output to standard output. We've piped to an instance of the
+<B
+CLASS="COMMAND"
+>tar</B
+> command running on our local host in extract mode
+reading from standard input.</P
+><P
+>&#13;Again, we were prompted for the password. Now you can see why we encouraged 
+you to configure <B
+CLASS="COMMAND"
+>ssh</B
+> so
+that it doesn't prompt you for passwords all the time! Let's now configure
+our local <B
+CLASS="COMMAND"
+>ssh</B
+> client so that it won't prompt for a password
+when connecting to the
+<SPAN
+CLASS="SYSTEMITEM"
+>vchianti.vbrew.com</SPAN
+> host. We mentioned
+the <TT
+CLASS="FILENAME"
+>.ssh/authorized_keys</TT
+> file earlier; this is where
+it is used. The <TT
+CLASS="FILENAME"
+>.ssh/authorized_keys</TT
+> file contains the
+<I
+CLASS="EMPHASIS"
+>public</I
+> keys on any remote user accounts that we wish to
+automatically log in to. You can set up automatic logins by copying the 
+contents of the
+<TT
+CLASS="FILENAME"
+>.ssh/identity.pub</TT
+> from the <I
+CLASS="EMPHASIS"
+>remote</I
+>
+account into our local <TT
+CLASS="FILENAME"
+>.ssh/authorized_keys</TT
+> file. It is
+vital that the file permissions of <TT
+CLASS="FILENAME"
+>.ssh/authorized_keys</TT
+> 
+allow only that you read and write it; anyone may steal and use the
+keys to log in to that remote account. To ensure the permissions are correct,
+change <TT
+CLASS="FILENAME"
+>.ssh/authorized_keys</TT
+>, as shown:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>$ <TT
+CLASS="USERINPUT"
+><B
+>chmod 600 ~/.ssh/authorized_keys</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The public keys are a long <I
+CLASS="EMPHASIS"
+>single</I
+> line of plain
+text. If you use copy and paste to duplicate the key into your local file, 
+be sure to remove any end of line characters that might have been introduced 
+along the way. The <TT
+CLASS="FILENAME"
+>.ssh/authorized_keys</TT
+> file may contain 
+many such keys, each on a line of its own.</P
+><P
+>The <B
+CLASS="COMMAND"
+>ssh</B
+> suite of tools is very powerful and there are many
+other useful features and options that you will be interested in exploring.
+Please refer to the manual pages and other documentation that is supplied
+with the package for more information.</P
+></DIV
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNFE04"
+HREF="x-087-2-appl.remote.html#X-087-2-FNFE04"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>OpenSSH was developed by the OpenBSD project and is a fine example of the
+benefit of free software.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.rpc.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Remote Procedure Call</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-appl.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Network Information System</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

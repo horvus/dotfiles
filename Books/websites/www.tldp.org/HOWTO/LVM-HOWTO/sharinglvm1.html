@@ -1,0 +1,306 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Sharing LVM volumes</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Dangerous Operations"
+HREF="dangerousops.html"><LINK
+REL="PREVIOUS"
+TITLE="Restoring the VG UUIDs using uuid_fixer"
+HREF="uuidfixer.html"><LINK
+REL="NEXT"
+TITLE="Reporting Errors and Bugs"
+HREF="reportbug.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="uuidfixer.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Appendix A. Dangerous Operations</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="reportbug.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sharinglvm1"
+></A
+>A.2. Sharing LVM volumes</H1
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>LVM is not cluster aware</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          Be very careful doing this, LVM is not currently cluster-aware
+          and it is very easy to lose all your data.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>  
+        If you have a fibre-channel or shared-SCSI environment where more
+        than one machine has physical access to a set of disks then you can
+        use LVM to divide these disks up into logical volumes. If you want
+        to share data you should really be looking at 
+        <A
+HREF="http://www.sistina.com/gfs"
+TARGET="_top"
+>GFS</A
+> or other
+        cluster filesystems.
+      </P
+><P
+>&#13;        The key thing to remember when sharing volumes is that all the LVM
+        administration must be done on one node only and that all other
+        nodes must have LVM shut down before changing anything on the admin
+        node.  Then, when the changes have been made, it is necessary to
+        run vgscan on the other nodes before reloading the volume groups.
+        Also, unless you are running a cluster-aware filesystem (such as
+        GFS) or application on the volume, only one node can mount each
+        filesystem.  It is up to you, as system administrator to enforce
+        this, LVM will not stop you corrupting your data.
+      </P
+><P
+>&#13;        The startup sequence of each node is the same as for a single-node
+        setup with
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;vgscan
+vgchange -ay
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        in the startup scripts.
+      </P
+><P
+>&#13;        If you need to do <STRONG
+>any</STRONG
+> changes to
+        the LVM metadata (regardless of whether it affects volumes mounted
+        on other nodes) you must go through the following sequence. In the
+        steps below ``admin node'' is any arbitrarily chosen node in the
+        cluster.
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;Admin node                   Other nodes
+----------                   -----------
+                             Close all Logical volumes (umount)
+                             vgchange -an
+&#60;make changes, eg lvextend&#62;
+                             vgscan
+                             vgchange -ay
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+      </P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>VGs should be active on the admin node</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          You do not need to, nor should you, unload the VGs on
+          the admin node, so this can be the node with the highest uptime
+          requirement.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;        I'll say it again:  <STRONG
+>Be very careful doing
+          this</STRONG
+>
+      </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="uuidfixer.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="reportbug.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Restoring the VG UUIDs using uuid_fixer</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="dangerousops.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Reporting Errors and Bugs</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

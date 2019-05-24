@@ -1,0 +1,674 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Modem-HOWTO: Dial-In </TITLE>
+ <LINK HREF="Modem-HOWTO-13.html" REL=next>
+ <LINK HREF="Modem-HOWTO-11.html" REL=previous>
+ <LINK HREF="Modem-HOWTO.html#toc12" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Modem-HOWTO-13.html">Next</A>
+<A HREF="Modem-HOWTO-11.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc12">Contents</A>
+<HR>
+<H2><A NAME="dialin_"></A> <A NAME="s12">12.</A> <A HREF="Modem-HOWTO.html#toc12">Dial-In </A></H2>
+
+<H2><A NAME="ss12.1">12.1</A> <A HREF="Modem-HOWTO.html#toc12.1">Dial-In Overview</A>
+</H2>
+
+<P> Dial-in is where you set up your PC so that others may dial in to
+your PC (at your phone number) and use your PC.  Unfortunately some
+use the term "dial-in" when what they actually mean is just the
+opposite: dial-out.</P>
+<P>Dial-in works like this:  Someone with a modem dials your telephone
+number.  Your modem answers the phone ring and connects.  Once the
+caller is connected, the <CODE>getty</CODE> program is notified and starts the
+login process for the caller.  After the caller has logged in, the
+caller then may use your PC.  It could be almost as if they were
+sitting at your monitor-console.</P>
+<P>The caller may use a script to automatically log in.  This script will
+be of the expect-send type.  For example it expects "login:"
+and then (after it detects "login:") will send the users login name.
+It next expects the password and then sends the password, etc.  Then
+once the user has been automatically logged in, the /etc/passwd
+(password file) might specify that a shell (such as bash) will be
+started for the user.  Or it might specify that PPP is to start so
+that the user may be connected to the Internet.  See the PPP-HOWTO for
+more details.  The program that you use at your PC to handle dialin is
+called <CODE>getty</CODE> or <CODE>mgetty</CODE>.  See 
+<A HREF="#getty_">Getty</A></P>
+<P>An advanced getty program such as mgetty can watch to see if PPP is
+started by the PC on the other end.  If so, the login prompt would be
+skipped, a PPP connection would be made, and login would take place
+automatically over the PPP connection.</P>
+
+<H2><A NAME="ss12.2">12.2</A> <A HREF="Modem-HOWTO.html#toc12.2">What Happens when Someone Dials In ?</A>
+</H2>
+
+<P> Here's a more detailed description of dialin.  This all assumes
+that you are using either mgetty or uugetty.  Agetty is inferior and
+doesn't work exactly the same (see 
+<A HREF="#agetty_">About agetty</A>)</P>
+<P>For dialin to work, the modem must be listening for a ring and getty
+must be running and ready to respond to the call.  Your modem is
+normally listening for incoming calls, but what it does when it gets a
+ring depends on how it's configured.  The modem can either
+automatically answer the phone or not directly answer it.  In the
+latter case the modem sends a "RING" message to getty and then getty
+tells the modem to answer the ring.  In either case, it may be set up
+to answer on say the 4th ring.  This means that if the call is not for
+the modem, one must walk/run to the phone and pick it up manually
+before the 4th ring.  Then an ordinary conversation can take place on
+the telephone.  If ons gets to the phone too late one will hear the
+high pitched tones of the modem which has answered the call.</P>
+<P>Once the modem answers the call it sends tones to the other modem
+(and conversely).  The two modems negotiate how they will communicate
+and when this is completed your modem sends a "CONNECT" message (or
+the like) to <CODE>getty</CODE>.  When <CODE>getty</CODE> gets this message, it sends
+a login prompt out the serial port.  Once a user name is given to this
+prompt <CODE>getty</CODE> may just call on a program named <CODE>login</CODE> to
+handle the login procedure from there on.  While <CODE>getty</CODE> usually
+starts running at boot-time it should wait until a connection is made
+before sending out a "login" prompt.</P>
+<P>Now for more details on the two methods of answering the call.  The 
+first method is where the modem automatically answers the call.  In
+this case the number of times it will ring before answering is
+controlled by the S0 register of the modem.  If S0 is set to 3, the
+modem will automatically answer on the 3rd ring.  If S0 is set to 0
+then the modem will only answer the call if getty sends it an "A" (=
+Answer) AT command to the modem while the phone is ringing.  (Actually
+an "ATA" is sent since all modem commands are prefixed by "AT".)  This
+is the second method of answering, known as "manual" answering, since
+the modem itself doesn't do it automatically (but getty does).  You
+might think it best to utilize the ability of the modem hardware to
+automatically answer the call, but it's actually better if <CODE>getty</CODE>
+answers it "manually".</P>
+<P>For the "manual" answer case, <CODE>getty</CODE> opens the port at boot-time
+and listens.  When the phone rings, a "RING" message is sent to the
+listening <CODE>getty</CODE>.  Then if <CODE>getty</CODE> wants to answer this ring,
+it sends the modem an "A" command.  Note that getty may be set to
+answer only after say 4 "RING" messages (the 4th ring) similar to the
+automatic answer method.  The modem then makes a connection and sends
+a "CONNECT ..." message to <CODE>getty</CODE> which then sends a login prompt
+to the caller.  It's not all quite this simple as there are some
+special tricks used to allow dial-out when waiting for a call.  See
+<A HREF="#dial_out_while_listening">Dialing Out while Waiting for an Incoming Call</A></P>
+<P>The automatic answer case uses the CD (Carrier Detect aka DCD) wire
+from the modem to the serial port to tell when a connection is made.
+It works like this:  At boot-time <CODE>getty</CODE> tries to open the serial
+port but the attempt fails since the modem has negated CD (the modem
+is idle).  Then the <CODE>getty</CODE> program waits at the open statement in
+the program until a CD signal is raised.  When a CD signal arrives
+(perhaps hours later) then the port is opened and <CODE>getty</CODE> sends the
+login prompt.  While <CODE>getty</CODE> is waiting (sleeping) at the open
+statement, other processes can run so it doesn't degrade computer
+performance.  What actually wakes <CODE>getty</CODE> up is an interrupt which
+is issued when the CD line from the modem changes its state to on.</P>
+<P>You may wonder how getty is able to open the serial port in the
+"manual"-answer case since CD may be negated.  Well, there's a way to
+write a program to force the port to open even if there is no CD
+signal raised.</P>
+
+<H2><A NAME="ss12.3">12.3</A> <A HREF="Modem-HOWTO.html#toc12.3">56k Doesn't Work for Dialin</A>
+</H2>
+
+<P>If you expect that people will be able to dial-in to you at 56k, it
+can't be done unless you have all the following:
+<OL>
+<LI> You have a digital connection to the telephone company such as a
+trunkside-T1 or ISDN line</LI>
+<LI> You use special digital modems (see 
+<A HREF="Modem-HOWTO-3.html#digital_modem">Digital Modems</A>)</LI>
+<LI> You have a "... concentrator", or the like to interface your
+digital-modems to the digital lines of the telephone company.</LI>
+</OL>
+
+A "... concentrator" may  be called a "modem concentrator"
+or a "remote access concentrator" or it could be included in a "remote
+access server" (RAS) which includes the digital modems, etc.  This
+type of setup is used by ISPs (Internet Service Providers).</P>
+
+<H2><A NAME="getty_"></A> <A NAME="ss12.4">12.4</A> <A HREF="Modem-HOWTO.html#toc12.4">Getty </A>
+</H2>
+
+<H3>Introduction to Getty</H3>
+
+<P> A <CODE>getty</CODE> program (including agetty, mgetty, etc.) is what you
+run for dialin.  You don't need it for dialout.  In addition to
+presenting a login prompt, it also may help answer an incoming
+telephone call.  Originally getty was used for logging in to a
+computer from a dumb terminal.  A major use of it today is for logging
+in to a Linux system at a console.  There are several different getty
+programs a few of which work OK with modems for dialin.  The getty
+program is usually started either at boot-time or when someone dials
+in to your computer.  It must be called from the /etc/inittab file.
+In this file you may find some examples which you will likely need to
+edit a bit.</P>
+<P>There are four different getty programs to choose from that may be
+used with modems for dial-in: <CODE>mgetty</CODE>, <CODE>uugetty</CODE>, <CODE>getty_em</CODE>,
+and <CODE>agetty</CODE>.  A brief overview is given in the following
+subsections.  <CODE>agetty</CODE> is the weakest of the four and it's mainly
+for use with directly connected text-terminals. <CODE>mgetty</CODE> includes
+support for fax and voice mail but <CODE>uugetty</CODE> doesn't.  But
+<CODE>mgetty</CODE> allegedly lacks a few of the features of <CODE>uugetty</CODE>.
+<CODE>getty_em</CODE> is a simplified version of <CODE>uugetty</CODE>.  Thus
+<CODE>mgetty</CODE> is likely your best choice unless you are already familiar
+with <CODE>uugetty</CODE> (or find it difficult to get <CODE>mgetty</CODE>).  The
+syntax for these getty programs differs, so be sure to check that you
+are using the correct syntax in <CODE>/etc/inittab</CODE> for whichever
+getty you use.</P>
+<P>In order to see what documentation exists about the various gettys on
+your computer, use the "locate" command.  Type: locate "*getty*"
+(including the quotes may help).  Note that many distributions just
+call the program getty even though it may actually be agetty, uugetty,
+etc.  But if you read the man page (type: man getty), it might
+disclose which getty it is.  This should be the getty program with
+path <CODE>/sbin/getty.</CODE></P>
+
+<H3>How getty respawns</H3>
+
+<P>After you log in you will notice (by using "top", "ps -ax", or
+"ptree") that the getty process is no longer running.  What happened
+to it?  Why does getty restart again if your shell is killed?  Here's
+why.</P>
+<P>After you type in your user name, getty takes it and calls the login
+program telling it your user name.  The getty process is replaced
+by the login process.  The login process asks for your password,
+checks it and starts whatever process is specified in your password
+file.  This process is often the bash shell.  If so, bash starts and
+replaces the login process.  Note that one process replaces another
+and that the bash shell process originally started as the getty
+process.  The implications of this will be explained below.</P>
+<P>Now in the /etc/inittab file, getty is supposed to respawn (restart) if
+killed.  It says so on the line that calls getty.  But if the bash shell
+(or the login process) is killed, getty respawns (restarts).  Why?
+Well, both the login process and bash are replacements for getty and
+inherit the signal connections establish by their predecessors.  In
+fact if you observe the details you will notice that the replacement
+process will have the same process ID as the original process.  Thus
+bash is sort of getty in disguise with the same process ID number.  If
+bash is killed it is just like getty was killed (even though getty
+isn't running anymore).  This results in getty respawning.</P>
+<P>When one logs out, all the processes on that serial port are killed
+including the bash shell.  This may also happen (if enabled) if a
+hangup signal is sent to the serial port by a drop of DCD voltage by
+the modem.  Either the logout or drop in DCD will result in getty
+respawning.  One may force getty to respawn by manually killing bash
+(or login) either by hitting the k key, etc. while in "top" or with
+the "kill" command.  You will likely need to kill it with signal 9
+(which can't be ignored).</P>
+
+
+<H3><A NAME="mgetty_"></A> About mgetty </H3>
+
+<P><CODE>mgetty</CODE> was written as a replacement for <CODE>uugetty</CODE> which was
+in existence long before <CODE>mgetty</CODE>.  Both are for use with modems
+but mgetty is best (unless you already are committed to <CODE>uugetty</CODE>).
+<CODE>mgetty</CODE> may be also used for directly connected terminals but
+doesn't have many features for this purpose.  In addition to allowing
+dialup logins, <CODE>mgetty</CODE> also provides FAX support, auto PPP
+detection, and caller-id support.  It permits dialing out when mgetty
+is waiting for an incoming phone call.  There is a supplemental
+program called <CODE>vgetty</CODE> which handles voicemail for some modems.
+<CODE>mgetty</CODE> documentation is fair (except for voice mail), and is not
+supplemented in this HOWTO.  To automatically start PPP one must edit
+/etc/mgetty/login.conf to use "AutoPPP" (has example).  You can find
+the latest information on <CODE>mgetty</CODE> at 
+<A HREF="http://www.leo.org/~doering/mgetty/">http://www.leo.org/~doering/mgetty/</A> and 
+<A HREF="http://alpha.greenie.net/mgetty/">http://alpha.greenie.net/mgetty/</A></P>
+
+<H3><A NAME="uugetty_"></A> About uugetty </H3>
+
+<P><CODE>getty_ps</CODE>  contains two programs: <CODE>getty</CODE> is used for console
+and terminal devices, and <CODE>uugetty</CODE> for modems.  Greg Hankins
+(former author of Serial-HOWTO) used <CODE>uugetty</CODE> so his writings
+about it are included here.  See 
+<A HREF="Modem-HOWTO-13.html#uugetty_">Uugetty</A>.</P>
+
+<H3><A NAME="getty_em_"></A> About getty_em </H3>
+
+<P> This is a simplified version of ``uugetty''.  It was written by
+Vern Hoxie after he became fully confused with complex support files
+needed for getty_ps and uugetty.</P>
+<P>It is part of the collection of serial port utilities and information
+by Vern Hoxie available via ftp from 
+<A HREF="scicom.alphacdc.com/pub/linux">scicom.alphacdc.com/pub/linux</A>.  The name of the collection is
+``serial_suite.tgz''.</P>
+
+<H3><A NAME="agetty_"></A> About agetty </H3>
+
+<P> This subsection is long since the author tried using agetty for
+dialin.  <CODE>agetty</CODE> is seemingly simple since there are no
+initialization files.  But when I tried it, it opened the serial port
+even when there was no CD signal present.  It then sent both a login
+prompt and the /etc/issue file to the modem in the AT-command state
+before a connection was made.  The modem thinks all this an AT command
+and if it does contain any "at" strings (by accident) it is likely to
+adversely modify your modem profile.  Echo wars can start where getty
+and the modem send the same string back and forth over and over.  You
+may see a "respawning too rapidly" error message if this happens.  To
+prevent this you need to disable all echoing and result codes from the
+modem (E0 and Q1).  Also use the -i option with agetty to prevent any
+/etc/issue file from being sent.</P>
+<P>If you start getty on the modem port and a few seconds later find that
+you have the login process running on that port instead of getty, it
+means that a bogus user name has been sent to agetty from the modem.
+To keep this from happening, I had to save my dial-in profile in the
+modem so that it become effective at power-on.  The other saved
+profile is for dial-out.  Then any dial-out programs which use the
+modem must use a Z, Z0, or Z1 in their init string to initialize the
+modem for dial-out (by loading the saved dial-out profile).  If the
+1-profile is for dial-in you use Z1 to load it, etc.  If you want
+to listen for dial-in later on, then the modem needs to be reset to
+the dial-in profile.  Not all dial-out programs can do this reset upon
+exit from them.</P>
+<P>Thus while agetty may work OK if you set up a dial-in profile
+correctly in the modem hardware, it's probably best suited for virtual
+consoles or terminals rather than modems.  If agetty is running for
+dialin, there's no easy way to dial out.  When someone first dials in
+to agetty, they should hit the return key to get the login prompt.
+<CODE>agetty</CODE> in the Debian distribution is just named <CODE>getty</CODE>.</P>
+
+<H3>About mingetty, and fbgetty</H3>
+
+<P><CODE>mingetty</CODE> is a small getty that will work only for monitors
+(the usual console) so you can't use it with modems for dialin.
+<CODE>fbgetty</CODE> is as above but supports framebuffers.</P>
+
+<H2><A NAME="ss12.5">12.5</A> <A HREF="Modem-HOWTO.html#toc12.5">Why "Manual" Answer is Best</A>
+</H2>
+
+<P> The difference between the two ways of answering is exhibited
+when the computer happens to be down but the modem is still working.
+For the manual case, the "RING" message is sent to getty but since the
+computer is down, getty isn't there and the phone never gets answered.
+There are no telephone charges when there is no answer.  For the
+automatic answer case, the modem (which is still on) answers the phone
+but no login message is ever sent since the computer is down.  The
+phone bill runs up as the waiting continues.  If the phone call is
+toll-free, it doesn't make much difference, although it may be
+frustrating waiting for a login prompt that never arrives.
+<CODE>mgetty</CODE> uses manual answer.  <CODE>Uugetty</CODE> can do this too by using a
+configuration script.</P>
+
+<H2><A NAME="dial_out_while_listening"></A> <A NAME="ss12.6">12.6</A> <A HREF="Modem-HOWTO.html#toc12.6">Dialing Out while Waiting for an Incoming Call </A>
+</H2>
+
+<P>Here's what could go wrong with a simple-minded manual-answer
+situation.  Suppose another process dials out while getty is listening
+for a "RING" message from its modem on the serial wire.  Then incoming
+bytes for the dial-out process flow from the modem to the serial port.
+For example, your modem may send a "CONNECT" message to your serial
+port when the dial-out process connects.  If getty reads this there's
+trouble since reads are destructive reads.  Once getty reads it, then
+the dial-out process that is expecting "CONNECT" (or something else)
+can't read it.  Thus the dial-out process is likely to fail.</P>
+<P>There's a way to avoid this and here's how mgetty does it.  When
+mgetty is listing for an incoming call, it doesn't read anything from
+the port until it thinks that the characters are for mgetty.  Mgetty
+monitors the port and if characters arrive, it doesn't read them right
+away.  Instead, it first checks to see if another process is using the
+port.  If so, mgetty backs off and closes the port (but the port
+remains open for the other process).  Thus, if another process dials
+out, mgetty doesn't interfere with it.  When the other process finally
+closes the port, then mgetty resumes "listening".  It's a special type
+of "listening" that refrains from reading until mgetty believes that
+what it will read is for mgetty (hopefully a "RING" message).</P>
+<P>When mgetty checks to see if another process is using the port, it
+actually checks for valid lockfiles on the port.  If the other process
+failed to use lockfiles, too bad for it.  For more details see the
+mgetty documentation: "How mgetty works".  For programmers only:
+"listening" is actually using the system calls "poll" or "select" to
+monitor the port.  They are likely also used to monitor the port when
+a non-mgetty process is using the port.</P>
+<P>Then there's the problem of modem configuration when using mgetty.
+Mgetty first sets this configuration when it starts up and uses a
+user-specified chat script to do it.  So the modem is now configured
+not to auto-answer but to send the RING string to mgetty when the
+phone rings.  Now suppose that while mgetty is waiting for an incoming
+call, another program makes and outgoing call and reconfigures the
+modem to something bad for mgetty.  To prevent this, when mgetty
+detects that some other program using the port has exited, mgetty just
+exits itself.  This results in mgetty starting up anew (respawns per
+the /etc/inittab file) and then mgetty reconfigures the modem so that
+it's all set up to listen once more for incoming calls.</P>
+<P>With auto-answer (not normally used by mgetty), getty is waiting for
+CD to be raised so that it can open the port.  One may dial out, but
+once a connection is made, the modem's CD is raised.  If getty were
+to then read the port it would eat the characters intended to be read
+by the dial-out connection.  While agetty will have this problem, it's
+claimed that uugetty will check lockfiles before reading (similar to
+mgetty).</P>
+
+<H2><A NAME="end_dialin"></A> <A NAME="ss12.7">12.7</A> <A HREF="Modem-HOWTO.html#toc12.7">Ending a Dial-in Call </A>
+</H2>
+
+<P> There are two major ways to end a dial-in call.  The caller may
+either logout or just hang up.  For the hangup case see 
+<A HREF="#caller_hangs_up">Caller hangs up</A></P>
+
+<H3>Caller logs out</H3>
+
+<P> When the call is over, the normal way to end the connection is for
+the remote user to log out.  This should result in the dial-in PC
+hanging up the phone line as will be explained shortly.  Note that
+this behavior is not what normally happens when one logs out from a PC
+(when not using a modem).  In this case, the user logs out and
+immediately gets a login prompt as an invitation to log in again.  But
+a remote user that types "logout" gets hung up on, and must redial if
+s/he wants to log in again.  If there was no hang-up when the user
+logged out, the connection would be maintained, and not give anyone
+else the opportunity to login. </P>
+<P>Logging out by the remote user of your dial-in PC will kill the shell
+that the remote user was using on your dial-in PC.  Now, since there is
+nothing running on this port anymore, the port closes and sends a
+hangup signal to the modem by negating DTR.  This will only happen if
+stty -a shows hupcl (default).  hupcl = Hang UP on CLose => drop DTR
+(the "hang up" signal) when the last program running on this port is
+closed).  But normally, when the shell is killed it's like getty was
+killed and getty will respawn (since it's set this way in
+/etc/inittab).  This will almost immediately open the port again and
+raise DTR.  So DTR is said to wink (drop only for only a small
+fraction of a second and then reassert itself).  With modern fast
+computers, this wink would be too short to be recognized by the modem
+so the serial driver is supposed to make this wink longer (provided
+stty has hupcl set, and provided ...).  But there was a complaint in
+2003 that it's not long enough.</P>
+<P>The dial-in PC modem getting the hangup (negated DTR signal) will
+then hang up the phone line (provided the modem has been configured to
+do this --see below).  The modem should then be ready to answer any
+new incoming calls.  For mgetty, if there is a chat-script to
+initialize the modem and possibly reset the modem will happen also.  If the modem didn't hang
+up due to too short of a DTR wink, then a newly spawned getty might be
+able to hang up.  mgetty itself creates a long DTR wink when it starts
+up to hang up the modem.  It's claimed that making a respawned getty
+clean up the mess (the modem still online) left by the previous call,
+is not the right way to handle this.</P>
+<P>When setting up mgetty, one may use a chat-script with the code
+sequence +++ to the modem to put it into AT command mode if DTR didn't
+work.  The +++ must have both an initial and final minimal time delay.
+Once in AT command mode, a hangup command (H0) may be sent to the
+modem as well as other AT commands.  One may have things set up to use
+both this method and the DTR method and so that if one method should
+fail, the other one will hopefully work.  If the PC fails to
+successfully signal the modem when a logout happens (or fails to use
+the +++ escape when restarting getty), then the modem is apt to remain
+in on-line mode and no more incoming calls can be received.  It's
+claimed that this might be a security risk.</P>
+
+<H3>When DTR drops (is negated) </H3>
+
+<P>When DTR (the "hang-up" signal
+when negated) is dropped (negated), what the modem does depends on the
+value of the &amp;D option in the modem's profile.  If it's &amp;D0
+nothing at all happens (the modem ignores the negation of DTR).
+Here's what happens when the computer drops DTR:</P>
+<P><CODE>&amp;D2:</CODE> The modem will hang up and go into AT command mode
+(off-line) to wait for the next call.  Except that it will not
+be able to automatically answer the phone until DTR is raised
+again.  But since mgetty automatically respawns (if so set in
+/etc/inittab) then mgetty will immediately restart after a logout and
+this will raise DTR.  So what happens when someone logs out is that
+DTR only is negated for a fraction of a second (winks) before it gets
+raised again.  During this wink, the DTR must be negated for
+at least the time specified by register S25, otherwise the modem will
+not hang up. </P>
+<P><CODE>&amp;D3:</CODE> or S13 = 1.  In this case the modem does a hard
+reset when DTR drops: It hangs up and restores the saved profile as
+specified by &amp;Y.  It should now be in the same state it was in
+when first powered on.  But mgetty may have a chat script which will
+send the modem an init string and thus change the profile again.
+Since these two changes in profile happen at about the same time,
+could this be a problem (known as "race conditions").</P>
+<P>The S25 limit may have no effect so even a very short DTR "wink" is
+detected.  Another brand of modem says the S25 limit is still valid.
+Thus <CODE>&amp;D3</CODE> is a stronger "reset" than <CODE>&amp;D2</CODE>
+which doesn't restore the saved profile and could require a longer
+wink to work.</P>
+<P>Under favorable conditions, either <CODE>&amp;D3</CODE> or
+<CODE>&amp;D2</CODE> should work OK.  It's reported that for a few modems,
+only <CODE>&amp;D2</CODE> works OK.  Could this be related to a possible
+race condition mentioned above if <CODE>&amp;D3</CODE> is used?</P>
+
+<H3><A NAME="caller_hangs_up"></A> Caller hangs up </H3>
+
+<P> Instead of logging out the normal way, a caller may just hang up
+(by closing the "terminal" program s/he's using, etc).  This results
+in a lost connection and of course a loss of carrier.  Other problems
+could also cause a loss of carrier.  The modem hangs up and waits for
+the next call.  Except that there is no mgetty running yet to start
+the login process.</P>
+<P>Here's how getty gets started again:  The loss of carrier should
+negate the CD signal sent by the modem to the serial port (provided
+<CODE>&amp;C1</CODE> has been set).  When the PC's serial port gets the
+dropped CD signal it should kill the shell, provided clocal is negated
+(-clocal) and then getty should respawn.  mgetty raises clocal when
+it starts.  Does it later drop clocal?</P>
+<P>This paragraph is about other things that happen but do nothing.  Only
+the curious need read it.  When the shell is killed, a DTR wink is sent
+to the modem but since the modem is not on-line anymore and has
+already hung up due to lost carrier, the modem ignores the drop of
+DTR.  The loss of carrier also negates the DSR signal sent by the
+modem to the serial port (provided &amp;S1 or &amp;S2 is set) but this
+signal is ignored (by Linux).  The "NO CARRIER" result code should be
+generated by the modem but where does it go to ?  </P>
+
+<H2><A NAME="dial-in_conf"></A> <A NAME="ss12.8">12.8</A> <A HREF="Modem-HOWTO.html#toc12.8">Dial-in Modem Configuration </A>
+</H2>
+
+<P> The getty programs have a provision for sending an init string to
+the modem to configure it.  But you may need to edit it.  Another
+method is to save a suitable init string inside the modem (see
+<A HREF="Modem-HOWTO-8.html#init_str">Init Strings: Saving and Recalling</A> for how
+to save it in the modem).</P>
+<P>The configuration for dial-in depends both on the getty you use and
+perhaps on your modem.  If you can't find suggested configurations in
+other documentation here are some hints using Hayes AT commands:</P>
+<P>
+<UL>
+<LI><CODE>&amp;C1</CODE>  Make the CD line to the serial port track the actual
+state of the carrier (CD raised only when there's carrier).
+Getty_em requires &amp;C0 (CD always raised)</LI>
+<LI><CODE>&amp;D3</CODE>  Do a hard reset of the modem when someone logs out
+(or hangs up).  For some modems it's reported that &amp;D2 is
+required since they can't tolerate a hard reset ??</LI>
+<LI><CODE>E0</CODE>  Don't echo AT commands back to the serial port.  This
+is a must for agetty.  Some suggest E1 (echo AT commands) for mgetty.
+For dial-out you want E1 so you can see what was sent.</LI>
+<LI><CODE>&amp;K3</CODE> Use hardware flow control</LI>
+<LI><CODE>Q0</CODE>  Echo results words (such as CONNECT).  Most gettys use
+them.  But it's reported an AT&amp;T version of uugetty and agetty
+require Q2 (no result words for dial-in).</LI>
+<LI><CODE>S0=?</CODE>  mgetty suggests S0=0 (manual answer) but you give
+the number of rings on the mgetty command line.  If you set
+S0=3 the modem will auto-answer on the 3rd ring, etc.  Agetty uses
+auto-answer.  So does uugetty (usually).</LI>
+<LI><CODE>V1</CODE>  Display results (such as CONNECT) in words (and not in code)</LI>
+<LI><CODE>X4</CODE>  Check for dialtone and busy signal</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss12.9">12.9</A> <A HREF="Modem-HOWTO.html#toc12.9">Callback</A>
+</H2>
+
+<P> Callback is where someone first dials in to your modem.  Then, you
+get a little info from the caller and then call it right back.  Why
+would you want to do this?  One reason is to save on telephone bills
+if you can call the caller cheaper than the caller can call you.
+Another is to make sure that the caller really is who it claims to be.
+If a caller calls you and claims to be calling from its usual phone
+number, then one way to verify this is to actually place a new call to
+that number.</P>
+<P>There's a program for Linux called "callback" that works with mgetty.
+It's at 
+<A HREF="ftp://ftp.rug.nl/contrib/frank/software/linux/callback/">ftp://ftp.rug.nl/contrib/frank/software/linux/callback/</A>
+Step-by-step instructions on how someone installed it (and PPP) is at
+<A HREF="http://www.stokely.com/unix.serial.port.resources/callback.html">http://www.stokely.com/unix.serial.port.resources/callback.html</A></P>
+
+<H2><A NAME="ss12.10">12.10</A> <A HREF="Modem-HOWTO.html#toc12.10">Distinctive Ring</A>
+</H2>
+
+<P>"Distinctive ring" is where you want the modem to answer phone calls
+only for certain types of rings like long, short, long, short, etc.
+To do this, you first need a modem that supports distinctive ring.  The
+Netcomm Roadster modem can be set with an AT command to do the
+following, for example:  It will send to mgetty: DROF=14 DRON=4 RING
+DROF=4 DRON=2 RING ... meaning that there is a 1.4 seconds of initial
+silence (DROF=14) followed by .4 seconds of ringing (DRON=4) etc.
+RING is also reported after each ring.  Note that the modem can't
+be set to answer a certain type of ring, it only informs the program
+listening on the serial port (such as mgetty) what the ring sequence
+is.  Then if the program likes the sequence, it sends an AT command to
+the modem to answer the call.  Unfortunately, mgetty doesn't recognize
+such ring sequences but there's a workaround that may work.</P>
+<P>Mgetty only waits for a "RING" and will ignore the DRON and DROF
+(Distinctive Ring OFf) words.  For the Netcomm Roadster modem, you can
+set the delay between sending DRON= and RING.  For example you could
+set a delay of 2.0 seconds.  However, if within this 2.0 second period
+another actual ring occurs, the modem cancels the delayed RING message
+and never sends it.  So you might be able to set this delay so the
+calls you don't want the modem to answer never send a RING message to
+mgetty.  But for the calls you want mgetty to answer, you get the
+interval between rings to be long enough so that "RING" is sent
+to mgetty and mgetty answers the call.  This workaround is not always
+feasible, especially if the telephone company doesn't give you much
+choice of distinctive rings.  Will the above work for other modems that
+support distinctive ring?</P>
+<P>For the above modem, the AT command: AT+VDR=1,24 sets the above delay for
+2.4 seconds.  You can put this in an "init-chat" parameter in
+mgetty.config.</P>
+
+<H2><A NAME="voice_"></A> <A NAME="ss12.11">12.11</A> <A HREF="Modem-HOWTO.html#toc12.11">Voice Mail </A>
+</H2>
+
+<P> Voice mail is like an answering machine run by a computer.
+To do this you must have a modem that supports "voice" and supporting
+software.  Instead of storing the messages on tape, they are stored in
+digital format on a hard-drive.  When a person phones you, they hear a
+"greeting" message and can then leave a message for you.  More
+advanced systems would have caller-selectable mail boxes and
+caller-selectable messages to listen to.  Free software is available in
+Linux for simple answering, but doesn't seem to be available yet for
+the more advanced stuff.</P>
+<P>I know of two different voicemail packages for Linux.  One is a very
+minimal package (see 
+<A HREF="Modem-HOWTO-15.html#voice_sw">Voicemail Software</A>).
+The other, more advanced, but currently poorly documented, is
+<CODE>vgetty</CODE> which supports all ELSA modems and the ITU v.253 standard.
+It's an optional addition to the well documented and widely
+distributed <CODE>mgetty</CODE>  program.  In the Debian distribution, you
+must get the mgetty-voice package in addition to the mgetty package
+and mgetty-doc (documentation) package.</P>
+
+<H2><A NAME="manual_dialin"></A> <A NAME="ss12.12">12.12</A> <A HREF="Modem-HOWTO.html#toc12.12">Simple Manual Dial-In </A>
+</H2>
+
+<P> This is really doing it manually!  It doesn't even permit the
+caller to login but the caller may "chat" with you, etc.  It's a way
+to answer a call without bothering to edit any configuration files for
+dial-in or enabling getty.  To do it you run a terminal program such
+as minicom.  Make sure it's connected to your modem by typing "AT
+&lt;enter&gt;" and expect "OK".  Then wait for the call.  Then you
+really answer the call manually by typing "ATA" when the phone is
+ringing.  This doesn't run getty and the caller can't login.  But if
+the caller is calling in with a terminal program they may type a
+message to your screen (and conversely).  You both may send files back
+and forth by using the commands built into the terminal programs (such
+as minicom).  Another way to answer such a call would be to type say
+"ATS0=3" just before the call comes in to enable the modem to
+auto-answer on the third ring.</P>
+<P>This is one way to crudely transfer files with someone on a MS Windows
+PC who uses HyperTerminal or Terminal (for Windows 3.x or DOS).  These
+two MS programs are something like minicom.  Using this simple manual
+method (for Linux-to-Linux or MS-to-Linux) requires two people to be
+present, one one each end of the phone line connection running a
+terminal communications program.  Be warned that if both people
+type at the same time it's chaos.  It's a "last resort" way to
+transfer files between any two people that have PCs (either Linux or
+MS Windows).  It could also be used for testing your modem or as a
+preliminary test before setting up dial-in.</P>
+
+<H2><A NAME="ss12.13">12.13</A> <A HREF="Modem-HOWTO.html#toc12.13">Complex GUI Dial-In, VNC</A>
+</H2>
+
+<P> At the opposite extreme to the simple (but labor intensive) manual
+dial-in described above, is one that results in GUI graphical
+interface to the Linux PC.  This generally requires that a network
+running TCP/IP protocol exist between the two computers.  One way to
+get such a "network" is to dial-out to a PC set for dial-in and then
+run PPP on the phone line.  PPP will use TCP/IP protocol encapsulated
+inside the PPP packets.  Both sides must run PPP and mgetty can be
+configured to start PPP as soon as the caller does.  The caller may
+use a PPP-dialer program just like they were dialing an ISP.  Programs
+such as wvdial, eznet, or chat scripts should do it.</P>
+<P>Instead of this tiny network over a phone connection a much larger
+network (the entire world) is reached via an ISP.  For their
+lowest-rate service many of them use proxy servers that will not give
+you access to the ports you need to use.   Even if they don't use
+proxy servers, the IP address they give you is only temporary for the
+session, so you'll need to email this IP to whomever wants to reach
+you.  If you get a more expensive ISP service, then you can avoid
+these problems.</P>
+<P>One way to get a GUI interface from the remote PC is to run the GPLed
+program: Virtual Network Computer (VNC) from AT&amp;T.  It has a
+server part which you run on your Linux PC for dial-in and a viewer
+(client) part used for dial-out.  Neither of these actually does any
+dialing or login but assumes that you have a network already set up.
+The VNC server has an X-server built in and may use Linux's twm window
+manager.  See the article on VNC in Linux Magazine: 
+<A HREF="http://www.linux-mag.com/2000-11/desktop_03.html">http://www.linux-mag.com/2000-11/desktop_03.html</A>.  The AT&amp;T
+site for VNC is: 
+<A HREF="http://www.uk.research.att.com/vnc/">http://www.uk.research.att.com/vnc/</A>.</P>
+<P>With VNC one can also connect to remote Windows PCs, get the Windows
+GUI on a Linux PC, and run Windows programs on the remote Windows PC.
+Of course the Windows PC must be running VNC (as a server).
+Obviously, a GUI connection over a modem will be slower than a
+text-only connection especially if you run KDE or GNOME or want 16-bit
+color.</P>
+
+<H2><A NAME="ss12.14">12.14</A> <A HREF="Modem-HOWTO.html#toc12.14">Interoperability with MS Windows</A>
+</H2>
+
+<P> Once you have dial-in set up, others may call in to you using
+minicom (or the like) from Unix-like systems.  From MS Windows one may
+call you using "HyperTerminal (or just "Terminal" in Windows 3.1 or
+DOS).</P>
+<P>If in Windows one wants to use dial-up with a network protocol over
+the phone line it's called "Dial-up Networking".  But it probably will
+not be able to communicate with Linux.  For setting up such dial-in in
+Windows one clicks on "server" while dial-out is the "client.  Such
+dial-in is often called "remote control" meaning that the caller can
+use your PC, run programs on it, and thus control it remotely.</P>
+<P>While it's easy to call in to a text-based Linux system from MS
+Windows, it's not so easy the other way around (partly because
+Windows is not text-based and would need to put the caller into DOS
+where files wouldn't be protected like they are in Linux.</P>
+<P>However Windows "Dial-up Networking" can establish a dial-in provided
+the caller uses certain network protocols over the phone line: MS's
+or Novel's (two protocols not liked by Linux).  So if someone with
+Windows enables their Dial-up networking server in Windows 98, you
+can't just dial in directly to it from Linux.  This type of dial-in
+doesn't permit the caller to run most of the programs on the host like
+Linux does.  It's called "remote access" and one may transfer files,
+use the hosts printer, access databases, etc.  Is there some way to
+interface to Dial-up Networking from Linux??</P>
+<P>It is possible for two people to crudely chat and send files using
+Minicom on the Linux end and HyperTerminal on the Windows end.  It's
+all done manually by two live persons, one on each end of the phone
+connection.  See 
+<A HREF="#manual_dialin">Simple Manual Dial-In</A>.</P>
+<P>At the opposite extreme, one would like to run a dial-in so that the
+person calling would get a GUI interface.  For that a network protocol
+is normally used.  It's possible using PC Anywhere for Windows or VNC
+for both Linux and Windows.  But PC Anywhere doesn't seem to talk to
+Linux ??  Other Window programs for "remote control" include Laplink,
+Co-Session, and Microcom.  Do any such programs support Linux besides
+VNC ??</P>
+
+<HR>
+<A HREF="Modem-HOWTO-13.html">Next</A>
+<A HREF="Modem-HOWTO-11.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc12">Contents</A>
+</BODY>
+</HTML>

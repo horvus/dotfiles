@@ -1,0 +1,208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>mini-HOWTO install qmail with MH: ISDN</TITLE>
+ <LINK HREF="Qmail+MH-9.html" REL=next>
+ <LINK HREF="Qmail+MH-7.html" REL=previous>
+ <LINK HREF="Qmail+MH.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Qmail+MH-9.html">Next</A>
+<A HREF="Qmail+MH-7.html">Previous</A>
+<A HREF="Qmail+MH.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. ISDN</A></H2>
+
+<P>
+<P>I am including this although this has nothing to do with qmail or
+mh. But without a PPP line to your ISP there is no email at all. I had
+quite a bit of bother to get my ISDN working. The SusE distribution
+includes a configuration for ISDN, but I wanted something simpler. The
+stuff here was adapted from Bernhard Hailer's scripts. (Vielen, vielen
+dank!)
+<P>The following rc.config loads the necessary modules during
+initialisation:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#!/bin/bash
+# This is adapted Bernhard Hailer's old script
+
+LOCAL_NUMBER="91311234"        # tel no. 091311234
+REMOTE_NUMBER="0911123456"     # ISP tel no.
+LOCAL_IP="192.168.0.99"        # I have dynamic IP so this will do
+REMOTE_IP="195.112.123.11"     # your ISP's gateway
+DEVICE="ippp0"
+
+SYSPATH="/sbin"
+ISDNCTRL="$SYSPATH/isdnctrl"
+
+case "$1" in
+start)
+        # turn on isdn
+        insmod /lib/modules/2.0.33/net/slhc.o
+        insmod /lib/modules/2.0.33/misc/isdn.o
+        sleep 1
+        # load the hisax module
+        insmod /lib/modules/2.0.33/misc/hisax.o 
+                                   id=Tel0 type=5 protocol=2 irq=10 io=0x300 
+        echo "starting isdn4linux"
+        # global
+        $ISDNCTRL verbose 0
+
+        $ISDNCTRL addif $DEVICE         # create new interface
+        $ISDNCTRL addphone $DEVICE in $REMOTE_NUMBER
+        $ISDNCTRL addphone $DEVICE out $REMOTE_NUMBER
+        $ISDNCTRL eaz $DEVICE $LOCAL_NUMBER
+        $ISDNCTRL l2_prot $DEVICE hdlc
+        $ISDNCTRL l3_prot $DEVICE trans
+        $ISDNCTRL encap $DEVICE syncppp
+        $ISDNCTRL huptimeout $DEVICE 300 
+        $ISDNCTRL chargehup  $DEVICE off
+        $ISDNCTRL secure $DEVICE on
+
+        $SYSPATH/ifconfig $DEVICE $LOCAL_IP pointopoint $REMOTE_IP metric 1
+        $SYSPATH/route add default $DEVICE
+        $SYSPATH/ipppd /dev/ippp0 file /etc/ppp/options.ipppd &amp;
+        $SYSPATH/route del default
+        
+        ;;
+stop)
+        #turn off isdn
+        rmmod hisax.o  
+        sleep 1
+        rmmod isdn.o
+        rmmod slhc.o
+        echo "Shutting down isdn4linux"
+        $ISDNCTRL delif ippp0
+        ;;
+*)
+        echo "Usage: $0 (start|stop)"
+        exit 1
+        ;;
+esac
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>I use the following script to dial out, it is called simply isdn on|off
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+
+#!/bin/bash
+# This is based on an old script from Bernhard Hailer
+
+IP_ADDRESS="195.112.123.11"
+
+case "$1" in
+on)
+        
+        
+        echo "Calling ippp0"
+        /sbin/isdnctrl dial ippp0
+# the sleep is important as it gives the PPP time to settle down
+        echo "Sleep for 8s for PPP handshake"
+        sleep 8s
+        /sbin/route add default ippp0
+        echo "line open - checking...."
+      
+# check whether PPP negotiation was successful:
+        set `ping -qc3 -i1 $IP_ADDRESS 2>/dev/null | grep transmitted`
+        if [ $4 -gt 0 ];
+        then
+                echo "succeeded."
+                echo "Starting fetchmail daemon"
+                /usr/bin/fetchmail -d 600 -k -v -a -L /var/log/fetchmail
+                echo "Flushing mail queue...."
+                /usr/local/bin/serialmail/maildir2smtp 
+                            ~alias/pppdir alias-ppp- mail.server.ip.no `hostname`
+        else
+                echo "failed!"
+                /sbin/isdnctrl hangup ippp0
+        fi
+        
+;;
+
+off)
+                echo -n "Shutting down fetchmail daemon"
+                /usr/bin/fetchmail --quit
+                
+                /sbin/isdnctrl hangup ippp0
+                /sbin/route del default         # and delete route
+                echo "You're off line"
+;;
+
+*)
+        echo -e "\aUsage:"
+        echo "isdn on"
+        echo "isdn off"
+;;
+
+esac
+</PRE>
+</CODE></BLOCKQUOTE>
+
+The next lot is the ipppd options file /etc/ppp/options.ipppd
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# Based on:
+# Klaus Franken, kfr@suse.de
+# Version: 27.08.97 (5.1)
+# 
+# This file is copy by YaST from /etc/ppp/ioptions.YaST 
+#   to options.&lt;device>
+
+user "myuserid"
+
+# my system name (only for CHAP!)
+# name my_system_name
+
+# accept IP addresses from peer
+# use with dynamic IP
+ipcp-accept-local
+ipcp-accept-remote
+noipdefault
+
+# try to get IP address from interface
+# option specific to ipppd (as opposed to pppd)
+# use only with static IP
+#useifip
+
+# disable all header-compression
+-vj
+-vjccomp
+-ac
+-pc
+-bsdcomp
+
+# sometimes you need this:
+#noccp
+
+# max receive unit
+mru 1524
+# max transmit unit
+mtu 1500
+
+# If this machine is a server, force authentication by uncommenting one
+# of the following. However, if this machine is a client, doing this will
+# prevent a succesful connection! (message "peer refused to authenticate").
+# So, only uncomment on a server.
+# "+pap" / "+chap" NUR AKTIVIEREN, WENN DIES EIN SERVER IST!!!
+#+pap
+#+chap
+
+# if you have problems with handshaking (no response for first
+# lcp-package) try to decrease the retry-cycle. Default is 3 sec,
+# try for example 2 sec:
+# lcp-restart 2
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<HR>
+<A HREF="Qmail+MH-9.html">Next</A>
+<A HREF="Qmail+MH-7.html">Previous</A>
+<A HREF="Qmail+MH.html#toc8">Contents</A>
+</BODY>
+</HTML>

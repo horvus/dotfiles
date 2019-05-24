@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>KernelAnalysis-HOWTO: Useful Tips</TITLE>
+ <LINK HREF="KernelAnalysis-HOWTO-11.html" REL=next>
+ <LINK HREF="KernelAnalysis-HOWTO-9.html" REL=previous>
+ <LINK HREF="KernelAnalysis-HOWTO.html#toc10" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="KernelAnalysis-HOWTO-11.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-9.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc10">Contents</A>
+<HR>
+<H2><A NAME="s10">10. Useful Tips</A></H2>
+
+<H2><A NAME="ss10.1">10.1 Stack and Heap</A>
+</H2>
+
+<H3>Overview</H3>
+
+<P>Here we view how "stack" and "heap" are allocated in memory
+<P>
+<H3>Memory allocation</H3>
+
+<P>
+<PRE>
+
+FF..        |                 | &lt;-- bottom of the stack
+       /|\  |                 |   | 
+ higher |   |                 |   |   stack
+ values |   |                 |  \|/  growing
+            |                 |
+XX..        |                 | &lt;-- top of the stack [Stack Pointer]
+            |                 |
+            |                 |
+            |                 |
+00..        |_________________| &lt;-- end of stack [Stack Segment]
+                 
+                   Stack
+
+</PRE>
+<P>Memory address values start from 00.. (which is also where Stack
+Segment begins) and they grow going toward FF.. value.
+<P>
+<P>XX.. is the actual value of the Stack Pointer.
+<P>
+<P>Stack is used by functions for:
+<P>
+<P>
+<OL>
+<LI>global variables  </LI>
+<LI>local variables</LI>
+<LI>return address
+</LI>
+</OL>
+<P>For example, for a classical function:
+<P>
+<P>
+<PRE>
+
+ |int foo_function (parameter_1, parameter_2, ..., parameter_n) {
+    |variable_1 declaration;
+    |variable_2 declaration;
+      ..
+    |variable_n declaration;
+   
+    |// Body function
+    |dynamic variable_1 declaration;
+    |dynamic variable_2 declaration;
+     ..
+    |dynamic variable_n declaration;
+   
+    |// Code is inside Code Segment, not Data/Stack segment!
+    
+    |return (ret-type) value; // often it is inside some register, for i386 eax register is used.
+ |}
+we have
+
+          |                       |
+          | 1. parameter_1 pushed | \
+    S     | 2. parameter_2 pushed |  | Before 
+    T     | ...................   |  | the calling
+    A     | n. parameter_n pushed | /
+    C     | ** Return address **  | -- Calling
+    K     | 1. local variable_1   | \ 
+          | 2. local variable_2   |  | After
+          | .................     |  | the calling
+          | n. local variable_n   | /
+          |                       | 
+         ...                     ...   Free
+         ...                     ...   stack
+          |                       |
+    H     | n. dynamic variable_n | \
+    E     | ...................   |  | Allocated by
+    A     | 2. dynamic variable_2 |  | malloc &amp; kmalloc
+    P     | 1. dynamic variable_1 | /
+          |_______________________|
+        
+            Typical stack usage
+ 
+Note: variables order can be different depending on hardware architecture.
+
+</PRE>
+<H2><A NAME="ss10.2">10.2 Application vs Process</A>
+</H2>
+
+<H3>Base definition</H3>
+
+<P>We have to distinguish 2 concepts:
+<P>
+<P>
+<UL>
+<LI>Application: that is the useful code we want to execute</LI>
+<LI>Process: that is the IMAGE on memory of the application (it depends
+on memory strategy used, segmentation and/or Pagination).
+</LI>
+</UL>
+<P>Often Process is also called Task or Thread.
+<P>
+<H2><A NAME="ss10.3">10.3 Locks</A>
+</H2>
+
+<H3>Overview</H3>
+
+<P>2 kind of locks:
+<P>
+<P>
+<OL>
+<LI>intraCPU</LI>
+<LI>interCPU
+</LI>
+</OL>
+<H2><A NAME="ss10.4">10.4 Copy_on_write</A>
+</H2>
+
+<P>Copy_on_write is a mechanism used to reduce memory usage. It
+postpones memory allocation until the memory is really needed.
+<P>
+<P>For example, when a task executes the "fork()" system call (to
+create another task), we still use the same memory pages as the 
+parent, in read only mode. When a task WRITES into the page, it causes
+an exception and the page is copied and marked "rw" (read, write).
+<P>
+<P>
+<PRE>
+ 
+1-) Page X is shared between Task Parent and Task Child
+ Task Parent
+ |         | RO Access  ______
+ |         |----------&gt;|Page X|    
+ |_________|           |______|
+                          /|\
+                           |
+ Task Child                | 
+ |         | RO Access     |  
+ |         |----------------                
+ |_________| 
+ 
+ 
+2-) Write request
+ Task Parent
+ |         | RO Access  ______
+ |         |----------&gt;|Page X|    Trying to write
+ |_________|           |______|
+                          /|\
+                           |
+ Task Child                | 
+ |         | RO Access     |  
+ |         |----------------                
+ |_________| 
+ 
+ 
+3-) Final Configuration: Either Task Parent and Task Child have an independent copy of the Page, X and Y
+ Task Parent
+ |         | RW Access  ______
+ |         |----------&gt;|Page X|    
+ |_________|           |______|
+              
+              
+ Task Child
+ |         | RW Access  ______
+ |         |----------&gt;|Page Y|    
+ |_________|           |______|
+</PRE>
+<HR>
+<A HREF="KernelAnalysis-HOWTO-11.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-9.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc10">Contents</A>
+</BODY>
+</HTML>

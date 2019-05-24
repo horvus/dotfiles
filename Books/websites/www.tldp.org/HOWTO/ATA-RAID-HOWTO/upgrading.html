@@ -1,0 +1,508 @@
+<HTML
+><HEAD
+><TITLE
+>Upgrading Kernel</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Linux ATA RAID HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Installing on an existing Linux system"
+HREF="existing.html"><LINK
+REL="NEXT"
+TITLE="Disabling RAID feature on Promise FastTrack"
+HREF="disable.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux ATA RAID HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="existing.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="disable.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="UPGRADING">8. Upgrading Kernel</H1
+><P
+>Read this section carefully before you plan to upgrade kernel on your Linux machine with Promise FastTrack RAID. Unless you are not using Promise FastTrack at all in any way, you need this information to avoid problems.</P
+><P
+>Always backup your data before kernel upgrade. Also backup <TT
+CLASS="FILENAME"
+>/etc/fstab</TT
+>, <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>, <TT
+CLASS="FILENAME"
+>/boot/vmlinuz-currentversion</TT
+> and  <TT
+CLASS="FILENAME"
+>/boot/initrd.img</TT
+> (if you use initrd). When you upgrade your kernel, do not delete old kernel or its dependent files in <TT
+CLASS="FILENAME"
+>/boot</TT
+> and do not delete the lines corresponding to it in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>. If you upgrade kernel to say 2.4.19, just create another kernel section in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>. For example, add the following lines to <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>&#13;# Begin Code for booting my brand new kernel: 2.4.19
+
+image=/boot/vmlinuz-2.4.19
+	label=linux-new
+	read-only
+	root=/dev/ataraid/d0p12
+
+# End Code for booting my brand new kernel: 2.4.19&#13;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Also, do not change <TT
+CLASS="FILENAME"
+>default=linux</TT
+> line in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> unless and until you successfully can boot into your new kernel by typing <TT
+CLASS="USERINPUT"
+><B
+>linux-new</B
+></TT
+> at the <TT
+CLASS="PROMPT"
+>boot:</TT
+> prompt (or highlighting <TT
+CLASS="FILENAME"
+>linux-new</TT
+> in the menu, if you are using LILO in curses menu mode).</P
+><P
+>Now lets discuss the actual process of upgrading kernel in the following four cases:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Promise Technology (<TT
+CLASS="FILENAME"
+>ft</TT
+>) Driver with OS on RAID mirror</P
+></LI
+><LI
+><P
+>Promise Technology (<TT
+CLASS="FILENAME"
+>ft</TT
+>) Driver with non-OS data on RAID mirror</P
+></LI
+><LI
+><P
+>Linux Native (<TT
+CLASS="FILENAME"
+>ataraid</TT
+>) Driver with OS on RAID mirror</P
+></LI
+><LI
+><P
+>Linux Native (<TT
+CLASS="FILENAME"
+>ataraid</TT
+>) Driver with non-OS data on RAID mirror</P
+></LI
+></OL
+><P
+>OS stands for "Operating System" or more specifically Red Hat Linux Operating System in our case.  When you install Linux on mirrored partitions such as <TT
+CLASS="FILENAME"
+>/dev/ataraid/d0p1</TT
+> (or <TT
+CLASS="FILENAME"
+>/dev/sda1</TT
+> when using Promise Technology proprietary driver), you are said to have your OS on RAID mirror.  If your Linux machine has only the main partitions such as <TT
+CLASS="FILENAME"
+>/</TT
+> and <TT
+CLASS="FILENAME"
+>/boot</TT
+> on RAID, it is also called (a case of) OS on RAID.</P
+><P
+>Partitions created by user to make use of available free partitions such as <TT
+CLASS="FILENAME"
+>/mydata1</TT
+>, <TT
+CLASS="FILENAME"
+>/imp</TT
+>, <TT
+CLASS="FILENAME"
+>/scratch</TT
+> are not part of Linux OS because Linux does not install any files into them by default when you install Linux or upgrade any standard Linux software package. Any data in such user partitions becomes user data or alternatively, non-OS data. It is a good idea to use only ext3 and swap file systems for OS partitions. For non-OS partitions, you can use other file systems such as ext2 and dos (if you have another operating system like Windows on the same Linux computer or if you just feel like you love dos so much). However, why do you want to use ext2 if you dont have to and you have a better choice of using ext3 for OS or non-OS partitions?</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CASE1">8.1. Promise Technology (<TT
+CLASS="FILENAME"
+>ft</TT
+>) Driver with OS on RAID mirror</H2
+><P
+>Currently, Promise Technology supports Red Hat 7.2 and earlier versions only. Red Hat 7.2 uses kernel 2.4.7-10 by default. Also note that, you have to use initrd.img (Initial RAM disk image) in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>, when you install Linux with Promise supplied driver. At the time of installation, Promise Driver scripts are supposed to automatically generate initrd file and configure <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> for you. Unfortunately, this does not work properly and you may have to manually create initrd.img and configure <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> yourself.</P
+><P
+>You are stuck with the default kernel 2.4.7-10 and you cannot and should not upgrade kernel either by compiling or by automatic update programs such as <B
+CLASS="COMMAND"
+>up2date</B
+> or <B
+CLASS="COMMAND"
+>rpm</B
+> utility. If you really really want to upgrade kernel then do so but do not use raid. You can add <EM
+>Append Line</EM
+> to the <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> as explained in <A
+HREF="existing.html#DETERMINE"
+>Section 7.2</A
+> and do not load ataraid module (or do not compile your new kernel with ataraid feature built-in).  By doing this, you are upgrading kernel to new version and sacrificing RAID feature because you are using Promise Technology card as a simple IDE extension card.</P
+><P
+>If Promise Technology releases new version of their <TT
+CLASS="FILENAME"
+>ft</TT
+> driver for 2.4.19 in future, you can then upgrade your kernel first to 2.4.19 (using <B
+CLASS="COMMAND"
+>up2date</B
+> or <B
+CLASS="COMMAND"
+>rpm</B
+> but not by manually compiling) and place their new version of <TT
+CLASS="FILENAME"
+>ft.o</TT
+> file in <TT
+CLASS="FILENAME"
+>/lib/modules/kernel-2.4.19</TT
+>. You will also have to put <TT
+CLASS="FILENAME"
+>initrd-2.4.19</TT
+> in <TT
+CLASS="FILENAME"
+>/boot</TT
+> and append <TT
+CLASS="FILENAME"
+>initrd=</TT
+> line to the new kernel section in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>. If your Linux  machine uses Promise Technology driver, your OS is on RAID mirror and Promise Technology did not release any new versions for new kernel versions, please do not fool around with your current kernel. If you do fool around, remember that you can seriously damage your computer and not be able to boot or retrieve your data.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CASE2">8.2. Promise Technology (<TT
+CLASS="FILENAME"
+>ft</TT
+>) Driver with non-OS data on RAID mirror</H2
+><P
+>Almost all of explanation in previous case (Promise Technology (<TT
+CLASS="FILENAME"
+>ft</TT
+>) Driver with OS on RAID mirror) applies in this also, ofcourse you are now risking non-OS data instead of OS. That means, if your upgrade fails, you will be able to boot but not be able to see data in your RAID partitions. Additionally, you have the flexibility of loading and unloading Promise Proprietary driver (<TT
+CLASS="FILENAME"
+>ft.o</TT
+>). However, this is not guaranteed to work smoothly because Promise Technology driver has a lot of issues.</P
+><P
+>Unless Promise Technology releases appropriate drivers for new kernel version, please do not attempt kernel upgrade in any method. You are stuck with 2.4.7-10 kernel.  You may be required to add <EM
+>Append Line</EM
+> as discussed in <A
+HREF="existing.html#DETERMINE"
+>Section 7.2</A
+> to boot your computer in some cases.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CASE3">8.3. Linux Native (ataraid) Driver with OS on RAID mirror</H2
+><P
+>You can upgrade kernel to any version above 2.4.18 by recompiling the kernel and not by any automatic upgrade method such as <B
+CLASS="COMMAND"
+>up2date</B
+> or <B
+CLASS="COMMAND"
+>rpm</B
+> utility. You need .config file from your previous kernel source directory (<TT
+CLASS="FILENAME"
+>/usr/src/linux-2.4.18/.config</TT
+>). You did save your 2.4.18 .config file, did't you?</P
+><P
+>&#13;After you copy <TT
+CLASS="FILENAME"
+>.config</TT
+> into <TT
+CLASS="FILENAME"
+>/usr/src/linux-2.4.19</TT
+> directory, you may make changes by typing <B
+CLASS="COMMAND"
+>make menuconfig</B
+> but generally you do not need to make changes because you are upgrading only to 2.4.19 and your machine hardware did not change. But if you do make changes by typing <B
+CLASS="COMMAND"
+>make menuconfig</B
+>, remember to save and also backup your modified .config file. Save the .config file safely in /root or on a floppy disk. Here are the steps:</P
+><P
+></P
+><UL
+><LI
+><P
+>Unzip new kernel in <TT
+CLASS="FILENAME"
+>/usr/src</TT
+> and rename top directory to <TT
+CLASS="FILENAME"
+>linux-2.4.19</TT
+>. So your new kernel source directory is <TT
+CLASS="FILENAME"
+>/usr/src/linux-2.4.19</TT
+>.</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>cp /root/config.txt .config</B
+></P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>make menuconfig</B
+> (Make any required changes)</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>cp .config /root/config-2.4.19.txt</B
+> (Back up config file in a safe place)</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>make dep ; make clean ; make &#38;&#38; make install</B
+> (Install new kernel)</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>make modules &#38;&#38; make modules_install</B
+> (Install new kernel modules)</P
+></LI
+><LI
+><P
+>Edit <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+> to add new lines to boot new kernel. Label the new kernel <TT
+CLASS="FILENAME"
+>linux-new</TT
+>. Do not change <TT
+CLASS="FILENAME"
+>default=</TT
+> line and do not delete lines corrosponding to current working kernel.</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>/sbin/lilo</B
+> (Activate changes in <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>)</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>/sbin/lilo -R linux-new</B
+> (Tell LILO to treat <TT
+CLASS="FILENAME"
+>linux-new</TT
+> as default boot kernel just for one time only)</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>sync;sync;reboot</B
+> (Reboot and hope that it works. If it does not boot, power off and power on again. Then login and investigate why your new kernel did not boot.)</P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CASE4">8.4. Linux Native (ataraid) Driver with non-OS data on RAID mirror</H2
+><P
+>To upgrade kernel in this case, follow same procedure as explained in previous section (Linux Native (ataraid) Driver with OS on RAID mirror). If you experience problems, you may be required to add an additional line, <EM
+>Append Line</EM
+>, to your <TT
+CLASS="FILENAME"
+>/etc/lilo.conf</TT
+>. To find out what your <EM
+>Append Line</EM
+> is, see <A
+HREF="existing.html#DETERMINE"
+>Section 7.2</A
+>.</P
+><P
+>Similar to previous case, do not attempt to upgrade kernel by any automatic method (<B
+CLASS="COMMAND"
+>up2date</B
+> or <B
+CLASS="COMMAND"
+>rpm</B
+> utility). Manually compile and your install your new kernel as explained in the previous section.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="existing.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="disable.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Installing on an existing Linux system</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Disabling RAID feature on Promise FastTrack</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

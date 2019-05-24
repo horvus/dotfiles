@@ -1,0 +1,692 @@
+<HTML
+><HEAD
+><TITLE
+>Avoiding Bounce Buffers</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="I/O Performance HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="introduction.html"><LINK
+REL="NEXT"
+TITLE="Raw I/O Variable-Size Optimization Patch"
+HREF="x159.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>I/O Performance HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="introduction.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x159.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="OVERVIEW">3. Avoiding Bounce Buffers</H1
+><P
+>This section provides information on applying and using the bounce buffer patch on the Linux 2.4 kernel. The bounce buffer patch, written by Jens Axboe, enables device drivers that support direct memory access (DMA) I/O  to high-address physical memory to avoid bounce buffers.</P
+><P
+>This document provides a brief overview on memory and addressing in the Linux kernel, followed by information on why and how to make use of the bounce buffer patch.</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN40">3.1. Memory and Addressing in the Linux 2.4 Kernel</H2
+><P
+>The Linux 2.4 kernel includes configuration options for specifying the amount of physical memory in the target computer.  By default, the configuration is limited to the amount of memory that can be directly mapped into the kernel's virtual address space starting at PAGE_OFFSET. On i386 systems the default mapping scheme limits kernel-mode addressability to the first gigabyte (GB) of physical memory, also known as low memory. Conversely, high memory is normally the memory above 1 GB. High memory is not directly accessible or permanently mapped by the kernel. Support for high memory is an option that is enabled during <A
+HREF="overview.html#config"
+>configuration of the Linux kernel</A
+>.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN44">3.2. The Problem with Bounce Buffers</H2
+><P
+>When DMA I/O is performed to or from high memory, an area is allocated in low memory known as a bounce buffer. When data travels between a device and high memory, it is first copied through the bounce buffer.</P
+><P
+>Systems with a large amount of high memory and intense I/O activity can create a large number of bounce buffers that can cause memory shortage problems. In addition, the excessive number of bounce buffer data copies can lead to performance degradation.</P
+><P
+>Peripheral component interface (PCI) devices normally address up to 4 GB of physical memory. When a bounce buffer is used for high memory that is below 4 GB, time and memory are wasted because the peripheral has the ability to address that memory directly. Using the bounce buffer patch can decrease, and possibly eliminate, the use of bounce buffers.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="config">3.3. Locating the Patch</H2
+><P
+> The latest version of the bounce buffer patch is <EM
+>block-highmem-all-18b.bz2</EM
+>, and it is available from Andrea Arcangeli's -aa series kernels at 
+ <A
+HREF="http://kernel.org/pub/linux/kernel/people/andrea/kernels/v2.4/"
+TARGET="_top"
+>http://kernel.org/pub/linux/kernel/people/andrea/kernels/v2.4/</A
+>.</P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN54">3.3.1. Configuring the Linux Kernel to Avoid Bounce Buffers</H3
+><P
+>This section includes information on configuring the Linux kernel to avoid bounce buffers. The Linux Kernel-HOWTO at <A
+HREF="http://www.linuxdoc.org/HOWTO/Kernel-HOWTO.html"
+TARGET="_top"
+>http://www.linuxdoc.org/HOWTO/Kernel-HOWTO.html</A
+> explains the process of re-compiling the Linux kernel.</P
+><P
+>The following kernel configuration options are required to enable the bounce buffer patch:</P
+><P
+><EM
+>Development Code</EM
+> - To enable the configurator to display the <TT
+CLASS="option"
+>High I/O Support</TT
+> option, select the <TT
+CLASS="option"
+>Code maturity level options</TT
+> category and specify "y" to <TT
+CLASS="option"
+>Prompt for development and/or incomplete code/drivers</TT
+>.</P
+><P
+><EM
+>High Memory Support</EM
+> - To enable support for physical memory that is 			greater than 1 GB, select the <TT
+CLASS="option"
+>Processor type and features</TT
+> category, and select a value from the  <TT
+CLASS="option"
+>High Memory Support</TT
+> option.</P
+><P
+><EM
+>High Memory I/O Support</EM
+> - To enable DMA I/O to physical 					addresses greater than 1 GB, select the  <TT
+CLASS="option"
+>Processor type and features</TT
+> category, and enter "y" 			to  the <TT
+CLASS="option"
+>HIGHMEM I/O support</TT
+> option. This configuration option is a new option introduced by the bounce buffer patch.</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="enabled">3.3.2. Enabled Device Drivers</H3
+><P
+>The bounce buffer patch provides the kernel infrastructure, as well as the SCSI and IDE mid-level driver modifications to support DMA I/O to high memory.  Updates for several device drivers to make use of the added support are also included with the patch.</P
+><P
+>If the bounce buffer patch is applied and you configure the kernel to support 						high memory I/O, many IDE configurations and the device drivers listed below					perform DMA I/O without the use of bounce buffers:</P
+><P
+><P
+></P
+><TABLE
+BORDER="0"
+><TBODY
+><TR
+><TD
+>aic7xxx_drv.o</TD
+></TR
+><TR
+><TD
+>aic7xxx_old.o</TD
+></TR
+><TR
+><TD
+>cciss.o</TD
+></TR
+><TR
+><TD
+>cpqarray.o</TD
+></TR
+><TR
+><TD
+>megaraid.o</TD
+></TR
+><TR
+><TD
+>qlogicfc.o</TD
+></TR
+><TR
+><TD
+>sym53c8xx.o</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></P
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN85">3.4. Modifying Your Device Driver to Avoid Bounce Buffers</H2
+><P
+>If your device drivers are not listed above in the 
+<A
+HREF="overview.html#enabled"
+>Enabled Device Drivers</A
+> section, and the device is capable of high-memory DMA I/O, you can modify your device driver to make use of the bounce buffer patch as follows. More information on rebuilding a Linux device driver is available at <A
+HREF="http://www.xml.com/ldd/chapter/book/index.html"
+TARGET="_top"
+>http://www.xml.com/ldd/chapter/book/index.html</A
+>.
+</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>A.) For SCSI Adapter Drivers: set the <TT
+CLASS="structfield"
+><I
+>highmem_io</I
+></TT
+> bit in the <TT
+CLASS="structfield"
+><I
+>Scsi_Host_Template</I
+></TT
+>  structure. </P
+><P
+>B.) For IDE Adapter Drivers: set the <TT
+CLASS="structfield"
+><I
+>highmem</I
+></TT
+>bit in the <TT
+CLASS="structfield"
+><I
+>ide_hwif_t</I
+></TT
+> structure.</P
+></LI
+><LI
+><P
+>Call <TT
+CLASS="structfield"
+><I
+>pci_set_dma_mask(struct pci_dev *pdev, dma_addr_t mask)</I
+></TT
+> to specify the address bits that the device can successfully use on DMA operations. </P
+><P
+>If DMA I/O can be supported with the specified mask, <TT
+CLASS="structfield"
+><I
+>pci_set_dma_mask()</I
+></TT
+> will set <TT
+CLASS="structfield"
+><I
+>pdev-&#62;dma_mask</I
+></TT
+> and return 0. For SCSI or IDE, the mask value will also be passed by the mid-level drivers to <TT
+CLASS="structfield"
+><I
+>blk_queue_bounce_limit(request_queue_t *q, u64 dma_addr)</I
+></TT
+> so that bounce buffers are not created for memory directly addressable by the device. Drivers other than SCSI or IDE must call <TT
+CLASS="structfield"
+><I
+>blk_queue_bounce_limit()</I
+></TT
+> directly. </P
+></LI
+><LI
+><P
+>Use <TT
+CLASS="structfield"
+><I
+>pci_map_page(dev, page, offset, size, direction)</I
+></TT
+>, instead of <TT
+CLASS="structfield"
+><I
+>pci_map_single(dev, address, size, direction)</I
+></TT
+> to map a memory region so that it is accessible by the peripheral device. <TT
+CLASS="structfield"
+><I
+>pci_map_page() </I
+></TT
+> supports both high and low memory.</P
+><P
+>The <TT
+CLASS="structfield"
+><I
+>address </I
+></TT
+> parameter for <TT
+CLASS="structfield"
+><I
+>pci_map_single()</I
+></TT
+> correlates to the <TT
+CLASS="structfield"
+><I
+>page</I
+></TT
+> and<TT
+CLASS="structfield"
+><I
+> offset </I
+></TT
+> parameters for <TT
+CLASS="structfield"
+><I
+>pci_map_page()</I
+></TT
+>. Use the <TT
+CLASS="structfield"
+><I
+>virt_to_page()</I
+></TT
+> macro to convert an <TT
+CLASS="structfield"
+><I
+>address</I
+></TT
+> to a <TT
+CLASS="structfield"
+><I
+>page </I
+></TT
+> and <TT
+CLASS="structfield"
+><I
+>offset</I
+></TT
+>. The <TT
+CLASS="structfield"
+><I
+>virt_to_page()</I
+></TT
+> macro is defined by including pci.h. For example:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><TT
+CLASS="structfield"
+><I
+>void *address;</I
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><TT
+CLASS="structfield"
+><I
+>struct page *page;</I
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><TT
+CLASS="structfield"
+><I
+>unsigned long offset;</I
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><TT
+CLASS="structfield"
+><I
+>page = virt_to_page(address);</I
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><TT
+CLASS="structfield"
+><I
+>offset = (unsigned long) address &#38; ~PAGE_MASK;</I
+></TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Call <TT
+CLASS="structfield"
+><I
+>pci_unmap_page()</I
+></TT
+> after the DMA I/O transfer is complete to remove the mapping established by <TT
+CLASS="structfield"
+><I
+>pci_map_page()</I
+></TT
+>.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="structfield"
+><I
+>pci_map_single()</I
+></TT
+> is implemented using <TT
+CLASS="structfield"
+><I
+>virt_to_bus()</I
+></TT
+>. <TT
+CLASS="structfield"
+><I
+>virt_to_bus()</I
+></TT
+> handles low memory addresses only. Drivers supporting high memory should no longer call <TT
+CLASS="structfield"
+><I
+>virt_to_bus()</I
+></TT
+> or <TT
+CLASS="structfield"
+><I
+>bus_to_virt()</I
+></TT
+>.</P
+></TD
+></TR
+></TABLE
+></DIV
+></LI
+><LI
+><P
+>If your driver calls <TT
+CLASS="structfield"
+><I
+>pci_map_sg()</I
+></TT
+> to map a scatter-gather DMA operation, your driver should set the <TT
+CLASS="structfield"
+><I
+>page</I
+></TT
+> and <TT
+CLASS="structfield"
+><I
+>offset</I
+></TT
+> fields instead of the <TT
+CLASS="structfield"
+><I
+>address</I
+></TT
+> field of the <TT
+CLASS="structfield"
+><I
+>scatterlist</I
+></TT
+> structure. Refer to step 3 for converting an <TT
+CLASS="structfield"
+><I
+>address</I
+></TT
+> to a <TT
+CLASS="structfield"
+><I
+>page</I
+></TT
+> and <TT
+CLASS="structfield"
+><I
+>offset</I
+></TT
+>.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>If your driver is already using the PCI DMA API, continue to use <TT
+CLASS="structfield"
+><I
+>pci_map_page()				</I
+></TT
+> or <TT
+CLASS="structfield"
+><I
+>pci_map_sg()</I
+></TT
+> as appropriate. However, do not use the <TT
+CLASS="structfield"
+><I
+>address</I
+></TT
+> field of the <TT
+CLASS="structfield"
+><I
+>scatterlist</I
+></TT
+> structure.</P
+></TD
+></TR
+></TABLE
+></DIV
+></LI
+></OL
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="introduction.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x159.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Raw I/O Variable-Size Optimization Patch</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

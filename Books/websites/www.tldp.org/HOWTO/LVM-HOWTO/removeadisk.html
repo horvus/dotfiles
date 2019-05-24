@@ -1,0 +1,505 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Removing an Old Disk</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Recipes"
+HREF="recipes.html"><LINK
+REL="PREVIOUS"
+TITLE="Taking a Backup Using Snapshots"
+HREF="snapshots_backup.html"><LINK
+REL="NEXT"
+TITLE="Moving a volume group to another system"
+HREF="recipemovevgtonewsys.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="snapshots_backup.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. Recipes</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="recipemovevgtonewsys.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="RemoveADisk"
+></A
+>13.5. Removing an Old Disk</H1
+><P
+>&#13;        Say you have an old IDE drive on /dev/hdb.  You want to remove that
+        old disk but a lot of files are on it.
+      </P
+><DIV
+CLASS="caution"
+><P
+></P
+><TABLE
+CLASS="caution"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/caution.gif"
+HSPACE="5"
+ALT="Caution"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Backup Your System</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          You should always backup your system before attempting a pvmove
+          operation.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1272"
+></A
+>13.5.1. Distributing Old Extents to Existing Disks in Volume Group</H2
+><P
+>&#13;          If you have enough free extents on the other disks in the volume
+          group, you have it easy.  Simply run
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvmove /dev/hdb</B
+>
+<TT
+CLASS="computeroutput"
+>pvmove -- moving physical extents in active volume group "dev"
+pvmove -- WARNING: moving of active logical volumes may cause data loss!</TT
+>
+<TT
+CLASS="prompt"
+>pvmove -- do you want to continue? [y/n]</TT
+> y
+<TT
+CLASS="computeroutput"
+>pvmove -- 249 extents of physical volume "/dev/hdb" successfully moved</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          This will move the allocated physical extents from /dev/hdb onto
+          the rest of the disks in the volume group.
+        </P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+><B
+CLASS="command"
+>pvmove</B
+> is Slow</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;            Be aware that pvmove is quite slow as it has to copy the
+            contents of a disk block by block to one or more disks.  If you
+            want more steady status reports from pvmove, use the
+            <TT
+CLASS="option"
+>-v</TT
+> flag.
+          </P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1285"
+></A
+>13.5.1.1. Remove the unused disk</H3
+><P
+>&#13;            We can now remove the old IDE disk from the volume group.
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgreduce dev /dev/hdb</B
+>
+<TT
+CLASS="computeroutput"
+>vgreduce -- doing automatic backup of volume group "dev"
+vgreduce -- volume group "dev" successfully reduced by physical volume:
+vgreduce -- /dev/hdb</TT
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            The drive can now be either physically removed when the
+            machine is next powered down or reallocated to other users.
+          </P
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1291"
+></A
+>13.5.2. Distributing Old Extents to a New Replacement Disk</H2
+><P
+>&#13;          If you do not have enough free physical extents to distribute
+          the old physical extents to, you will have to add a disk to the 
+          volume group and move the extents to it.
+        </P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1294"
+></A
+>13.5.2.1. Prepare the disk</H3
+><P
+>&#13;            First, you need to pvcreate the new disk to make it available
+            to LVM.  In this recipe we show that you don't need to
+            partition a disk to be able to use it.
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvcreate /dev/sdf</B
+>
+<TT
+CLASS="computeroutput"
+>pvcreate -- physical volume "/dev/sdf" successfully created</TT
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1300"
+></A
+>13.5.2.2. Add it to the volume group</H3
+><P
+>&#13;            As developers use a lot of disk space this is a good volume
+            group to add it into.
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgextend dev /dev/sdf</B
+>
+<TT
+CLASS="computeroutput"
+>vgextend -- INFO: maximum logical volume size is 255.99 Gigabyte
+vgextend -- doing automatic backup of volume group "dev"
+vgextend -- volume group "dev" successfully extended</TT
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1306"
+></A
+>13.5.2.3. Move the data</H3
+><P
+>&#13;            Next we move the data from the old disk onto the new one.
+            Note that it is not necessary to unmount the file system
+            before doing this.  Although it is *highly* recommended that
+            you do a full backup before attempting this operation in case
+            of a power outage or some other problem that may interrupt
+            it. The pvmove command can take a considerable amount of time
+            to complete and it also exacts a performance hit on the two
+            volumes so, although it isn't necessary, it is advisable to
+            do this when the volumes are not too busy.
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvmove /dev/hdb /dev/sdf</B
+>
+<TT
+CLASS="computeroutput"
+>pvmove -- moving physical extents in active volume group "dev"
+pvmove -- WARNING: moving of active logical volumes may cause data loss!</TT
+>
+<TT
+CLASS="prompt"
+>pvmove -- do you want to continue? [y/n]</TT
+> y
+<TT
+CLASS="computeroutput"
+>pvmove -- 249 extents of physical volume "/dev/hdb" successfully moved</TT
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN1314"
+></A
+>13.5.2.4. Remove the unused disk</H3
+><P
+>&#13;            We can now remove the old IDE disk from the volume group.
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgreduce dev /dev/hdb</B
+>
+<TT
+CLASS="computeroutput"
+>vgreduce -- doing automatic backup of volume group "dev"
+vgreduce -- volume group "dev" successfully reduced by physical volume:
+vgreduce -- /dev/hdb</TT
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            The drive can now be either physically removed when the
+            machine is next powered down or reallocated to some other
+            users.
+          </P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="snapshots_backup.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="recipemovevgtonewsys.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Taking a Backup Using Snapshots</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="recipes.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Moving a volume group to another system</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

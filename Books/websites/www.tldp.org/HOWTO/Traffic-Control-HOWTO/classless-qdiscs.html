@@ -1,0 +1,704 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Classless Queuing Disciplines (qdiscs)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Traffic Control HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Software and Tools"
+HREF="software.html"><LINK
+REL="NEXT"
+TITLE="Classful Queuing Disciplines (qdiscs)"
+HREF="classful-qdiscs.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Traffic Control HOWTO: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="software.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="classful-qdiscs.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="classless-qdiscs"
+></A
+>6. Classless Queuing Disciplines (<A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+>s)</H1
+><P
+>&#13;    Each of these queuing disciplines can be used as the primary qdisc on an
+    interface, or can be used inside a leaf class of a <A
+HREF="classful-qdiscs.html"
+>classful qdiscs</A
+>.
+    These are the fundamental schedulers used under Linux.  Note that the
+    default scheduler is the <A
+HREF="classless-qdiscs.html#qs-pfifo_fast"
+><TT
+CLASS="constant"
+>pfifo_fast</TT
+></A
+>.
+  </P
+><P
+>&#13;  </P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="qs-fifo"
+></A
+>6.1. FIFO, First-In First-Out (<TT
+CLASS="constant"
+>pfifo</TT
+> and <TT
+CLASS="constant"
+>bfifo</TT
+>)</H2
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>This is not the default qdisc on Linux interfaces.  Be certain to see
+      <A
+HREF="classless-qdiscs.html#qs-pfifo_fast"
+>Section 6.2</A
+> for the full details on the default
+      (<TT
+CLASS="constant"
+>pfifo_fast</TT
+>) qdisc.
+    </TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;      The FIFO algorithm forms the basis for the default qdisc on all Linux
+      network interfaces (<A
+HREF="classless-qdiscs.html#qs-pfifo_fast"
+><TT
+CLASS="constant"
+>pfifo_fast</TT
+></A
+>).  It performs no shaping or
+      rearranging of packets.  It simply transmits packets as soon as it can
+      after receiving and queuing them.  This is also the qdisc used inside
+      all newly created classes until another qdisc or a class replaces the
+      FIFO.
+    </P
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="images/fifo-qdisc.png"></P
+></DIV
+><P
+>&#13;      A real FIFO qdisc must, however, have a size limit (a buffer size) to
+      prevent it from overflowing in case it is unable to dequeue packets as
+      quickly as it receives them.  Linux implements two basic FIFO
+      <A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+>s, one based on bytes, and one on packets.  Regardless of
+      the type of FIFO used, the size of the queue is defined by the parameter
+      <TT
+CLASS="parameter"
+><I
+>limit</I
+></TT
+>.  For a <TT
+CLASS="constant"
+>pfifo</TT
+> the unit is understood
+      to be packets and for a <TT
+CLASS="constant"
+>bfifo</TT
+> the unit is understood to be bytes.
+    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-qs-fifo-limit"
+></A
+><P
+><B
+>Example 6. Specifying a <TT
+CLASS="parameter"
+><I
+>limit</I
+></TT
+> for a packet
+        or byte FIFO</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>cat bfifo.tcc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+>/*
+ * make a FIFO on eth0 with 10kbyte queue size
+ *
+ */
+
+dev eth0 {
+    egress {
+        fifo (limit 10kB );
+    }
+}</TT
+>
+<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>tcc &#60; bfifo.tcc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+># ================================ Device eth0 ================================
+
+tc qdisc add dev eth0 handle 1:0 root dsmark indices 1 default_index 0
+tc qdisc add dev eth0 handle 2:0 parent 1:0 bfifo limit 10240</TT
+>
+<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>cat pfifo.tcc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+>/*
+ * make a FIFO on eth0 with 30 packet queue size
+ *
+ */
+
+dev eth0 {
+    egress {
+        fifo (limit 30p );
+    }
+}</TT
+>
+<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>tcc &#60; pfifo.tcc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+># ================================ Device eth0 ================================
+
+tc qdisc add dev eth0 handle 1:0 root dsmark indices 1 default_index 0
+tc qdisc add dev eth0 handle 2:0 parent 1:0 pfifo limit 30</TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="qs-pfifo_fast"
+></A
+>6.2. <TT
+CLASS="constant"
+>pfifo_fast</TT
+>, the default Linux qdisc</H2
+><P
+>&#13;      The <TT
+CLASS="constant"
+>pfifo_fast</TT
+> qdisc is the default qdisc for all interfaces under
+      Linux.  Based on a conventional <A
+HREF="classless-qdiscs.html#qs-fifo"
+>FIFO</A
+> qdisc, this qdisc also
+      provides some prioritization.  It provides three different bands
+      (individual FIFOs) for separating traffic.  The highest priority traffic
+      (interactive flows) are placed into band 0 and are always serviced
+      first.  Similarly, band 1 is always emptied of pending packets before
+      band 2 is dequeued.
+    </P
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="images/pfifo_fast-qdisc.png"></P
+></DIV
+><P
+>&#13;      There is nothing configurable to the end user about the <TT
+CLASS="constant"
+>pfifo_fast</TT
+>
+      qdisc.  For exact details on the <TT
+CLASS="constant"
+>priomap</TT
+> and use of
+      the ToS bits, see the <A
+HREF="http://lartc.org/howto/lartc.qdisc.classless.html"
+TARGET="_top"
+>pfifo-fast
+         section of the LARTC HOWTO</A
+>.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="qs-sfq"
+></A
+>6.3. SFQ, Stochastic Fair Queuing</H2
+><P
+>&#13;      The SFQ qdisc attempts to fairly distribute opportunity to
+      transmit data to the network among an arbitrary number of
+      <A
+HREF="overview.html#o-flows"
+>flows</A
+>.  It accomplishes this by using a hash function to
+      separate the traffic into separate (internally maintained) FIFOs
+      which are dequeued in a round-robin fashion.  Because there is the
+      possibility for unfairness to manifest in the choice of hash function,
+      this function is altered periodically.  Perturbation (the parameter
+      <TT
+CLASS="parameter"
+><I
+>perturb</I
+></TT
+>) sets this periodicity.
+    </P
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="images/sfq-qdisc.png"></P
+></DIV
+><DIV
+CLASS="example"
+><A
+NAME="ex-qs-sfq"
+></A
+><P
+><B
+>Example 7. Creating an SFQ</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>cat sfq.tcc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+>/*
+ * make an SFQ on eth0 with a 10 second perturbation
+ *
+ */
+
+dev eth0 {
+    egress {
+        sfq( perturb 10s );
+    }
+}</TT
+>
+<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>tcc &#60; sfq.tcc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+># ================================ Device eth0 ================================
+
+tc qdisc add dev eth0 handle 1:0 root dsmark indices 1 default_index 0
+tc qdisc add dev eth0 handle 2:0 parent 1:0 sfq perturb 10</TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;      Unfortunately, some clever software (<I
+CLASS="foreignphrase"
+>e.g.</I
+> Kazaa and eMule among others)
+      obliterate the benefit of this attempt at fair queuing by opening as
+      many TCP sessions (<A
+HREF="overview.html#o-flows"
+>flows</A
+>) as can be sustained.  In many
+      networks, with well-behaved users, SFQ can adequately distribute
+      the network resources to the contending flows, but other measures may be
+      called for when obnoxious applications have invaded the network.
+    </P
+><P
+>&#13;      See also
+      <A
+HREF="classless-qdiscs.html#qs-esfq"
+>Section 6.4</A
+> for an SFQ qdisc with more exposed
+      parameters for the user to manipulate.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="qs-esfq"
+></A
+>6.4. ESFQ, Extended Stochastic Fair Queuing</H2
+><P
+>&#13;      Conceptually, this qdisc is no different than SFQ although it
+      allows the user to control more parameters than its simpler cousin.
+      This qdisc was conceived to overcome the shortcoming of SFQ
+      identified above.  By allowing the user to control which hashing
+      algorithm is used for distributing access to network bandwidth, it
+      is possible for the user to reach a fairer real distribution of
+      bandwidth.
+    </P
+><DIV
+CLASS="example"
+><A
+NAME="ex-qs-esfq-usage"
+></A
+><P
+><B
+>Example 8. ESFQ usage</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;Usage: ... esfq [ perturb SECS ] [ quantum BYTES ] [ depth FLOWS ]
+        [ divisor HASHBITS ] [ limit PKTS ] [ hash HASHTYPE]
+
+Where:
+HASHTYPE := { classic | src | dst }
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;      FIXME; need practical experience and/or attestation here.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="qs-gred"
+></A
+>6.5. GRED, Generic Random Early Drop</H2
+><P
+>&#13;      FIXME; I have never used this.  Need practical experience or
+      attestation.
+    </P
+><P
+>&#13;      Theory declares that a RED algorithm is useful on a backbone or core
+      network, but not as useful near the end-user.  See the section on
+      <A
+HREF="overview.html#o-flows"
+>flows</A
+> to see a general discussion of the thirstiness of TCP.
+    </P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="qs-tbf"
+></A
+>6.6. TBF, Token Bucket Filter</H2
+><P
+>&#13;      This qdisc is built on <A
+HREF="overview.html#o-tokens"
+>tokens</A
+> and <A
+HREF="overview.html#o-buckets"
+>buckets</A
+>.  It
+      simply shapes traffic transmitted on an interface.  To limit the speed
+      at which packets will be dequeued from a particular interface, the
+      TBF qdisc is the perfect solution.  It simply slows down
+      transmitted traffic to the specified rate.
+    </P
+><P
+>&#13;      Packets are only transmitted if there are sufficient tokens available.
+      Otherwise, packets are deferred.  Delaying packets in this fashion will
+      introduce an artificial latency into the packet's round trip time.
+    </P
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="images/tbf-qdisc.png"></P
+></DIV
+><DIV
+CLASS="example"
+><A
+NAME="ex-qs-tbf"
+></A
+><P
+><B
+>Example 9. Creating a 256kbit/s TBF</B
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>cat tbf.tcc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+>/*
+ * make a 256kbit/s TBF on eth0
+ *
+ */
+
+dev eth0 {
+    egress {
+        tbf( rate 256 kbps, burst 20 kB, limit 20 kB, mtu 1514 B );
+    }
+}</TT
+>
+<TT
+CLASS="prompt"
+>[root@leander]# </TT
+><TT
+CLASS="userinput"
+><B
+>tcc &#60; tbf.tcc</B
+></TT
+>
+<TT
+CLASS="computeroutput"
+># ================================ Device eth0 ================================
+
+tc qdisc add dev eth0 handle 1:0 root dsmark indices 1 default_index 0
+tc qdisc add dev eth0 handle 2:0 parent 1:0 tbf burst 20480 limit 20480 mtu 1514 rate 32000bps</TT
+>
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;    </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="software.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="classful-qdiscs.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Software and Tools</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Classful Queuing Disciplines (<A
+HREF="components.html#c-qdisc"
+><TT
+CLASS="constant"
+>qdisc</TT
+></A
+>s)</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

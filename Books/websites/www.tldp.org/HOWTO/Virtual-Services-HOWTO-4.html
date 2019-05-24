@@ -1,0 +1,331 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Virtual Services Howto: Shell Scripts</TITLE>
+ <LINK HREF="Virtual-Services-HOWTO-5.html" REL=next>
+ <LINK HREF="Virtual-Services-HOWTO-3.html" REL=previous>
+ <LINK HREF="Virtual-Services-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Virtual-Services-HOWTO-5.html">Next</A>
+<A HREF="Virtual-Services-HOWTO-3.html">Previous</A>
+<A HREF="Virtual-Services-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Shell Scripts</A></H2>
+
+<H2><A NAME="ss4.1">4.1 Virtfs</A>
+</H2>
+
+<P>Each domain should get their own directory structure.  Since you are 
+using <CODE> chroot </CODE> you will require duplicate copies of the shared 
+libraries, binaries, conf files, etc.  I use /virtual/domain1.com for 
+each domain that I create.  
+<P>
+<P>I realize that you are taking up more disk space but it is cheaper than 
+a whole new machine and network cards.  If you really want to preserve space 
+you can hard link the files together so only one copy of each binary exists.  The 
+filesystem that I use takes up a little over 2M.  However, this script attempts to 
+copy all the files from the main filesystem in order to be as generic as possible.
+<P>
+<P> 
+Here is a sample virtfs script: 
+<P>
+<PRE>
+#!/bin/sh
+
+echo '$Revision: 1.49 $'
+
+echo -n "Enter the domain name: "
+read domain
+
+if [ "$domain" = "" ]
+then
+        echo Nothing entered: aborting
+        exit 0
+fi
+
+leadingdir=/virtual
+
+echo -n "Enter leading dir: (Enter for default: $leadingdir): "
+read ans
+
+if [ "$ans" != "" ]
+then
+        leadingdir=$ans
+fi 
+
+newdir=$leadingdir/$domain
+
+if [ -d "$newdir" ]
+then
+        echo New directory: $newdir: ALREADY exists
+        exit 0
+else
+        echo New directory: $newdir
+fi
+
+echo Create $newdir
+mkdir -p $newdir
+
+echo Create bin
+cp -pdR /bin $newdir
+
+echo Create dev
+cp -pdR /dev $newdir
+
+echo Create dev/log
+ln -f /virtual/log $newdir/dev/log
+
+echo Create etc
+mkdir -p $newdir/etc
+for i in /etc/* 
+do 
+        if [ -d "$i" ]
+        then 
+                continue
+        fi
+        cp -pd $i $newdir/etc
+done
+
+echo Create etc/skel
+mkdir -p $newdir/etc/skel
+
+echo Create home
+for i in a b c d e f g h i j k l m n o p q r s t u v w x y z 
+do 
+        mkdir -p $newdir/home/$i
+done
+
+echo Create home/c/crc
+mkdir -p $newdir/home/c/crc
+chown crc.users $newdir/home/c/crc
+
+echo Create lib
+mkdir -p $newdir/lib
+for i in /lib/* 
+do 
+        if [ -d "$i" ]
+        then 
+                continue
+        fi
+        cp -pd $i $newdir/lib
+done
+
+echo Create proc
+mkdir -p $newdir/proc
+
+echo Create sbin
+cp -pdR /sbin $newdir
+
+echo Create tmp
+mkdir -p -m 0777 $newdir/tmp
+chmod +t $newdir/tmp
+
+echo Create usr
+mkdir -p $newdir/usr
+
+echo Create usr/bin
+cp -pdR /usr/bin $newdir/usr
+
+echo Create usr/lib
+mkdir -p $newdir/usr/lib
+
+echo Create usr/lib/locale
+cp -pdR /usr/lib/locale $newdir/usr/lib
+
+echo Create usr/lib/terminfo
+cp -pdR /usr/lib/terminfo $newdir/usr/lib
+
+echo Create usr/lib/zoneinfo
+cp -pdR /usr/lib/zoneinfo $newdir/usr/lib
+
+echo Create usr/lib/\*.so\*
+cp -pdR /usr/lib/*.so* $newdir/usr/lib
+
+echo Create usr/sbin
+cp -pdR /usr/sbin $newdir/usr
+
+echo Linking usr/tmp
+ln -s /tmp $newdir/usr/tmp
+
+echo Create var
+mkdir -p $newdir/var
+
+echo Create var/lock
+cp -pdR /var/lock $newdir/var
+
+echo Create var/log
+mkdir -p $newdir/var/log
+
+echo Create var/log/wtmp
+cp /dev/null $newdir/var/log/wtmp
+
+echo Create var/run
+cp -pdR /var/run $newdir/var
+
+echo Create var/run/utmp
+cp /dev/null $newdir/var/run/utmp
+
+echo Create var/spool
+cp -pdR /var/spool $newdir/var
+
+echo Linking var/tmp
+ln -s /tmp $newdir/var/tmp 
+
+echo Create var/www/html
+mkdir -p $newdir/var/www/html
+chown webmast.www $newdir/var/www/html
+chmod g+s $newdir/var/www/html
+
+echo Create var/www/master
+mkdir -p $newdir/var/www/master
+chown webmast.www $newdir/var/www/master
+
+echo Create var/www/server
+mkdir -p $newdir/var/www/server
+chown webmast.www $newdir/var/www/server
+
+exit 0
+</PRE>
+<P>
+<H2><A NAME="ss4.2">4.2 Virtexec</A>
+</H2>
+
+<P> 
+To execute commands in a virtual environment you have to 
+<CODE> chroot </CODE> to that directory and then run the command.  
+I have written a special shell script called virtexec
+that handles this for any command:
+<P>
+<PRE>
+#!/bin/sh
+
+echo '$Revision: 1.49 $'
+
+BNAME=`basename $0`
+FIRST4CHAR=`echo $BNAME | cut -c1-4`
+REALBNAME=`echo $BNAME | cut -c5-`
+
+if [ "$BNAME" = "virtexec" ]
+then
+        echo Cannot run virtexec directly: NEED a symlink
+        exit 0
+fi
+
+if [ "$FIRST4CHAR" != "virt" ]
+then
+        echo Symlink not a virt function
+        exit 0
+fi
+
+list=""
+num=1
+for i in /virtual/*
+do
+        if [ ! -d "$i" ]
+        then
+                continue
+        fi
+        if [ "$i" = "/virtual/lost+found" ]
+        then
+                continue
+        fi
+        list="$list $i $num"
+        num=`expr $num + 1`
+done
+
+if [ "$list" = "" ]
+then
+        echo No virtual environments exist
+        exit 0
+fi
+
+dialog --clear --title 'Virtexec' --menu Pick 20 70 12 $list 2&gt; /tmp/menu.$$
+if [ "$?" = "0" ]
+then
+        newdir=`cat /tmp/menu.$$`
+else
+        newdir=""
+fi
+tput clear
+rm -f /tmp/menu.$$
+
+echo '$Revision: 1.49 $'
+
+if [ ! -d "$newdir" ]
+then
+        echo New directory: $newdir: NOT EXIST
+        exit 0
+else
+        echo New directory: $newdir
+fi
+
+echo bname: $BNAME
+
+echo realbname: $REALBNAME
+
+if [ "$*" = "" ]
+then
+        echo args: none
+else
+        echo args: $*
+fi
+
+echo Changing to $newdir
+cd $newdir
+
+echo Running program $REALBNAME
+
+chroot $newdir $REALBNAME $*
+
+exit 0
+</PRE>
+<P>Please note that you must have the <CODE> dialog </CODE> program installed on
+your system for this to work.  To use virtexec just symlink a 
+program to it.  For example,
+<P>
+<PRE>
+ln -s /usr/local/bin/virtexec /usr/local/bin/virtpasswd
+ln -s /usr/local/bin/virtexec /usr/local/bin/virtvi
+ln -s /usr/local/bin/virtexec /usr/local/bin/virtpico
+ln -s /usr/local/bin/virtexec /usr/local/bin/virtemacs
+ln -s /usr/local/bin/virtexec /usr/local/bin/virtmailq
+</PRE>
+<P>Then if you type virtvi or virtpasswd or virtmailq it will allow you 
+to vi a program, change a user's password or check the mail queue on
+your virtual system.  You can create as many virtexec symlinks as
+you want.  Please note that if your program requires a shared library
+it has to be in the virtual filesystem as well as the binary.
+<P>
+<H2><A NAME="ss4.3">4.3 Notes</A>
+</H2>
+
+<P>I install all the scripts in /usr/local/bin.  Anything that I do not want
+to put on the virtual filesystem I put in /usr/local.  The script does
+not copy any of the files in /usr/local to the virtual filesystem.  Any files 
+that are important to not cross virtual filesystems should be removed.  For 
+example, ssh is installed on my system and I did not want the private key for
+the server available on all the virtual filesystems so I remove it 
+from each virtual filesystem after I run virtfs.  I also change 
+resolv.conf and remove anything that has the name of another domain 
+on it for legal reasons.  For example, /etc/hosts and /etc/HOSTNAME.
+<P>
+<P>The programs that I symlink to virtexec are:
+<P>
+<UL>
+<LI> virtpasswd -- change a user password</LI>
+<LI> virtadduser -- create a user</LI>
+<LI> virtdeluser -- delete a user</LI>
+<LI> virtsmbstatus -- see SAMBA status  </LI>
+<LI> virtvi -- edit a file</LI>
+<LI> virtmailq -- check out the mailq      </LI>
+<LI> virtnewaliases -- rebuild alias tables </LI>
+</UL>
+<P>
+<HR>
+<A HREF="Virtual-Services-HOWTO-5.html">Next</A>
+<A HREF="Virtual-Services-HOWTO-3.html">Previous</A>
+<A HREF="Virtual-Services-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

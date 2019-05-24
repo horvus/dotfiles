@@ -1,0 +1,324 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Summary: (I like doing summaries first)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Masquerading Made Simple HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="intro.html"><LINK
+REL="NEXT"
+TITLE="Bitmore indepth version"
+HREF="indepth.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Masquerading Made Simple HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="indepth.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SUMMARY"
+></A
+>2. Summary: (I like doing summaries first)</H1
+><P
+>   Assuming external internet card is eth0, and external IP is 123.12.23.43
+   and the internal network card is eth1, then:
+  </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>modprobe ipt_MASQUERADE</B
+> # If this fails, try continuing anyway
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -F; iptables -t nat -F; iptables -t mangle -F</B
+>
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to 123.12.23.43</B
+>
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>echo 1 &#62; /proc/sys/net/ipv4/ip_forward</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>   Or for a dial-up connection:
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>modprobe ipt_MASQUERADE</B
+> # If this fails, try continuing anyway
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -F; iptables -t nat -F; iptables -t mangle -F</B
+>
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE</B
+>
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>echo 1 &#62; /proc/sys/net/ipv4/ip_forward</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>   Then to secure it:
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT</B
+>
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -A INPUT -m state --state NEW -i ! eth0 -j ACCEPT</B
+>
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -P INPUT DROP</B
+>   #only if the first two are succesful
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -A FORWARD -i eth0 -o eth0 -j REJECT</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>   Or for a dial-up connection (with eth0 as the internal network card):
+   </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT</B
+>
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -A INPUT -m state --state NEW -i ! ppp0 -j ACCEPT</B
+>
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -P INPUT DROP</B
+>   #only if the first two are succesful
+<TT
+CLASS="PROMPT"
+>$&#62;</TT
+> <B
+CLASS="COMMAND"
+>iptables -A FORWARD -i ppp0 -o ppp0 -j REJECT</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>   And thats it!  To view the rules do "<B
+CLASS="COMMAND"
+>iptables -t nat -L</B
+>"
+   </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="indepth.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Bitmore indepth version</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

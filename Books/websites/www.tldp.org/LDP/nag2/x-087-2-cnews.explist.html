@@ -1,0 +1,571 @@
+<HTML
+><HEAD
+><TITLE
+>Expiring News</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="C News"
+HREF="x-087-2-cnews.html"><LINK
+REL="PREVIOUS"
+TITLE="Article Batching"
+HREF="x-087-2-cnews.batcher.html"><LINK
+REL="NEXT"
+TITLE="Miscellaneous Files"
+HREF="x-087-2-cnews.misc.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-cnews.batcher.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 21. C News</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-cnews.misc.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-CNEWS.EXPLIST"
+>21.6. Expiring News</A
+></H1
+><P
+>&#13;
+ 
+In B News, expiration needs to be performed by a program called
+<B
+CLASS="COMMAND"
+>expire</B
+>, which took a list of newsgroups as arguments,
+along with a time specification after which articles had to be expired.
+To have different hierarchies expire at different times, you had to write a
+script that invoked <B
+CLASS="COMMAND"
+>expire</B
+> for each of them separately.
+C News offers a more convenient solution. In a file called
+<TT
+CLASS="FILENAME"
+>explist</TT
+>, you may specify newsgroups and expiration
+intervals.  A command called <B
+CLASS="COMMAND"
+>doexpire</B
+> is usually run once
+a day from <B
+CLASS="COMMAND"
+>cron</B
+> and processes all groups according to this
+list.</P
+><P
+>&#13;
+Occasionally, you may want to retain articles from certain groups even
+after they have been expired; for example, you might want to keep
+programs posted to <SPAN
+CLASS="SYSTEMITEM"
+>comp.sources.unix</SPAN
+>.
+This is called <I
+CLASS="EMPHASIS"
+>archiving</I
+>. <TT
+CLASS="FILENAME"
+>explist</TT
+>
+permits you to mark groups for archiving.</P
+><P
+>An entry in <TT
+CLASS="FILENAME"
+>explist</TT
+> looks like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="REPLACEABLE"
+><I
+>grouplist</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>perm</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>times</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>archive</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+><TT
+CLASS="REPLACEABLE"
+><I
+>grouplist</I
+></TT
+> is a comma-separated list of
+newsgroups to which the entry applies. Hierarchies may be specified by
+giving the group name prefix, optionally appended with <SPAN
+CLASS="SYSTEMITEM"
+>all</SPAN
+>. For example, for an entry applying to
+all groups below <SPAN
+CLASS="SYSTEMITEM"
+>comp.os</SPAN
+>,
+enter either <TT
+CLASS="USERINPUT"
+><B
+>comp.os</B
+></TT
+> or
+<TT
+CLASS="USERINPUT"
+><B
+>comp.os.all</B
+></TT
+>.</P
+><P
+>When <I
+CLASS="EMPHASIS"
+>expiring</I
+> news from a group, the name is
+checked against all entries in <TT
+CLASS="FILENAME"
+>explist</TT
+> in the
+order given. The first matching entry applies. For example, to throw
+away the majority of <SPAN
+CLASS="SYSTEMITEM"
+>comp</SPAN
+>
+after four days, except for <SPAN
+CLASS="SYSTEMITEM"
+>comp.os.linux.announce</SPAN
+>, which you want
+to keep for a week, you simply have an entry for the latter, which
+specifies a seven-day expiration period, followed by an expiration
+period for <SPAN
+CLASS="SYSTEMITEM"
+>comp</SPAN
+>, which
+specifies four days.</P
+><P
+>The <TT
+CLASS="REPLACEABLE"
+><I
+>perm</I
+></TT
+> field details if the entry applies to
+moderated, unmoderated, or any groups. It may take the values
+<SPAN
+CLASS="SYSTEMITEM"
+>m</SPAN
+>,
+<SPAN
+CLASS="SYSTEMITEM"
+>u</SPAN
+>, or
+<SPAN
+CLASS="SYSTEMITEM"
+>x</SPAN
+>, which denote moderated, unmoderated,
+or any type.</P
+><P
+>The third field, <TT
+CLASS="REPLACEABLE"
+><I
+>times</I
+></TT
+>, usually contains
+only a single number. This is the number of days after which articles 
+expire if they haven't been assigned an artificial expiration
+date in an <TT
+CLASS="LITERAL"
+>Expires:</TT
+> field in the article
+header. Note that this is the number of days counting from its
+<I
+CLASS="EMPHASIS"
+>arrival</I
+> at your site, not the date of posting.</P
+><P
+>The <TT
+CLASS="REPLACEABLE"
+><I
+>times</I
+></TT
+> field may, however, be more
+complex than that. It may be a combination of up to three numbers
+separated from one another by dashes. The first denotes the number of
+days that have to pass before the article is considered a candidate
+for expiration, even if the <TT
+CLASS="LITERAL"
+>Expires:</TT
+> field would
+have it expire already. It is rarely useful to use a value other than
+zero. The second field is the previously mentioned default number of days
+after which it will be expired. The third is the number of days after
+which an article will be expired unconditionally, regardless of
+whether it has an <TT
+CLASS="LITERAL"
+>Expires:</TT
+> field or not.  If only
+the middle number is given, the other two take default values. These
+may be specified using the special entry <SPAN
+CLASS="SYSTEMITEM"
+>/bounds/</SPAN
+>, which is described a little
+later.</P
+><P
+>The fourth field, <TT
+CLASS="REPLACEABLE"
+><I
+>archive</I
+></TT
+>, denotes whether the
+newsgroup is to be archived and where.  If no archiving is intended, a dash
+should be used. Otherwise, you either use a full pathname (pointing to a
+directory) or an at sign (@). The at sign denotes the default archive
+directory, which must then be given to <B
+CLASS="COMMAND"
+>doexpire</B
+> by using
+the <TT
+CLASS="OPTION"
+>&#8211;a</TT
+> flag on the command line.  An archive directory
+should be owned by <SPAN
+CLASS="SYSTEMITEM"
+>news</SPAN
+>. When
+<B
+CLASS="COMMAND"
+>doexpire</B
+> archives an article from say,
+<SPAN
+CLASS="SYSTEMITEM"
+>comp.sources.unix</SPAN
+>, it stores it in
+the directory <SPAN
+CLASS="SYSTEMITEM"
+>comp/sources/unix</SPAN
+> below
+the archive directory, creating it if necessary. The archive directory itself,
+however, will not be created.</P
+><P
+>There are two special entries in your <TT
+CLASS="FILENAME"
+>explist</TT
+> file that
+<B
+CLASS="COMMAND"
+>doexpire</B
+> relies on.  Instead of a list of newsgroups, they
+have the keywords <SPAN
+CLASS="SYSTEMITEM"
+>/bounds/</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>/expired/</SPAN
+>. The
+<SPAN
+CLASS="SYSTEMITEM"
+>/bounds/</SPAN
+> entry contains the default
+values for the three values of the <TT
+CLASS="REPLACEABLE"
+><I
+>times</I
+></TT
+> field
+described previously.</P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>/expired/</SPAN
+> field determines how
+long C News will hold onto lines in the <TT
+CLASS="FILENAME"
+>history</TT
+> file. 
+C News will not remove a line from the history file
+once the corresponding article(s) have been expired, but will hold onto it
+in case a duplicate should arrive after this date. If you are fed by only
+one site, you can keep this value small. Otherwise, a couple of weeks is
+advisable on UUCP networks, depending on the delays you experience with
+articles from these sites.</P
+><P
+>Here is a sample <TT
+CLASS="FILENAME"
+>explist</TT
+> file with rather tight
+expiry intervals:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># keep history lines for two weeks. No article gets more than three months
+/expired/                       x       14      -
+/bounds/                        x       0-1-90  -
+# groups we want to keep longer than the rest
+comp.os.linux.announce          m       10      -
+comp.os.linux                   x       5       -
+alt.folklore.computers          u       10      -
+rec.humor.oracle                m       10      -
+soc.feminism                    m       10      -
+# Archive *.sources groups
+comp.sources,alt.sources        x       5       @
+# defaults for tech groups
+comp,sci                        x       7       -
+# enough for a long weekend
+misc,talk                       x       4       -
+# throw away junk quickly
+junk                            x       1       -
+# control messages are of scant interest, too
+control                         x       1       -
+# catch-all entry for the rest of it
+all                             x       2       -</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;Expiring presents several potential problems. One is that your newsreader
+might rely on the third field of the <I
+CLASS="EMPHASIS"
+>active</I
+> file 
+described earlier, which contains the number
+of the lowest article online. When expiring articles, C News does not update
+this field. If you need (or want) to have this field represent the real
+situation, you need to run a program called <B
+CLASS="COMMAND"
+>updatemin</B
+> after
+each run of <B
+CLASS="COMMAND"
+>doexpire</B
+>. (In older versions of C News, a 
+script called <B
+CLASS="COMMAND"
+>upact</B
+> did this.)</P
+><P
+>&#13;C News does not expire by scanning the newsgroup's directory, but simply
+checks the <TT
+CLASS="FILENAME"
+>history</TT
+> file if the article is due for
+expiration.<A
+NAME="X-087-2-FNCN07"
+HREF="#FTN.X-087-2-FNCN07"
+>[1]</A
+>
+If your history file somehow gets out of sync, articles may be around on
+your disk forever because C News has literally forgotten
+them.<A
+NAME="X-087-2-FNCN08"
+HREF="#FTN.X-087-2-FNCN08"
+>[2]</A
+>
+You can repair this by using the <B
+CLASS="COMMAND"
+>addmissing</B
+> script in
+<TT
+CLASS="FILENAME"
+>/usr/lib/news/maint</TT
+>, which will add missing articles
+to the <TT
+CLASS="FILENAME"
+>history</TT
+> file or <B
+CLASS="COMMAND"
+>mkhistory</B
+>,
+which rebuilds the entire file from scratch. Don't forget to become user
+<SPAN
+CLASS="SYSTEMITEM"
+>news</SPAN
+> before invoking it, or else you
+will wind up with a <TT
+CLASS="FILENAME"
+>history</TT
+> file unreadable by
+C News.
+&#13;</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNCN07"
+HREF="x-087-2-cnews.explist.html#X-087-2-FNCN07"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The article's date of arrival is kept in the middle field of the history
+line and given in seconds since January 1, 1970.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNCN08"
+HREF="x-087-2-cnews.explist.html#X-087-2-FNCN08"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>I don't know <I
+CLASS="EMPHASIS"
+>why</I
+> this happens, but it does from
+time to time.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-cnews.batcher.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-cnews.misc.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Article Batching</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-cnews.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Miscellaneous Files</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

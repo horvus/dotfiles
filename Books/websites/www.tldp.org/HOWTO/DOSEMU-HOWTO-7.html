@@ -1,0 +1,154 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The dosemu HOWTO: dosemu and X-windows(97/2/9).</TITLE>
+ <LINK HREF="DOSEMU-HOWTO-8.html" REL=next>
+ <LINK HREF="DOSEMU-HOWTO-6.html" REL=previous>
+ <LINK HREF="DOSEMU-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="DOSEMU-HOWTO-8.html">Next</A>
+<A HREF="DOSEMU-HOWTO-6.html">Previous</A>
+<A HREF="DOSEMU-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. dosemu and X-windows(97/2/9).</A></H2>
+
+<H2><A NAME="ss7.1">7.1 Can I run dosemu in console mode while running X?</A>
+</H2>
+
+<P>Ronald Schalk (<B>R.Schalk@uci.kun.nl</B>) reported (94/1/17)
+that
+<P>Yes, no problem.  Just remember to use ctrl-alt-&lt;Fn<CODE>></CODE> to go to
+a Virtual Console (VC), and you can run any Linux application (dosemu
+is a linux-application).  I've got almost always WP5.1 in a dos
+session.
+<P><CODE>[</CODE>Note:  Use ctrl-alt-F7 to switch back to X from dosemu, if X
+runs on VC7.] 
+<P>
+<P>
+<H2><A NAME="ss7.2">7.2 Is it possible to run dosemu in a window in X-windows?</A>
+</H2>
+
+<P>If you have X installed and you have successfully compiled dosemu
+and run it successfully outside X-windows, you should be able to
+run "<CODE>xdos</CODE>" or "<CODE>dos -X</CODE>" right away to bring up a dosemu
+window.  If this does not work, make sure:
+<P>
+<PRE>
+  1. Dosemu has X support compiled in. This is default, however
+     if you you have compiled dosemu with "x off" in the
+     compiletime-settings file you don't have X support. So changing
+     "x off" to "x on" in the compiletime-settings file, followed by
+     "make pristine; make; make install" should build 
+     you a dosemu-executable with X support, if you have the 
+     X-libraries installed in /usr/X11R6.
+  2. Set up your X key-mappings.  In an xterm, type
+
+     xmodmap -e "keycode 22 = 0xff08"
+     xmodmap -e "keycode 107 = 0xffff"
+
+     These lines fix the backspace and delete keys respectively.
+  3. Configure the X-related configuration options in your 
+     /etc/dosemu.conf file.
+</PRE>
+<P>Alternatively, you can run dosemu inside a color xterm,
+which is not recommended because many color xterms have buggy
+support for the complex text display capabilities of dosemu.
+This does not require <CODE>X_SUPPORT</CODE> to be compiled into dosemu.
+However, if you really want to do this, do the following steps:
+<P>
+<PRE>
+  1. Install ansi_xterm.  The recommended package is available as:
+     tsx-11.mit.edu:/pub/linux/ALPHA/dosemu/Development/ansi-xterm-R6.tar.gz
+
+  2. Set up your X key-mappings.  In an xterm, type
+
+     xmodmap -e "keycode 22 = 0xff08"
+     xmodmap -e "keycode 107 = 0xffff"
+
+     These lines fix the backspace and delete keys, respectively.
+  
+  3. Configure the terminal-related (not X-related) settings in
+     /etc/dosemu.conf
+</PRE>
+<P>
+<P>Marty Leisner (<B>leisner@sdsp.mc.xerox.com</B>) reported (95/3/31)
+that
+<P>I have xrdb log the following resources
+<BLOCKQUOTE><CODE>
+dosxterm*Font:  vga
+dosxterm*geometry:      80x25
+dosxterm*saveLines: 25
+</CODE></BLOCKQUOTE>
+
+or I alias "<CODE>dosxterm</CODE>" to 
+"<CODE>term -fn vga -title dosxterm -geometry 80x25 -sl 25</CODE>"
+<P>If you use the xrdb method, all you have to do is run
+"<CODE>xterm -name dosxterm</CODE>"
+<P>
+<H2><A NAME="ss7.3">7.3 Xdos dosen't work on a remote X-display!</A>
+</H2>
+
+<P>At present, dosemu is set up to use the MIT shared memory
+extensions. This extension only works on a local display. If you want
+to run xdos on a remote display, compile dosemu with "mitshm off" in
+the compiletime-settings file after a <B>"make pristine"</B> or on
+the clean source tree(97/2/9).
+<P>
+<H2><A NAME="ss7.4">7.4 Xdos dosen't find the VGA font</A>
+</H2>
+
+<P>Check that the vga fonts you installed are listed in the font.dir of the
+directory you installed the fonts in:
+<BLOCKQUOTE><CODE>
+<PRE>
+hertz:~> grep misc /usr/X11R6/lib/X11/XF86Config
+    FontPath    "/usr/X11R6/lib/X11/fonts/misc/"
+hertz:~> grep vga /usr/X11R6/lib/X11/fonts/misc/fonts.dir 
+vga.pcf vga
+vga11x19.pcf vga11x19
+hertz:~> ls /usr/X11R6/lib/X11/fonts/misc/vga*
+/usr/X11R6/lib/X11/fonts/misc/vga.pcf
+/usr/X11R6/lib/X11/fonts/misc/vga11x19.bdf
+/usr/X11R6/lib/X11/fonts/misc/vga11x19.pcf
+</PRE>
+</CODE></BLOCKQUOTE>
+
+If you installed some X-fonts, like you did when you installed dosemu with
+X-Support for the first time,  "mkfontdir" and then "xset fp rehash" needs
+to be run. The dosemu install should take care for "mkfontdir" and tells you
+about "xset fp rehash". Tell us if it doesn't work for you.
+(97/2/13)
+<P>
+<H2><A NAME="ss7.5">7.5 The vga font is very small on my high resolution display</A>
+</H2>
+
+<P>Look for the vga11x19 font.
+(97/2/13)
+<P>
+<H2><A NAME="ss7.6">7.6 Dosemu compilation fails with some strange error regarding X!</A>
+</H2>
+
+<P>As stated above, dosemu uses the MIT shared memory extensions by
+default. Under XFree86 they are only available with Version 3.1.2 and
+above. If you have an older version, consider to upgrade, or configure
+dosemu to not use this extension (see last section)(97/2/9).
+<P>
+<H2><A NAME="ss7.7">7.7 Does ansi emulation work properly?</A>
+</H2>
+
+<P>Marty Leisner (<B>leisner@sdsp.mc.xerox.com</B>) reported (95/3/31)
+that
+<P>Yes.  I use <CODE>nnansi.com</CODE> under X windows.  I find 25, 43 and 50
+line mode work properly, however 50 line mode is difficult to use on a
+1024x768 screen (unless smaller fonts are used or you use a bigger
+screen.  43 line mode will resize the <CODE>xterm</CODE> window to use 43 lines.
+<P>
+<P>
+<HR>
+<A HREF="DOSEMU-HOWTO-8.html">Next</A>
+<A HREF="DOSEMU-HOWTO-6.html">Previous</A>
+<A HREF="DOSEMU-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

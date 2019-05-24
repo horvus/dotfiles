@@ -1,0 +1,484 @@
+<HTML
+><HEAD
+><TITLE
+>Software Installation</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="VPN PPP-SSH Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="introduction.html"><LINK
+REL="NEXT"
+TITLE="Configure the Server"
+HREF="configserver.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>VPN PPP-SSH Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="introduction.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="configserver.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INSTALLATION"
+>3. Software Installation</A
+></H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN160"
+>3.1. Terminology</A
+></H2
+><P
+>Because setting up the VPN very much resembles a client-server
+transaction, I'll borrow from that terminology to give a name
+to the computer at each end of the tunnel:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>Server</DT
+><DD
+><P
+>This is the computer that passively waits
+for incoming VPN connection requests.
+It runs completely unattended.
+    </P
+></DD
+><DT
+>Client</DT
+><DD
+><P
+>This is the computer that initiates the connection
+request, asking the Server to bring up the VPN.
+    </P
+></DD
+></DL
+></DIV
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN172"
+>3.2. Requirements</A
+></H2
+><P
+></P
+><UL
+><LI
+><P
+>Your kernel must have support for TCP/IP and PPP compiled in.
+Almost all distributions ship with PPP support straight
+out of the box.  If yours didn't, or if you're using a custom kernel,
+I'll include a little more detail about this in
+<A
+HREF="installation.html#KERNEL"
+>Section 3.4</A
+>.
+    </P
+></LI
+><LI
+><P
+>You must install the pppd daemon.  This most likely comes with your
+distribution. I'm using ppp-2.3.11.  Later versions should work just
+fine, and earlier versions should also work as
+well as long as they support the "pty" option.  You don't need to install
+chat or any of the other tools designed to work with PPP -- you just need
+pppd.
+    </P
+></LI
+><LI
+><P
+>The client machine needs to have the the ssh client installed.
+There are many different versions of ssh floating around,
+but they should all work.
+I'm using OpenBSD's <A
+HREF="http://www.openssh.org/"
+TARGET="_top"
+>OpenSSH</A
+> package version 2.2.0p1.
+    </P
+></LI
+><LI
+><P
+>The server machine needs the sshd daemon to field ssh requests from
+the client.  OpenSSH includes a very good ssh daemon.
+    </P
+></LI
+><LI
+><P
+>Finally, you want to install the sudo tool on the server.
+You can find out more about sudo in the <A
+HREF="http://www.seifried.org/lasg/"
+TARGET="_top"
+>Linux Administrator's Security Guide</A
+>, in the Administration Tools
+section, and the <A
+HREF="http://www.linuxdoc.org/HOWTO/Security-HOWTO.html"
+TARGET="_top"
+>Linux Security HOWTO</A
+>, in the Root Security section.
+You might also want to look at <A
+HREF="http://www.courtesan.com/sudo/"
+TARGET="_top"
+>sudo's home page</A
+>.
+    </P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PLANNING"
+>3.3. Planning</A
+></H2
+><P
+>To set up a PPP-SSH link, you need to specify the the following parameters:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>Server Hostname</DT
+><DD
+><P
+>What is the hostname or IP address for your VPN server?
+    </P
+></DD
+><DT
+>Server VPN Username</DT
+><DD
+><P
+>On your server, what username will the VPN software run under?
+This HOWTO includes instructions on how to create a
+user named "vpn" specifically for this.
+This should <EM
+>not</EM
+> be root!
+For security and logging, this should be a dedicated account.
+    </P
+></DD
+><DT
+>Server Interface IP Address</DT
+><DD
+><P
+>The PPP-SSH VPN sets up dedicated network interfaces on both the client
+and the server.  The interface will be pppN, where N is the number of
+the first unused ppp interface (i.e. it will be ppp1 if you're already
+using ppp0 to dial out over your modem).
+    </P
+><P
+>You will need to specify the IP address for the interface on the server.
+This address is only visible to the client and server (and to any machines
+on subnets that the client and server may be forwarding 
+unmasqueraded packets for).
+    </P
+><P
+>If you don't know what IP address to pick, read chapter 2.2 in the
+<A
+HREF="http://www.linuxdoc.org/LDP/nag2/index.html"
+TARGET="_top"
+>Linux Network Administrators Guide</A
+>
+and especially look at Table 2-1.
+For example, 192.168.0.1 is a good choice.
+    </P
+></DD
+><DT
+>Client Interface IP Address</DT
+><DD
+><P
+>You need to select the IP address for the interface on the
+client.  It must, of course, be on the same network as the
+server's IP address.
+It must not conflict with any other networks on the client, nor can
+it be the same as the server's network interface IP address.
+If you selected 192.168.0.1 for the previous answer, you
+would probably use 192.168.0.2 here.
+    </P
+></DD
+></DL
+></DIV
+><P
+>My setup looks like this:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>SERVER_HOSTNAME = eldivino.domain.com
+SERVER_USERNAME = vpn
+SERVER_IFIPADDR = 192.168.3.1
+CLIENT_IFIPADDR = 192.168.3.2</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="KERNEL"
+>3.4. Set Up PPP</A
+></H2
+><P
+>The kernel's PPP code can either be compiled into the kernel
+itself or it can be put in loadable kernel modules.
+If you compiled it into the kernel, you can
+skip on to the next step -- you're done here.
+However, if you're loading PPP as modules, you need to make
+sure the modules get properly loaded.</P
+><P
+>You can check to see if ppp is listed, along with all other
+currently loaded modules, when you run lsmod.  Remember to check
+that the PPP module is loaded on both the client and the server.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>server$ /sbin/lsmod
+Module                  Size  Used by
+ppp                    20780   0 (unused)
+slhc                    4376   0 [ppp]
+3c59x                  21636   1
+
+client$ lsmod
+Module                  Size  Used by
+ppp_deflate            40308   0  (autoclean)
+bsd_comp                4076   0  (autoclean)
+ppp                    20844   2  [ppp_deflate bsd_comp]
+slhc                    4376   1  [ppp]</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>If you're sure ppp was compiled as a module, but it's not loaded into
+the kernel, try loading it with modprobe:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># modprobe ppp</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>If modprobe didn't return any errors, check lsmod again --
+it should be listed this time.  If so, then your ppp module
+is not being loaded at boot time.
+This is OK if you're running the kernel daemon as the PPP modules
+will be loaded on demand.
+If you're not, however, you'll need to manually load the
+modules at boot time by putting a single line consisting
+entirely of the word "ppp" in your /etc/modules file.</P
+><P
+>See the <A
+HREF="http://www.linuxdoc.org/HOWTO/Kernel-HOWTO.html"
+TARGET="_top"
+>Linux Kernel HOWTO</A
+> for more on this subject.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SSHFIREWALL"
+>3.5. Allow SSH Through the Firewall</A
+></H2
+><P
+>The only network traffic between the two machines
+(as a result of the tunnel, of course) will be over the
+SSH protocol.</P
+><P
+>SSH uses only TCP streams -- no UDP or ICMP.
+ The ssh server (sshd) listens on port 22.
+Our client (because we use the -P flag) only uses the unpriveleged ports
+from 1024 through 65535.  This description should have given you
+enough information to set up your firewall.</P
+><P
+>For example, here are the ipchains commands needed to allow
+ssh connections to the server.
+We allow incoming SSH connection between port 22 on the local
+machine and any port on the remote.
+ Replace eth0 with the interface
+that will be carrying the ssh traffic and $IPADDR with the IP
+address of that interface.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>ipchains -A input  -i eth0 -p tcp -d $IPADDR 22 -j ACCEPT
+ipchains -A output -i eth0 -p tcp ! -y -s $IPADDR 22 -j ACCEPT</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>And, here are the commands needed to set up the firewall on
+the client.  We don't allow incoming ssh connections, and we only allow
+the protocol to pass between port 22 on the remote machine and unprivileged
+ports on this machine.
+Again, replace eth0 with the interface that will be carrying
+the ssh traffic, and $IPADDR with the IP address of that interface..</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>ipchains -A input  -i eth0 -p tcp ! -y --source-port 22 -d $IPADDR 1024:65535 -j ACCEPT
+ipchains -A output -i eth0 -p tcp -s $IPADDR 1024:65535 --destination-port 22 -j ACCEPT</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="introduction.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="configserver.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Configure the Server</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,263 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>The Problem</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="C++ dlopen mini HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="intro.html"><LINK
+REL="NEXT"
+TITLE="The Solution"
+HREF="thesolution.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>C++ dlopen mini HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="thesolution.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="theproblem"
+></A
+>2. The Problem</H1
+><P
+>At some time you might have to load a library (and use its
+      functions) at runtime; this happens most often when you are
+      writing some kind of plug-in or module architecture for your
+      program.</P
+><P
+>In the C language, loading a library is very simple (calling
+      <TT
+CLASS="function"
+>dlopen</TT
+>, <TT
+CLASS="function"
+>dlsym</TT
+> and
+      <TT
+CLASS="function"
+>dlclose</TT
+> is enough), with C++ this is a bit
+      more complicated.  The difficulties of loading a C++ library
+      dynamically are partially due to <A
+HREF="theproblem.html#mangling"
+>name
+      mangling</A
+>, and partially due to the fact that the
+      <TT
+CLASS="function"
+>dlopen</TT
+> API was written with C in mind, thus
+      not offering a suitable way to load classes.</P
+><P
+>Before explaining how to load libraries in C++, let's better
+      analyze the problem by looking at name mangling in more
+      detail. I recommend you read the explanation of name mangling,
+      even if you're not interested in it because it will help you
+      understanding why problems occur and how to solve them.</P
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="mangling"
+></A
+>2.1. Name Mangling</H2
+><P
+>In every C++ program (or library, or object file), all
+        non-static functions are represented in the binary file as
+        <EM
+>symbols</EM
+>. These symbols are special text
+        strings that uniquely identify a function in the program,
+        library, or object file.</P
+><P
+>In C, the symbol name is the same as the function name:
+        the symbol of <TT
+CLASS="function"
+>strcpy</TT
+> will be
+        <TT
+CLASS="computeroutput"
+>strcpy</TT
+>, and so on. This is
+        possible because in C no two non-static functions can have the
+        same name.</P
+><P
+>Because C++ allows overloading (different functions with
+        the same name but different arguments) and has many features C
+        does not &#8212; like classes, member functions, exception
+        specifications &#8212; it is not possible to simply use the
+        function name as the symbol name.  To solve that, C++ uses
+        so-called <EM
+>name mangling</EM
+>, which transforms
+        the function name and all the necessary information (like the
+        number and size of the arguments) into some weird-looking
+        string which only the compiler knows about.  The mangled name
+        of <TT
+CLASS="function"
+>foo</TT
+> might look like
+        <TT
+CLASS="computeroutput"
+>foo@4%6^</TT
+>, for example.  Or it
+        might not even contain the word <SPAN
+CLASS="QUOTE"
+>"foo"</SPAN
+>.</P
+><P
+> One of the problems with name mangling is that the C++
+        standard (currently [<SPAN
+CLASS="citation"
+>ISO14882</SPAN
+>]) does not
+        define how names have to be mangled; thus every compiler
+        mangles names in its own way. Some compilers even change their
+        name mangling algorithm between different versions (notably
+        g++ 2.x and 3.x).  Even if you worked out how your particular
+        compiler mangles names (and would thus be able to load
+        functions via <TT
+CLASS="function"
+>dlsym</TT
+>), this would most
+        probably work with your compiler only, and might already be
+        broken with the next version.</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN137"
+></A
+>2.2. Classes</H2
+><P
+>Another problem with the <TT
+CLASS="function"
+>dlopen</TT
+> API
+        is the fact that it only supports loading
+        <EM
+>functions</EM
+>. But in C++ a library often
+        exposes a class which you would like to use in your
+        program. Obviously, to use that class you need to create an
+        instance of it, but that cannot be easily done.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="thesolution.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Solution</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,336 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Using a swap space</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Memory Management"
+HREF="memory-management.html"><LINK
+REL="PREVIOUS"
+TITLE="Creating a swap space"
+HREF="swap-space.html"><LINK
+REL="NEXT"
+TITLE="Sharing swap spaces with other operating systems"
+HREF="sharing-swap.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="swap-space.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Memory Management</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sharing-swap.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="USING-SWAP"
+></A
+>6.3. Using a swap space</H1
+><P
+>An initialized swap space is taken into use with
+	<B
+CLASS="COMMAND"
+>swapon</B
+>.  This command tells the kernel that
+	the swap space can be used.  The path to the swap space is given
+	as the argument, so to start swapping on a temporary swap file
+	one might use the following command.
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>swapon /extra-swap</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>$</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	Swap spaces can be used automatically by listing them in
+	the <TT
+CLASS="FILENAME"
+>/etc/fstab</TT
+> file.
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>/dev/hda8        none        swap        sw     0     0
+/swapfile        none        swap        sw     0     0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	The startup scripts will run the command <B
+CLASS="COMMAND"
+>swapon
+	-a</B
+>, which will start swapping on all the swap
+	spaces listed in <B
+CLASS="COMMAND"
+>/etc/fstab</B
+>.  Therefore,
+	the <B
+CLASS="COMMAND"
+>swapon</B
+> command is usually used only when
+	extra swap is needed.</P
+><P
+>You can monitor the use of swap spaces with
+	<B
+CLASS="COMMAND"
+>free</B
+>.  It will tell the total amount of swap
+	space used.
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>$</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>free</B
+></TT
+>
+<TT
+CLASS="COMPUTEROUTPUT"
+>             total       used       free     shared   
+ buffers
+Mem:         15152      14896        256      12404       2528
+-/+ buffers:            12368       2784
+Swap:        32452       6684      25768</TT
+>
+<TT
+CLASS="PROMPT"
+>$</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+	The first line of output (<TT
+CLASS="LITERAL"
+>Mem:</TT
+>) shows the
+	physical memory.  The total column does not show the physical
+	memory used by the kernel, which is usually about a megabyte.
+	The used column shows the amount of memory used (the second
+	line does not count buffers).  The free column shows completely
+	unused memory.	The shared column shows the amount of memory
+	shared by several processes; the more, the merrier.  The buffers
+	column shows the current size of the disk buffer cache.</P
+><P
+>That last line (<TT
+CLASS="LITERAL"
+>Swap:</TT
+>) shows similar
+	information for the swap spaces.  If this line is all zeroes,
+	your swap space is not activated.</P
+><P
+>The same information is available via
+	<B
+CLASS="COMMAND"
+>top</B
+>, or using the proc filesystem in file
+	<TT
+CLASS="FILENAME"
+>/proc/meminfo</TT
+>.  It is currently difficult
+	to get information on the use of a specific swap space.</P
+><P
+>A swap space can be removed from use with
+	<B
+CLASS="COMMAND"
+>swapoff</B
+>.  It is usually not necessary to do it,
+	except for temporary swap spaces.  Any pages in use in the swap
+	space are swapped in first; if there is not sufficient physical
+	memory to hold them, they will then be swapped out (to some other
+	swap space).  If there is not enough virtual memory to hold all
+	of the pages Linux will start to thrash; after a long while it
+	should recover, but meanwhile the system is unusable.  You should
+	check (e.g., with <B
+CLASS="COMMAND"
+>free</B
+>) that there is enough
+	free memory before removing a swap space from use.</P
+><P
+>All the swap spaces that are used automatically
+	with <B
+CLASS="COMMAND"
+>swapon -a</B
+> can be removed from use
+	with <B
+CLASS="COMMAND"
+>swapoff -a</B
+>; it looks at the file
+	<TT
+CLASS="FILENAME"
+>/etc/fstab</TT
+> to find what to remove.
+	Any manually used swap spaces will remain in use.</P
+><P
+>Sometimes a lot of swap space can be in use even though
+	there is a lot of free physical memory.  This can happen for
+	instance if at one point there is need to swap, but later a big
+	process that occupied much of the physical memory terminates
+	and frees the memory.  The swapped-out data is not automatically
+	swapped in until it is needed, so the physical memory may remain
+	free for a long time.  There is no need to worry about this,
+	but it can be comforting to know what is happening.  </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="swap-space.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sharing-swap.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Creating a swap space</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="memory-management.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Sharing swap spaces with other operating systems</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

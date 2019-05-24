@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Remote-Boot mini-HOWTO:  Configuring Remote-Boot Workstations         with Linux, DOS, Windows 95/98 and Windows NT: Special TFTP Servers</TITLE>
+ <LINK HREF="Remote-Boot-5.html" REL=previous>
+ <LINK HREF="Remote-Boot.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+Next
+<A HREF="Remote-Boot-5.html">Previous</A>
+<A HREF="Remote-Boot.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Special TFTP Servers</A></H2>
+
+<P>As the only network support available in the TCP/IP BootPROM is TFTP, there
+is a special interest in enhancing TFTP servers for providing new
+capabilities.
+<P>
+<H2><A NAME="ss6.1">6.1 Incom Enhanced TFTP Server</A>
+</H2>
+
+<P>InCom GmbH distributes with the TCP/IP BootPROM an enhanced TFTP server that
+can send packets of up to 1408 bytes instead of the standard 512 bytes.
+This is a great enhancement that you should use. This server is available
+on the TCP/IP Bootprom Utility disk for Solaris, Windows and as Netware NLM.
+<P>
+<H2><A NAME="ss6.2">6.2 Linux Enhanced TFTP Server</A>
+</H2>
+
+<P>We built a modified version of Linux TFTP server that acts as InCom 
+enhanced TFTP server. Basically, we simply changed the packet size from
+512 to 1408 bytes and the port from 69 to 59.
+It is available from <CODE>
+<A HREF="soft/etftpd.tar.gz">http://cuiwww.unige.ch/info/pc/remote-boot/soft/etdtpd.tar.gz</A></CODE>.
+<P>
+<H2><A NAME="ss6.3">6.3 The Security Gateway</A>
+</H2>
+
+<P>We wrote a special TFTP server that serves as security gateway for
+authenticating users. This server runs under Linux or Solaris,
+and can authenticate users according to a Unix password database
+(NIS and shadow passwords are supported), a Windows NT (or Samba)
+server or a Radius server. 
+It is available from <CODE>
+<A HREF="soft/stftpd.tar.gz">http://cuiwww.unige.ch/info/pc/remote-boot/soft/stdtpd.tar.gz</A></CODE>,
+with source and precompiled binaries. 
+The precompiled binaries do not
+include NT password encryption as we cannot distribute <CODE>libdes</CODE>
+but compilation is straightforward.
+<P>In order to use the security gateway, you just have to setup a trivial
+<EM>security domains</EM> configuration file that describes to which
+authentication server each logical security domains maps (the <CODE>Unix</CODE>
+domain implicitely maps to the server Unix password database). This is
+a sample configuration file:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#
+# STFTPD configuration file
+#  
+# This file specify the server of the "security domains". Two types of 
+# authentication servers are supported : radius or winnt (winnt includes
+# NT Server and Samba)
+#
+# Format of radius servers 
+# radius        &lt;domain>        &lt;serveraddress>         &lt;secret>
+#
+# secret is the secret word as specified in your /etc/raddb/clients file
+#
+# Format of SMB servers
+# winnt         &lt;domain>        &lt;serveraddress>         &lt;netbiosname>
+#
+# netbiosname is the NETBIOS name of your server 
+#
+# Examples
+radius         sec-dom-rad     radiusserver    testing123
+winnt          sec-dom-nt1     192.168.1.1     NTSERVER1
+winnt          sec-dom-smb     samba           SAMBA1
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+Note that if you are using Samba, you must set <CODE>security = user</CODE>.
+<P>You can also provide to the security server a file containing a list of 
+users which are not allowed to log on (for which the check will fail anyways).
+<P>
+<H2><A NAME="ss6.4">6.4 The Broadcast TFTP Server</A>
+</H2>
+
+<P>We wrote a special TFTP server that implements a home-made Broadcast
+variant of TFTP. Using this server, we were able to download
+images to 25 clients on a heavily loaded 10 Mb ethernet network 
+at 6 Mb/s (it is more efficient than the regular TFTP because
+it does not need to acknowledge each packets). 
+This server runs under Linux or Solaris.
+It is available from <CODE>
+<A HREF="soft/btftpd.tar.gz">http://cuiwww.unige.ch/info/pc/remote-boot/soft/btdtpd.tar.gz</A></CODE>,
+with source and precompiled binaries. 
+<P>As the TCP/IP bootprom
+does not support this protocol, our solution consist in booting
+a tiny ramdisk-based linux system using the tools described in this document,
+and running the Linux version of MrBatch which has built-in support
+for Broadcast TFTP. A simple batch file can the download all files
+to the cache in a few minutes, simultaneously on all client computers.
+You do not need to install Linux yourself to use this package, except
+if you have exotic hardware and cannot directly use the kernel provided
+in the package.
+<P>The process works as follow. First, you startup the broadcast server
+manually, giving the number of expected client computers as argument
+(remember, this procedure is not to be used every day but only when
+you changed an image and want to ensure it is immediately uploaded
+to all your client computers). Then, you turn on all client computers,
+which will run the following BpBatch script:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#
+# This batch is run by bpbatch to launch a mini-linux using an initial 
+# ramdisk, which will then run mrbatch under linux.
+#
+# The broadcast TFTP protocol only works with the Linux implementation of
+# mrbatch, because of the lack of broadcast support in the bootprom itself.
+#
+# 1. Setup a tiny partition, to let a lot of space for the cache
+setpartitions "BIGDOS:50"
+# 2. Clean the MBR
+clean 0
+# 3. Run a Linux Kernel with initrd (Initial Ramdisk) supprt, and use 
+#    bcastrd.gz as the initial ramdisk (will be mounted root and then
+#    executed via /linuxrc). See initrd.txt for more details about
+#    initial ramdisks. You don't have to specify a root device (second
+#    parameter is null) to the kernel, it will use the initial ramdisk.
+linuxboot "linux.krn" "" "bcastrd.gz"
+# 4. The initial ramdisk will run dhcpcd to setup networking using DHCP.
+#    It will then run mrbatch -w bcastlx
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+The initial ramdisk contains:
+<UL>
+<LI><CODE>dhcpcd</CODE>, a DHCP client used to setup networking</LI>
+<LI><CODE>mrbatch</CODE></LI>
+<LI><CODE>linuxrc</CODE>, a little wrapper automatically started by initrd and
+that starts <CODE>dhcpcd</CODE> then <CODE>mrbatch</CODE>.</LI>
+<LI><CODE>usr/lib/terminfo/l/linux</CODE>, used by MrBatch</LI>
+<LI><CODE>dev/*</CODE>, devices needed to run Linux and mrbatch</LI>
+</UL>
+
+All programs are statically linked and stripped, to avoid <CODE>libc.so</CODE>
+which is really huge. The resulting ramdisk is Gzipped and takes
+less than 300 KB. The kernel itself takes 450 KB (with many network
+cards and initrd support).
+When Linux is up and running, MrBatch is called with the following script
+(that you should edit for your needs):
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+# This file is executed when mrbatch is launched by the initial ramdisk
+# bcastrd.gz
+# It's main purpose is to "broacast copy" files to the cache
+#
+# 1. Be verbose
+showlog
+# 2. Don't want a "press a key"
+set pauselog="OFF"
+# 3. Set partitions at their final values. 
+#    Important: Since you will copy files into the cache to be used in future
+#    boot, you need to specify the same partitions as in the future boots.
+setpartitions "BIGDOS:1024"
+# 4. Clean the CACHE partition
+clean -1
+# 5. And the copy files into the cache, using the Broadcast TFTP protocol
+#    (port 99)
+#
+# You can use the script "as is", but you surely need to modify the following
+# line ! In our example, we download the file mblinux.imz, which is the image
+# file for our installation of Linux.
+copy "$BOOTP-Server-IP@99:mblinux.imz" "{:-1}mblinux.imz"
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+When the transfer is done, you can simply turn off all client computers
+and change their initial boot script to your favorite menu.
+<P>
+<HR>
+Next
+<A HREF="Remote-Boot-5.html">Previous</A>
+<A HREF="Remote-Boot.html#toc6">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Setting Up Your New Domain Mini-HOWTO.: Planning Your Network Topology</TITLE>
+ <LINK HREF="Domain-4.html" REL=next>
+ <LINK HREF="Domain-2.html" REL=previous>
+ <LINK HREF="Domain.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Domain-4.html">Next</A>
+<A HREF="Domain-2.html">Previous</A>
+<A HREF="Domain.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="plannettop"></A> <A NAME="s3">3. Planning Your Network Topology</A></H2>
+
+<P>While there are arguments which can be made for many different network
+layouts, the requirements of many organizations can be met by putting
+the desktop machines and private servers on a private masqueraded
+subnet, and the publicly accessible machines on valid external
+IPs. The machines on valid external IPs will be referred to in this
+document as ``exposed hosts''. This leads to the following (example)
+topology:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
++--------------+               
+|              |               +---------------+
+| ISP-supplied |---------------| FTP server    |
+| router       |        |      +---------------+
+|              |        |
++--------------+        |      +---------------+
+                        |------| WWW server #1 |
+                        |      +---------------+
+                        |
+                        |      +---------------+
+                        |------| WWW server #2 |
+                        |      +---------------+
+                        |
+                        ~
+                        ~
+                        |      
+                        |      +---------------+
+                        |------| Private       |
+                               | Network       |
+                               | Gateway       |
+                               +---------------+
+                                      |
+                                      |
+                                      |
+                                      |
+     +------------+                   |      +-------------------+
+     | Desktop #1 |-------------------|------| Private server #1 |
+     +------------+                   |      +-------------------+
+                                      |
+            .      -------------------|--------        .
+            .                         |                .
+            .      -------------------|--------        .
+                                      |
+     +------------+                   |      +-------------------+
+     | Desktop #N |-------------------|------| Private server #N |
+     +------------+                          +-------------------+
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>In this example, the router provided by the ISP (Internet Service
+Provider), FTP server, WWW servers, and the machine labelled ``private
+network gateway'' all have externally visible IP numbers, while the
+desktop and private server machines have IP numbers allocated from
+<A HREF="http://www.ietf.org/rfc/rfc1918.txt">RFC 1918</A>,
+reserved for private use. The IP numbers you choose for use within the
+private network (everything below the private network gateway
+machine) should be chosen to be unique, not only among the hosts under
+your control, but should also not conflict with numbers assigned on
+similar private subnets at other sites or partner companies with whom
+you might, at some time, want to implement a virtual private network,
+in order to reduce confusion and reconfiguration when the networks are
+merged in that way. As outlined in the RFC, you can choose from any
+class C network from 192.168.0.* to 192.168.255.*, or any class B
+network from 172.16.*.* to 172.31.*.*, or the class A network
+10.*.*.*. In the rest of this document I will assume that your private
+network (if you've chosen to create one) is on the class C network
+192.168.1.*, and your private network gateway machine is at IP number
+10.1.1.9, one of the IP numbers provided to you by your provider (note
+that this is not a valid external IP, I use it as an example only). I
+will also assume that there is a machine, betty.example.com, at
+10.1.1.10, which will handle both www and FTP services.
+<P>
+<P>Take note of the number of external IP numbers which you need for your
+own machines. You will need one IP number for each machine which lies
+outside the private network gateway, plus one for the gateway
+itself. This count does not include any IP numbers which may be taken
+by routers, broadcast addresses, and so on. You should ask your
+provider for a block of addresses large enough to mount the given
+number of machines. For example, in my office network, of the 8 IP
+numbers allocated from the ISP, three were not usable by my
+computers, leaving enough IP numbers for four machines outside the
+gateway, plus the gateway itself.
+<P>
+<P>This network topology is not correct for everybody, but it is a
+reasonable starting point for many configurations which don't have
+special needs. The advantages of this configuration include:
+<UL>
+<LI>Easy expandability. If you suddenly double your number of
+private nodes, you don't have to worry about getting a new IP block
+from your provider and reconfiguring all of the interfaces on your
+machines.  </LI>
+<LI>Local network control. Adding a new workstation to your private
+network requires no communication with your provider, unlike exposed
+nodes, which need both forward and reverse DNS (domain name service)
+mappings if they are to perform certain tasks (ssh and ftpd may
+complain if they can't perform reverse and forward DNS on incoming
+connections). A reverse DNS query is an attempt to obtain the host name
+from the IP number.</LI>
+<LI>Centralized security. The private network gateway can enforce
+security over the whole private network, filtering packets and logging
+attacks, rather than having to install such measures on each desktop
+and server on the private network. This can be enforced not only on
+incoming packets, but also on outgoing packets, so that a
+misconfigured desktop machine doesn't inadvertently broadcast data
+to the outside world which ought to remain internal.</LI>
+<LI>Easy transplantability. Because the IP numbers within the
+private network are yours for as long as you want them, you can move
+the entire network to a new range of IP numbers without having to make
+any changes to the network configuration on the private network. The
+publicly exposed hosts still have to be reconfigured, of course.</LI>
+<LI>Transparent Internet access. The machines on your private
+network can still use FTP, telnet, WWW, and other services with
+minimal obstruction, assuming a Linux masquerading router. The users
+may not even be aware that their machines are not on externally
+visible IP numbers.</LI>
+</UL>
+<P>
+<P>Some of the potential disadvantages of such a configuration are:
+<UL>
+<LI>Some services will not be available directly to the machines on
+the internal network. NTP synchronization against an outside host,
+certain obscure services which may not have masquerading rules in the
+kernel, and .shosts authentication for logging in to external nodes
+are all difficult or impossible, but simple workarounds are almost
+always available.</LI>
+<LI>More network hardware costs. The private network gateway machine
+needs two network cards, and you need at least two hubs / switches,
+one on the visible network and one on the private network.</LI>
+<LI>Machines outside the private network cannot easily make direct
+connections to machines within the private network. They may have to
+open a session first on the private network gateway machine, then log
+through to the internal host. It is possible to route packets
+transparently through the firewall, but this is not recommended for
+security reasons which will be discussed in a later section.</LI>
+</UL>
+<P>
+<P>You should consider these points in planning your network topology,
+and decide if a fully visible network is more appropriate for your
+situation. In the rest of this document I will assume that you have
+configured your network as shown above. If you have chosen to have a
+fully visible network, some details will differ, and I will try to
+point out such differences in this document.
+<P>
+<P>As a special case, if you do not need any external servers, the
+ISP-supplied router can be attached directly to your external
+interface on the private network gateway machine, rather than with a
+hub.
+<P>
+<P>
+<HR>
+<A HREF="Domain-4.html">Next</A>
+<A HREF="Domain-2.html">Previous</A>
+<A HREF="Domain.html#toc3">Contents</A>
+</BODY>
+</HTML>

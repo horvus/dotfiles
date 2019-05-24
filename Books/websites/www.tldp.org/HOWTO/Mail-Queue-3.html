@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Mail-Queue mini-HOWTO: Dial-on-demand solutions PART</TITLE>
+ <LINK HREF="Mail-Queue-4.html" REL=next>
+ <LINK HREF="Mail-Queue-2.html" REL=previous>
+ <LINK HREF="Mail-Queue.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Mail-Queue-4.html">Next</A>
+<A HREF="Mail-Queue-2.html">Previous</A>
+<A HREF="Mail-Queue.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Dial-on-demand solutions PART</A></H2>
+
+<P>Written by Jan P Tietze &lt;jptietze@mail.hh.provi.de&gt;.
+<P>Many Linux users access the Internet through a dialup line, and many
+have decided to implement dial-on-demand facilities on their system.
+That is, whenever an IP packet of some sort has to leave the local
+network or the local host, the link to an Internet Service Provider
+(ISP) will automatically be established. The link will be dropped
+after some period of time that no packet has travelled across.
+<P>Although this is very comfortable and cost effective, there is one
+special case in which this is neither comfortable (as the time to
+bring up a &quot;traditional&quot; modem dialup is very noticeable) nor cost
+effective, and this is sending e-mail. E-Mail is commonly sent by
+SMTP, either delivered by your own system or through a SMTP host on
+the Internet that usually resides in your ISP's network.
+<P>With dialup lines, every time you send a message the link will have
+to be brought up. This is quite okay if you send only one message,
+but if you happen to create and send multiple messages, bringing up
+the line more than once can be tedious and cost ineffective. Also,
+if your ISP imposes limits as to what times you are allowed to
+login, this would also restrict you to postpone messages at certain
+times of the day, and you would have to manually send them later.
+<P>Section 1 of this document will solve the situation, however in
+situations where an external DNS lookup would cause the link up, the
+link will still be established even if e-mail is just being queued.
+The reason is that sendmail wishes to &quot;canonify&quot; host names.
+<P>The solution to this problem is twofold: First, we'll have to
+moderately change sendmail.cf. And then we have to define the
+process of actual mail delivery. Personally, I prefer to have cron
+do the job for me and describe the necessary changes below.
+<P>
+<H2><A NAME="ss3.1">3.1 Configuring sendmail.cf</A>
+</H2>
+
+<P>For the reasons stated in [1.2], I recommend modifying the m4
+sources instead of editing sendmail.cf directly. It will actually
+save you a lot of hassle and make configuration changes more
+verbose.
+<P>First, perform all the changes described in the first part of this
+document. Then go through the dial-on-demand specific stuff.
+<P>
+<H3>Configuring sendmail.cf directly, for trivial configurations</H3>
+
+<P>Configuring directly is highly impractical and anything but verbose,
+but obviously, this is your decision.
+<P>Close to very bottom of your sendmail.cf should be a line that
+reads:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+R$* &lt; @ $* $~P &gt; $*               $: $1 &lt; @ $[ $2 $3 $] &gt; $4
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Precede that line with a &quot;#&quot; so that it reads
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#R$* &lt; @ $* $~P &gt; $*              $: $1 &lt; @ $[ $2 $3 $] &gt; $4
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>Configuring sendmail.cf using the m4 source.</H3>
+
+<P>Add the following line to
+/usr/src/sendmail-8.8.7/cf/cf/yourhostname.smtp.mc:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+FEATURE(nocanonify)dnl
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Your final sendmail.cf can then be built by issuing the following
+commands. Remember to always back up your old /etc/sendmail.cf
+before installing the new one:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cp /etc/sendmail.cf /etc/sendmail.cf.bak
+cd /usr/src/sendmail-8.8.7/cf/cf
+m4 yourhostname.smtp.mc &gt; /etc/sendmail.cf
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss3.2">3.2 Adding dial delay</A>
+</H2>
+
+<P>It is oftentimes useful, especially when using modem lines, to have
+a dial delay installed. This means that if sendmail tries to
+initiate a connection in an attempt to send an e-mail (and this
+causes the line to go up) but the link actually takes more time to
+get established than what sendmail thinks should be a reasonable
+timeout, sendmail will simply wait some seconds and then retry.
+<P>
+<H3>Configuring sendmail.cf directly</H3>
+
+<P>Somewhere in your sendmail.cf could be a line that would read:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#O DialDelay=10s
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>(or very similar). Delete the ``#''. If there's no ``#'' at the
+beginning of the line, things should be considered okay (it just
+means this had already been enabled before).
+<P>If there is no such line in your sendmail.cf, add one (it is a wise
+thing to do to add this in the &quot;options&quot; part of the file):
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+O DialDelay=10s
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Now change the ``10s'' part to the number of seconds you deem
+suitable.
+<P>
+<H3>Configuring sendmail.cf using m4 source</H3>
+
+<P>Add the following line to
+/usr/src/sendmail-8.8.7/cf/cf/yourhostname.smtp.mc:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+define(`confDIAL_DELAY',`10s')
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Now change the ``10s'' part to the number of seconds you deem
+suitable.
+<P>Your final sendmail.cf can then be built by issuing the following
+commands. Remember to always back up your old /etc/sendmail.cf
+before installing the new one:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cp /etc/sendmail.cf /etc/sendmail.cf.bak
+cd /usr/src/sendmail-8.8.7/cf/cf
+m4 yourhostname.smtp.mc &gt; /etc/sendmail.cf
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<HR>
+<A HREF="Mail-Queue-4.html">Next</A>
+<A HREF="Mail-Queue-2.html">Previous</A>
+<A HREF="Mail-Queue.html#toc3">Contents</A>
+</BODY>
+</HTML>

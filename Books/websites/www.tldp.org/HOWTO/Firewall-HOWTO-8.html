@@ -1,0 +1,111 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Firewall and Proxy Server HOWTO: IP filtering setup (IPCHAINS)</TITLE>
+ <LINK HREF="Firewall-HOWTO-9.html" REL=next>
+ <LINK HREF="Firewall-HOWTO-7.html" REL=previous>
+ <LINK HREF="Firewall-HOWTO.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Firewall-HOWTO-9.html">Next</A>
+<A HREF="Firewall-HOWTO-7.html">Previous</A>
+<A HREF="Firewall-HOWTO.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. IP filtering setup (IPCHAINS)</A></H2>
+
+<P>Linux ipchains is a rewrite of the Linux IPv4 firewalling code and a rewrite of ipfwadm, which was a rewrite of BSD's ipfw, I believe. It is required to administer the IP packet filters in Linux kernel versions 2.1.102 and above. 
+<P>The older code doesn't deal with fragments, has 32-bit counters (on Intel at least), doesn't allow specification of protocols other than TCP, UDP or ICMP, can't make large changes atomically, can't specify inverse rules, has some quirks, and can be tough to manage (making it prone to user error). Or so the author says.
+<P>I'm not going to get real deep into how to control an IPChains firewall because there is a GREAT!! HOWTO on it at 
+<A HREF="http://www.adelaide.net.au/~rustcorp/ipfwchains/ipfwchains.html">http://www.adelaide.net.au/~rustcorp/ipfwchains/ipfwchains.html</A>.
+I'd just end up duplicating it here. Here are the basics.
+<P>You work with chains by name. You start with three built-in chains input, output and forward which you can't delete.  You can create chains of your own. Rules can then be added and deleted from these rule sets.
+<P>The operations to work on entire chains are;
+<P>
+<OL>
+<LI>Create a new chain (-N). </LI>
+<LI>Delete an empty chain (-X). </LI>
+<LI>Change the policy for a built-in chain. (-P). </LI>
+<LI>List the rules in a chain (-L). </LI>
+<LI>Flush the rules out of a chain (-F). </LI>
+<LI>Zero the packet and byte counters on all rules in a chain (-Z). </LI>
+</OL>
+<P>There are several ways to manipulate rules inside a chain: 
+<P>
+<OL>
+<LI>Append a new rule to a chain (-A). </LI>
+<LI>Insert a new rule at some position in a chain (-I). </LI>
+<LI>Replace a rule at some position in a chain (-R). </LI>
+<LI>Delete a rule at some position in a chain (-D). </LI>
+<LI>Delete the first rule that matches in a chain (-D). </LI>
+</OL>
+<P>There are a few operations for masquerading, which are in ipchains for want of a good place to put them: 
+<P>
+<OL>
+<LI>List the currently masqueraded connections (-M -L). </LI>
+<LI>Set masquerading timeout values (-M -S).</LI>
+</OL>
+<P>There are some timing issues involved in altering firewall rules. If you are not careful, you can let packets through while you are half-way through your changes. A simplistic approach is to do the following: 
+<P>
+<PRE>
+     # ipchains -I input 1 -j DENY
+     # ipchains -I output 1 -j DENY
+     # ipchains -I forward 1 -j DENY
+</PRE>
+<P>... make changes ...
+<P>
+<PRE>
+     # ipchains -D input 1
+     # ipchains -D output 1
+     # ipchains -D forward 1
+     # 
+</PRE>
+<P>This drops all packets for the duration of the changes. 
+<P>Here a duplicate of the above firewall rules in IPChains.
+<P>
+<PRE>
+#!/bin/sh
+#
+# rc.firewall
+#
+## Flush everything, start from scratch
+  /sbin/ipchains -F input
+  /sbin/ipchains -F output
+  /sbin/ipchains -F forward
+
+## Redirect for HTTP Transparent Proxy
+  #$IPCHAINS  -A input -p tcp -s 192.1.2.0/24 -d 0.0.0.0/0 80 -j REDIRECT 8080
+
+## Create your own chain
+  /sbin/ipchains -N my-chain
+  # Allow email to got to the server
+  /sbin/ipchains -A my-chain -s 0.0.0.0/0 smtp -d 192.1.2.10 1024:-j ACCEPT
+  # Allow email connections to outside email servers
+  /sbin/ipchains -A my-chain -s 192.1.2.10 -d 0.0.0.0/0 smtp -j ACCEPT  
+  # Allow Web connections to your Web Server
+  /sbin/ipchains -A my-chain -s 0.0.0.0/0 www -d 192.1.2.11 1024: -j ACCEPT
+  # Allow Web connections to outside Web Server
+  /sbin/ipchains -A my-chain -s 192.1.2.0/24 1024: -d 0.0.0.0/0 www -j ACCEPT
+  # Allow DNS traffic
+  /sbin/ipchains -A my-chain -p UDP -s 0.0.0.0/0 dns -d 192.1.2.0/24 -j ACCEPT
+
+## If you are using masquerading
+  # don't masq internal-internal traffic
+  /sbin/ipchains -A forward -s 192.1.2.0/24 -d 192.1.2.0/24 -j ACCEPT
+  # don't masq external interface direct
+  /sbin/ipchains -A forward -s 24.94.1.0/24 -d 0.0.0.0/0 -j ACCEPT
+  # masquerade all internal IP's going outside
+  /sbin/ipchains -A forward -s 192.1.2.0/24 -d 0.0.0.0/0 -j MASQ
+
+## Deny everything else
+  /sbin/ipchains -P my-chain input DENY
+</PRE>
+<P>Don't stop here.  This is not a great firewall and I'm sure you have other services you will be providing.  Again, read the IPCHAINS-HOWTO.
+<P>
+<P>
+<HR>
+<A HREF="Firewall-HOWTO-9.html">Next</A>
+<A HREF="Firewall-HOWTO-7.html">Previous</A>
+<A HREF="Firewall-HOWTO.html#toc8">Contents</A>
+</BODY>
+</HTML>

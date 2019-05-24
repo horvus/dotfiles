@@ -1,0 +1,335 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux IPCHAINS-HOWTO: Miscellaneous.</TITLE>
+ <LINK HREF="IPCHAINS-HOWTO-6.html" REL=next>
+ <LINK HREF="IPCHAINS-HOWTO-4.html" REL=previous>
+ <LINK HREF="IPCHAINS-HOWTO.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="IPCHAINS-HOWTO-6.html">Next</A>
+<A HREF="IPCHAINS-HOWTO-4.html">Previous</A>
+<A HREF="IPCHAINS-HOWTO.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="s5">5. Miscellaneous.</A></H2>
+
+<P>This section contains all the information and FAQs that I couldn't fit
+inside the structure above.
+<P>
+<H2><A NAME="organisation"></A> <A NAME="ss5.1">5.1 How to Organize Your Firewall Rules</A>
+</H2>
+
+<P>This question requires some thought.  You can try to organize them to
+optimize speed (minimize the number of rule-checks for the most common
+packets) or to increase manageability.
+<P>
+<P>If you have an intermittent link, say a PPP link, you might want to
+set the first rule in the input chain to be set to `-i ppp0 -j DENY' at
+boot time, then have something like this in your <CODE>ip-up</CODE> script:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# Re-create the `ppp-in' chain.
+ipchains-restore -f &lt; ppp-in.firewall
+
+# Replace DENY rule with jump to ppp-handling chain.
+ipchains -R input 1 -i ppp0 -j ppp-in
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Your <CODE>ip-down</CODE> script would look like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ipchains -R input 1 -i ppp0 -j DENY
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss5.2">5.2 What Not To Filter Out</A>
+</H2>
+
+<P>There are some things you should be aware of before you start
+filtering out everything you don't want.
+<P>
+<H3><A NAME="ICMP"></A> ICMP packets</H3>
+
+<P>ICMP packets are used (among other things) to indicate failure for
+other protocols (such as TCP and UDP).  `destination-unreachable'
+packets in particular.  Blocking these packets means that you will
+never get `Host unreachable' or `No route to host' errors; any
+connections will just wait for a reply that never comes.  This is
+irritating, but rarely fatal.
+<P>
+<P>A worse problem is the role of ICMP packets in MTU discovery.  All
+good TCP implementations (Linux included) use MTU discovery to try to
+figure out what the largest packet that can get to a destination
+without being fragmented (fragmentation slows performance, especially
+when occasional fragments are lost).  MTU discovery works by sending
+packets with the "Don't Fragment" bit set, and then sending smaller
+packets if it gets an ICMP packet indicating "Fragmentation needed but
+DF set" (`fragmentation-needed').  This is a type of
+`destination-unreachable' packet, and if it is never received, the
+local host will not reduce MTU, and performance will be abysmal or
+non-existent.
+<P>
+<P>Note that it is common to block all ICMP redirect messages (type 5);
+these can be used to manipulate routing (although good IP stacks have
+safeguards), and so are often seen as slightly risky.
+<P>
+<H3>TCP Connections to DNS (nameservers)</H3>
+
+<P>If you're trying to block outgoing TCP connections, remember that DNS
+doesn't always use UDP; if the reply from the server exceeds 512
+bytes, the client uses a TCP connection (still going to port number
+53) to get the data.
+<P>
+<P>This can be a trap because DNS will `mostly work' if you disallow such
+TCP transfers; you may experience strange long delays and other
+occasional DNS problems if you do.
+<P>
+<P>If your DNS queries are always directed at the same external source
+(either directly by using the <CODE>nameserver</CODE> line in
+<CODE>/etc/resolv.conf</CODE> or by using a caching nameserver in forward
+mode), then you need only allow TCP connections to port <CODE>domain</CODE>
+on that nameserver from the local <CODE>domain</CODE> port (if using a caching
+nameserver) or from a high port (&gt; 1023) if using
+<CODE>/etc/resolv.conf</CODE>.
+<P>
+<H3><A NAME="ftp"></A> FTP Nightmares</H3>
+
+<P>The classic packet filtering problem is FTP.  FTP has two <B>modes</B>;
+the traditional one is called <B>active mode</B> and the more recent one
+is called <B>passive mode</B>.  Web browsers usually default to passive
+mode, but command-line FTP programs usually default to active mode.
+<P>
+<P>In active mode, when the remote end wants to send a file (or even the
+results of an <CODE>ls</CODE> or <CODE>dir</CODE> command) it tries to open a TCP
+connection to the local machine.  This means you can't filter out
+these TCP connections without breaking active FTP.
+<P>
+<P>If you have the option of using passive mode, then fine; passive mode
+makes data connections from client to server, even for incoming data.
+Otherwise, it is recommended that you only allow TCP connections to
+ports above 1024 and not between 6000 and 6010 (6000 is used for
+X-Windows).
+<P>
+<H2><A NAME="ss5.3">5.3 Filtering out Ping of Death</A>
+</H2>
+
+<P>Linux boxes are now immune to the famous <B>Ping of Death</B>, which
+involves sending an illegally-large ICMP packet which overflows
+buffers in the TCP stack on the receiver and causes havoc.
+<P>
+<P>If you are protecting boxes which might be vulnerable, you could simply
+block ICMP fragments.  Normal ICMP packets aren't large enough to
+require fragmentation, so you won't break anything except big pings.
+I have heard (unconfirmed) reports that some systems required only the
+last fragment of an oversize ICMP packet to corrupt them, so blocking
+only the first fragment is not recommended.
+<P>
+<P>While the exploit programs I have seen all use ICMP, there is no
+reasons that TCP or UDP fragments (or an unknown protocol) could not
+be used for this attack, so blocking ICMP fragments is only a
+temporary solution.
+<P>
+<H2><A NAME="ss5.4">5.4 Filtering out Teardrop and Bonk</A>
+</H2>
+
+<P>Teardrop and Bonk are two attacks (mainly against Microsoft Windows NT
+machines) which rely on overlapping fragments.  Having your Linux
+router do defragmentation, or disallowing all fragments to your
+vulnerable machines are the other options.
+<P>
+<H2><A NAME="ss5.5">5.5 Filtering out Fragment Bombs</A>
+</H2>
+
+<P>Some less-reliable TCP stacks are said to have problems dealing with
+large numbers of fragments of packets when they don't receive all the
+fragments.  Linux does not have this problem.  You can filter out
+fragments (which might break legitimate uses) or compile your kernel
+with `IP: always defragment' set to `Y' (only if your Linux box is the
+only possible route for these packets).
+<P>
+<H2><A NAME="ss5.6">5.6 Changing Firewall Rules</A>
+</H2>
+
+<P>There are some timing issues involved in altering firewall rules.  If
+you are not careful, you can let packets through while you are
+half-way through your changes.  A simplistic approach is to do the
+following:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ipchains -I input 1 -j DENY
+# ipchains -I output 1 -j DENY
+# ipchains -I forward 1 -j DENY
+
+... make changes ...
+
+# ipchains -D input 1
+# ipchains -D output 1
+# ipchains -D forward 1
+# 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This drops all packets for the duration of the changes.
+<P>
+<P>If your changes are restricted to a single chain, you might want to
+create a new chain with the new rules, and then replace (`-R') the
+rule that pointed to the old chain with one that points to the new
+chain: then you can delete the old chain.  This replacement will occur
+atomically.
+<P>
+<H2><A NAME="antispoof"></A> <A NAME="ss5.7">5.7 How Do I Set Up IP Spoof Protection?</A>
+</H2>
+
+<P>IP spoofing is a technique where a host sends out packets which claim
+to be from another host.  Since packet filtering makes decisions based
+on this source address, IP spoofing is uses to fool packet filters.
+It is also used to hide the identity of attackers using SYN attacks,
+Teardrop, Ping of Death and the like (don't worry if you don't know
+what they are).
+<P>
+<P>The best way to protect from IP spoofing is called Source Address
+Verification, and it is done by the routing code, and not firewalling
+at all.  Look for a file called
+<CODE>/proc/sys/net/ipv4/conf/all/rp_filter</CODE>.  If this exists, then
+turning on Source Address Verification at every boot is the right
+solution for you.  To do that, insert the following lines somewhere in
+your init scripts, before any network interfaces are initialized:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# This is the best method: turn on Source Address Verification and get
+# spoof protection on all current and future interfaces.
+if [ -e /proc/sys/net/ipv4/conf/all/rp_filter ]; then
+  echo -n "Setting up IP spoofing protection..."
+  for f in /proc/sys/net/ipv4/conf/*/rp_filter; do
+      echo 1 > $f
+  done
+  echo "done."
+else
+  echo PROBLEMS SETTING UP IP SPOOFING PROTECTION.  BE WORRIED.
+  echo "CONTROL-D will exit from this shell and continue system startup."
+  echo
+  # Start a single user shell on the console
+  /sbin/sulogin $CONSOLE
+fi
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>If you cannot do this, you can manually insert rules to protect every
+interface.  This requires knowledge of each interface.  The 2.1
+kernels automatically reject packets claiming to come from the 127.*
+addresses (reserved for the local loopback interface, <CODE>lo</CODE>).  
+<P>
+<P>For example, say we have three interfaces, <CODE>eth0</CODE>, <CODE>eth1</CODE> and
+<CODE>ppp0</CODE>.  We can use <CODE>ifconfig</CODE> to tell us the address and
+netmask of the interfaces.  Say <CODE>eth0</CODE> was attached to a network
+192.168.1.0 with netmask 255.255.255.0, <CODE>eth1</CODE> was attached to a
+network 10.0.0.0 with netmask 255.0.0.0, and <CODE>ppp0</CODE> connected to
+the Internet (where any address except the reserved private IP
+addresses are allowed), we would insert the following rules:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ipchains -A input -i eth0 -s ! 192.168.1.0/255.255.255.0 -j DENY
+# ipchains -A input -i ! eth0 -s 192.168.1.0/255.255.255.0 -j DENY
+# ipchains -A input -i eth1 -s ! 10.0.0.0/255.0.0.0 -j DENY
+# ipchains -A input -i ! eth1 -s 10.0.0.0/255.0.0.0 -j DENY
+# 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>This approach is not as good as the Source Address Verification
+approach, because if your network changes, you have to change your
+firewalling rules to keep up.
+<P>
+<P>If you are running a 2.0 series kernel, you might want to protect the
+loopback interface as well, using a rule like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ipchains -A input -i ! lo -s 127.0.0.0/255.0.0.0 -j DENY
+#
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss5.8">5.8 Advanced Projects</A>
+</H2>
+
+<P>There is a userspace library I have written which is included with the
+source distribution called `libfw'.  It uses the ability of IP Chains
+1.3 and above to copy a packet to userspace (using the
+IP_FIREWALL_NETLINK config option).
+<P>
+<P>The mark value can be used to specify the Quality of Service
+parameters for packets, or to specify how packets should be
+port-forwarded.  I've never used either, but if you want to write
+about it, please contact me.
+<P>
+<P>Things such as <B>stateful inspection</B> (I prefer the term
+dynamic firewalling) can be implemented in userspace using this
+library.  Other nifty ideas include controlling packets on a per-user
+basis by doing a lookup in a userspace daemon.  This should be pretty
+easy.
+<P>
+<H3>SPF: Stateful Packet Filtering</H3>
+
+<P>
+<A HREF="ftp://ftp.interlinx.bc.ca/pub/spf">ftp://ftp.interlinx.bc.ca/pub/spf</A> is the site of Brian
+Murrell's SPF project, which does connection tracking in userspace.
+It adds significant security for low-bandwidth sites.
+<P>
+<P>There's little documentation at present, but here's a post to the
+mailing list in which Brian answered some questions:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+
+> I believe it does exactly what I want: Installing a temporary
+> "backward"-rule to let packets in as a response to an
+> outgoing request.
+
+Yup, that is exactly what it does.  The more protocols it
+understands, the more "backward" rules it gets right.  Right
+now it has support for (from memory, please excuse any errors
+or omissions) FTP (both active and passive, in and out), some
+RealAudio, traceroute, ICMP and basic ICQ (inbound from the ICQ
+servers, and direct TCP connections, but alas the secondary
+direct TCP connections for things like file transfer, etc. are
+not there yet)
+
+> Is it a replacement for ipchains or a supplement?
+
+It is a supplement.  Think of ipchains as the engine to allow
+and prevent packets from travelling across a Linux box.  SPF is
+the driver, constantly monitoring traffic and telling ipchains
+how to change it's policies to reflect the changes in traffic
+patterns.
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>Michael Hasenstein's ftp-data hack</H3>
+
+<P> Michael Hasenstein of SuSE has written a kernel patch which adds
+ftp connection tracking to ipchains.  It can currently be found at
+<A HREF="http://www.suse.de/~mha/patch.ftp-data-2.gz">http://www.suse.de/~mha/patch.ftp-data-2.gz</A><P>
+<H2><A NAME="ss5.9">5.9 Future Enhancements</A>
+</H2>
+
+<P>Firewalling and NAT have being redesigned for 2.4.  Plans and
+discussions are available on the netfilter list (see 
+<A HREF="http://lists.samba.org">http://lists.samba.org</A>).  These
+enhancements should clear up many outstanding usability issues
+(really, firewalling and masquerading shouldn't be <EM>this
+hard</EM>), and allow growth for far more flexible firewalling.
+<P>
+<HR>
+<A HREF="IPCHAINS-HOWTO-6.html">Next</A>
+<A HREF="IPCHAINS-HOWTO-4.html">Previous</A>
+<A HREF="IPCHAINS-HOWTO.html#toc5">Contents</A>
+</BODY>
+</HTML>

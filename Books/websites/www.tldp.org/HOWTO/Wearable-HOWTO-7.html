@@ -1,0 +1,182 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Wearable-HOWTO.: The Sulawesi project.</TITLE>
+ <LINK HREF="Wearable-HOWTO-8.html" REL=next>
+ <LINK HREF="Wearable-HOWTO-6.html" REL=previous>
+ <LINK HREF="Wearable-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Wearable-HOWTO-8.html">Next</A>
+<A HREF="Wearable-HOWTO-6.html">Previous</A>
+<A HREF="Wearable-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. The Sulawesi project.</A>      </H2>
+
+<P>
+<P>Sulawesi:  An intelligent user interface system for ubquitous computing.
+<H2><A NAME="ss7.1">7.1 Background</A>
+</H2>
+
+<P>A few years ago, wearable computers were dedicated systems constructed
+by and for a single person. The machine was customised to suit the owners
+personal preferences using alternative input/output devices to achieve
+different interaction techniques, and until now most of the interfaces
+used on these machines have been an amalgamation of existing desktop user
+interface systems and novel input/output devices.
+<P>The ideal human-computer interface for use in a mobile/ubiquitous environment
+would be one which listens for its user, understands what the user has
+asked it to do using speech recognition, gestures, machine vision and other
+channels of information, carried out the users request automatically, and
+presented the results back to the user when it is most appropriate and
+in a suitable format. For example; a machine which could monitor the users
+respiratory levels, heart rate and movement, the user could ask ``when
+I fall asleep could you turn off those &lt;user pointing> lights''. This
+type of interaction with a mobile device or an ubiquitous environment,
+using spoken sentences and gestures, fall under the category of multi-modal
+and intelligent user interfaces; and Sulawesi is a framework which provides
+a basic multimodal development system.
+<P>
+<H2><A NAME="ss7.2">7.2 The Sulawesi Architecture</A>
+</H2>
+
+<P>The Sulawesi system that has been designed comprises of three distinct
+parts,
+<UL>
+<LI>An input stage, which gathers raw data from the various sensors.</LI>
+<LI>A core stage, which contains a natural language processing module and service
+agents.</LI>
+<LI>An output stage, which decides how to render the results from the service
+agents.</LI>
+</UL>
+
+Programming API's allow third partys to create new input, service and output
+modules and integrate them with Sulawesi.
+<H3>The input stage</H3>
+
+<P>The system gathers real world information through a well defined API. The
+current implementation includes a keyboard input, a network input, a speech
+recognition input, a video camera input, a G.P.S. input and infra-red input.
+The inputs do not do any pre-processing of the data, they only provide
+the raw data to the core of the system for interpretation by the services
+within.
+<P>
+<H3>The core stage</H3>
+
+<P>The core of the system contains a basic natural language processor which
+performs sentence translations. This converts a sentence into a command
+stream from which two pieces of information are extracted, which service
+to invoke and how the output should be rendered. A service manager is responsible
+for the instantiation and monitoring of the services, it also checkpoints
+commands to try and provide some kind of resiliance against system failures.
+The services produce, where possible, a modal neutral output which can
+be send to the output stage for processing.
+<P>
+<H3>The output stage</H3>
+
+<P>The output stage takes a modal neutral result from a service and makes
+a decision on how to render the information. The decision is made based
+on two criteria, what the user has asked for, and how the system percieves
+the users current context/environment.
+<P>If the user has asked to be shown a piece of information, this implies
+a visual rendition. If the system detects that the user is moving at speed
+(through the input sensors) an assumption can be made that the user attention
+might be distracted if a screen with the results in is displayed in front
+of them. (imagine what would happen if the user was driving!).. In this
+case the system will override the users request and would redirect the
+results to a more suitable renderer, such as speech.
+<P>
+<H2><A NAME="ss7.3">7.3 Sentence translations</A>
+</H2>
+
+<P>When humans recognise speech they do not understand every word in a sentence,
+sometimes words are misheard or a distraction prevents the whole sentence
+from being heard. A human can infer what has been said from the other words
+around the ones missed in a sentence, this is not always sucessfull but
+in most cases it is satisfactory for the understanding of a conversation.
+This type of sentence decoding has been called semi-natural language processing
+and has been implemented using a few basic rules, the example below explains
+how the system converts human understandable sentences into commands that
+the system understands :
+<UL>
+<LI><CODE>could you show me what the time is</CODE></LI>
+<LI><CODE>I would like you to tell me the time</CODE></LI>
+</UL>
+
+It can be argued that in practice these sentences result in similar information
+being relayed to a user. The request is for the machines interpretation
+of the time to be sent to an appropriate output channel, the result is
+the user receiving the knowledge of what the time is. Closer inspection
+reveals that almost all the data in the sentences can be thrown away and
+the request can still be inferred from the resulting information.
+<P>
+<UL>
+<LI><CODE>show time</CODE></LI>
+<LI><CODE>tell time</CODE></LI>
+</UL>
+
+In the example above there has been a reduction to 1/4 and 2/9 of the number
+of words (data) in the sentences, while it can be argued that close to
+100% of the information content is still intact.
+<P>The system implemented allows sentences to be processed and interpreted.
+The semi-natural language processing is achieved through a self generated
+lookup table of services and a language transformation table.
+<P>The service names have to be unique (due to the restrictions on the
+file system) and this provides a simple mechanism to match a service such
+as ``time'' within a sentence. It is impractical and almost impossible
+to hard code all predefined language transformations, and such a system
+would not be easily adaptable to diverse situations. The use of lookup
+tables provides a small and efficient way in which a user can customise
+the system to their own personal preferences without having to re-program
+or re-compile the sentence understanding code. The system knows what the
+words '<CODE>show</CODE>' and '<CODE>tell</CODE>' mean in the sentences by referring
+to the lookup table to determine which output renderer the results should
+be sent to.
+<P>Example of a lookup file.
+<PRE>
+|tell|speak| 
+|read|speak| 
+|show|text| 
+|display|text| 
+|EOF| 
+</PRE>
+
+The top entry in this lookup table specifies that the first time the
+word "say" is encountered in a sentence the results of the service should
+be sent to the "speak" output renderer.
+<P>The use of lookup tables inherently restricts the use of sentences,
+in order to create a sentence which is to be understood the following rule
+must be adhered to.
+<PRE>
+&lt;render type> &lt;service name> &lt;service arguments> 
+</PRE>
+<P>
+<H2><A NAME="ss7.4">7.4 Summary</A>
+</H2>
+
+<P>The above system enables a sentence like ``I would like you to turn the
+lights on when it gets dark''. The system interprets the sentence as a
+request to invoke the `light' service and to render the output using some
+kind of light controller device to turn on or off the lights. There are
+two points which need to be emphasised here, the first is on the machine
+inferring a meaning from a relatively natural sentence rather than the
+user having to adapt to the machine and remember complex commands or manipulate
+a user interface. The second is on the machine being asked to perform a
+certain task when certain conditions are met in the real world, ``when
+it gets dark'' requests that when the computers interpretation of the current
+lighting conditions cross a certain threshold, it should respond and send
+a message to the light controller output.
+<P>The Sulawesi system provides the flexability to achieve this type of
+interaction but it does not provide the underlying mechanisms for controlling
+lighting circuits, that's the part you have to code up ;)..
+<P>
+<P>Online documentation and downloads can be found here:-
+<A HREF="http://wearables.essex.ac.uk/sulawesi/">http://wearables.essex.ac.uk/sulawesi/</A><P>
+<P>
+<HR>
+<A HREF="Wearable-HOWTO-8.html">Next</A>
+<A HREF="Wearable-HOWTO-6.html">Previous</A>
+<A HREF="Wearable-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

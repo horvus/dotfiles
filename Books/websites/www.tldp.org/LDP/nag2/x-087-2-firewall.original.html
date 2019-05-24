@@ -1,0 +1,1473 @@
+<HTML
+><HEAD
+><TITLE
+>Original IP Firewall (2.0 Kernels)</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="TCP/IP Firewall"
+HREF="x-087-2-firewall.html"><LINK
+REL="PREVIOUS"
+TITLE="Three Ways We Can Do Filtering"
+HREF="x-087-2-firewall.filteringmethods.html"><LINK
+REL="NEXT"
+TITLE="IP Firewall Chains (2.2 Kernels)"
+HREF="x-087-2-firewall.fwchains.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.filteringmethods.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. TCP/IP Firewall</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.fwchains.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-FIREWALL.ORIGINAL"
+>9.6. Original IP Firewall (2.0 Kernels)</A
+></H1
+><P
+>&#13;
+
+
+
+
+The first generation IP firewall support for Linux appeared in the 1.1
+series kernel. It was a port of the BSD ipfw firewall support to Linux
+by Alan Cox.  The firewall support that appeared in the 2.0 series
+kernels and is the second generation was enhanced by Jos Vos, Pauline
+Middelink, and others.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.USINGIPFWADM"
+>9.6.1. Using ipfwadm</A
+></H2
+><P
+>The <B
+CLASS="COMMAND"
+>ipfwadm</B
+> command was the configuration tool for the
+second generation Linux IP firewall. Perhaps the simplest way to describe the
+use of the <B
+CLASS="COMMAND"
+>ipfwadm</B
+> command is by example. To begin, let's
+code the example we presented earlier.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.SIMPLEEXAMPLE"
+>9.6.1.1. A naïve example</A
+></H3
+><P
+>Let's suppose that we have a network in our organization and that we
+are using a Linux-based firewall machine to connect our network to
+the Internet. Additionally, let's suppose that we wish the users of
+that network to be able to access web servers on the Internet, but to
+allow no other traffic to be passed.</P
+><P
+>We will put in place a forwarding rule to allow datagrams with a source
+address on our network and a destination socket of port 80 to be forwarded
+out, and for the corresponding reply datagrams to be forwarded back via the
+firewall.</P
+><P
+>Assume our network has a 24-bit network mask (Class C) and an address
+of 172.16.1.0. The rules we might use are:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -f</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -p deny</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -a accept -P tcp -S 172.16.1.0/24 -D 0/0 80</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -a accept -P tcp -S 0/0 80 -D 172.16.1.0/24</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <TT
+CLASS="OPTION"
+>-F</TT
+> command-line argument tells
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> that this is a forwarding rule.
+The first command instructs <B
+CLASS="COMMAND"
+>ipfwadm</B
+> to "flush" all
+of the forwarding rules. This ensures we are working from a known
+state before we begin adding specific rules.</P
+><P
+>The second rule sets our default forwarding policy. We
+tell the kernel to deny or disallow forwarding of IP datagrams. It
+is very important to set the default policy, because this describes what will
+happen to any datagrams that are not specifically handled by any other
+rule. In most firewall configurations, you will want to set your default
+policy to "deny," as shown, to be sure that only the traffic you specifically
+allow past your firewall is forwarded.</P
+><P
+>The third and fourth rules are the ones that implement our requirement.
+The third command allows our datagrams out, and the fourth rule allows
+the responses back.</P
+><P
+>Let's review each of the arguments:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-F</DT
+><DD
+><P
+>This is a Forwarding rule.</P
+></DD
+><DT
+>-a accept</DT
+><DD
+><P
+>Append this rule with the policy set to "accept," meaning we will forward
+any datagrams that match this rule.</P
+></DD
+><DT
+>-P tcp</DT
+><DD
+><P
+>This rule applies to tcp datagrams (as opposed to UDP or ICMP).</P
+></DD
+><DT
+>-S 172.16.1.0/24</DT
+><DD
+><P
+>The Source address must have the first 24 bits matching those of the
+network address 172.16.1.0.</P
+></DD
+><DT
+>-D 0/0 80</DT
+><DD
+><P
+>The destination address must have zero bits matching the address 0.0.0.0.
+This is really a shorthand notation for "anything." The 80 is the
+destination port, in this case WWW. You may also use any entry that
+appears in the <TT
+CLASS="FILENAME"
+>/etc/services</TT
+> file to describe the
+port, so <TT
+CLASS="LITERAL"
+>-D 0/0 www</TT
+> would have worked just as well.</P
+></DD
+></DL
+></DIV
+></P
+><P
+><B
+CLASS="COMMAND"
+>ipfwadm</B
+> accepts network masks in a form with which you may
+not be familiar. The <TT
+CLASS="LITERAL"
+>/nn</TT
+> notation is a means of
+describing how many bits of the supplied address are significant, or the
+size of the mask. The bits are always counted from left to right;
+some common examples are listed in <A
+HREF="x-087-2-firewall.original.html#X-087-2-CHFW-NETMASKS"
+>Table 9-1</A
+>.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="X-087-2-CHFW-NETMASKS"
+></A
+><P
+><B
+>Table 9-1. Common Netmask Bit Values</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Netmask</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Bits</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.0.0.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>8</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.0.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>16</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>24</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.128</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>25</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.192</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>26</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.224</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>27</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.240</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>28</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.248</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>29</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>255.255.255.252</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>30</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>We mentioned earlier that <B
+CLASS="COMMAND"
+>ipfwadm</B
+> implements a
+small trick that makes adding these sorts of rules easier. This trick
+is an option called <I
+CLASS="EMPHASIS"
+>-b</I
+>, which makes the command a
+bidirectional rule.</P
+><P
+>The bidirectional flag allows us to collapse our two
+rules into one as follows:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -a accept -P tcp -S 172.16.1.0/24 -D 0/0 80 -b</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.SIMPLEEXAMPLE.REFINEMENT"
+>9.6.1.2. An important refinement</A
+></H3
+><P
+>Take a closer look at our ruleset. Can you see that there is still one method
+of attack that someone outside could use to defeat our firewall?</P
+><P
+>Our ruleset allows all datagrams from outside our network with a source port
+of 80 to pass. This will include those datagrams with the SYN bit set! The SYN
+bit is what declares a TCP datagram to be a connection request. If a person
+on the outside had privileged access to a host, they could make a connection
+through our firewall to any of our hosts, provided they use port 80 at their
+end. This is not what we intended.</P
+><P
+>Fortunately there is a solution to this problem. The
+<B
+CLASS="COMMAND"
+>ipfwadm</B
+> command provides another flag that allows
+us to build rules that will match datagrams with the SYN bit
+set. Let's change our example to include such a rule:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -a deny -P tcp -S 0/0 80 -D 172.16.10.0/24 -y</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -a accept -P tcp -S 172.16.1.0/24 -D 0/0 80 -b</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <TT
+CLASS="OPTION"
+>-y</TT
+> flag causes the rule to match only if the
+SYN flag is set in the datagram. So our new rule says:
+"Deny any TCP datagrams destined for our network from anywhere with a source
+port of 80 and the SYN bit set," or "Deny any connection requests from hosts
+using port 80."</P
+><P
+>Why have we placed this special rule <I
+CLASS="EMPHASIS"
+>before</I
+> the
+main rule?  IP firewall rules operate so that the first match is the
+rule that is used. Both rules would match the datagrams we want to
+stop, so we must be sure to put the <TT
+CLASS="LITERAL"
+>deny</TT
+> rule
+before the <TT
+CLASS="LITERAL"
+>accept</TT
+> rule.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.LISTING"
+>9.6.1.3. Listing our rules</A
+></H3
+><P
+>&#13;After we've entered our rules, we ask <B
+CLASS="COMMAND"
+>ipfwadm</B
+> to list
+them for us using the command:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -l</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+This command will list all of the configured forwarding rules. The output
+should look something like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -l</B
+></TT
+>
+IP firewall forward rules, default policy: accept
+type  prot source               destination          ports
+deny  tcp  anywhere             172.16.10.0/24       www -&#62; any
+acc   tcp  172.16.1.0/24        anywhere             any -&#62; www</PRE
+></TD
+></TR
+></TABLE
+>
+
+The <B
+CLASS="COMMAND"
+>ipfwadm</B
+> command will attempt to translate the port
+number into a service name using the <TT
+CLASS="FILENAME"
+>/etc/services</TT
+> if
+an entry exists there.</P
+><P
+>The default output is lacking in some important detail for us. In the
+default listing output, we can't see the effect of the
+<TT
+CLASS="LITERAL"
+>-y</TT
+> argument.  The <B
+CLASS="COMMAND"
+>ipfwadm</B
+> command
+is able to produce a more detailed listing output if you specify the
+<TT
+CLASS="LITERAL"
+>-e</TT
+> (extended output) argument too. We won't show the
+whole output here because it is too wide for the page, but it includes
+an <TT
+CLASS="LITERAL"
+>opt</TT
+> (options) column that shows the <TT
+CLASS="OPTION"
+>-y</TT
+> option
+controlling SYN packets:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -F -l -e</B
+></TT
+>
+P firewall forward rules, default policy: accept
+ pkts bytes type  prot opt  tosa tosx ifname  ifaddress   source        ...   
+    0     0 deny  tcp  --y- 0xFF 0x00 any     any         anywhere      ...       
+    0     0 acc   tcp  b--- 0xFF 0x00 any     any         172.16.1.0/24 ...</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.COMPLEXEXAMPLE"
+>9.6.2. A More Complex Example</A
+></H2
+><P
+>The previous example was a simple one. Not all network services are as
+simple as the WWW service to configure; in practice, a typical firewall
+configuration would be much more complex. Let's look at another common
+example, this time FTP. We want our internal network users to be able
+to log into FTP servers on the Internet to read and write files. But we don't
+want people on the Internet to be able to log into our FTP servers.</P
+><P
+>We know that FTP uses two TCP ports: port 20 (ftp-data) and port 21 (ftp),
+so:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -a deny -P tcp -S 0/0 20 -D 172.16.1.0/24 -y</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -a accept -P tcp -S 172.16.1.0/24 -D 0/0 20 -b</B
+></TT
+>
+#
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -a deny -P tcp -S 0/0 21 -D 172.16.1.0/24 -y</B
+></TT
+>
+<TT
+CLASS="PROMPT"
+>#</TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ipfwadm -a accept -P tcp -S 172.16.1.0/24 -D 0/0 21 -b</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+>
+
+Right? Well, not necessarily. FTP servers
+can operate in two different modes: passive mode and active
+mode.<A
+NAME="X-087-2-FW-FN03"
+HREF="#FTN.X-087-2-FW-FN03"
+>[1]</A
+>  In passive mode, the FTP server
+listens for a connection from the client. In active mode, the server actually
+makes the connection to the client. Active mode is usually the
+default. The differences are illustrated in <A
+HREF="x-087-2-firewall.original.html#X-087-2-FIREWALL.FTP.GRAPHIC"
+>Figure 9-3</A
+>.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="X-087-2-FIREWALL.FTP.GRAPHIC"
+></A
+><P
+><B
+>Figure 9-3. FTP server modes</B
+></P
+><P
+><IMG
+SRC="lag2_0903.jpg"></P
+></DIV
+><P
+>Many FTP servers make their data connection from port 20 when operating in
+active mode, which simplifies things for us a little, but unfortunately not
+all do.<A
+NAME="X-087-2-FW-FN04"
+HREF="#FTN.X-087-2-FW-FN04"
+>[2]</A
+></P
+><P
+>But how does this affect us? Take a look at our rule for port 20, the
+FTP-data port. The rule as we have it now assumes that the connection
+will be made by our client to the server. This will work if we
+use passive mode. But it is very difficult for us to configure
+a satisfactory rule to allow FTP active mode, because we may not know in
+advance what ports will be used. If we open up our firewall to allow incoming
+connections on any port, we are exposing our network to attack on all
+services that accept connections.</P
+><P
+>The dilemna is most safely resolved by insisting that our users operate in
+passive
+mode. Most FTP servers and many FTP clients will operate this way.
+The popular <B
+CLASS="COMMAND"
+>ncftp</B
+> client also supports passive mode, but
+it may require a small configuration change to make it default to passive
+mode. Many
+World Wide Web browsers such as the Netscape browser also support passive
+mode FTP, so it shouldn't be too hard to find appropriate software to use.
+Alternatively, you can avoid the issue entirely by using an FTP proxy
+server that accepts a connection from the internal network and establishes
+connections to the outside network.</P
+><P
+>In building your firewall, you will probably find a number of these
+sorts of problems. You should always give careful thought to how a service
+actually operates to be sure you have put in place an appropriate ruleset for
+it. A real firewall configuration can be quite complex.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-FIREWALL.IPFWADMARGS"
+>9.6.3. Summary of ipfwadm Arguments</A
+></H2
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>ipfwadm</B
+> has many different arguments that relate to
+IP firewall configuration. The general syntax is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><B
+CLASS="COMMAND"
+>ipfwadm</B
+> <TT
+CLASS="REPLACEABLE"
+><I
+>category</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>command</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>parameters</I
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>[options]</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Let's take a look at each of these.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPFWADM.CATEGORIES"
+>9.6.3.1. Categories</A
+></H3
+><P
+>One and only one of the following must be supplied. The category tells the
+firewall what sort of firewall rule you are configuring:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-I</DT
+><DD
+><P
+>Input rule</P
+></DD
+><DT
+>-O</DT
+><DD
+><P
+>Output rule</P
+></DD
+><DT
+>-F</DT
+><DD
+><P
+>Forwarding rule</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPFWADM.COMMAND"
+>9.6.3.2. Commands</A
+></H3
+><P
+>At least one of the following must be supplied and applies only to
+those rules that relate to the supplied category. The command tells the
+firewall what action to take.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-a [policy]</DT
+><DD
+><P
+>Append a new rule</P
+></DD
+><DT
+>-i [policy]</DT
+><DD
+><P
+>Insert a new rule</P
+></DD
+><DT
+>-d [policy]</DT
+><DD
+><P
+>Delete an existing rule</P
+></DD
+><DT
+>-p policy</DT
+><DD
+><P
+>Set the default policy</P
+></DD
+><DT
+>-l</DT
+><DD
+><P
+>List all existing rules</P
+></DD
+><DT
+>-f</DT
+><DD
+><P
+>Flush all existing rules</P
+></DD
+></DL
+></DIV
+><P
+>The policies relevant to IP firewall and their meanings are:
+
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>accept</DT
+><DD
+><P
+>Allows matching datagrams to be received, forwarded, or transmitted</P
+></DD
+><DT
+>deny</DT
+><DD
+><P
+>Blocks matching datagrams from being received, forwarded, or transmitted</P
+></DD
+><DT
+>reject</DT
+><DD
+><P
+>Blocks matching datagrams from being received, forwarded, or transmitted, and
+sends the host that sent the datagram and ICMP error message</P
+></DD
+></DL
+></DIV
+>&#13;</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPFWADM.PARAMETERS"
+>9.6.3.3. Parameters</A
+></H3
+><P
+>At least one of the following must be supplied. Use the parameters
+to specify to which datagrams this rule applies:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-P protocol</DT
+><DD
+><P
+>Can be TCP, UDP, ICMP, or all. Example:</P
+><P
+><TT
+CLASS="LITERAL"
+>-P tcp</TT
+></P
+></DD
+><DT
+>-S address[/mask] [port]</DT
+><DD
+><P
+>Source IP address that this rule will match. A netmask of
+&#8220;/32&#8221; will be assumed if you don't supply one. You may
+optionally specify which ports this rule will apply to. You must also
+specify the protocol using the <TT
+CLASS="OPTION"
+>-P</TT
+> argument described
+above for this to work. If you don't specify a port or port range,
+&#8220;all&#8221; ports will be assumed to match. Ports may be
+specified by name, using their <TT
+CLASS="FILENAME"
+>/etc/services</TT
+> entry
+if you wish. In the case of the ICMP protocol, the port field is used
+to indicate the ICMP datagram types. Port ranges may be described; use
+the general syntax:
+<TT
+CLASS="REPLACEABLE"
+><I
+>lowport</I
+></TT
+>:<TT
+CLASS="REPLACEABLE"
+><I
+>highport</I
+></TT
+>. Here is an example:</P
+><P
+><TT
+CLASS="LITERAL"
+>-S 172.29.16.1/24 ftp:ftp-data</TT
+></P
+></DD
+><DT
+>-D address[/mask] [port]</DT
+><DD
+><P
+>Specify the destination IP address that this rule will match. The destination
+address is coded with the same rules as the source address described previously. Here is an example:</P
+><P
+><TT
+CLASS="LITERAL"
+>-D 172.29.16.1/24 smtp</TT
+></P
+></DD
+><DT
+>-V address</DT
+><DD
+><P
+>Specify the address of the network interface on which the packet is received
+(<TT
+CLASS="OPTION"
+>-I</TT
+>&#8201;) or is being sent (<TT
+CLASS="OPTION"
+>-O</TT
+>). This
+allows us to create rules that apply only to certain network interfaces on our
+machine. Here is an example:</P
+><P
+><TT
+CLASS="LITERAL"
+>-V 172.29.16.1</TT
+></P
+></DD
+><DT
+>-W name</DT
+><DD
+><P
+>Specify the name of the network interface. This argument works in the same way
+as the <TT
+CLASS="OPTION"
+>-V</TT
+> argument, except you supply the device name
+instead of its address. Here is an example:</P
+><P
+><TT
+CLASS="LITERAL"
+>-W ppp0</TT
+></P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPFWADM.OPTARGS"
+>9.6.3.4. Optional arguments</A
+></H3
+><P
+>These arguments are sometimes very useful:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-b</DT
+><DD
+><P
+>This is used for bidirectional mode. This flag matches traffic flowing
+in either direction between the specified source and
+destination. This saves you from having to create two rules: one for
+the forward direction of a connection and one for the reverse.</P
+></DD
+><DT
+>-o</DT
+><DD
+><P
+>This enables logging of matching datagrams to the kernel log. Any
+datagram that matches this rule will be logged as a kernel
+message. This is useful to enable you to detect unauthorized access.</P
+></DD
+><DT
+>-y</DT
+><DD
+><P
+>This is used to match TCP connect datagrams. The option causes the
+rule to match only datagrams that attempt to establish TCP
+connections. Only datagrams that have their SYN bit set, but their ACK
+bit unset, will match. This is useful to filter TCP connection
+attempts and is ignored for other protocols.</P
+></DD
+><DT
+>-k</DT
+><DD
+><P
+>This is used to match TCP acknowledgement datagrams. This option
+causes the rule to match only datagrams that are acknowledgements to
+packets attempting to establish TCP connections.  Only datagrams that
+have their ACK bit set will match. This is useful to filter TCP
+connection attempts and is ignored for all other protocols.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="X-087-2-FIREWALL.IPFWADM.ICMP-TYPES"
+>9.6.3.5. ICMP datagram types</A
+></H3
+><P
+>&#13;
+
+Each of the firewall configuration commands allows you to specify ICMP
+datagram types. Unlike TCP and UDP ports, there is no convenient
+configuration file that lists the datagram types and their
+meanings. The ICMP datagram types are defined in
+RFC-1700, the Assigned Numbers RFC. The ICMP datagram types are also
+listed in one of the standard C library header files. The
+<TT
+CLASS="FILENAME"
+>/usr/include/netinet/ip_icmp.h</TT
+> file, which
+belongs to the GNU standard library package and is used by C
+programmers when writing network software that uses the ICMP protocol,
+also defines the ICMP datagram types. For your convenience, we've
+listed them in <A
+HREF="x-087-2-firewall.original.html#X-087-2-CHFW-ICMPTYPES"
+>Table 9-2</A
+>. The
+<B
+CLASS="COMMAND"
+>iptables</B
+> command interface allows you to specify
+ICMP types by name, so we've listed the mnemonics it uses, as well.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="X-087-2-CHFW-ICMPTYPES"
+></A
+><P
+><B
+>Table 9-2. ICMP Datagram Types</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Type Number</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>iptables Mnemonic</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Type Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>echo-reply</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Echo Reply</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>3</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>destination-unreachable</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Destination Unreachable</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>4</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>source-quench</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Source Quench</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>5</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>redirect</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Redirect</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>8</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>echo-request</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Echo Request</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>11</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>time-exceeded</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Time Exceeded</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>12</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>parameter-problem</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Parameter Problem</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>13</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>timestamp-request</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Timestamp Request</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>14</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>timestamp-reply</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Timestamp Reply</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>15</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>none</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Information Request</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>16</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>none</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Information Reply</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>17</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>address-mask-request</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Address Mask Request</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>18</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>address-mask-reply</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Address Mask Reply</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+></DIV
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FW-FN03"
+HREF="x-087-2-firewall.original.html#X-087-2-FW-FN03"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>FTP active mode is somewhat nonintuitively enabled using the
+<B
+CLASS="COMMAND"
+>PORT</B
+> command. FTP passive mode is enabled using the
+<B
+CLASS="COMMAND"
+>PASV</B
+> command.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FW-FN04"
+HREF="x-087-2-firewall.original.html#X-087-2-FW-FN04"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The ProFTPd daemon is a good example of an FTP server that doesn't, at least
+in older versions.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.filteringmethods.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.fwchains.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Three Ways We Can Do Filtering</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>IP Firewall Chains (2.2 Kernels)</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Network Install HOWTO: SuSE Server Setup</TITLE>
+ <LINK HREF="Network-Install-HOWTO-5.html" REL=next>
+ <LINK HREF="Network-Install-HOWTO-3.html" REL=previous>
+ <LINK HREF="Network-Install-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Network-Install-HOWTO-5.html">Next</A>
+<A HREF="Network-Install-HOWTO-3.html">Previous</A>
+<A HREF="Network-Install-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. SuSE Server Setup</A></H2>
+
+<P>
+<!--
+network install!suse server setup
+-->
+
+This section explains how to set up your server machine to be an install server
+for SuSE Linux.  You can set up any Linux distribution to be a SuSE Linux
+install server, this machine does not necessarily have to be running SuSE Linux
+itself.
+<P>This guide starts from the point where you have a machine installed with Linux
+which is already up and running and connected to your network.  If you require
+help with installing Linux on your server then please consult the Further
+Information section of this HOWTO in 
+<A HREF="Network-Install-HOWTO-10.html#AppendixA">Appendix A</A>.
+<P>
+<P>
+<H2><A NAME="ss4.1">4.1 Setting Up Filespace</A>
+</H2>
+
+<P>In order for your server to act as a SuSE Network Install server you will need
+to put on all the required data that will be needed to perform a full
+installation of the SuSE version you are serving.  For example, if you are used
+to installing SuSE using CDs then you will need space on your server to copy
+<EM>ALL</EM> the contents of each CD onto your server.
+<P>So, before you even think about setting up your machine as an install server,
+you must check that you have the required space available.  This sounds like a
+trivial thing to check but it is very important and easily forgotten when you're
+setting up.
+<P>
+<P>
+<H3>How much space will you need?</H3>
+
+<P>A guide for the amount of space that you will require will be the amount or
+space of install media that you are intending to copy from later.  This might be
+one of the following examples:
+<P>
+<UL>
+<LI>Number of CDs x 650Mb</LI>
+<LI>Number of ISO images x 650Mb</LI>
+<LI>One DVD which might be roughly 5Gb</LI>
+</UL>
+<P>
+<P>
+<H3>How much space do you have?</H3>
+
+<P>You will need the appropriate amount of space available to your system on some
+local filesystem.  It does not matter what form this takes, whether it's a RAID
+device, local disk (either SCSI or IDE), etc.  Ensure that the space you intend
+to use is formatted with your chosen filesystem and is mounted.
+<P>You can check this space with the command: 
+<PRE>
+df -h
+</PRE>
+<P>If this output shows you have enough space to copy your install media then
+great, you can continue installation.  If not then it's time to think about an
+upgrade to your intended server machine!
+<P>
+<P>
+<H2><A NAME="ss4.2">4.2 Copy Installation Media</A>
+</H2>
+
+<P>Once you know you have enough space available it's time to start copying your
+install media to your chosen filesystem and directory.  For the purposes of this
+HOWTO we will use the following example to represent the directory from which
+our install server will be setup and running: 
+<PRE>
+/install
+</PRE>
+<P>Copy your install media to <CODE>/install</CODE>.  The following example shows you how to do
+this for copying your SuSE CD images to <CODE>/install</CODE>:
+<OL>
+<LI>Mount your CD<BR>e.g. <CODE>mount /mnt/cdrom</CODE></LI>
+<LI>Copy the data from CD<BR>e.g. <CODE>cp -av /mnt/cdrom /install</CODE></LI>
+<LI>Unmount the CD<BR>e.g. <CODE>umount /mnt/cdrom</CODE></LI>
+<LI>Now swap CDs and repeat from step 1 for each of your CDs you have.</LI>
+<LI>Ensure that you have the dot files from the root directory of each CD copied over to <CODE>/install</CODE></LI>
+</OL>
+<P>Now you should have all you need in <CODE>/install</CODE> but if you have copied
+from CD then as far as SuSE is concerned the <CODE>/install</CODE> directory still
+represents a set of CD images that you have copied.  You need to change this
+such that the set of CD images appears as a single installation medium.  Use
+the following Perl command to do this:
+<PRE>
+perl -pi -e 's/InstPath:\t\d+/InstPath:\t01/' /install/suse/setup/descr/common.pkd
+</PRE>
+<P>
+<P>
+<H2><A NAME="ss4.3">4.3 Enable Remote Access</A>
+</H2>
+
+<P>Time to make your install data available to other machines on the network.
+<P>
+<P>
+<H3>NFS</H3>
+
+<P>SuSE is best installed over the network using NFS since support for the HTTP and
+FTP protocols is not necessarily supported during installation, even though later
+system updates may be applied over HTTP or FTP.
+<P>To install over NFS you need to meet certain conditions on the server:
+<UL>
+<LI>Your install directory is exported</LI>
+<LI>NFS is installed and running</LI>
+<LI>Portmap is running</LI>
+</UL>
+<P>To export your install directory edit the <CODE>/etc/exports</CODE> file and add an
+entry for <CODE>/install</CODE> to it.  In our example, we would use the folowing
+line: 
+<PRE>
+/install *(ro)
+</PRE>
+
+When you have saved your exports file you must then get your NFS daemon to read
+its configuration file again in order to export the directory you just added.
+Do this by running the command: 
+<PRE>
+exportfs -r
+</PRE>
+
+This gives us the most simple read-only export to all hosts on our network.  If
+you want to include more advanced options in your export e.g. only exporting to
+certain hosts on the network or a certain subnet, etc then see your man page for
+the exports file at exports (5).
+<P>You have now completed the basic setup of your install server.
+<P>
+<P>
+<H2><A NAME="susecustomrpm"></A> <A NAME="ss4.4">4.4 Package Customisation </A>
+</H2>
+
+<P>You can, if you wish, add your own packages to the SuSE distribution so that
+they are installed along with SuSE over the network when you install your
+clients.  The advantage of this is that you don't have to spend time
+configuring each machine for packages that you may want installed that are
+not included with SuSE.  Examples of this might be your own RPM packages that
+you have created or some specialised package.
+<P>Simply copy your RPM package files into the following directory
+<PRE>
+/install/suse/custom
+</PRE>
+
+<EM>NOTE: you may need to create this directory if it does not exist</EM>
+<P>Your custom RPM packages should now be available to the clients.
+<P>
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Network-Install-HOWTO-5.html">Next</A>
+<A HREF="Network-Install-HOWTO-3.html">Previous</A>
+<A HREF="Network-Install-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

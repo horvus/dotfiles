@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux Ext2fs Undeletion mini-HOWTO: Preparing to write data elsewhere</TITLE>
+ <LINK HREF="Ext2fs-Undeletion-8.html" REL=next>
+ <LINK HREF="Ext2fs-Undeletion-6.html" REL=previous>
+ <LINK HREF="Ext2fs-Undeletion.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Ext2fs-Undeletion-8.html">Next</A>
+<A HREF="Ext2fs-Undeletion-6.html">Previous</A>
+<A HREF="Ext2fs-Undeletion.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="sec-prep-wrt"></A> <A NAME="s7">7. Preparing to write data elsewhere</A></H2>
+
+<P>If you chose to go this route, you need to make sure you have a rescue
+partition somewhere -- a place to write out new copies of the files you
+recover.  Hopefully, your system has several partitions on it: perhaps a
+root, a <CODE>/usr</CODE>, and a <CODE>/home</CODE>.  With all these to choose from,
+you should have no problem: just create a new directory on one of these.
+<P>If you have only a root partition, and store everything on that, things are
+slightly more awkward.  Perhaps you have an MS-DOS or Windows partition you
+could use?  Or you have the ramdisk driver in your kernel, maybe as a
+module?  To use the ramdisk (assuming a kernel more recent than 1.3.48), say
+the following:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# dd if=/dev/zero of=/dev/ram0 bs=1k count=2048
+# mke2fs -v -m 0 /dev/ram0 2048
+# mount -t ext2 /dev/ram0 /mnt
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This creates a 2MB ramdisk volume, and mounts it on <CODE>/mnt</CODE>.
+<P>A short word of warning: if you use <CODE>kerneld</CODE> (or its replacement
+<CODE>kmod</CODE> in 2.2.x and later 2.1.x kernels) to automatically load and unload
+kernel modules, then don't unmount the ramdisk until you've copied any files
+from it onto non-volatile storage.  Once you unmount it, <CODE>kerneld</CODE>
+assumes it can unload the module (after the usual waiting period), and once
+this happens, the memory gets re-used by other parts of the kernel, losing
+all the painstaking hours you just spent recovering your data.
+<P>If you have a Zip, Jaz, or LS-120 drive, or something similar, it would
+probably be a good choice for a rescue partition location.  Otherwise,
+you'll just have to stick with floppies.
+<P>The other thing you're likely to need is a program which can read the
+necessary data from the middle of the partition device.  At a pinch, <CODE>dd</CODE>
+will do the job, but to read from, say, 600 MB into an 800 MB partition,
+<CODE>dd</CODE> insists on reading but ignoring the first 600 MB.  This takes a not
+inconsiderable amount of time, even on fast disks.  My way round this was to
+write a program which will seek to the middle of the partition.  It's called
+<CODE>fsgrab</CODE>; you can find the source package on
+<A HREF="http://pobox.com/~aaronc/tech/fsgrab-1.2.tar.gz">my website</A>
+or on
+<A HREF="http://metalab.unc.edu/pub/Linux/utils/file/">Metalab</A>
+(and mirrors).  If you want to use this method, the rest of this mini-Howto
+assumes that you have <CODE>fsgrab</CODE>.
+<P>If none of the files you are trying to recover were more than 12 blocks long
+(where a block is usually one kilobyte), then you won't need <CODE>fsgrab</CODE>.
+<P>If you need to use <CODE>fsgrab</CODE> but don't want to download and build it, it
+is fairly straightforward to translate an <CODE>fsgrab</CODE> command-line to one
+for <CODE>dd</CODE>.  If we have
+<P>
+<BLOCKQUOTE><CODE>
+fsgrab -c <EM>count</EM> -s <EM>skip</EM> <EM>device</EM>
+</CODE></BLOCKQUOTE>
+<P>then the corresponding (but typically much slower) <CODE>dd</CODE> command is
+<P>
+<BLOCKQUOTE><CODE>
+dd bs=1k if=<EM>device</EM> count=<EM>count</EM> skip=<EM>skip</EM>
+</CODE></BLOCKQUOTE>
+<P>I must warn you that, although <CODE>fsgrab</CODE> functioned perfectly for me, I can
+take no responsibility for how it performs.  It was really a very quick and
+dirty kludge just to get things to work.  For more details on the lack of
+warranty, see the `No Warranty' section in the <CODE>COPYING</CODE> file included with
+it (the GNU General Public Licence).
+<P>
+<P>
+<HR>
+<A HREF="Ext2fs-Undeletion-8.html">Next</A>
+<A HREF="Ext2fs-Undeletion-6.html">Previous</A>
+<A HREF="Ext2fs-Undeletion.html#toc7">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Root over nfs clients &amp; server Howto.  : Adding workstations</TITLE>
+ <LINK HREF="Diskless-root-NFS-HOWTO-5.html" REL=next>
+ <LINK HREF="Diskless-root-NFS-HOWTO-3.html" REL=previous>
+ <LINK HREF="Diskless-root-NFS-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Diskless-root-NFS-HOWTO-5.html">Next</A>
+<A HREF="Diskless-root-NFS-HOWTO-3.html">Previous</A>
+<A HREF="Diskless-root-NFS-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Adding workstations</A> </H2>
+
+<P>Now that the server is all done, we can start adding workstations.
+<H2><A NAME="ss4.1">4.1 Creating a boot disk or bootrom</A>
+ </H2>
+
+<P>You'll need ot create a bootrom and / or a bootdisk to boot your workstation.
+<H3>Creating a bootdisk </H3>
+
+<P>Even if you wish to use a bootrom its wise to first test with a bootdisk,
+to create a boot disk just type:
+<P>
+<BLOCKQUOTE>
+dd if=/&lt;path-to-zImage&gt;/zImage of=/dev/fd0
+</BLOCKQUOTE>
+<H3>Creating a bootrom </H3>
+
+<P>There are a few free package's out there to create bootroms:
+<P>
+<OL>
+<LI>netboot, this is IMHO the most complete free package out there. It uses
+standard dos packet drivers so allmost all cards are supported. One very usefull
+hint I got on there mailing list was to pklite the packetdrivers since some
+commercial drivers are to big to fit into the bootrom. Netboot's documentation
+is complete enough, so I won't waste any time reproducing it here, it should
+be more then sufficient to create a bootrom and boot a ws with it. Netboot's
+webpage is: http://www.han.de/~gero/netboot/</LI>
+<LI>etherboot, this is the other free package out there it has got a few nice
+features like dhcp support, but has limited driver support as it uses its own
+driver format. I haven't used this so I really can't give anymore usefull info.
+Etherboot's webpage is: http://www.slug.org.au/etherboot/</LI>
+</OL>
+<P>About the roms themselves. Most cards take ordinary eproms with an 28 pins
+dip housing. These eproms come in size upto 64kB. For most cards you'll need
+32kB eproms with netboot. Some cards drivers will fit into 16kB but the price
+difference of the eproms is minimal. These eproms can be burned with any ordinairy
+eprom burner.
+<H2><A NAME="ss4.2">4.2 Creating a ws dir</A>
+ </H2>
+
+<P>Just copy over the template by typing:
+<P>
+<BLOCKQUOTE>
+cd /tftpbootcp -a template &lt;ip&gt;
+</BLOCKQUOTE>
+<P>You could of course also copy over the dir of a workstation with identical
+mouse, graphicscard and monitor and ommit the configuration in step 5.4.
+<H2><A NAME="ss4.3">4.3 Add entries to /etc/bootptab and /etc/hosts</A>
+ </H2>
+
+<P>Edit /etc/bootptab and add an entry for your test ws, an example entry
+is:
+<P>
+<HR>
+<PRE>
+nfsroot1:hd=/tftpboot:vm=auto:ip=10.0.0.237:\ 
+:ht=ethernet:ha=00201889EE78:\
+:bf=bootImage:rp=/tftpboot/10.0.0.237/root
+ 
+</PRE>
+<HR>
+<P>Replace nfsroot1 by the hostname you want your ws to have. Replace 10.0.0.237
+by the ip you want your ws to have (do this twice) and replace 00201889EE78
+by the MAC-ADDRESS of your ws. If you don't know the MAC-ADDRESS of the ws,
+just boot it with the just created boot disk and look for the MAC-ADDRESS in
+the boot messages. There's a chance bootpd is already running so just to make
+sure try to restart it by typing:
+<P>
+<BLOCKQUOTE>
+killall -HUP bootpd
+</BLOCKQUOTE>
+<P>Don't worry if it fails, that just means it wasn't running, inetd will
+start it when asked too.
+<H2><A NAME="ss4.4">4.4 Booting the ws for the first time</A>
+ </H2>
+
+<P>Just boot the ws from the bootdisk. This should get you a working ws in
+textmode, with the exact same setup as your server except for the ip-nr and
+the running services. Even if you want to use a bootprom it's wise to first
+test with the bootdisk, if that works you can try to boot with the bootrom
+see the bootroms documentation for more info.
+<H2><A NAME="ss4.5">4.5 Set the ws specific configuration.</A>
+ </H2>
+
+<P>Now it's time to configure any ws specific settings:
+<P>
+<OL>
+<LI>First off all to get the mouse working, just run mouseconfig. To apply
+the changes, and check that the mouse works type:
+<BLOCKQUOTE>
+/etc/rc.d/init.d restart
+</BLOCKQUOTE>
+</LI>
+<LI>Run Xconfigurator, when Xconfigurator has probed the card and you can press
+ok don't! Since we have moved the symlink for the Xserver from /etc/X11/X to
+/etc/sysconfig/X11/X Xconfigurator will fail to create the proper link. Thus
+to make sure the rest of Xconfigurator goes well, switch to another console
+and create the link in /etc/sysconfig/X11 to the advised server. Now just finish
+Xconfigurator and test X.</LI>
+<LI>Configure anything else which is different then the server / template:
+<UL>
+<LI>sound: You probaly need to modify isapnp.conf and conf.modules, both are
+already made links to /etc/sysconfig by the server setup script.</LI>
+<LI>cdrom: Link in /dev, entry in /etc/fstab? etc.</LI>
+<LI>rc.local: Make any nescesarry changes.</LI>
+</UL>
+</LI>
+<LI>Save the links and any other changes to /dev type:
+<BLOCKQUOTE>
+/etc/rc.d/rc.devfs save /etc/sysconfig
+</BLOCKQUOTE>
+</LI>
+<LI>All done.</LI>
+</OL>
+<HR>
+<A HREF="Diskless-root-NFS-HOWTO-5.html">Next</A>
+<A HREF="Diskless-root-NFS-HOWTO-3.html">Previous</A>
+<A HREF="Diskless-root-NFS-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

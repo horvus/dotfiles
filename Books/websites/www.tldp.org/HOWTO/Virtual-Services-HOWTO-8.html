@@ -1,0 +1,296 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Virtual Services Howto: Virtual Web</TITLE>
+ <LINK HREF="Virtual-Services-HOWTO-9.html" REL=next>
+ <LINK HREF="Virtual-Services-HOWTO-7.html" REL=previous>
+ <LINK HREF="Virtual-Services-HOWTO.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Virtual-Services-HOWTO-9.html">Next</A>
+<A HREF="Virtual-Services-HOWTO-7.html">Previous</A>
+<A HREF="Virtual-Services-HOWTO.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. Virtual Web</A></H2>
+
+<H2><A NAME="ss8.1">8.1 Running With Virtuald</A>
+</H2>
+
+<H3>Not recommended</H3>
+
+<P>Apache has their own support for virtual domains.  This is the only 
+program I recommend using the internal virtual domain mechanism.   When 
+you run something through inetd there is a cost, the program has to
+start up each time you run it.  This results in slower response time, which
+is perfectly fine for most services but is completely unacceptable for web service.  
+Apache also has a mechanism for stopping connections when too many come in, which 
+can be critical for even medium volume sites.
+<P>
+<P>Simply stated, virtualizing Apache with virtuald is a really bad idea.  The whole
+point of virtuald is to fill the gap created when services DO NOT have their
+own internal mechanism to do the job.  Virtuald is not meant to replace good code
+that already completes the task at hand.
+<P>
+<P>The above not withstanding here is how to do it for those who are foolhardy enough
+to do so.
+<P>
+<H3>Inetd</H3>
+
+<P>Edit /etc/inetd.conf
+<P>
+<PRE>
+vi /etc/inetd.conf # Add this line
+www stream tcp nowait www /usr/local/bin/virtuald \
+        virtuald /virtual/conf.www httpd -f /var/www/conf/httpd.conf
+</PRE>
+<P>
+<H3>Httpd.conf</H3>
+
+<P>Edit /var/www/conf/httpd.conf
+<P>
+<PRE>
+vi /var/www/conf/httpd.conf # Or wherever you put the Apache config files
+It should say:
+ServerType standalone
+
+Replace it with:
+ServerType inetd
+</PRE>
+<P>
+<H3>Configuration</H3>
+
+<P>Then configure each instance of the Apache server like you would 
+normally for single domain use.
+<P>
+<H3>Httpd.init</H3>
+
+<P>An httpd.init file is not needed since the server is run through
+inetd.
+<P>
+<H2><A NAME="ss8.2">8.2 Running With Apache VirtualHost</A>
+</H2>
+
+<P>Apache has three configuration files <CODE> access.conf </CODE>, <CODE> httpd.conf </CODE>, 
+and <CODE> srm.conf </CODE>.  Newer versions of Apache have made the three 
+configuration files unnecessary.  However, I find that breaking up the configuration
+into three sections makes it easier to manage so I will be keeping with that style in 
+this HOWTO document.
+<P>
+<H3>Access.conf</H3>
+
+<P>This configuration file is used to control the accessibility of
+directories in the web directory structure.  Here is a sample configuration
+file that shows how to have different options for each domain.
+<P>
+<PRE>
+# /var/www/conf/access.conf: Global access configuration
+
+# Options are inherited from the parent directory
+# Set the main directory with default options
+&lt;Directory /&gt;
+AllowOverride None
+Options Indexes
+&lt;/Directory&gt;
+
+# Give one domain a passwd protected directory
+&lt;Directory /virtual/domain1.com/var/www/html/priv&gt;
+AuthUserFile /var/www/passwd/domain1.com-priv
+AuthGroupFile /var/www/passwd/domain1.com-priv-g
+AuthName PRIVSECTION
+AuthType Basic
+&lt;Limit GET PUT POST&gt;
+require valid-user
+&lt;/Limit&gt;
+&lt;/Directory&gt;
+
+# Give another domain Server Side Includes
+&lt;Directory /virtual/domain2.com/var/www/html&gt;
+Options IncludesNOEXEC
+&lt;/Directory&gt;
+</PRE>
+<P>
+<H3>Httpd.conf</H3>
+
+<P>This configuration file is used to control the main options for the 
+Apache server.  Here is a sample configuration file that shows
+how to have different options for each domain.
+<P>
+<PRE>
+# /var/www/conf/httpd.conf: Main server configuration file
+
+# Begin: main conf section
+
+# Needed since not using inetd
+ServerType standalone
+
+# Port to run on
+Port 80
+
+# Log clients with names vs IP addresses
+HostnameLookups on
+
+# User to run server as
+User www
+Group www
+
+# Where server config, error and log files are
+ServerRoot /var/www
+
+# Process Id of server in this file
+PidFile /var/run/httpd.pid
+
+# Internal server process info
+ScoreBoardFile /var/www/logs/apache_status
+
+# Timeout and KeepAlive options
+Timeout 400
+KeepAlive 5
+KeepAliveTimeout 15
+
+# Number of servers to run
+MinSpareServers 5
+MaxSpareServers 10
+StartServers 5
+MaxClients 150
+MaxRequestsPerChild 30
+
+# End: main conf section
+
+# Begin: virtual host section
+
+# Tell server to accept requests for ip:port
+# I have one for each IP needed so you can explicitly ignore certain domains
+Listen 10.10.10.129:80
+Listen 10.10.10.130:80
+
+# VirtualHost directive allows you to specify another virtual
+# domain on your server.  Most Apache options can be specified
+# within this section.
+&lt;VirtualHost www.domain1.com&gt;
+
+# Mail to this address on errors
+ServerAdmin webmaster@domain1.com
+
+# Where documents are kept in the virtual domain
+DocumentRoot /virtual/domain1.com/var/www/html
+
+# Name of the server
+ServerName www.domain1.com
+
+# Log files Relative to ServerRoot option
+ErrorLog logs/domain1.com-error_log
+TransferLog logs/domain1.com-access_log
+RefererLog logs/domain1.com-referer_log
+AgentLog logs/domain1.com-agent_log
+
+# Use CGI scripts in this domain
+ScriptAlias /cgi-bin/ /var/www/cgi-bin/domain1.com/
+AddHandler cgi-script .cgi
+AddHandler cgi-script .pl
+&lt;/VirtualHost&gt;
+
+&lt;VirtualHost www.domain2.com&gt;
+
+# Mail to this address on errors
+ServerAdmin webmaster@domain2.com
+
+# Where documents are kept in the virtual domain
+DocumentRoot /virtual/domain2.com/var/www/html
+
+# Name of the server
+ServerName www.domain2.com
+
+# Log files Relative to ServerRoot option
+ErrorLog logs/domain2.com-error_log
+TransferLog logs/domain2.com-access_log
+RefererLog logs/domain2.com-referer_log
+AgentLog logs/domain2.com-agent_log
+
+# No CGI's for this host
+&lt;/VirtualHost&gt;
+# End: virtual host section
+</PRE>
+<P>
+<H3>Srm.conf</H3>
+
+<P>This configuration file is used to control how requests are
+serviced and how results are formatted.   You do not have to
+edit anything here for the virtual domains.  The sample
+config file from Apache should work.   
+<P>
+<H3>Httpd.init</H3>
+
+<P>Nothing special has to be done to the httpd.init file.  Use
+a standard one that comes with the Apache configuration.
+<P>
+<H2><A NAME="ss8.3">8.3 File Descriptor Overflow</A>
+</H2>
+
+<H3>Warning</H3>
+
+<P>This only applies to the standalone style Apache server.  A server
+run through inetd does not interact with the other domains so it has
+the whole file descriptor table.
+<P>
+<P>Every log file that the Apache server opens is another
+file descriptor for the process.  There is a limit of 256 file descriptors
+per process in Linux.  Since you have multiple domains you are using
+a lot more file descriptors.  If you have too many domains running off of one
+Apache web server process you can overflow this table.  This would mean
+that certain logs would not work and CGI's would fail.
+<P>
+<H3>Multiple Apache Servers</H3>
+
+<P>If you assume five file descriptors per domain you can have 50 domains
+running on your Apache server without any problems.  However, if you 
+find your server having problems like this you could create /var/www1 
+with an Apache server in charge of domain1 - domain25 and /var/www2 with 
+an Apache server in charge of domain26 - domain50 and so on.   
+This would give each server their own configuration, error, and log 
+directory.  Each server should be configured separately with their
+own Listen and VirtualHost directives.  Do not forget to run multiple
+servers in your httpd.init file.
+<P>
+<H2><A NAME="ss8.4">8.4 Sharing Servers With One IP</A>
+</H2>
+
+<H3>Saving IPs</H3>
+
+<P>The HTTP (HyperText Transfer Protocol) version 1.1 added a feature that
+communicates the name of the server to the client.  This means that the
+client does not need to look up the server from its IP address.  Therefore,
+two virtual servers could have the same IP address and be different web
+sites. The Apache configuration is the same as above except that you do not have
+to put in a different Listen directive since the two domains will have
+the same IP. 
+<P>
+<H3>Drawback</H3>
+
+<P>The only problem is that virtuald uses IP addresses to distinguish between
+domains.  In its current form virtuald would not be able to <CODE> chroot </CODE>
+to different spool directories for each domain.  Therefore, mail would only 
+be able to respond as one IP and there would no longer be a unique spool 
+directory for each domain.  All the web sharing IP clients 
+would have to share that IPs spool directory.  That would mean duplicate
+usernames would be an issue again.  However, that is the price
+you pay for sharing IPs.
+<P>
+<H2><A NAME="ss8.5">8.5 More Information</A>
+</H2>
+
+<P>This HOWTO only shows how to implement virtual support on the Apache web server.  
+Most web servers use a similar interface.  For more information on virtual web
+hosting consult the 
+<A HREF="http://sunsite.unc.edu/LDP/HOWTO/WWW-HOWTO.html">WWW HOWTO</A>, 
+the documentation for Apache at 
+<A HREF="http://www.apache.org">Apache's Site</A>, or the
+documentation at 
+<A HREF="http://www.apacheweek.com">ApacheWeek</A>.
+<P>
+<HR>
+<A HREF="Virtual-Services-HOWTO-9.html">Next</A>
+<A HREF="Virtual-Services-HOWTO-7.html">Previous</A>
+<A HREF="Virtual-Services-HOWTO.html#toc8">Contents</A>
+</BODY>
+</HTML>

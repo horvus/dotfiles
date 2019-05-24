@@ -1,0 +1,349 @@
+<HTML
+><HEAD
+><TITLE
+>Multi-architectural RPM Building</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="RPM HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Building It"
+HREF="build-it.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>RPM HOWTO: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="build-it.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="MULTI-ARCH">8. Multi-architectural RPM Building</H1
+><P
+>      RPM can now be used to build packages for the Intel i386, the Digital
+      Alpha running Linux, and the Sparc (and others).  There are several
+      features that make building packages on all platforms easy.  The first of
+      these is the "optflags" directive in the
+      <SPAN
+CLASS="SYSTEMITEM"
+>/etc/rpmrc</SPAN
+>.  It can be used to set flags used
+      when building software to architecture specific values.  Another feature
+      is the "arch" macros in the spec file.  They can be used to do different
+      things depending on the architecture you are building on.  Another feature
+      is the "Exclude" directive in the header.
+    </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MULTI-ARCH-SPEC">8.1. Sample spec File</H2
+><P
+>	The following is part of the spec file for the "fileutils" package.
+	It is setup to build on both the Alpha and the Intel.
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>Summary: GNU File Utilities
+Name: fileutils
+Version: 3.16
+Release: 1
+Copyright: GPL
+Group: Utilities/File
+Source0: prep.ai.mit.edu:/pub/gnu/fileutils-3.16.tar.gz
+Source1: DIR_COLORS
+Patch: fileutils-3.16-mktime.patch
+
+%description
+These are the GNU file management utilities.  It includes programs
+to copy, move, list, etc, files.
+
+The ls program in this package now incorporates color ls!
+
+%prep
+%setup
+
+%ifarch alpha
+%patch -p1
+autoconf
+%endif
+%build
+configure --prefix=/usr --exec-prefix=/
+make CFLAGS="$RPM_OPT_FLAGS" LDFLAGS=-s
+
+%install
+rm -f /usr/info/fileutils*
+make install
+gzip -9nf /usr/info/fileutils*
+
+.
+.
+.
+
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="OPTFLAGS">8.2. Optflags</H2
+><P
+>	In this example, you see how the "optflags" directive is used from the
+	<SPAN
+CLASS="SYSTEMITEM"
+>/etc/rpmrc</SPAN
+>.  Depending on which architecture
+	you are building on, the proper value is given to
+	<TT
+CLASS="VARNAME"
+>RPM_OPT_FLAGS</TT
+>.  You must patch the Makefile for your
+	package to use this variable in place of the normal directives you might
+	use (like <TT
+CLASS="PARAMETER"
+><I
+>-m486</I
+></TT
+> and <TT
+CLASS="PARAMETER"
+><I
+>-O2</I
+></TT
+>).  You can get a better feel for what
+	needs to be done by installing this source package and then unpacking
+	the source and examine the Makefile.  Then look at the patch for the
+	Makefile and see what changes must be made.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MACROS">8.3. Macros</H2
+><P
+>	The <SPAN
+CLASS="SYSTEMITEM"
+>%ifarch</SPAN
+> macro is very important to all of
+	this.  Most times you will need to make a patch or two that is specific
+	to one architecture only.  In this case, RPM will allow you to apply
+	that patch to just one architecture only.
+      </P
+><P
+>	In the above example, fileutils has a patch for 64 bit machines.
+	Obviously, this should only be applied on the Alpha at the moment.  So,
+	we add an <SPAN
+CLASS="SYSTEMITEM"
+>%ifarch</SPAN
+> macro around the 64 bit patch
+	like so:
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>%ifarch axp
+%patch1 -p1
+%endif
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>	This will insure that the patch is not applied on any architecture
+	except the alpha.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="EXCUDE-ARCH">8.4. Excluding Architectures from Packages</H2
+><P
+>	So that you can maintain source RPMs in one directory for all platforms,
+	we have implemented the ability to "exclude" packages from being built
+	on certain architectures.  This is so you can still do things like
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>rpm --rebuild /usr/src/SRPMS/*.rpm
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>	and have the right packages build.  If you haven't yet ported an application
+	to a certain platform, all you have to do is add a line like:
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>ExcludeArch: alpha
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>	to the header of the spec file of the source package.  Then rebuild the
+	package on the platform that it does build on.  You'll then have a
+	source package that builds on an Intel and can easily be skipped on an
+	Alpha.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="FINISH">8.5. Finishing Up</H2
+><P
+>	Using RPM to make multi-architectural packages is usually easier to do
+	than getting the package itself to build both places.  As more of the
+	hard packages get built this is getting much easier, however.  As
+	always, the best help when you get stuck building an RPM is to look a
+	similar source package.
+      </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="build-it.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Building It</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

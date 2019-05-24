@@ -1,0 +1,368 @@
+<HTML
+><HEAD
+><TITLE
+>Integrating the VPN into your system</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="VPN PPP-SSH Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Bring up the Link"
+HREF="bringup.html"><LINK
+REL="NEXT"
+TITLE="Forwarding Between Subnets"
+HREF="forwarding.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>VPN PPP-SSH Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="bringup.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="forwarding.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INTEGRATION"
+>7. Integrating the VPN into your system</A
+></H1
+><P
+>Bringing up the link by hand gets tiring after a while.  You probably
+want your VPN to come up either at boot time or when your
+dial-up connection comes up.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN357"
+>7.1. Connecting at Boot Time</A
+></H2
+><P
+>It's quite easy to get this script to run at boot time.
+I assume you're using the very common System V initscript setup.
+If not, you'll have to figure out how to integrate this with your
+system on your own.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Either copy or symlink the vpn-pppssh script to /etc/init.d.
+    </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>cp /usr/local/bin/vpn-pppssh /etc/init.d/vpn-pppssh</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Uncomment the echo lines in the start and stop
+clauses in the vpn-pppssh script
+to enable the boot-time "Starting" and
+"done." messages.
+    </P
+></LI
+><LI
+><P
+>Put "&#62; /dev/null 2&#62;&#38;1" after the line beginning
+"${PPPD}" in the start section of the script.  This just prevents
+pppd's verbose messages from mucking up your boot screen.
+You could also redirect pppd's messages (which may include
+a very informative error) to a log file or, if you're not aesthetically
+inclined, leave it alone and let your screen get all mucked up.
+    </P
+></LI
+><LI
+><P
+>Now, you simply link your script in to each of the six runlevels.
+    </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>client$ ln -s /etc/init.d/vpn-pppssh /etc/rc0.d/K10vpn-pppssh
+client$ ln -s /etc/init.d/vpn-pppssh /etc/rc1.d/K10vpn-pppssh
+client$ ln -s /etc/init.d/vpn-pppssh /etc/rc2.d/S99vpn-pppssh
+client$ ln -s /etc/init.d/vpn-pppssh /etc/rc3.d/S99vpn-pppssh
+client$ ln -s /etc/init.d/vpn-pppssh /etc/rc4.d/S99vpn-pppssh
+client$ ln -s /etc/init.d/vpn-pppssh /etc/rc5.d/S99vpn-pppssh
+client$ ln -s /etc/init.d/vpn-pppssh /etc/rc6.d/K10vpn-pppssh</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+></OL
+><P
+>Now, when you reboot your machine, the vpn should come up
+near the end of the boot process.
+When it hits this script, your machine will wait
+until the VPN is up before it continues booting.  If this is an
+issue, you can write your own /etc/init.d/vpn-pppssh
+script that calls the /usr/local/bin/vpn-pppssh script in the
+background.  The link will come up as your machine finishes
+booting.</P
+><P
+>To manually bring the link down or up, just run the vpn-pppssh
+script directly from /etc/init.d:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>client$ /etc/init.d/vpn-pppssh stop
+client$ /etc/init.d/vpn-pppssh start</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CONNDIALUP"
+>7.2. Connecting via Dial-Up</A
+></H2
+><P
+>If you're dialing into the internet with PPP, you can bring the VPN 
+up every time you bring up the dial-up connection.
+This is not difficult, but it does require a fairly recent
+version of pppd, one that supports both the ipparam option,
+and the ip-up.d and ip-down.d directories.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Create the "vpn-up" file in /etc/ppp/ip-up.d:
+    </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#!/bin/sh
+
+if [ "$PPP_IPPARAM" = "vpn" ]; then
+        # Don't bring up the vpn if we're bringing up the vpn.
+        exit 0
+fi
+
+/usr/local/bin/vpn start</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>There's a re-entrancy here that the if statement takes care of.  If we're
+bringing up the regular PPP link, we want to bring up the VPN.
+But, the VPN is a PPP link itself!  If we didn't do anything
+about this, PPP would recursively spawn itself until it ground
+your machine to a halt.
+    </P
+><P
+>The secret is the "ipparam vpn" parameter in the vpn-pppssh script.
+This sets the IPPARAM variable for this
+invocation to "vpn", which we then check in the startup script.
+If it's set to vpn, then we know we're in the middle of bringing
+up the vpn, so we just exit without error.  Otherwise, we fire it up.
+    </P
+></LI
+><LI
+><P
+>If you want to punch a hole in your firewall for your VPN 
+when you bring it up,
+you can simply create an /etc/ppp/ip-up.d/vpn-fw file with the
+following contents.  All the shell variables below are supplied
+by pppd, so you should be able to use this script unmodified.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#!/bin/sh
+
+# Punch a hole in the firewall for the VPN
+
+if [ "$PPP_IPPARAM" = "vpn" ]; then
+        ipchains -I input 1 -i $PPP_IFACE -s $PPP_REMOTE -d $PPP_LOCAL -j ACCEPT
+        ipchains -I output 1 -i $PPP_IFACE -s $PPP_LOCAL -d $PPP_REMOTE -j ACCEPT
+fi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Create the "vpn-down" file in /etc/ppp/ip-down.d/vpn-pppssh:
+    </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#!/bin/sh
+
+if [ "$PPP_IPPARAM" = "vpn" ]; then
+        # Don't bring down the VPN if we're bringing down the vpn.
+        exit 0
+fi
+
+/usr/local/bin/vpn stop</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+></OL
+><P
+>Make sure to make all the scripts above executable
+(chmod a+x /etc/ppp/ip-up.d/vpn-pppssh).
+Now, when you bring up your PPP link, the VPN should come up with it.
+And, when you shut it down, the VPN will disappear.  Easy as pie.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="bringup.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="forwarding.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Bring up the Link</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Forwarding Between Subnets</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

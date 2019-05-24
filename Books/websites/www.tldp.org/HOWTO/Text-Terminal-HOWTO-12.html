@@ -1,0 +1,754 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Text-Terminal-HOWTO: Physical Connection </TITLE>
+ <LINK HREF="Text-Terminal-HOWTO-13.html" REL=next>
+ <LINK HREF="Text-Terminal-HOWTO-11.html" REL=previous>
+ <LINK HREF="Text-Terminal-HOWTO.html#toc12" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Text-Terminal-HOWTO-13.html">Next</A>
+<A HREF="Text-Terminal-HOWTO-11.html">Previous</A>
+<A HREF="Text-Terminal-HOWTO.html#toc12">Contents</A>
+<HR>
+<H2><A NAME="cable"></A> <A NAME="s12">12.</A> <A HREF="Text-Terminal-HOWTO.html#toc12">Physical Connection </A></H2>
+
+<H2><A NAME="ss12.1">12.1</A> <A HREF="Text-Terminal-HOWTO.html#toc12.1">Introduction</A>
+</H2>
+
+<P> A terminal may be connected to its host computer either by a
+direct cable connection, via a modem, or via a terminal server.  The
+flow of data may be either a direct sequence of bytes (such as from a
+serial port) or packets on a network (such as TCP/IP).</P>
+
+<H2><A NAME="ss12.2">12.2</A> <A HREF="Text-Terminal-HOWTO.html#toc12.2">Multiport I/O Cards (Adapters)</A>
+</H2>
+
+<P> Additional serial cards may be purchased which have many serial
+ports on them called "multiport boards".  These boards are not covered
+in this HOWTO but there is a list of some of them (with URLs) in the
+Serial-HOWTO.</P>
+
+<H2><A NAME="ss12.3">12.3</A> <A HREF="Text-Terminal-HOWTO.html#toc12.3">Direct Serial Cable Connection.</A>
+</H2>
+
+<P> The simplest way to connect a terminal to a host computer is via a
+direct connection to a serial port on the computer.  You may also use
+some the info in this section for connecting one computer to another
+(via the serial port).  Most desktop PC's come with a serial port or
+two, one of which may be used by a mouse.  For the EIA-232 port, you
+need a null modem cable (PC-to-PC cable) that crosses over the
+transmit and receive wires.  In ethernet terminology it would be
+called a "crossover cable" (but the ethernet cable will not work for
+the serial port).  If you want hardware flow control, you will
+probably use the DTR pin (or both the DTR and DSR pins).</P>
+<P>Make sure you have the right kind of cable.  A null modem cable
+bought at a computer store may do it (if it's long enough), but it
+probably will not work for hardware flow control.  Such a cable may be
+labeled as a serial printer cable.   Only larger computer stores are
+likely to stock such cables.  A "modem cable" will not work since the
+wires go straight thru (and don't cross over).  See 
+<A HREF="#buy_or_make_cable">Buy or Make</A> your own cable.  Make sure
+you are connecting to your PC's serial port at the male DB25 or the
+DB9, and not to your parallel port (female DB25).</P>
+
+<H3>Pin numbering</H3>
+
+<P>Pin numbers are often printed on the plastic right next to the
+pins.  You may need a bright light and/or a magnifying glass to read
+them.  Looking at the male pins of a DB connector with the wider row
+up, the pin in the upper left is 1 (there is no pin 0).  Then the next
+pin in this row is 2, etc.  At the end of this row is pin 5 or 13.
+Then the next pin (6 or 14) is in the next row all the way to the left
+and below pin 1.  If you look at the female connector with the wider
+row up, then pin 1 is in the upper right corner.</P>
+
+<H3>Null Modem cable pin-out (3, 4, or 5 conductor)</H3>
+
+<P> These 3 diagrams are for real text-terminals.  But you could use
+them to connect up 2 PCs if you substitute RTS for DTR and CTS for
+DSR.  (Don't use 4-conductors for PC-to-PC).  For terminals, if you
+only have DTR flow control (one-way) you may eliminate the RTS-to-DSR
+wire.  If you have no hardware flow control, then you may also
+eliminate the CTS-to-DTR wire.  Then if you have 2@ twisted pairs, you
+may then use 2 wires for signal ground per 
+<A HREF="#twist_pair_kludge">A Kludge using Twisted-Pair Cable</A>.  For a DB25 connector on
+your PC, you need:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+  PC male DB25                          Terminal DB25
+    TxD   Transmit Data       2 --> 3       RxD   Receive Data
+    RxD   Receive Data        3 &lt;-- 2       TxD   Transmit Data
+    SG    Signal Ground       7 --- 7       SG    Signal Ground
+    CTS   Clear To Send       5 &lt;--20       DTR   Data Terminal Ready
+    RTS   Request To Send     4 --> 6       DSR   Data Set Ready
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>If you have a DB9 connector on your PC, try the following:
+<BLOCKQUOTE><CODE>
+<PRE>
+        PC DB9                                 Terminal DB25
+    RxD   Receive Data        2 &lt;-- 2            TxD   Transmit Data
+    TxD   Transmit Data       3 --> 3       RxD   Receive Data
+    SG    Signal Ground       5 --- 7       SG    Signal Ground
+    CTS   Clear To Send       8 &lt;--20       DTR   Data Terminal Ready
+    RTS   Request To Send     7 --> 6       DSR   Data Set Ready   **
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>If you have a DB9 connector on both your serial port and terminal:
+<BLOCKQUOTE><CODE>
+<PRE>
+        PC DB9                                 Terminal DB9
+    RxD   Receive Data        2 &lt;-- 3            TxD   Transmit Data
+    TxD   Transmit Data       3 --> 2       RxD   Receive Data
+    SG    Signal Ground       5 --- 5       SG    Signal Ground
+    CTS   Clear To Send       8 &lt;-- 4       DTR   Data Terminal Ready
+    RTS   Request To Send     7 --> 6       DSR   Data Set Ready   **
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>The above don't have modem control lines so be sure to give a "local"
+option to getty (which is equivalent to "stty clocal").  Also if you
+need hardware flow control it must be enabled at your computer (use a
+-h flag with agetty) ( equivalent to "stty crtscts" ).</P>
+
+<H3><A NAME="null_modem_pinout"></A> Standard Null Modem cable pin-out (7 conductor)</H3>
+
+<P> The following 3 diagrams show full "standard" null modem cables.
+One that you purchase may be wired this way.  Another pinout is for 20
+and 6 to cross over and to have 8 cross over to both 4 and 5.  This
+will not provide hardware flow control (RTS/CTS) for directly
+connected computers.   Both of the above will work for terminals using
+software (Xon/Xoff) flow control (or no flow control).  None of these
+cables will work for terminal hardware flow control since most real
+terminals support DTR or DTR/DSR flow control (handshaking) but Linux
+doesn't yet (2000).</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+PC male DB25                            Terminal DB25
+DSR   Data Set Ready        6 &lt;--|
+DCD   Carrier Detect        8 &lt;--|- 20    DTR   Data Terminal Ready
+TxD   Transmit Data         2 ----> 3     RxD   Receive Data
+RxD   Receive Data          3 &lt;---- 2     TxD   Transmit Data
+RTS   Request To Send       4 ----> 5     CTS   Clear To Send
+CTS   Clear To Send         5 &lt;---- 4     RTS   Request To Send
+SG    Signal Ground         7 ----- 7     SG    Signal Ground
+DTR   Data Terminal Ready  20 -|--> 8     DCD   Carrier Detect
+                               |--> 6     DSR   Data Set Ready
+
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<A NAME="DB_pin-out"></A> 
+Alternatively, a full DB9-DB25 file-transfer (null-modem) cable (will
+not work with terminal hardware handshaking; see above):</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+PC DB9                                  Terminal DB25
+RxD   Receive Data          2 &lt;---- 2     TxD   Transmit Data
+TxD   Transmit Data         3 ----> 3     RxD   Receive Data
+                               |--> 6     DSR   Data Set Ready
+DTR   Data Terminal Ready   4 -|--> 8     DCD   Carrier Detect
+SG    Signal Ground         5 ----- 7     SG    Signal Ground
+DCD   Carrier Detect        1 &lt;--|
+DSR   Data Set Ready        6 &lt;--|- 20    DTR   Data Terminal Ready
+RTS   Request To Send       7 ----> 5     CTS   Clear To Send
+CTS   Clear To Send         8 &lt;---- 4     RTS   Request To Send
+RI   Ring Indicator        9 (not needed)
+</PRE>
+</CODE></BLOCKQUOTE>
+
+(Yes, the pins 2 and 3 really do have opposite meanings for DB9 and
+DB25 connectors!)</P>
+<P>Here's how to connect two DB9's together (but DTR flow control will
+not work):
+<BLOCKQUOTE><CODE>
+<PRE>
+PC DB9                                  DB9
+RxD   Receive Data          2 &lt;----- 3     TxD   Transmit Data
+TxD   Transmit Data         3 -----> 2     RxD   Receive Data
+                                |--> 6     DSR   Data Set Ready
+DTR   Data Terminal Ready   4 --|--> 1     DCD   Carrier Detect
+GND   Signal Ground         5 ------ 5     GND   Signal Ground
+DCD   Carrier Detect        1 &lt;--|
+DSR   Data Set Ready        6 &lt;--|-- 4     DTR   Data Terminal Ready
+RTS   Request To Send       7 -----> 8     CTS   Clear To Send
+CTS   Clear To Send         8 &lt;----- 7     RTS   Request To Send
+RI   Ring Indicator         9 (not used)
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Using the above 2 connections provide full modem control signals and
+seemingly allow one to set "stty -clocal".  Then one must turn on the
+terminal first (asserts DTR) before the port may be opened in a normal
+manner by getty, etc.  But there is likely to be trouble if you fail
+to turn on the terminal first (see 
+<A HREF="Text-Terminal-HOWTO-19.html#rapid_respawn">Getty Respawning Too Rapidly</A>).  For this reason one should use "stty
+clocal" which is the default (ignores modem control lines) and the
+additional wires in these cables then serve no useful purpose.</P>
+<P>In olden days when it may not have been this easy to ignore modem
+control signals etc, the following "trick" was done for cables that
+lacked conductors for modem control: on your computer side
+of the connector, connect RTS and CTS together, and also connect DSR,
+DCD and DTR together.  This way, when the computer needs a certain
+handshaking signal to proceed, it will get it (falsely) from itself.</P>
+
+<H3><A NAME="length_"></A> Overcoming length limitations </H3>
+
+<P> A cable longer than a 50 feet or so may not work properly at high
+speed.  Much longer lengths sometimes work OK, especially if the speed
+is low and/or the cable is a special low-capacitance type and/or the
+electronics of the receiving end are extra sensitive.  It is claimed
+that under ideal conditions at 9600 baud, 1000 feet works OK.  One way
+to cover long distances is to install 2@ line drivers near each serial
+port so as to convert unbalanced to balanced (and conversely) and then
+use twisted pair cabling.  But line drivers are expensive.</P>
+<P>Another way to increase the distance is to try to cancel out much of
+the magnetic field created by the currents in the transmit and receive
+data wires: TxD and RxD.  To do this, ground return lines,  which have
+current which is roughly equal (but in the opposite direction) are
+placed next to the transmit and received wires.  Twisted pair has
+the best cancellation.  Some DEC terminals have two signal ground
+wires for this purpose.  For example, one pair would be TxD and
+SG(TxD) where SG is signal ground.  If you use ribbon cable, insure
+that the TxD and SG(TxD) wires are right next to each other.
+Similarly for the RxD.</P>
+<P>If there is only one signal ground wire provided by both the PC and
+the terminal, it may be split into two wires in a twisted pair cable
+for this purpose.  You might think that return currents will be
+equally split between the two signal ground wires.  This would cancel
+out only about half of the magnetic field.  But it's better
+cancellation than this because return current prefers the path of
+least impedance.  The return path of a data signal (such as TxD) has
+the lowest impedance (due to lower inductance) if it flows back in the
+same twisted pair.  Although I've haven't seen any experimental test
+results for this method, it should allow longer cable lengths.</P>
+
+<H3>Hardware Flow Control cables</H3>
+
+<P> If you expect to use hardware flow control (handshaking) you will
+likely need to make up your own cable (or order one made).  Of course,
+if the connecters on the ends of a used cable remove, you might rewire
+it.  See 
+<A HREF="#db_conn_install">Installing DB Connectors</A>.
+You will need to determine whether or not the terminal uses the
+DTR pin for this, and if not, what pin (or pins) it uses.  The set-up
+menus may give you a clue on this since there may be an option for
+enabling "DTR handshaking" (or flow control) which of course implies
+that it uses the DTR pin.  It may also use the DSR pin.  See 
+<A HREF="Text-Terminal-HOWTO-11.html#hdw_flow_control">Hardware Flow Control</A> for a detailed
+explanation of it.  Older terminals may have no provision for hardware
+flow control.</P>
+
+<H3>Cable tips</H3>
+
+<P> The normal "straight thru" cable will not work unless you are
+using it as an extension cable in conjunction with either a null modem
+(crossover or file-transfer) cable or a null modem adapter.  Make sure
+that the connectors on the cable ends will mate with the connectors on
+the hardware.  One may use telephone cable which is at least
+4-conductor (and possibly twisted pair).  Shielded, special
+low-capacitance cable computer cable is best.</P>
+
+<H3><A NAME="twist_pair_kludge"></A> A kludge using twisted-pair cable </H3>
+
+<P> See also 
+<A HREF="#length_">Overcoming Length Limitations</A>.
+Although none of the EIA-232 signals are balanced for twisted pair
+one may attempt to use twisted-pair cable with it.  Use one pair for
+transmit and another for receive.  To do this connect signal ground to
+one wire in each of these 2 pair.  Only part of the signal ground
+current flows in the desired wire but it may help.  Due to the lower
+inductance of the twisted pair circuit (as compared to ground return
+current by some other path)  more return (ground) current will confine
+itself to the desired twisted pair than one would expect from only
+resistance calculations.  This is especially true at higher
+frequencies since inductive impedance increases with frequency.  The
+rectangular wave of the serial port contains high frequency harmonics.</P>
+
+<H3>Cable grounding</H3>
+
+<P> Pin 1 (of a DB25) should be chassis ground (also earth ground) but
+on cheap serial ports it may not even be connected to anything.  A
+9-pin connector doesn't even have a chassis ground.  The signal ground
+is pin 7 and is usually grounded to chassis ground.  This means that
+part of the signal current will flow thru the ground wires of the
+building wiring (undesirable).  Cable shields are supposed to be only
+grounded at one end of the cable, but it may be better to ground both
+ends since it's better to have current in the shield than in the
+building wiring ??</P>
+
+<H2><A NAME="ss12.4">12.4</A> <A HREF="Text-Terminal-HOWTO.html#toc12.4">Modem Connection</A>
+</H2>
+
+<P> By using a terminal-modem combination (without a computer) one may
+dial out to other computers.  Up to the mid 1990s in the US, there
+were many "bulletin boards" one could dial out to.  Some even provided
+connections to the Internet.  But bulletin boards lost out in favor of
+the Internet.</P>
+
+<H3>Dialing out from a terminal</H3>
+
+<P> Instead of connecting a terminal (or computer emulating a
+terminal) directly to a host computer using a cable it may be
+connected to the host via a telephone line (or dedicated private line)
+with a modem at each end of the line.  The terminal (or computer) will
+usually dial out on a phone line to a host computer.</P>
+<P>Most people use a PC and modem for dialing out.  The PC could have a
+terminal connected to a serial port and the person at the terminal
+may dial out using the PC.   Connecting a real terminal directly to an
+external modem is more difficult since the real terminal isn't very
+intelligent and doesn't give as much feedback to the user.  For
+dialing out, many terminals can store one or more telephone numbers as
+messages which may be "set-up" into them and are sent out to the modem
+by pressing certain function keys.  Many modems can also store phone
+numbers.  The modem initiation sequence must precede the telephone
+number.  When the outgoing call is answered by another modem at the
+other end of the phone line, the host computer on this modem may
+run a getty program to enable you to log in.</P>
+
+<H3>Terminal gets dialed into</H3>
+
+<P> It's common for a computer running Linux to get dialed into.  The
+caller gets a login prompt and logs in.  At first glance, it may seem
+strange how a dumb terminal (not connected to any computer) could
+accept an incoming call, but it can.  One possible reason for doing
+this is to save on phone bills where rates are not symmetric.  Your
+terminal needs to be set up for dial-in: Set the modem at your
+terminal for automatic answer (Register S0 set to 2 will answer on the
+2nd ring).  You turn on the terminal and modem before you expect a
+call and when the call comes in you get a login prompt and log in.</P>
+<P>The host computer that dials out to your terminal needs to do
+something quite unusual.  As soon as your modem answers, it needs to
+run login (getty).   A host may do this by running the Linux program
+"callback" sometimes named "cb".  Callback is for having computer A
+call computer B, and then B hangs up and calls A back.  This is what
+you want if you are using computer A to emulate a terminal.  For the
+case of a real terminal this may be too complex a task so the host may
+utilize only the "back" part of the callback program.  The setup file
+for callback must be properly configured at the host.  Callback makes
+the call to the terminal and then has mgetty run a login on that port.
+Mgetty by itself (as of early 1998) is only for dial-in calls but
+there is work being done to incorporate callback features into it and
+thus make it able to dial-out.  As of early 1999 it didn't seem to have
+been done.</P>
+
+<H2><A NAME="ss12.5">12.5</A> <A HREF="Text-Terminal-HOWTO.html#toc12.5">Telnet and ssh</A>
+</H2>
+
+<P>Telnet is a program which lets a text terminal (or a PC console)
+connect to a host computer over a network.  No serial ports are used
+for the telnet connection.  Of course if you are sitting at a real
+text terminal there is a serial connection to your own host.  But when
+you run telnet, your host connects to another host via serial-less
+telnet.</P>
+<P>Telnet uses tcp/ip packets over various networks: the Internet, LANs,
+etc.  You run telnet (as a client) and it connects to a telnet server
+on another computer on a network.  Then you get a login prompt and log
+in just as if you were directly connected via a cable to a serial
+port.</P>
+<P>Ssh is "Secure Shell" and is like telnet.  At one time it was much
+more secure than the conventional telnet which sent passwords in the
+clear (no encoding).  But now (2006) there are packages "telnet-ssl"
+which offer secure telnet.  But since telnet was slow in introducing
+security, ssh may have become more popular.</P>
+<P>Telnet may put each character you type inside a packet and naturally
+there's a lot of overhead with this.  But there's an option for sending
+one line at a time.  To use telnet as a client, you need to have an
+account on another computer on that runs a telnet server.  Then you
+give the telnet command and specify the address of the computer that
+will accept a connection from you.</P>
+<P>What kind of terminal does telnet emulate?  It doesn't.  Instead, it
+connects you to a remote computer using whatever kind of terminal you
+are currently using.  If you're on a Linux console, it's a terminal of
+type Linux.  The remote computer needs to somehow find out what type
+of terminal you're on so it can send the correct escape sequences.</P>
+<P>So using telnet is much like connecting up a dumb terminal to a serial
+port except that instead of a cable between you and the computer,
+there is a stream of packets flowing over the Internet between you and
+some distant computer.</P>
+
+<H2><A NAME="ss12.6">12.6</A> <A HREF="Text-Terminal-HOWTO.html#toc12.6">Terminal Server Connection</A>
+</H2>
+
+<H3>What is a terminal server ?</H3>
+
+<P> A terminal server is something that serves to connect a bunch of
+terminals to a host computer(s) via a network.  Today this server is
+often located nearby or inside the host computer.  If you directly
+connect some terminals to a PC or connect them via dial-up modems thru
+serial ports at each end, you don't need a terminal server.</P>
+<P>But if the terminals are connected to the host over a network, then
+you may need a terminal server to make the serial-to-network
+conversions.  This is useful for devices such as printers and
+terminals that have no built-in network support.  However the
+definition of "terminal server" has broadened to the case where all
+data flows entirely over a network (except of course within the
+computer itself) and where no serial ports are involved.  The term
+"terminal" may include a thin client type terminal with a GUI.  The
+network usually uses tcp/ip and/or ppp but other protocols (including
+protocol conversion) are sometimes supported.</P>
+<P>One way to connect a "terminal" (your PC console) to a network is to
+run telnet on your PC (assuming your PC has a network connection).  At
+one time, terminal servers were dedicated hardware which could be used
+only as terminal servers.  Today a PC can simultaneously serve as a
+terminal server, thereby serving many terminals.</P>
+<P>Today, most terminal servers serve thin client terminals rather than
+text-terminals.  The "Linux Terminal Server Project" is an example. 
+But it can also serve text terminals using telnet.  Such a text-terminal
+is likely to be just a PC monitor emulating a terminal of type
+"Linux".  The terminal server is just software running on the host
+computer.  Telnet server software is like a simple terminal server.</P>
+<P>A host that only has directly connected terminals (or modem
+connections without tcp/ip or ppp) is sometimes called a "terminal
+server".  Although it's doing the same job as a real terminal server,
+it strictly speaking is not a terminal server. </P>
+
+<H3>Evolution of the "terminal server"</H3>
+
+<P>Originally a terminal server served real text-terminals via the
+serial port.  A server for real text-terminals would have a number of
+serial ports.  The user would log in to the server and then get
+connected via tcp/ip, etc. to a host computer where s/he would login a
+second time again.  Sometimes the first login would be automatic, or
+perhaps there would be a choice given the user as to what host
+computer (or printer) to connect to (or what protocol to use).</P>
+<P>The use of real text-terminals declined as the PC replaced mainframes.
+But the PC could emulate a terminal (using say minicom (Linux) or
+(hyper)terminal for MS).   One could could then dial-out via a modem
+to a bulletin-board or the like.  There would be a bank of modems to
+accept such calls and each modem would be connected to a serial port.
+The serial port could either be on a multiport card or on a dedicated
+terminal server.  Note that in both the above cases there is no client
+software.  It's not a client-server model.</P>
+<P>When the Internet became popular, one would run the PPP protocol on
+the phone line and still go thru a modem and "terminal server" at the
+ISP.  This server would handle PPP and ultimately connect one to the
+Internet.  But the PC was no longer emulating a text terminal since
+browser images were being displayed.  Today with ISPs getting only
+digital signals from the phone company, they don't need real modems
+anymore.  So what was once a "terminal server" evolved into a "remote
+access server".  It's infrequently been called a "digital terminal
+server".  Note that 56k modem service requires that an ISP have a
+digital connection to the phone company.</P>
+<P>With remote access servers, instead of many individual telephone line
+cables connected to a terminal server, one now finds just a few cables
+with many digitized telephone calls on each cable (multiplexed).  The
+multitude of connectors needed for large numbers of terminals or
+modems is no longer present on a remote access server and thus the
+successor to this type of terminal server can't readily serve
+text-terminals anymore.</P>
+<P>More recently with the advent of thin clients terminals, the term
+"terminal server" was revived to apply to the hosts that served the
+thin clients.  Both MS Windows and Linux can serve thin clients.</P>
+
+<H2><A NAME="ss12.7">12.7</A> <A HREF="Text-Terminal-HOWTO.html#toc12.7">Connector and Adapter Types</A>
+</H2>
+
+<P> A connector is more-or-less permanently attached to the end of a
+cable or to a hardware unit.  There are two basic types of connectors
+used in serial communications: 1. DB types with pins (DB 9 or DB25) and 2.
+modular telephone-style connectors.</P>
+<P>An adapter looks about like a connector but it has two ends with pins.
+It is just like a cable that is so short that there is no cable part
+left at all --just different connectors on each end is all that
+remains.  The adapter just plugs in to two other connectors on each side
+of it.  It allows two incompatible connectors to mate with each other
+by going in between them.  Except that even for two connectors that
+will mate with each other, an adapter may be used to connect the cable
+conductors together in other than straight-thru.  Obviously, one may
+use a special cable (perhaps homemade) as a substitute for an adapter.</P>
+
+<H3>Sex of connector/adapters</H3>
+
+<P> Connectors (or one side of adapters) are either male or female.
+The connectors that have pins are male and the ones that have sockets
+(sometimes also called pins) are female.  For modular connectors, the
+ones with exposed contacts are plugs while the ones with internal
+contacts (not easy to see) are jacks.  Plugs are male; jacks are
+female.</P>
+
+<H3>Types of adapters</H3>
+
+<P> There are three basic types of adapters: null modem, gender
+changers and port adapters.  Some adapters perform more than one of
+these three functions.
+<UL>
+<LI> null modem adapter: Reroutes wires, like a null modem cable.</LI>
+<LI> gender changer: Changes the sex of a cable end.  Two connectors
+of the same sex can now connect (mate) with each other.</LI>
+<LI> port adapter: Goes from one type of connector to another (DB9
+to DB 25, etc.)</LI>
+</UL>
+</P>
+
+<H3><A NAME="db_conn"></A> DB connectors </H3>
+
+<P> (For how to install a DB connector on the ends of a cable see 
+<A HREF="#db_conn_install">Installing DB Connectors</A>.)  These come in
+9 or 25 pins.  The EIA-232 specs. call for 25 pins but since most of
+these pins are not used on ordinary serial ports, 9 pins is
+sufficient. See 
+<A HREF="#DB_pin-out">DB9-DB25</A> for the pin-out.
+The pins are usually numbered if you look closely enough or use a
+magnifying glass.</P>
+
+<H3><A NAME="rj_conn"></A> RJ modular connectors </H3>
+
+<P> RJ means Registered Jack.  These look like modern telephone
+connectors but are sometimes not compatible with telephone connectors.
+See also 
+<A HREF="#rj_conn_install">Installing RJ Connectors</A>.
+For use with serial ports they may be 6 or 8 conductor.  A few are
+10-conductor but may not officially belong to the RJ series.</P>
+
+<H3>6-conductors: RJ11/14, RJ12,  and MMJ</H3>
+
+<P> RJ11 are all the same size but may have  2, 4, or 6 conductors.
+If it has two conductors, it should be called a RJ11.  If it has 4
+conductors, some call it a RJ14.  If it has 6 conductors, many call it
+a RJ12 (but a RJ12 per the phone company has only 4 conductors).
+Seems confusing but they are all the same size and differ mainly by
+the number of conductor contacts present.</P>
+<P>A look-alike (almost) is a MMJ connector (6-conductor) used on later
+model VT (and other) terminals.  It's sometimes referred to as a
+DEC-423 or a DEC RJ11.  MMJ has an offset tab and is not compatible
+with RJ ones (unless the tab is cut off).  However, some connectors
+have been made that are compatible with both MMJ and the RJ ones.
+Since MMJ connectors are both hard to find and may be expensive some
+people have forced a RJ (6 conductor) to fit MMJ by filing off the
+offset tab with a file.</P>
+<P>The MMJ (DEC) pinout is: 1-DTR, 2-TxD, 3-TxD_Gnd, 4-RxD_Gnd, 5-RxD,
+6-DSR.  Cyclades Cyclom-8Ys RJ12 has: 1-DTR, 2-TxD, 3-Gnd, 4-CTS,
+5-RxD, 6-DCD.  Specialix IO8+ has: 1-DCD, 2-RxD, 3-DTR/RTS, 4-Gnd,
+5-TxD, 6-CTS.  The pins of the RJ (and MMJ) are numbered similar to
+the RJ45.</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+       Plug                         Jack (or socket)
+  (Looking at the end           (Looking at the cavity
+   end of a cable)               in a wall or PC back)
+     .________.                       .________.
+     | 654321 |                       | 123456 |
+     |__.  .__|                       |__.  .__|
+        |__|                             |__|
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>A standard MMJ file-transfer (null-modem) cable has a MMJ connector at
+each end.  It connects to the PC using a MMJ-to-DB adapter.  This
+adapter plugs into a DB (say 25 pin) connector on the back of the PC
+and the MMJ connecter plugs into it.  If you don't have such an
+adapter, you can make a custom cable with a MMJ (or filed RJ)
+connector on one end and a DB connector on the other end.</P>
+<P>The standard file-transfer (null-modem) cable with two MMJ (or
+RJ11/14) connectors will connect: 1-6, 2-5, and 3-4.  Note that such a
+cable supports DTR/DSR flow control which is not supported (yet) by
+Linux.  Making up your own standard 6-conductor file-transfer cable is
+very simple if you understand that the ordinary 4-conductor telephone
+cable from the wall to your telephone, used in hundreds of millions of
+homes, is also a file-transfer cable.  Find one and wire your cable the
+same way.</P>
+<P>If you lay such a cable flat on the floor (with no twists) you will
+note that both plugs on the ends have their gold contacts facing up
+(or both facing down).  Although it's symmetrical, it is also
+file-transfer if you think about it a bit.  One may put a few such
+cables together with inline couplers and everything works OK because
+each inline coupler is also a file-transfer (null-modem) adapter.  Two
+file-transfer cables in series result in a straight-thru connection.</P>
+<P>Here's a custom cable diagram (by Mark Gleaves) for connecting MMJ to
+a 9-pin serial port using RTS/CTS flow control:
+<BLOCKQUOTE><CODE>
+<PRE>
+  DEC MMJ                            Linux PC DB9
+Pin  Signal                           Signal  Pin
+===  ======                           ======  ===
+ 1    DTR -----------------------|---> DSR     6
+                                 |---> CTS     8
+ 2    TxD ---------------------------> RxD     2
+ 3    SG (TxD)--------------------|--- SG      5
+ 4    SG (RxD)--------------------|
+ 5    RxD &lt;--------------------------- TxD     3
+ 6    DSR &lt;-----------------------|--- RTS     7
+                                  |--> DTR     4
+                                  |--> CD      1
+                       (no connection) RI      9
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<H3>8-conductors and 10-conductors</H3>
+
+<P> RJ45 and RJ48 are 8-conductor modular telephone plugs.
+There exists some 10-conductor connectors which are allegedly wider
+and will not mate with the 8-conductor ones.  People have called the
+10-conductor ones RJ45 and/or RJ48 but this may be incorrect.  These
+connectors are used for both flat telephone cable and round twisted
+pair cable.  The cable end of the connector may be different for round
+and flat cable.  RJ48 has an extra tab so that a RJ48 plug will not
+push into a RJ45 jack (but a RJ45 plug will mate with a RJ48 jack).
+They're used on some multiport serial cards and networks.  Heres the
+pin numbers for an 8-conductor:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+  Plug                          Jack (or socket)
+  (Looking at the end           (Looking at the cavity
+   end of a cable)               in a wall)
+     .__________.                   .__________.
+     | 87654321 |                   | 12345678 |
+     |__.    .__|                   |__.    .__|
+        |____|                         |____|
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H2><A NAME="ss12.8">12.8</A> <A HREF="Text-Terminal-HOWTO.html#toc12.8">Making or Modifying a Cable</A>
+</H2>
+
+<H3><A NAME="buy_or_make_cable"></A> Buy or make ? </H3>
+
+<P> You may try to buy a short, null modem cable.  Just a "modem
+cable" will not work.  Null modem cables were once labeled as "serial
+printer" cables but serial printers are not popular today (2004).
+They also may be labeled as "file-transfer" cables or "PC-to-PC"
+cables.  Hardware flow control will work on them for PC-to-PC
+connections (terminal emulation) but not for the DTR flow control used
+by most real text terminals.  If Linux supported DTR flow control,
+real terminals would work OK .  Make sure the connectors on the cable
+ends will fit the connectors on your computer and terminal.</P>
+<P>But if you need longer cables to connect up terminals or need hardware
+flow control, how do you get the right cables?  The right ready-made
+cables may be difficult to find (you might find them by searching the
+Internet), especially if you want to use a minimum (say 4) of
+conductors.  One option is to get them custom made, which is likely to
+be fairly expensive although you might find someone to make them at
+prices not too much higher than ready-made cable (I did).</P>
+<P>A low-cost alternative is to buy used cables (if you can find them).
+If you get a used terminal, ask if they have a cable for it.  Another
+alternative is to make your own.  Even if you get used cables, they
+may need some changes to the pin wiring.  In either case, this may
+require special tools.  Most connectors that come with short cables
+are permanently molded to the cable and can't be rewired but most
+custom-made and homemade cables have connectors that can be rewired.
+One advantage of making your own cable is that the skills you learn
+will come in handy if a cable breaks (or goes bad) or if you need to
+make up another cable in a hurry.</P>
+
+<H3>Pin numbers of 9 and 25 pin connectors</H3>
+
+<P> The pin numbers are often engraved in the plastic of the
+connector but you may need a magnifying glass to read them.
+Note DCD is sometimes labeled CD.  The numbering of the pins on a
+female connector is read from right to left, starting with 1 in the
+upper right corner (instead of 1 in the upper left corner for the male
+connector as shown below).  --> direction is out of PC.</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+  ___________                    ________________________________________
+  \1 2 3 4 5/  Looking at pins   \1  2  3  4  5  6  7  8  9  10 11 12 13/
+   \6 7 8 9/  on male connector   \14 15 16 17 18 19 20 21 22 23 24 25/
+    ------                         -----------------------------------
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H3><A NAME="db_conn_install"></A> Installing DB connectors on cable ends </H3>
+
+<P> See 
+<A HREF="#db_conn">DB Connectors</A> for a brief description
+of them.  Unfortunately, most cables one purchases today have molded
+connectors on each end and can't be modified.  Others have connectors
+which unscrew and can be rewired.  If you are making up cable or
+modifying an existing one then you need to know about pins.  There are
+two types: soldered and crimped.</P>
+<P>The crimped pins require a special crimping tool and also need an
+"insertion/extraction" tool.  But once you have these tools, making up
+and modifying cable may be faster than soldering.  If you are
+connecting two wires to one pin (also needed if you want to jumper one
+connected pin to another pin) then soldering is faster (for these
+pins).  This is because the crimped pins can only take one wire each
+while the soldered ones can accept more than one wire per pin.</P>
+<P>To insert crimped pins just push them in by hand or with the insertion
+tool.  Using the tool for either insertion of removal first requires
+putting the tool tip around the wire.  The tool tip should completely
+encircle the wire at the back of the pin.</P>
+<P>Removing a pin with this tool is a little tricky.  These directions
+can be best understood if you have both the tool and wires in front of
+you as you read this.  With the tool tip around the wire insert the
+tool as far as it will go into the hole (about 1 1/2 cm.  Some tools
+have a mark (such as a tiny hole) on them to indicate how far to
+insert it.  The tool tip should have a tapered gap so that you may get
+the tip around the wire by starting it in where the gap is wider than
+the wire.  The tool may have 2 tips.  The one that is the most
+difficult to get around the wire is also the one that removes the wire
+the easiest since it almost completely envelops the wire.</P>
+<P>With the tip properly inserted pull on both the tool and the wire
+with a gentle pull.  If it doesn't come out, the tool was likely not
+inserted correctly so either push it in more or twist it to a
+different position (or both).   Perhaps you should have used another
+tip that fits tighter around the pin.  Using this tool, one may
+readily convert a straight-thru cable to a file-transfer (null-modem)
+cable, etc.</P>
+<P>There can be problems using the "insertion/extraction" tool.  If the
+tools will not insert on the back of the pin, it could be that the pin
+was not neatly crimped to the wire and is sort of square where it
+should be round, etc.  If a pin starts to come out but will not pull
+out all the way, the pin may be bent.  Look at it under a magnifying
+glass.  Straightening a pin with needle-nose pliers may damage the
+gold plating but you may have to straighten it to remove it.
+Sometimes a stuck pin may be pushed out with a thick screwdriver blade
+tip (or the like) but if you push too hard you may gouge the plastic
+hole or bend the pin:.</P>
+<P>Don't try soldering unless you know what you're doing or have read
+about how to do it.</P>
+
+<H3><A NAME="rj_conn_install"></A> Installing RJ connectors </H3>
+
+<P> These are telephone modular connecters one type of which is used
+for most ordinary telephones.  But there are many different types (see
+<A HREF="#rj_conn">RJ Modular Connectors</A>).</P>
+<P>These are not easy to reuse.  You might be able to pull the wires out,
+push in something wedged that would lift up the gold-colored contacts
+and reuse the connector.  There are special crimping tools used to
+install them; a different tool for each type.</P>
+<P>If you don't have a crimping tool, installation is still possible (but
+difficult) using a small screwdriver (and possibly a hammer).  Push in
+the cable wires and then push each gold-colored contact down hard with
+a small screwdriver that will just fit between the insulating ridges
+between the contacts.  You may damage it if you fail to use a
+screwdriver with a head almost the same thickness as the contacts or
+if the screwdriver slips off the contact as you are pushing it down.
+You may also use a small hammer to pound on the screwdriver (push
+first by hand).</P>
+<P>Be sure to not hurt the "remove lever" on the connecter when you push
+in the contacts.  Don't just set it down on a table and push in the
+contacts.  Instead, put a shim (about 1 mm thick) that fits snugly
+in the crevice between the lever and the body.  For such a shim you
+may use thick cardboard, several calling cards, or wood.  Since the
+bottom of the connector (that you will put on the table) isn't level
+(due to the "remove lever), make sure that the table top has something
+a little soft on it (like a sheet of cardboard) to help support the
+non-level connector.  Even better would be to put another 1mm shim
+under the first 6mm of the connector, supporting it just under where
+you see the contacts.  A soft tabletop wouldn't hurt either.  Another
+method (I've never done this) is to hold the connector in a vice but
+be careful not to break the connector.</P>
+<P>As compared to using a crimping tool, installing it per above takes a
+lot longer and is much more prone to errors and failure but it's sometimes
+more expedient and a lot cheaper than buying a special tool if you
+only have one or two connectors to install.</P>
+
+<HR>
+<A HREF="Text-Terminal-HOWTO-13.html">Next</A>
+<A HREF="Text-Terminal-HOWTO-11.html">Previous</A>
+<A HREF="Text-Terminal-HOWTO.html#toc12">Contents</A>
+</BODY>
+</HTML>

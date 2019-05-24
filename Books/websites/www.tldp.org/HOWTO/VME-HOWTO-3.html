@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux VME Howto: How to talk to the VMEbus with the VMEUtils and the VMEShell Packages</TITLE>
+ <LINK HREF="VME-HOWTO-4.html" REL=next>
+ <LINK HREF="VME-HOWTO-2.html" REL=previous>
+ <LINK HREF="VME-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="VME-HOWTO-4.html">Next</A>
+<A HREF="VME-HOWTO-2.html">Previous</A>
+<A HREF="VME-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. How to talk to the VMEbus with the VMEUtils and the VMEShell Packages</A></H2>
+
+<H2><A NAME="ss3.1">3.1 What is the VMEUtils program</A>
+</H2>
+
+<P>This program can be run as is.  Once started, you will see a command prompt.  Type ? And you will see a list of commands.  While useful, I think you will find the VMEShell scripts a better way to go.  They do use this program to speak with the kernel driver so it is necessary to have this program available in the current PATH.
+<P>The source code for "vmeutils" is also instruction on how to speak directly to the kernel driver.  For those of you who wish to create programs that directly speak with the driver, these source files are good examples.
+<H2><A NAME="ss3.2">3.2 What are the VMEShell Scripts</A>
+</H2>
+
+<P>The VMEShell programs are unix shell scripts.  They offer the operator a simple way to access the data on a VMEbus.  Using these commands creates temporary files in the user's working directory which store information on the last access you did.  This is nice because it will be possible to log off the machine, log back in and proceed from where you left off without having to re-enter VMEbus information again.  Plus, these files are stored in the current working directory, so you can have different VME access configuration just by setting up different directories for each VME board of interest.
+<P>Assuming you placed the shell programs and the "vmeutils" program in the /usr/local/bin directory, you should be able to log in as a regular user and run them.  What follows assumes exactly this.
+<H2><A NAME="ss3.3">3.3 The "vmemap" command.</A>
+</H2>
+
+<P>Login as a regular user and create a directory to experiment with.  Once in this directory type:
+<PRE>
+vmemap
+</PRE>
+
+You should get a help screen like this...
+<PRE>
+Usage:  map address count space size type
+  where address is VME Address to set Universe image to
+
+    Space = 0 CR/CSR    Space = 1 A16
+    Space = 2 A24       Space = 3 A32
+
+    Size  = 1 8 bit     Size  = 2 16 bit
+    Size  = 3 32 bit    Size  = 4 64 bit
+
+    Type  = 0 USR/DATA  Type  = 1 USR/PRG
+    Type  = 2 SUP/DATA  Type  = 3 SUP/PRG
+</PRE>
+
+This is where you tell VMELinux how you want to access the VMEbus.  We assume you already know about the VMEbus' many modes of operation, but here is a short list to help you.
+<UL>
+<LI> <B>address</B> is the actual VMEbus address you wish to see.  This should be set to the lower most value of the address range of interest.</LI>
+<LI> <B>count</B> is the number of bytes you consider a valid range to view.  This is the number of bytes starting at the address specified above.</LI>
+<LI> <B>space</B> is the addressing space (mode).  For those of you who do not know what we are talking about here, the VMEbus has four overlapping address spaces that can be called independent of each other.  A16 is a 64 Kilobyte space.  A24 is a 16 Megabyte space.  A32 is a 4 Gigabyte space.  There is an A64 space defined the VME specification, but the Universe does not support it.</LI>
+<LI> <B>Size</B> refers to the maximum data width allowed for the VME board you are accessing.  Some VMEbus board only handle 8 bit data paths.  Others transfer 32 bits (four bytes) at a time.  Some can handle a special VME block mode which can move 64 bits per transaction.  The Universe can handle all these modes allowing you to mix inexpensive serial port boards with hugh memory arrays.</LI>
+<LI> <B>Type</B> is the type of VME transaction performed.  Some VME boards make a distinction between "User" access (USR) and "Supervisor" access (SUP).  Also, some boards allow access to two "pages" of memory: Program (PRG) and Data.  The Universe supports all modes.</LI>
+</UL>
+
+Typing...
+<PRE>
+vmemap 0x8000 0x100 1 2 0
+</PRE>
+
+sets up the VMELinux driver to access an A16 board at base address 8000 Hex with a range of 100H bytes with 16 bit data width and USR/DATA mode.
+<P>You will find two new files in your current directory.
+<UL>
+<LI> fa.vme</LI>
+<LI> map.vme</LI>
+</UL>
+
+<B>fa.vme</B> stores a "fixed adder" value that will be added to all subsequent accesses with the programs below.
+<P><B>map.vme</B> store the parameters above so you do not have to enter them every time.
+<P>All the following shell utilities read values from these two files to performs VME accesses.
+<P>
+<H2><A NAME="ss3.4">3.4 Read Byte, Word or Long</A>
+</H2>
+
+<P>Syntax:
+<UL>
+<LI> vmerb -options address size</LI>
+<LI> vmerw  -options address size</LI>
+<LI> vmerl -options address size</LI>
+</UL>
+<H2><A NAME="ss3.5">3.5 Write Byte, Word or Long</A>
+</H2>
+
+<P>Syntax:
+<UL>
+<LI> vmewb -options address value</LI>
+<LI> vmeww  -options address value</LI>
+<LI> vmewl -options address value</LI>
+</UL>
+<H2><A NAME="ss3.6">3.6 Read the VMEbus to a file</A>
+</H2>
+
+<P>Syntax:
+<UL>
+<LI> vmerf -options address size filename</LI>
+</UL>
+<H2><A NAME="ss3.7">3.7 Write a file to the VMEbus</A>
+</H2>
+
+<P>Syntax:
+<UL>
+<LI> vmewf -options address filename</LI>
+</UL>
+<H2><A NAME="ss3.8">3.8 Parameters</A>
+</H2>
+
+<P>There are several parameters used with these commands: address, size and filename.
+<UL>
+<LI> address - The actual hexadecimal VMEbus address you wish to read.  If the map command is set to access A16 VME address space, the address should be 0xABCD.  If the space is A24 then use 0xABCDEF.  For A32 space use 0xABCDEFGH.</LI>
+<LI> size - The number of bytes to read.  This value is always the number of bytes regardless of the data word size read.  For example, if you want to read 16 bytes of information and use vmerl, the display will show 16 bytes displayed as 4 long words.</LI>
+<LI> filename - The name of the file to send "read" VMEbus data to or "write" VMEbus data from.</LI>
+<LI> value - a hex value written as "0xXXXX."</LI>
+</UL>
+<H2><A NAME="ss3.9">3.9 Options</A>
+</H2>
+
+<P>Available options are defined with a single dash with the any combination of the following:
+<UL>
+<LI> q - Hides details on the access to the vmeutils program (default)</LI>
+<LI> Q - Shows details on the access to the vmeutils program</LI>
+<LI> p - Single access PCI addressing mode (opposite of d) (default)</LI>
+<LI> d - DMA access PCI addressing mode (opposite of p) (very fast access to the VMEbus)</LI>
+<LI> 0, 1, 2, or 3 - Which Universe chip "Image" to use (defaults to 0)</LI>
+<LI> b - binary mode off (default)</LI>
+<LI> B - binary mode on</LI>
+<LI> v - turn off verbose parameter printing (default)</LI>
+<LI> V - turn on verbose parameter printing to see how the driver is begin used</LI>
+</UL>
+<H2><A NAME="ss3.10">3.10 A Note about DMA mode.</A>
+</H2>
+
+<P>VMELinux offers access to all the features of the Universe Chip.  Especially useful is access to the DMA engine on the chip.  With this feature the Universe chip transfers data on the PCI bus by becoming a PCI master.  This is nice, but the real benefit comes from the VMEbus accesses.  Even if the VMEbus interface is not using block mode transfers, the Universe chip can complete VMEbus transfers under 400 nanoseconds sustained.  This is the direct result of the Universe taking complete control of both the PCI bus and the VMEbus.  Thus, it is possible to access non block mode VMEbus peripherals much faster than older technologies.
+<P>
+<HR>
+<A HREF="VME-HOWTO-4.html">Next</A>
+<A HREF="VME-HOWTO-2.html">Previous</A>
+<A HREF="VME-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

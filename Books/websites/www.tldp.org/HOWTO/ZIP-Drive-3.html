@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Zip Drive Mini-HOWTO: Configuring a kernel for the ZIP drive</TITLE>
+ <LINK HREF="ZIP-Drive-4.html" REL=next>
+ <LINK HREF="ZIP-Drive-2.html" REL=previous>
+ <LINK HREF="ZIP-Drive.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="ZIP-Drive-4.html">Next</A>
+<A HREF="ZIP-Drive-2.html">Previous</A>
+<A HREF="ZIP-Drive.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Configuring a kernel for the ZIP drive</A></H2>
+
+<P>To use the ZIP drive with Linux, you must have a kernel configured
+with support for the SCSI system, support for SCSI disks, and support
+for the host adapter you are using.  If you are not familiar with
+building a kernel, you should read up on the 
+<A HREF="http://metalab.unc.edu/mdw/HOWTO/Kernel-HOWTO.html">Linux Kernel HOWTO</A> for information.
+<P>You must begin the process of building a kernel with the configuration
+step.  Here, you identify the specific kernel components that you
+need. First step <CODE> cd /usr/src/linux</CODE>. There are several
+ways to actually do the configuration. Under X windows I use 
+<B>make xconfig</B>. There is also <CODE>make menuconfig</CODE>
+or <CODE>make config</CODE> for command line prompts. The easiest way 
+is with xconfig. 
+<P>In the section <B>SCSI Support</B> set <B>SCSI support = Y</B>.
+Also set <B>SCSI disk support = Y</B>.
+<P>In the section <B>SCSI low-level drivers</B> you want to set 
+<B>IOMEGA Parallel Port ZIP drive SCSI support = M</B>. The M
+stands for modules. 
+<P>In the section <B>Character Devices</B> find and set 
+<B>Parallell Printer support = M</B>
+<P>If you are a bit unsure about any of this, use zdisk for the make
+step. This will build and install the kernel to floppy. If you 
+screw it up somehow, you still have a good bootable system on the hard
+drive. 
+<P>Now build the kernel with these steps:
+<UL>
+<LI> make dep</LI>
+<LI> make clean</LI>
+<LI> make zImage or zlilo or zdisk </LI>
+<LI> make modules</LI>
+<LI> make mdoules_install</LI>
+</UL>
+<P><B>hint</B> if you want to create an output log of the make zImage
+step you can use
+<BLOCKQUOTE><CODE>
+<PRE>
+   make zImage 2>&amp;1 | tee zImage.out
+   
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This is really
+a good thing to do, if you have compile errors or other conflicts
+in the configuration, now you have a file with the error messages or
+compile errors. This makes asking for help much easier.
+<P>You also need to load the modules somewhere. On my system I just added
+a couple of lines to the boot.local file.
+<UL>
+<LI> insmod ppa</LI>
+<LI> insmod lp</LI>
+</UL>
+
+My system is Suse 5.3 and this file is in /etc/rc.d. The location of this
+file will vary by distribution, but there will be a file somewhere, for
+local changes to be made at start up time. You should use the file that
+is applicable for your distribution. 
+<P>Now <CODE>shutdown and reboot</CODE>. 
+<P>You can also build all or part of the SCSI system as modules.  If you
+do this, be sure to load scsi.o, then sd.o and finally the driver for
+your host adapter, before you try to access the ZIP drive.
+<P>
+<H2><A NAME="ss3.1">3.1 SCSI version</A>
+</H2>
+
+<P>
+<P>If you already have a SCSI disk in your system, and you are connecting
+the ZIP drive to the same controller, there is no additional kernel
+configuration required.  Otherwise, you will most likely have to build
+a new kernel.
+<P>If you are building a kernel to support the SCSI version of the ZIP
+drive, you should select SCSI support and SCSI disk support.  You must
+also select a driver for the interface card you will use. If you have
+a ZIP Zoom, select the aha152x driver.
+<P>Be sure to read the documentation for your adapter in the SCSI HOWTO
+and any README files in the drivers/scsi subdirectory of the Linux
+source tree.  Pay attention to command line parameters that you might
+have to use to help the kernel initialise your adapter.
+<P>For instance, if you are using the ZIP Zoom card, you will have to add
+something like
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+          aha152x=0x340,11,7,1
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>to the boot command (or include it in your /etc/lilo.conf file in an
+append clause).  This tells the driver the port address and IRQ of
+your ZIP Zoom card - be sure to use the numbers that correspond to the
+way your jumpers are set.
+<P>You should also read Paul Gortmaker's
+<A HREF="http://metalab.unc.edu/mdw/HOWTO/BootPrompt-HOWTO.html">BOOTPROMPT HOWTO</A> for information
+about configuring your kernel with LILO or LOADLIN.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="ZIP-Drive-4.html">Next</A>
+<A HREF="ZIP-Drive-2.html">Previous</A>
+<A HREF="ZIP-Drive.html#toc3">Contents</A>
+</BODY>
+</HTML>

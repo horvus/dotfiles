@@ -1,0 +1,1287 @@
+<HTML
+><HEAD
+><TITLE
+>Implementing and using SSL to secure HTTP traffic</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Apache based WebDAV Server with LDAP and SSL "
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="WebDAV server management"
+HREF="x383.html"><LINK
+REL="NEXT"
+TITLE="HTTP/HTTPS Benchmarking tools"
+HREF="a656.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Apache based WebDAV Server with LDAP and SSL</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x383.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="a656.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="ssl"
+></A
+>6. Implementing and using SSL to secure HTTP traffic</H1
+><P
+>&#13;Security of the data stored on a file server is very important these days. Compromised data can cost thousands of dollars to
+company. In the last section, we compiled LDAP authentication module into the Apache build to provide a Authentication 
+mechanism. However HTTP traffic is very insecure, and all data is transferred in clear text - meaning, the LDAP authentication
+(userid/passwd) will be transmitted as clear text as well. This creates a problem. Anyone can sniff these userid/passwd and gain
+access to DAV store. To prevent this we have to encrypt HTTP traffic, essentially HTTP + SSL or HTTPS. Anything transferred over
+HTTPS is encrypted, so the LDAP userid/passwd can not be easily deciphered. HTTPS runs on port 443. The resulting build from the last 
+section's compilation process will have Apache to listen to both port 80 (normal HTTP) and 443 (HTTPS). If you are just going
+to use this server for DAV, then I will highly suggest that you close port 80. In this section of the HOWTO I will provide some 
+information regarding SSL and maintaining SSL on a Apache HTTP server.  
+</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN429"
+></A
+>6.1. Introduction to SSL</H2
+><P
+>&#13;SSL (Secure Socket Layer) is a protocol layer that exists between the Network Layer and Application layer. As the name suggest
+SSL provides a mechanism for encrypting all kinds of traffic - LDAP, POP, IMAP and most importantly HTTP. 
+</P
+><P
+>&#13;The following is a over-simplified structure of the layers involved in SSL.
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;
+	+-------------------------------------------+
+	|   LDAP   |    HTTP    |   POP   |   IMAP  |
+	+-------------------------------------------+
+	|                   SSL                     |
+	+-------------------------------------------+
+	|               Network Layer               |
+	+-------------------------------------------+
+	
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN434"
+></A
+>6.1.1. Encryption algorithms used in SSL</H3
+><P
+>&#13;	There are three kinds of cryptographic techniques used in SSL: Public-Private Key, Symmetric Key, and <A
+HREF="glossary.html#digitsign"
+>Digital Signature</A
+>.
+</P
+><P
+>&#13;	<STRONG
+>Public-Private Key Crytography - Initiating SSL connection: </STRONG
+> In this algorithm, encryption and decryption is performed using a pair of private and public keys.  The Web-server holds the private Key, and sends the Public key to the client in the Certificate. 
+</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>The client request content from the Web Server using HTTPS.</P
+></LI
+><LI
+><P
+>The web server responds with a Digital Certificate which includes the server's public key.</P
+></LI
+><LI
+><P
+>The client checks to see if the certificate has expired.</P
+></LI
+><LI
+><P
+>Then the client checks if the Certificate Authority that signed the certificate, is a trusted authority listed in the browser. This explains why we need to get a certificate from a a trusted CA.</P
+></LI
+><LI
+><P
+>The client then checks to see if the Fully Qualified Domain Name (FQDN) of the web server matches the Comman Name (CN) on the certificate?</P
+></LI
+><LI
+><P
+>If everything is successful the SSL connection is initiated.</P
+></LI
+></OL
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note:</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Anything encrypted with Private Key can only be decrypted by using the Public Key. Similarly anything encrypted using the Public Key can only be decrypted using the Private Key. There is a common mis-conception that only the Public Key is used for encryption and Private Key is used for decryption. This is not case. Any key can be used for encryption/decryption. However if one key is used for encryption then the other key must be used for decryption. e.g. A message can not encrypted and then decrypted using only the Public Key.</P
+><P
+><EM
+>Using Private Key to encrypt and a Public Key to decrypt ensures the integrity of the sender (owner of the Private Key) to the recipients. Using Public Key to encrypt and a Private Key to decrypt ensures that only the inteded recipient (owner of the Private Key) will have access to the data.</EM
+>(i.e. only the person who holds the Private Key will be able to decipher the message).</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;	<STRONG
+>Symmetric Cryptography - Actual transmission of data</STRONG
+>: After the SSL connection has been established, Symmetric cryptography is used for encrypting data as it uses less CPU cycles. In symmetric cryptography the data can be encrypted and decrypted using the same key. The Key for symmetric cryptography is exchanged during the initiation process, using Public Key Cryptography. </P
+><P
+><STRONG
+>Message Digest</STRONG
+> The server uses message digest algoritm such as <A
+HREF="glossary.html#hmac"
+>HMAC</A
+>, <A
+HREF="glossary.html#sha1"
+>SHA-1</A
+>, <A
+HREF="glossary.html#md5"
+>MD5</A
+> to verify the integrity of the transferred data.</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN465"
+></A
+>6.1.2. Ensuring Authenticity and Integrity</H3
+><P
+>Encryption Process</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;            Sender's                 Receiver's
+           PrivateKey                 PublicKey
+          ,-.                     ,-.
+         (   )..........         (   )..........
+          `-' ''''|'|'||          `-' ''''''''||
+                  | |                    |
+                  | |                    |
+   .----------.   | |    .----------.    |     .----------.
+   |          |   V |    |          |    V     |          |
+   |Clear Text|---------&#62;|CipherText|---------&#62;|CipherText|
+   |          |  Step1   |    1     |  Step2   |    2     |\
+   `----------'     |    `----------'          `----------' \    __
+         |          |                                        \   [_'
+         |          |                                   step5 \   |
+         |Step3     |                                       __  --|--
+         |          |                                  _.--'      |
+         V          |                            _..-''          / \
+    .---------.     |    .---------.       _..-''              Receiver
+    |  SHA 1  |     V    | Digital | _..-''
+    |MsgDigest|---------&#62;|Signature|'            _
+    `---------'  Step4   `---------'         _  (_)
+        _____ ____   ____  ____ _   _ ____ _| |_ _  ___  ____
+       | ___ |  _ \ / ___)/ ___) | | |  _ (_   _) |/ _ \|  _ \
+       | ____| | | ( (___| |   | |_| | |_| || |_| | |_| | | | |
+       |_____)_| |_|\____)_|    \__  |  __/  \__)_|\___/|_| |_|
+                               (____/|_|
+	</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step1: In this step the Original "Clear Text" message is encrypted using the Sender's Private Key, which results in Cipher Text 1. This ensures the Authenticity of the sender.</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step2: In this step the "CipherText 1" is encrypted using Receiver's Public Key resulting in "CipherText 2". This will ensure the Authenticity of the Receiver i.e. only the Receiver can decipher the Messsage using his Private Key.</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step3: Here the SHA1 Message Digest of the "Clear Text" is created.</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step4: SHA1 Message Digest is then encrypted using Sender's Private Key resulting in the Digital Signature of the "ClearText". This Digital Signature can be used by the receiver to ensure the Integrity of the message and authenticity of the Sender.</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step5: The "Digital Signature" and the "CipherText 2" are then send to the Receiver.</P
+></LI
+></UL
+><P
+>Decryption Process</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;           Receiver's               Sender's
+           PrivateKey               PublicKey
+         ,-.                     ,-.
+        (   )..........         (   )..........
+         `-' ''''''''||          `-' '''''''|||
+                |                      |    |
+                |                      |    |
+  .----------.  |       .----------.   |    | .----------.
+  |          |  V       |          |   V    | |          |       .---#1----.
+  |CipherText|---------&#62;|CipherText|---------&#62;|ClearText |------&#62;|  SHA 1  |
+  |    2     |  Step1   |    1     |  Step2 | |          | Step3 |MsgDigest|
+  `----------'          `----------'        | `----------'       `---------'
+                                            |                        ||
+                                            |                        ||Step5
+                                            |                        ||
+                                            |                        ||
+                               .---------.  |                    .---------.
+                               | Digital |  V                    |  SHA 1  |
+                               |Signature|----------------------&#62;|MsgDigest|
+                 _             `---------'  Step4     _          `---#2----'
+                | |                               _  (_)
+              __| |_____  ____  ____ _   _ ____ _| |_ _  ___  ____
+             / _  | ___ |/ ___)/ ___) | | |  _ (_   _) |/ _ \|  _ \
+            ( (_| | ____( (___| |   | |_| | |_| || |_| | |_| | | | |
+             \____|_____)\____)_|    \__  |  __/  \__)_|\___/|_| |_|
+                                    (____/|_|
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step1: In this step the "CipherText 2" message is decrypted using the Receiver's Private Key, which results in Cipher Text 1.</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step2: In this step the "CipherText 1" is decrypted using Sender's Public Key resulting in "ClearText".</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step3: Here the SHA1 Message Digest of the "Clear Text" is created.</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step4: The "Digital Signature" is then decrypted using Sender's Public Key, resulting the "SHA 1 MSG Digest".</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Step5: The "SHA1 MsgDigest #1" is then compared against "SHA1 MsgDigest #2". If they are equal, the data was not modified during transmission, and the integrity of the Original "Clear Text" has been maintained</P
+></LI
+></UL
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN493"
+></A
+>6.2. Test Certificates</H2
+><P
+>While compiling Apache we created a test certificate. We used the makefile provided by
+mod_ssl to create this custom Certificate. We used the command:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><B
+CLASS="command"
+># make certificate TYPE=custom</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>This certificate can be used for testing purposes.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN499"
+></A
+>6.3. Certificates for Production use</H2
+><P
+>&#13;	For production use you will need a certificate from a Certificate Authority (hereafter CA). Certificate Authorities are certificate vendors, who are listed as a Trusted CA in the user's browser. As mentioned in the Encryption Algorithms section, if the CA is not listed as a trusted authority, your user will get a warning message when trying to connect to a secure location.
+</P
+><P
+>&#13;Similarly the test certificates will also cause a warning message to appear on the user's browser.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN503"
+></A
+>6.4. How to generate a CSR</H2
+><P
+>&#13;CSR or Certificate Signing Request must be sent to the trusted CA for signing. This section discusses howto create a CSR,
+and send it to the CA of your choice. <B
+CLASS="command"
+># openssl req</B
+> command can be used to a CSR as follows:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># cd /usr/local/apache/conf/</B
+>
+<B
+CLASS="command"
+># /usr/local/ssl/bin/openssl req -new -nodes -keyout private.key -out public.csr</B
+>
+Generating a 1024 bit RSA private key
+............++++++
+....++++++
+writing new private key to 'private.key'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:California
+Locality Name (eg, city) []:San Jose
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Seagate 
+Organizational Unit Name (eg, section) []:Global Client Server
+Common Name (eg, YOUR name) []:xml.seagate.com
+Email Address []:saqib@seagate.com
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:badpassword
+An optional company name []:
+
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>"PRNG not seeded"</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>If you do not have <TT
+CLASS="filename"
+>/dev/random</TT
+> on your system you will get a <EM
+>"PRNG not seeded"</EM
+> error message. In that case you can use the following command:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><B
+CLASS="command"
+># /usr/local/ssl/bin/openssl req -rand <TT
+CLASS="filename"
+>some_file.ext</TT
+> -new -nodes -keyout private.key -out public.csr </B
+>
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Replace some_file.ext with the name of a existing file on your file system. Any file can be specified. Openssl will use that file to generate the seed</P
+><P
+>Solaris 9 comes with <TT
+CLASS="filename"
+>/dev/random</TT
+>. However on Solaris you might have to install the <A
+HREF="http://sunsolve.sun.com/pub-cgi/findPatch.pl?patchId=112438"
+TARGET="_top"
+>112438</A
+> patch to get the /dev/random</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;At this point you will be asked several questions about your server to generate the Certificate Singning Request</P
+><P
+>&#13;Note: Your Common Name (CN) is the Fully Qualified DNS (FQDN) name of your webserver e.g. dav.server.com . If you put in anything else, it will NOT work. Remember the password that you use, for future reference.
+</P
+><P
+>Once the process is complete, you will have <TT
+CLASS="filename"
+>private.key</TT
+> and a <TT
+CLASS="filename"
+>public.csr</TT
+> . You will need to submit the <TT
+CLASS="filename"
+>public.csr</TT
+> to the Certification Authority. At this pointe the public.key is not encrypted. To encrypt:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+> <B
+CLASS="command"
+># mv private.key private.key.unecrpyted</B
+>
+<B
+CLASS="command"
+># /usr/local/ssl/bin/openssl rsa -in private.key.unecrpyted -des3 -out private.key</B
+>
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="InstallingServerCert"
+></A
+>6.5. Installing Server Private Key, and Server Certificate</H2
+><P
+>Once the Certification Authority processes your request, they will send an encoded certificate (Digital Certificate) back to you. The Digital Certificate is in the format defined by X.509 v3. The following shows the structure of a typical X509 v3 Digital Certificate</P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Certificate
+			<P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Version</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Serial Number</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Algorithm ID</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Issuer</P
+></LI
+></UL
+>
+			<P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Validity</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Not Before</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Not After</P
+></LI
+></UL
+></LI
+></UL
+>
+			<P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Subject</P
+></LI
+></UL
+>
+			<P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Subject Public Key Info</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Public Key Algorithm</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>RSA Public Key</P
+></LI
+></UL
+></LI
+></UL
+>
+			<P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Extensions</P
+></LI
+></UL
+>
+		</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Certificate Signature Algorithm</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>Certificate Signature</P
+></LI
+></UL
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN574"
+></A
+>6.5.1. Verifying a Digital Certificate</H3
+><P
+>To verify a X.509 Certificate use the following command</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><B
+CLASS="command"
+># openssl verify <TT
+CLASS="filename"
+>server.crt</TT
+></B
+>
+server.crt: OK </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Where <TT
+CLASS="filename"
+>server.crt</TT
+> is the name of the file that contains the Digital Certificate</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="viewingdigitcertcontent"
+></A
+>6.5.2. Viewing the contents of a Digital Certificate</H3
+><P
+>The contents of a Digital Certificate can be viewed by using the <B
+CLASS="command"
+># openssl x509</B
+> command as follows:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><B
+CLASS="command"
+># openssl x509 -text -in <TT
+CLASS="filename"
+>server.crt</TT
+></B
+>
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 312312312 (0x0)
+        Signature Algorithm: md5WithRSAEncryption
+	Issuer: C=US, O=GTE Corporation, CN=GTE CyberTrust Root
+        Validity
+            Not Before: Feb  8 03:25:50 2000 GMT
+            Not After : Feb  8 03:25:50 2001 GMT
+	    Subject: C=US, ST=New York, L=Pelham, O=xml-dev, OU=web, CN=www.xml-dev.com/Email=saqib@xml-dev.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+            RSA Public Key: (1024 bit)
+                Modulus (1024 bit):
+		............
+		............
+                Exponent: 65537 (0x10001)
+    Signature Algorithm: md5WithRSAEncryption
+    	............
+	............
+
+	</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN589"
+></A
+>6.5.3. Modifying the httpd.conf to Install the Certificates</H3
+><P
+> You will need to place this certificate on the server, and tell Apache where to find it.</P
+><P
+>For this example, the Private Key is placed in the <TT
+CLASS="filename"
+>/usr/local/apache2/conf/ssl.key/</TT
+> directory, and the Sever Certificate is placed in the <TT
+CLASS="filename"
+>/usr/local/apache2/conf/ssl.crt/</TT
+>.</P
+><P
+>Copy the file received from the Certification to a file called <TT
+CLASS="filename"
+>server.crt</TT
+> in the <TT
+CLASS="filename"
+>/usr/local/apache2/conf/ssl.crt/</TT
+>.</P
+><P
+>And place the private.key generated in the previous step in the <TT
+CLASS="filename"
+>/usr/local/apache2/conf/ssl.key/</TT
+></P
+><P
+>Then modify the <TT
+CLASS="filename"
+>/usr/local/apache2/conf/ssl.conf</TT
+> to point to the correct Private Key and Server Certificate files:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;#   Server Certificate:
+#   Point SSLCertificateFile at a PEM encoded certificate.  If
+#   the certificate is encrypted, then you will be prompted for a
+#   pass phrase.  Note that a kill -HUP will prompt again.  Keep
+#   in mind that if you have both an RSA and a DSA certificate you
+#   can configure both in parallel (to also allow the use of DSA
+#   ciphers, etc.)
+<STRONG
+>SSLCertificateFile /usr/local/apache2/conf/ssl.crt/server.crt</STRONG
+>
+#SSLCertificateFile /usr/local/apache2/conf/ssl.crt/server-dsa.crt
+
+#   Server Private Key:
+#   If the key is not combined with the certificate, use this
+#   directive to point at the key file.  Keep in mind that if
+#   you've both a RSA and a DSA private key you can configure
+#   both in parallel (to also allow the use of DSA ciphers, etc.)
+<STRONG
+>SSLCertificateKeyFile /usr/local/apache2/conf/ssl.key/private.key</STRONG
+>
+#SSLCertificateKeyFile /usr/local/apache2/conf/ssl.key/server-dsa.key
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN605"
+></A
+>6.6. Removing passphrase from the RSA Private Key</H2
+><P
+>RSA Private Key stored on the webserver is usually encrypted, and you need a passphrase to parse the file. That is why you
+are prompted for a passphrase when start Apache with modssl:</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># apachectl startssl</B
+>
+<B
+CLASS="command"
+>Apache/1.3.23 mod_ssl/2.8.6 (Pass Phrase Dialog)</B
+>
+<B
+CLASS="command"
+>Some of your private key files are encrypted for security reasons.</B
+>
+<B
+CLASS="command"
+>In order to read them you have to provide us with the pass phrases.</B
+>
+<B
+CLASS="command"
+>Server your.server.dom:443 (RSA)</B
+>
+<B
+CLASS="command"
+>Enter pass phrase:</B
+>
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>Encrypting the RSA Private Key is very important. If a cracker gets hold of your "Unencrypted RSA Private Key" he/she can easily impersonate your webserver. If the Key is encrypted, the cracker can not do anything without brute forcing the passphrase. Use of a strong (ie: long) passphrase is encouraged. </P
+><P
+>However encrypting the Key can sometimes be nuisance, since you will be prompted for a passphrase everytime you start the web-server. Especially if you are using rc scripts to start the webserver at boot time. The prompt for a passphrase will stop the boot process, waiting for your input.</P
+><P
+>You can get rid of the passphrase prompt easily by decrypting the Key. However make sure that no one can hold of this Key. I would 
+recommend Hardening and Securing guidelines be followed before decrypting the Key on the webserver.</P
+><P
+>To decrypt the Key:</P
+><P
+>First make a copy of the encrypted key</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><B
+CLASS="command"
+># cp server.key server.key.cryp</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Then re-write the key with encryption. You will be prompted for the original encrypted Key passphrase</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+><B
+CLASS="command"
+># /usr/local/ssl/bin/openssl rsa -in server.key.cryp -out server.key</B
+>
+read RSA key
+Enter PEM pass phrase:
+writing RSA key
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;One way to secure the decrypted Private Key is to make readable only by the root:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># chmod 400 server.key</B
+>
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN631"
+></A
+>6.7. SSL Performance Tuning</H2
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN633"
+></A
+>6.7.1. Inter Process SSL Session Cache</H3
+><P
+>Apache uses a multi-process model, in which all the request are NOT handled by the same process. This causes the SSL Session Information to be lost when a Client makes multiple requests. Multiple SSL HandShakes causes lot of overhead on the webserver and the client. To avoid this, SSL Session Information must be stored in a inter-process Session Cache, allowing all the  processes to have access to to handshake information. SSLSessionCache Directive the in <TT
+CLASS="filename"
+>/usr/local/apache2/conf/ssl.conf</TT
+> file can be used to specify the location of the SSL Session Cache:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;SSLSessionCache        shmht:logs/ssl_scache(512000)
+#SSLSessionCache        shmcb:logs/ssl_scache(512000)
+#SSLSessionCache         dbm:logs/ssl_scache
+SSLSessionCacheTimeout  300
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Using dbm:logs/ssl_scache creates the Cache as DBM hashfile on the local disk.</P
+><P
+>Using shmht:logs/ssl_scache(512000) creates the Cache in Shared Memory Segment</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>shmht vs shmcb</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>shmht: uses a Hash Table to Cache the SSL HandShake Information in the Shared Memory</P
+><P
+>shmht: uses a Cyclic Buffer to Cache the SSL HandShake Informationin the Shared Memory</P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note:</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Not all platforms/OS support creation of Hash table in the Shared Memory. So dbm:logs/ssl_scache must be used instead</P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="AEN647"
+></A
+>6.7.2. Verifying SSLSession Cache</H3
+><P
+>To verify if the SSLSessionCache is working properly, you can use the <B
+CLASS="command"
+>openssl</B
+> utility with the <B
+CLASS="command"
+>-reconnect</B
+> as follows:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># openssl s_client -connect your.server.dom:443 -state  -reconnect</B
+>
+
+CONNECTED(00000003)
+.......
+.......
+Reused, TLSv1/SSLv3, Cipher is EDH-RSA-DES-CBC3-SHA
+SSL-Session:
+.....
+Reused, TLSv1/SSLv3, Cipher is EDH-RSA-DES-CBC3-SHA
+SSL-Session:
+.....
+Reused, TLSv1/SSLv3, Cipher is EDH-RSA-DES-CBC3-SHA
+SSL-Session:
+.....
+Reused, TLSv1/SSLv3, Cipher is EDH-RSA-DES-CBC3-SHA
+SSL-Session:
+.....
+Reused, TLSv1/SSLv3, Cipher is EDH-RSA-DES-CBC3-SHA
+SSL-Session:
+.....
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><B
+CLASS="command"
+>-reconnect</B
+> forces the s_client to connect to the server 5 times using the same SSL session ID. You should see 5 attempts of Reusing the same Session-ID as shown above. </P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x383.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="a656.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>WebDAV server management</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>HTTP/HTTPS Benchmarking tools</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

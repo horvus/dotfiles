@@ -1,0 +1,184 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>LINUX PLIP MINI-HOWTO: Activate the PLIP link.</TITLE>
+ <LINK HREF="PLIP-7.html" REL=next>
+ <LINK HREF="PLIP-5.html" REL=previous>
+ <LINK HREF="PLIP.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="PLIP-7.html">Next</A>
+<A HREF="PLIP-5.html">Previous</A>
+<A HREF="PLIP.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Activate the PLIP link.</A></H2>
+
+<P>Finally, these are the commands, that must be executed with root rights, 
+that activate the PLIP interface (of course the cable must be already plugged 
+correctly).
+<P><B>NOTE</B>: If something unexpected happens, please doublecheck the cable
+and the spelling of the commands. If you followed the istructions correctly
+but the are still errors, read the FAQ paragraph, a lot of answers are
+already available. 
+<P>First of all confirm that there is no lp device present:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# cat /proc/devices
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You mustn't see any reference to lp like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ 6 lp
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>If you see it, please remove (temporanely) the lp device before going on,
+if PLIP works then you can try it with lp later. 
+To remove the lp device you'll have to use the rmmod if it's a module; if 
+instead it's built in the kernel, you'll need to recompile the kernel with
+lp as a module (a much wiser idea).
+<P>Again I use the name one and two, as example. On one you'll have to do
+the following steps.
+<P>If you don't have the module automounter daemon and you compiled
+PLIP as a module, you must mount it:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# insmod plip
+</PRE>
+</CODE></BLOCKQUOTE>
+<P><B>NOTE</B>: if your parallel port is on an IRQ different from 7 and/or is 
+on a IO Address different from 0x378, then you'll have to tell it to insmod.
+Find your real IRQ and IO Address (the DOS command MSD is likely to be ok,
+but don't trust it too much) and write something like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# insmod plip io=0x278 irq=5
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Usually IRQ is 7 or 5, while IO Address is 0x378, 0x278 or 0x3bc. It is 
+important that you check that the address and IRQ match the hardware settings
+(jumpers on old boards, BIOS on modern motherboards).
+<P>If you are paranoic check that the module has been loaded with:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+  # lsmod
+
+Module:        #pages:  Used by:
+plip               3            0
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Take notice of the interface name (plip0, plip1, and so on; for more details
+read the kernel messages chapter above), then set up the PLIP interface:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ifconfig plip1 one pointopoint two up
+</PRE>
+</CODE></BLOCKQUOTE>
+<P><B>NOTE</B>: if your parallel port is on an IRQ different from 7 and/or is 
+on a IO Address different from 0x378, then you'll have to tell it to ifconfig.
+Use the same IRQ and IO Address reported by the kernel messages and write 
+something like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ifconfig plip1 irq 7
+# ifconfig plip1 io_addr 0x3bc
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Usually IRQ is 7 or 5, while IO Address is 0x378, 0x278 or 0x3bc.
+<P>Now check that it worked...
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ifconfig
+
+
+
+ .....
+ .....
+ plip1     Link encap:10Mbps Ethernet  HWaddr FC:FC:C8:00:00:01
+           inet addr:200.0.0.1  P-t-P:200.0.0.2  Mask:255.255.255.0
+           UP POINTOPOINT RUNNING NOARP  MTU:1500  Metric:1
+           RX packets:0 errors:0 dropped:0 overruns:0
+           TX packets:0 errors:0 dropped:0 overruns:0
+           Interrupt:7 Base address:0x378 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Add the route to two...
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# route add two plip1
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>And, if you want also the NFS for two:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# rpc.portmap
+# rpc.mountd
+# rpc.nfsd
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>On "two" the commands are the same, but you must write one instead of two 
+and vice versa.
+<P>One of your machines is likely to have only the PLIP connection, if this is
+true and that machine is two, you may also type:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# route add default gw one
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>on that machine. In my example above, two is a laptop with only a PLIP
+connection with one, so I type the above line on two.
+<P>Finally check with a
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ping two
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>from one and a
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ping one 
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>from two to see that all is working.
+<P>Of course you may want to have all these commands automatically done by a
+script or at boot time. You must only create a script that execute these
+commands: now you may invoke it as root when you need, or you may add a
+command (in /etc/rc.d/rc.inet2) that calls it at boot time. 
+<P>To tune your PLIP, you can use the plipconfig command, see the
+man page for more informations.
+<P>To shutdown PLIP, you need only to do:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ifconfig plip1 down
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>which removes also the route entries. If you don't have the automounter
+daemon, then remove also the module:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# rmmod plip
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<HR>
+<A HREF="PLIP-7.html">Next</A>
+<A HREF="PLIP-5.html">Previous</A>
+<A HREF="PLIP.html#toc6">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,522 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The Linux Tips HOWTO: Short Tips</TITLE>
+ <LINK HREF="Tips-HOWTO-3.html" REL=next>
+ <LINK HREF="Tips-HOWTO-1.html" REL=previous>
+ <LINK HREF="Tips-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Tips-HOWTO-3.html">Next</A>
+<A HREF="Tips-HOWTO-1.html">Previous</A>
+<A HREF="Tips-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. Short Tips</A></H2>
+
+<H2><A NAME="ss2.1">2.1 Handy Syslog Trick <I>Paul Anderson, Tips-HOWTO maintainer</I></A>
+</H2>
+
+<P>Edit your /etc/syslog.conf, and put in the following line:
+<BLOCKQUOTE><CODE>
+<PRE>
+# Dump everything on tty8
+*.*                                     /dev/tty8
+</PRE>
+</CODE></BLOCKQUOTE>
+
+One caveat: <I>REMEMBER TO USE TABS!</I>  syslog doesn't like spaces...
+<P>
+<H2><A NAME="ss2.2">2.2 Script to view those compressed HOWTOs. <I>Didier Juges,</I> <CODE>dj@destin.nfds.net</CODE></A>
+</H2>
+
+<P>
+<P>From a newbie to another, here is a short script that eases looking for
+and viewing howto documents.
+My howto's are in /usr/doc/faq/howto/ and are gzipped. The file names are
+XXX-HOWTO.gz, XXX being the subject.
+I created the following script called "howto" in the /usr/local/sbin
+directory:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+if [ "$1" = "" ]; then
+    ls /usr/doc/faq/howto | less
+else
+    gunzip -c /usr/doc/faq/howto/$1-HOWTO.gz | less
+fi
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+When called without argument, it displays a directory of the available
+howto's. Then when entered with the first part of the file name (before
+the hyphen) as an argument, it unzips (keeping the original intact) then
+displays the document.
+<P>For instance, to view the Serial-HOWTO.gz document, enter:
+<P>$ howto Serial
+<P>
+<P>
+<H2><A NAME="ss2.3">2.3 Is there enough free space??? <I>Hans Zoebelein,</I> <CODE>zocki@goldfish.cube.net</CODE></A>
+</H2>
+
+<P>Here comes a short script which will check from time to time
+that there is enough free space available on anything
+which shows up in mount (disks, cdrom, floppy...)
+<P>If space runs out, a message is printed every X seconds
+to the screen and 1 mail message per filled device is fired up.
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+
+#
+# $Id: check_hdspace,v 1.18 1996/12/11 22:33:29 root Exp root $
+#
+
+#
+# Since I got mysterious error messages during compile when
+# tmp files filled up my disks, I wrote this to get a warning
+# before disks are full.
+#
+# If this stuff saved your servers from exploding,
+# send praising email to zocki@goldfish.cube.net.
+# If your site burns down because of this, sorry but I
+# warned you: no comps.
+# If you really know how to handle sed, please forgive me :)
+#
+
+#
+# Shoot and forget: Put 'check_hdspace &amp;' in rc.local.
+# Checks for free space on devices every $SLEEPTIME sec.
+# You even might check your floppies or tape drives. :)
+# If free space is below $MINFREE (kb), it will echo a warning
+# and send one mail for each triggering device to $MAIL_TO_ME.
+# If there is more free space than trigger limit again,
+# mail action is also armed again.
+#
+
+# TODO: Different $MINFREE for each device.
+# Free /*tmp dirs securely from old junk stuff if no more free space.
+
+
+DEVICES='/dev/sda2 /dev/sda8 /dev/sda9'         # device; your put disks here
+MINFREE=20480                                   # kb; below this do warning
+SLEEPTIME=10                                    # sec; sleep between checks
+MAIL_TO_ME='root@localhost'                     # fool; to whom mail warning
+
+
+# ------- no changes needed below this line (hopefully :) -------
+
+MINMB=0
+ISFREE=0
+MAILED=""
+let MINMB=$MINFREE/1024         # yep, we are strict :)
+
+while [ 1 ]; do
+        DF="`/bin/df`"
+                for DEVICE in $DEVICES ; do
+                ISFREE=`echo $DF | sed s#.\*$DEVICE" "\*[0-9]\*""\*[0-9]\*" "\*## | sed s#" ".\*##`
+                
+                if [ $ISFREE -le $MINFREE ] ; then
+                        let ISMB=$ISFREE/1024
+                        echo  "WARNING: $DEVICE only $ISMB mb free." >&amp;2
+                        #echo "more stuff here" >&amp;2
+                        echo -e "\a\a\a\a"
+                        
+                        if [ -z  "`echo $MAILED | grep -w $DEVICE`" ] ; then
+                                echo "WARNING: $DEVICE only $ISMB mb free.      (Trigger is set to $MINMB mb)" \
+                                | mail -s "WARNING: $DEVICE only $ISMB mb free!" $MAIL_TO_ME
+                                MAILEDH="$MAILED $DEVICE"
+                                MAILED=$MAILEDH
+                                # put further action here like cleaning
+                                # up */tmp dirs...
+                        fi
+                        elif [ -n  "`echo $MAILED | grep -w $DEVICE`" ] ; then
+                                # Remove mailed marker if enough disk space
+                                # again. So we are ready for new mailing action.
+                                MAILEDH="`echo $MAILED  | sed s#$DEVICE##`"
+                                MAILED=$MAILEDH
+                        fi
+                        
+                done
+                sleep $SLEEPTIME
+
+done
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss2.4">2.4 Util to clean up your logfiles. <I>Paul Anderson, Tips-HOWTO Maintainer</I>></A>
+</H2>
+
+<P>If you're like me, you have a list with 430 subscribers, plus 100+ messages per day coming in over UUCP.  
+Well, what's a hacker to do with these huge logs?  
+Install chklogs, that's what.
+Chklogs is written by Emilio Grimaldo, <CODE>grimaldo@panama.iaehv.nl</CODE>, and the current version 1.8 
+available from ftp.iaehv.nl:/pub/users/grimaldo/chklogs-1.8.tar.gz.
+It's pretty self explanatory to install(you will, of course, check out the info in the doc subdirectory).  
+Once you've got it installed, add a crontab entry like this:
+<BLOCKQUOTE><CODE>
+<PRE>
+# Run chklogs at 9:00PM daily.
+00 21 * * *       /usr/local/sbin/chklogs -m
+</PRE>
+</CODE></BLOCKQUOTE>
+
+While you're at it, mention to the author how nice a peice of software this is:)
+<P>
+<P>
+<H2><A NAME="ss2.5">2.5 Handy Script to Clean Up Corefiles. <I>Otto Hammersmith,</I></A>
+<CODE>ohammers@cu-online.com</CODE></H2>
+
+<P>Create a file called rmcores(the author calls it handle-cores) with the
+following in it:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+USAGE="$0 &lt;directory> &lt;message-file>"
+
+if [ $# != 2 ] ; then
+        echo $USAGE
+        exit
+fi
+
+ echo Deleting...
+find $1 -name core -atime 7 -print -type f -exec rm {} \;
+
+echo e-mailing
+for name in `find $1 -name core -exec ls -l {} \; | cut -c16-24`
+do
+        echo $name
+        cat $2 | mail $name
+done
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>And have a cron job run it every so often.
+<P>
+<P>
+<H2><A NAME="ss2.6">2.6 Moving directories between filesystems. <I>Alan Cox,</I> <CODE>A.Cox@swansea.ac.uk</CODE></A>
+</H2>
+
+<P>Quick way to move an entire tree of files from one disk to another
+<BLOCKQUOTE><CODE>
+<PRE>
+(cd /source/directory &amp;&amp; tar cf - . ) | (cd /dest/directory &amp;&amp; tar xvfp -)
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<I>[ Change from cd /source/directory; tar....etc.  to prevent possibility of trashing directory in case of disaster.  
+Thanks to Jim Dennis, jim@starshine.org, for letting me know. -Maint. ]</I>
+<P>
+<H2><A NAME="ss2.7">2.7 Finding out which directories are the largest. <I>Mick Ghazey,</I></A>
+<CODE>mick@lowdown.com</CODE></H2>
+
+<P>Ever wondered which directories are the biggest on your computer?  Here's how to find out.
+<BLOCKQUOTE><CODE>
+<PRE>
+du -S | sort -n
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.8">2.8 The Linux Gazette</A>
+</H2>
+
+<P>Kudos go to John Fisk, creator of the Linux Gazette.  This is an excellent 
+e-zine plus, it's <B>FREE!!!</B>  Now what more could you ask?  Check it out at:
+<BLOCKQUOTE><CODE>
+<PRE>
+http://www.linuxgazette.com
+</PRE>
+</CODE></BLOCKQUOTE>
+
+BTW, It turns out that (1) LG is now out on a monthly basis, and (2) John Fisk no longer maintains it, the fellows at SSC do.
+<P>
+<P>
+<H2><A NAME="ss2.9">2.9 Pointer to patch for GNU Make 3.70 to change VPATH behavior.</A>
+<I>Ted Stern,</I> <CODE>stern@amath.washington.edu</CODE></H2>
+
+<P>I don't know if many people have this problem, but there is a "feature" of GNU
+make version 3.70 that I don't like. It is that VPATH acts funny if you give it
+an absolute pathname.  There is an extremely solid patch that fixes this, which
+you can get from Paul D. Smith <CODE>&lt;psmith@wellfleet.com></CODE>.  He also posts the
+documentation and patch after every revision of GNU make on the newsgroup
+&quot;gnu.utils.bug&quot; Generally, I apply this patch and recompile gmake on every
+system I have access to.
+<P>
+<H2><A NAME="ss2.10">2.10 How do I stop my system from fscking on each reboot? <I>Dale Lutz,</I> <CODE>dal@wimsey.com</CODE></A>
+</H2>
+
+<P>Q:  How do I stop e2fsck from checking my disk every time I boot up.
+<P>A:  When you rebuild the kernel, the filesystem is marked as 'dirty' and
+so your disk will be checked with each boot.  The fix is to run:
+<P>rdev -R /zImage 1
+<P>This fixes the kernel so that it is no longer convinced that the 
+filesystem is dirty.
+<P><EM>Note: If using lilo, then add </EM><CODE>read-only</CODE> <EM>to your linux setup in your lilo config file (Usually /etc/lilo.conf) </EM>
+<P>
+<H2><A NAME="ss2.11">2.11 How to avoid fscks caused by "device busy" at reboot time. <I>Jon Tombs,</I> <CODE>jon@gtex02.us.es</CODE></A>
+</H2>
+
+<P>If you often get device busy errors on shutdown that leave the filesystem in
+need of an fsck upon reboot, here is a simple fix:
+<P>To <CODE>/etc/rc.d/init.d/halt</CODE> or <CODE>/etc/rc.d/rc.0</CODE>, add the line
+<BLOCKQUOTE><CODE>
+<PRE>
+mount -o remount,ro /mount.dir
+</PRE>
+</CODE></BLOCKQUOTE>
+
+for all your mounted filesystems except /, before the call to umount -a. This
+means if, for some reason, shutdown fails to kill all processes and umount the
+disks they will still be clean on reboot. Saves a lot of time at reboot for
+me.
+<P>
+<P>
+<P>
+<H2><A NAME="ss2.12">2.12 How to find the biggest files on your hard-drive.</A>
+</H2>
+
+<P><I>Simon Amor,</I> <CODE>simon@foobar.co.uk</CODE>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ls -l | sort +4n
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Or, for those of you really scrunched for space this takes awhile but works 
+great:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cd /
+ls -lR | sort +4n
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.13">2.13 How to print pages with a margin for hole punching. <I>Mike Dickey,</I> <CODE>mdickey@thorplus.lib.purdue.edu</CODE></A>
+</H2>
+
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+        #!/bin/sh
+        # /usr/local/bin/print
+        # a simple formatted printout, to enable someone to
+        # 3-hole punch the output and put it in a binder
+
+        cat $1 | pr -t -o 5 -w 85 | lpr
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.14">2.14 A way to search through trees of files for a particular regular expression.</A>
+<I>Raul Deluth Miller,</I> <CODE>rockwell@nova.umd.edu</CODE></H2>
+
+<P>I call this script 'forall'.  Use it like this:
+<BLOCKQUOTE><CODE>
+<PRE>
+forall /usr/include grep -i ioctl
+forall /usr/man grep ioctl
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Here's forall:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+if [ 1 = `expr 2 \> $#` ]
+then
+        echo Usage: $0 dir cmd [optargs]
+        exit 1
+fi
+dir=$1
+shift
+find $dir -type f -print | xargs "$@"
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.15">2.15 A script for cleaning up after programs that create autosave and backup files.</A>
+<I>Barry Tolnas,</I> <CODE>tolnas@nestor.engr.utk.edu</CODE></H2>
+
+<P>Here is a simple two-liner which recursively descends a
+directory hierarchy removing emacs auto-save (#) and backup (~) files, .o 
+files, and  TeX .log files. It also compresses .tex files and
+README files. I call it 'squeeze' on my system.
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+#SQUEEZE removes unnecessary files and compresses .tex and README files
+#By Barry tolnas, tolnas@sun1.engr.utk.edu
+#
+echo squeezing $PWD
+find  $PWD \( -name \*~ -or -name \*.o -or -name \*.log -or -name \*\#\) -exec
+rm -f {} \;
+find $PWD \( -name \*.tex -or -name \*README\* -or -name \*readme\* \) -exec gzip -9 {} \;
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.16">2.16 How to find out what process is eating the most memory. <I>Simon Amor,</I></A>
+<CODE>simon@foobar.co.uk</CODE></H2>
+
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ps -aux | sort +4n
+</PRE>
+</CODE></BLOCKQUOTE>
+
+-OR-
+<BLOCKQUOTE><CODE>
+<PRE>
+ps -aux | sort +5n
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.17">2.17 Rigging vi for C programming, <I>Paul Anderson,</I><CODE>Tips-HOWTO Maintainer</CODE></A>
+</H2>
+
+<P>I do a lot of C programming in my spare time, and I've taken the time to
+rig vi to be C friendly.  Here's my .exrc:
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+set autoindent
+set shiftwidth=4
+set backspace=2
+set ruler
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>What does this do?  autoindent causes vi to automatically indent each line
+following the first one indented, shiftwidth sets the distance of ^T to 4 
+spaces, backspace sets the backspace mode, and ruler makes it display the line
+number.  Remember, to go to a specific line number, say 20, use:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+vi +20 myfile.c
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.18">2.18 Using ctags to ease programming.</A>
+</H2>
+
+<P>Most hackers already have ctags on their computers, but don't use it.  It can be 
+very handy for editing specific functions.  Suppose you have a function, in one of
+many source files in a directory for a program you're writing, and you want to
+edit this function for updates.  We'll call this function foo().  You don't
+where it is in the source file, either.  This is where ctags comes in handy.
+When run, ctags produces a file named tags in the current dir, which is a listing of
+all the functions, which files they're in and where they are in said files.  The
+tags file looks like this:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+
+ActiveIconManager       iconmgr.c       /^void ActiveIconManager(active)$/
+AddDefaultBindings      add_window.c    /^AddDefaultBindings ()$/
+AddEndResize    resize.c        /^AddEndResize(tmp_win)$/
+AddFuncButton   menus.c /^Bool AddFuncButton (num, cont, mods, func, menu, item)$/
+AddFuncKey      menus.c /^Bool AddFuncKey (name, cont, mods, func, menu, win_name, action)$/
+AddIconManager  iconmgr.c       /^WList *AddIconManager(tmp_win)$/
+AddIconRegion   icons.c /^AddIconRegion(geom, grav1, grav2, stepx, stepy)$/
+AddStartResize  resize.c        /^AddStartResize(tmp_win, x, y, w, h)$/
+AddToClientsList        workmgr.c       /^void AddToClientsList (workspace, client)$/
+AddToList       list.c  /^AddToList(list_head, name, ptr)$/
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>To edit, say AddEndResize() in vim, run:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+vim -t AddEndResize
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This will bring the appropriate file up in the editor, with the cursor located at the beginning
+of the function.
+<P>
+<P>
+<P>
+<H2><A NAME="ss2.19">2.19 Why does sendmail hang for 5 minutes on startup with RedHat? <I>Paul Anderson,</I></A>
+<CODE>paul@geeky1.ebtech.net</CODE></H2>
+
+<P>This is a fairly common problem, almost to the point of being a FAQ.  I don't
+know if RedHat has fixed this bug in their distribution, but you can repair it
+yourself.  If you look in your /etc/hosts file, you will find it looks something
+like:
+<BLOCKQUOTE><CODE>
+<PRE>
+127.0.0.1               localhost       yourbox
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>When sendmail starts, it does a lookup on your hostname(in this example, yourbox).
+It then finds that the IP for yourbox is 127.0.0.1, sendmail doesn't like this,
+so it does the lookup again.  It continues with this for a while until it
+eventually gives up and exits.  Fixing the problem is extremely easy,
+edit your /etc/hosts file and change it to something like this:
+<BLOCKQUOTE><CODE>
+<PRE>
+127.0.0.1               localhost
+10.56.142.1             yourbox
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss2.20">2.20 How do I configure RedHat for using color-ls? <I>Paul Anderson,</I> <CODE>paul@geeky1.ebtech.net</CODE></A>
+</H2>
+
+<P>RedHat's distribution comes with color-ls, however why they don't configure
+it for colour use by default is beyond me.  Here's to fix it.
+<P>First, type eval `DIRCOLORS`
+<P>Next, alias ls='ls --color=auto'
+<P>And put the 'alias.....' in your /etc/bashrc
+<P>
+<P>
+<P>
+<H2><A NAME="ss2.21">2.21 How do I find which library in /usr/lib holds a certain function? <I>Pawel Veselow,</I></A>
+<CODE>vps@unicorn.niimm.spb.su</CODE></H2>
+
+<P>What if you're compiling and you've missed a library that needed linking in?
+All gcc reports are function names...  Here's a simple command that'll
+find what you're looking for:
+<BLOCKQUOTE><CODE>
+<PRE>
+for i in *; do echo $i:;nm $i|grep tgetnum 2>/dev/null;done
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Where tgetnum is the name of the function you're looking for.
+<P>
+<P>
+<H2><A NAME="ss2.22">2.22 I compiled a small test program in C, but when I run it, I get no output!</A>
+</H2>
+
+<P>You probably compiled the program into a binary named test, didn't you?
+Linux has a program called test, which tests if a certain condition is true,
+it never produces any output on the screen.  Instead of just typing
+test, try: ./test
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Tips-HOWTO-3.html">Next</A>
+<A HREF="Tips-HOWTO-1.html">Previous</A>
+<A HREF="Tips-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

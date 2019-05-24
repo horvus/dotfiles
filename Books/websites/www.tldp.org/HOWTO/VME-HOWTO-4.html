@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux VME Howto: How to talk to the Tundra Universe PCI-VME bridge using the devices drivers.</TITLE>
+ <LINK HREF="VME-HOWTO-5.html" REL=next>
+ <LINK HREF="VME-HOWTO-3.html" REL=previous>
+ <LINK HREF="VME-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="VME-HOWTO-5.html">Next</A>
+<A HREF="VME-HOWTO-3.html">Previous</A>
+<A HREF="VME-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. How to talk to the Tundra Universe PCI-VME bridge using the devices drivers.</A></H2>
+
+<H2><A NAME="ss4.1">4.1 The device drivers used with VMELinux</A>
+</H2>
+
+<P>
+<UL>
+<LI> /dev/vme_ctl</LI>
+<LI> /dev/vme_m0</LI>
+<LI> /dev/vme_m1</LI>
+<LI> /dev/vme_m2</LI>
+<LI> /dev/vme_m3</LI>
+<LI> /dev/vme_m4</LI>
+<LI> /dev/vme_m5</LI>
+<LI> /dev/vme_m6</LI>
+<LI> /dev/vme_m7</LI>
+</UL>
+<H2><A NAME="ss4.2">4.2 VMEMaster Device Drivers</A>
+</H2>
+
+<P>/dev/vme_m* are drivers used to access the VMEbus as a bus master.
+<P>The Universe chip offers the programmer eight VMEMaster windows to the VMEbus.  These windows are called Images.  The details of the registers within these windows is beyond the scope of this Howto.  Please refer to the Universe documentation for details. 
+<A HREF="http://www.tundra.com/">Tundra Universe</A><P> Version 1.1 of our tools only supported the first four images.  This is because we originally designed this to work with the original Universe device.  When the Universe II became available, Tundra did not update their documentation.  Thanks to reports from other Universe users we are now aware of the new images, have found and downloaded the latest Universe manual from Tundra and have added these images to the 1.3.0 release.
+<H2><A NAME="ss4.3">4.3 VMESlave Device Drivers</A>
+</H2>
+
+<P>The Universe chip offers the programmer four (eight for the UniverseII) VMESlave windows to the VMEbus.  These windows are called Images.  The details of the registers within these windows is beyond the scope of this Howto.  Please refer to the Universe documentation for details. 
+<A HREF="http://www.tundra.com/">Tundra Universe</A><P>We originally intended to support the Universe's slave mode.  We never had a need for this thus our efforts concentrated solely on using the Universe as a VME master only.  So for 1.3.0 and the near future, we will not support the eight slave images.
+<P>I'll repeat this for clarity.  Slave VME modes are not yet supported by our VMELinux Universe Kernel driver.
+<H2><A NAME="ss4.4">4.4 Direct Control of the Universe Registers</A>
+</H2>
+
+<P>/dev/vme_ctl allows read and write access to the Universe registers.
+<P>For experienced users, this device allows direct access to the Universe chip's internal registers.  Explanation of these registers and what they do is beyond the scope of this howto. Please consult the Universe documentation available from 
+<A HREF="http://www.tundra.com/Tundra/unidex.html">Tundra Universe</A><H2><A NAME="ss4.5">4.5 read()</A>
+</H2>
+
+<P>n = read(vme_handle,buf,len);
+<P>Where:
+<UL>
+<LI> vme_handle = The value returned by "open,"</LI>
+<LI> buf = pointer to data block,</LI>
+<LI> len = number of bytes to read from the VMEbus.</LI>
+</UL>
+<H2><A NAME="ss4.6">4.6 write()</A>
+</H2>
+
+<P>write(vme_handle,buf,len);
+<P>Where:
+<UL>
+<LI> vme_handle = The value returned by "open,"</LI>
+<LI> buf = pointer to data block,</LI>
+<LI> len = number of bytes to write to the VMEbus.</LI>
+</UL>
+<H2><A NAME="ss4.7">4.7 lseek()</A>
+</H2>
+
+<P>lseek(vme_handle,vme_pnt,Seek_Type);
+<P>Where:
+<UL>
+<LI> vme_handle = The value returned by "open,"</LI>
+<LI> vme_pnt = The actual VME address to access,</LI>
+<LI> Seek_Type = SEEK_SET or SEEK_CUR</LI>
+</UL>
+<H2><A NAME="ss4.8">4.8 ioctl()</A>
+</H2>
+
+<P>ioctl(vme_handle, command, argument);
+<P>Where:
+<UL>
+<LI> vme_handle = The value returned by "open,"</LI>
+<LI> command = IOCTL_SET_CTL or IOCTL_SET_MODE or IOCTL_SET_BS or IOCTL_SET_BD or IOCTL_SET_TO</LI>
+<LI> argument to be sent</LI>
+</UL>
+
+And:
+<UL>
+<LI> IOCTL_SET_CTL = Sets the image CTL register to argument. Argument must be 32 bits.</LI>
+<LI> IOCTL_SET_MODE = "MODE_DMA" or "MODE_PROGRAMMED" - Sets the mode by which the Universe chips communicates to the PCI bus (Not VME Block Mode)</LI>
+<LI> IOCTL_SET_BS = Sets the image BS register to arguments.  NOTE: The BD register must already be set prior to making this call.</LI>
+<LI> IOCTL_SET_BD = Sets the image BD register to argument.</LI>
+<LI> IOCTL_SET_TO = Set the image TO register to argument.</LI>
+</UL>
+<H2><A NAME="ss4.9">4.9 open() and close()</A>
+</H2>
+
+<P>Here is where you open and close the four VMELinux Master or Slave devices plus the Control device.  Slave images are not yet supported.
+<UL>
+<LI> vme_handle = open("//dev//vme_m0",O_RDWR,0);</LI>
+<LI> uni_handle = open("//dev//vme_ctl",O_RDWR,0);</LI>
+</UL>
+<P>
+<UL>
+<LI> close(vme_handle);</LI>
+<LI> close(uni_handle);</LI>
+</UL>
+<P>
+<HR>
+<A HREF="VME-HOWTO-5.html">Next</A>
+<A HREF="VME-HOWTO-3.html">Previous</A>
+<A HREF="VME-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

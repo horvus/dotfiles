@@ -1,0 +1,296 @@
+<HTML>
+<HEAD>
+
+<TITLE>
+XFree86-Touch-Screen-HOWTO
+</TITLE>
+</HEAD>
+<BODY BGCOLOR=white>
+
+<HR>
+<H1>Linux Touch Screen HOWTO</H1>
+
+<H2>(c) 2002-2006 by Christoph Baumann, cgb(at)debian.org</H2>v3.4 -- Nov 7, 2006 -- the GNU Free
+Documentation License applies to this document
+<HR>
+<EM>This document describes how to set up a touch screen input device under XFree86. As the author had only the opportunity to work with devices
+from EloTouch(R) and MicroTouch(R) this HOWTO is rather specific for these
+devices. The examples given in this HOWTO concentrate on devices
+connected via the serial port i.e. /dev/ttyS0 or /dev/ttyS1.
+(Information about USB devices would be appreciated!)</EM>
+<HR>
+<P>
+<H2><A NAME="toc1">1.</A> <A HREF="#s1">How to configure the device</A></H2>
+
+<P>
+<H2><A NAME="toc2">2.</A> <A HREF="#s2">Activating the device</A></H2>
+
+<P>
+<H2><A NAME="toc3">3.</A> <A HREF="#s3">Using touch screen and mouse in parallel</A></H2>
+
+<P>
+<H2><A NAME="toc4">4.</A> <A HREF="#s4">Configuration under XFree86 4</A></H2>
+
+<UL>
+<LI><A NAME="toc4.1">4.1</A> <A HREF="#ss4.1">Another configuration example</A>
+<LI><A NAME="toc4.2">4.2</A> <A HREF="#ss4.2">Addendum</A>
+</UL>
+<P>
+<H2><A NAME="toc5">5.</A> <A HREF="#s5">Touch Screens on Fujitsu LifeBooks</A></H2>
+
+<P>
+<H2><A NAME="toc6">6.</A> <A HREF="#s6">Configuration under X.Org</A></H2>
+
+<P>
+<H2><A NAME="toc7">7.</A> <A HREF="#s7">Suggested reading</A></H2>
+
+<HR>
+<H2><A NAME="s1">1.</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc1">How to configure the device</A></H2>
+
+<P>Touch screen devices are configured in the Xinput section in the XF86Config
+file (mostly /etc/X11/XF86Config or /etc/XF86Config).
+At first verify that the device driver modules exist. They are located in
+/usr/X11R6/lib/modules/ (the modules for the above mentioned devices are 
+xf86Elo.so and xf86MuTouch.so). Now have a look into XF86Config.
+There should be a section looking like this:</P>
+<P>
+<PRE>
+Section "Files"
+...
+ModulePath "/usr/X11R6/lib/modules"
+...
+EndSection
+</PRE>
+</P>
+<P>To get the module loaded by the X server there has to be a section like this:</P>
+<P>
+<PRE>
+Section "Module"
+Load "xf86Elo.so"
+EndSection
+</PRE>
+</P>
+<P>Now the more tricky part. X needs to know some parameters about the device.
+The section for this looks like this (see "man XF86Config" for more details):</P>
+<P>
+<PRE>
+Section "Xinput"
+ SubSection "Elographics"  
+#the entry for a MicroTouch device would be SubSection "MicrotouchFinger"
+  Port "/dev/ttyS1" # for a device at serial port 2
+  DeviceName "TouchScreen" #could be any unambiguous name
+  MinimumXPosition 300
+  MaximumXPosition 3700
+  MinimumYPosition 300
+  MaximumYPosition 3700
+  UntouchDelay 10 #not supported with MuTouch
+  ReportDelay 10  #not supported with MuTouch
+  AlwaysCore #activates the device on startup
+ EndSubSection
+EndSection
+</PRE>
+</P>
+<P>The values for the entries MinimumXPosition etc. are of course specific
+for the setup of the hardware (i.e. depend on the position of the touch
+screen relative to the monitor). The values determine where the points (0,0)
+and (xmax,ymax) on your monitor (xmax and ymax depend on the resolution
+chosen for the Xserver, such as 1024x768) are mapped on the touch screen.
+The device driver reads these values and interpolishes the other coordinates.
+For illustration:</P>
+<P>
+<PRE>
+ --------------touch screen area-----------------
+ I                                              I
+ I  ########visible monitor area##############  I
+ I  #x                                       #  I
+ I  # (0,0)                                  #  I
+ I  # (MinimumXPosition,MinimumYPosition)    #  I
+ I  #                                        #  I
+ I  #                                        #  I
+ I  #                                        #  I
+ I  #                                        #  I
+ I  #                                        #  I
+ I  #                                        #  I
+ I  #                                        #  I
+ I  #     (MaximumXPosition,MaximumYPosition)#  I
+ I  #                             (xmax,ymax)#  I
+ I  #                                       x#  I
+ I  ##########################################  I
+ I                                              I
+ ------------------------------------------------
+</PRE>
+</P>
+<P>This mapping can be done by trial and error or by reading the raw output
+of the device (needs some serial port programming, see "The Linux Serial 
+Programming HOWTO"). For the types EloTouch and MicroTouch exists a
+rudimentary calibration tool (written by the author of this document,
+it can be found at 
+<A HREF="http://touchcal.sourceforge.net">http://touchcal.sourceforge.net</A>).</P>
+<HR>
+<H2><A NAME="s2">2.</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc2">Activating the device</A></H2>
+
+<P>After starting X, type in an Xterminal the command </P>
+<P><CODE>xsetpointer &lt;devicename&gt;</CODE></P>
+<P>where<CODE>&lt;devicename&gt;</CODE> is the name defined in XF86Config  
+with the line
+<CODE>DeviceName "....."</CODE>, in this example it would be TouchScreen.</P>
+<P>To get the device working on startup use the AlwaysCore option in
+the touch screen section (see above)</P>
+<HR>
+<H2><A NAME="s3">3.</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc3">Using touch screen and mouse in parallel</A></H2>
+
+<P>To use the touch screen and a mouse in parallel you need to enter the
+mouse specs in the Xinput-section. This definitions should be the same
+as in the Pointer-section. The following example is for a
+PS/2-mouse:
+<PRE>
+Section "Xinput" 
+   SubSection "Mouse" 
+      Protocol "PS/2" 
+      Port "/dev/mouse" #could also be /dev/psaux 
+      DeviceName "Mouse" 
+      AlwaysCore 
+   EndSubSection
+...
+EndSection 
+</PRE>
+
+Several people pointed this out, especially the usage of the
+AlwaysCore option. Thanks to them all.</P>
+<HR>
+<H2><A NAME="s4">4.</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc4">Configuration under XFree86 4</A></H2>
+
+<P>(from Lee Monamy)</P>
+<P>Example XF86Config-4 for an ELO touch screen:</P>
+<P>
+<PRE>
+Section "InputDevice"
+        Identifier "ELO touchscreen"
+        Driver "elographics"
+        Option  "Device"        "/dev/ttyS0"
+        Option  "MinimumXPosition"      "300"
+        Option  "MaximumXPosition"      "3700"
+        Option  "MinimumYPosition"      "300"
+        Option  "MaximumYPosition"      "3700"
+        Option  "UntouchDelay"  "10"
+        Option  "ReportDelay"   "10"
+        Option  "SendCoreEvents"        "yes"
+EndSection
+</PRE>
+</P>
+<P>Noteable differences between this and the version 3 config are that you
+specify a Device, *not* a Port, otherwise you get an error.
+Also, AlwaysCore from v3 has been replaced with SendCoreEvents.</P>
+<P>You must also add to the ServerLayout section, despite that X might
+say:
+"(II) XINPUT: Adding extended input device "TOUCHSCREEN" (type:
+Elographics Touch Screen)"</P>
+<P>
+<PRE>
+Section "ServerLayout"
+        Identifier      "Default Layout"
+        Screen  "Default Screen"
+        InputDevice "Generic Keyboard"
+...
+        InputDevice "ELO touchscreen"
+EndSection
+</PRE>
+</P>
+<H2><A NAME="ss4.1">4.1</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc4.1">Another configuration example</A>
+</H2>
+
+<P>from Dirk Mueller 
+(for Microtouch SMT3 Series):</P>
+<P>
+<PRE>
+Section "InputDevice"
+        Identifier  "MicroTouchFinger"
+        Driver      "mutouch"
+        Option      "Type" "finger"
+        Option      "Device" "/dev/ttyS0"
+        Option      "ScreenNo" "0"
+        Option      "MinimumXPosition" "0"
+        Option      "MaximumXPosition" "16383"
+        Option      "MinimumYPosition" "0"
+        Option      "MaximumYPosition" "16383"
+EndSection
+</PRE>
+</P>
+<P>Option "Type" can be "finger" or "stylus"
+Since Microtouch was bought by 3M-Touch, the resources are on
+<A HREF="http://www.3M.com/3MTouchSystems/downloads/legacy.jhtml#Linux">http://www.3M.com/3MTouchSystems/downloads/legacy.jhtml#Linux</A></P>
+<H2><A NAME="ss4.2">4.2</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc4.2">Addendum</A>
+</H2>
+
+<P>According to Wong Yeow Sen the configuration option names have changed
+in XFree86 4.2 (at least with Red Hat 7.3). If it seems your
+calibration values aren't parsed try the following:</P>
+<P>
+<PRE>
+...
+        Option  "MinX"      "100"
+        Option  "MaxX"      "4000"
+        Option  "MinY"      "100"
+        Option  "MaxY"      "4000"
+...
+</PRE>
+</P>
+<HR>
+<H2><A NAME="s5">5.</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc5">Touch Screens on Fujitsu LifeBooks</A></H2>
+
+<P>(from Joerg Hau)</P>
+<P>Information about these devices can be found here:</P>
+<P>"...</P>
+<P>Harald Hoyer's Linux Touch Panel Drivers for the Fujitsu Lifebooks
+B112/B142/B2130, 
+<A HREF="http://parzelle.de/Linux/Lifebook/">http://parzelle.de/Linux/Lifebook/</A>. Unfortunately,
+this is XFree 3.x only and it seems that this information is now
+"static" (dead?).</P>
+<P>Kenan Esau's Lifebook Series B Touchscreen driver, which is the
+adaptation of Harald's driver to XFree 4.x.
+<A HREF="http://www.conan.de/lifebook/lifebook.html">http://www.conan.de/lifebook/lifebook.html</A>.</P>
+<P>I [Joerg Hau] have used Kenan's driver on my Fujitsu LifeBook B142 
+(described at
+<A HREF="http://www.mysunrise.ch/users/joerg.hau/linux/b142.htm">http://www.mysunrise.ch/users/joerg.hau/linux/b142.htm</A>), 
+and it works like a charm.</P>
+<P>..."</P>
+<HR>
+<H2><A NAME="s6">6.</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc6">Configuration under X.Org</A></H2>
+
+<P>(from Kenan Bektas)</P>
+<P>Example xorg.conf for an Elo TouchSystems 2216 AccuTouch&reg; USB Touch-Monitor:
+<PRE>
+Section "InputDevice"
+    Identifier "elo"
+    Driver "elo"
+    Option "AlwaysCore"
+    Option "MinX"          "300"
+    Option "MaxX"          "3700"
+    Option "MinY"          "300"
+    Option "MaxY"          "3700"
+    Option "ScreenNumber"  "0"
+    Option "ButtonNumber"  "1"
+EndSection
+</PRE>
+</P>
+<HR>
+<H2><A NAME="s7">7.</A> <A HREF="XFree86-Touch-Screen-HOWTO.html#toc7">Suggested reading</A></H2>
+
+<P>
+<UL>
+<LI>Manpage for XF86Config</LI>
+<LI>
+<A HREF="http://www.elotouch.com/support/linux.asp">http://www.elotouch.com/Support/linux.asp</A></LI>
+<LI>
+<A HREF="http://www.3M.com/3MTouchSystems/downloads/legacy.jhtml#Linux">http://www.3M.com/3MTouchSystems/downloads/legacy.jhtml#Linux</A></LI>
+<LI>
+<A HREF="http://www.hof-berlin.de/tablet/tablet.html">http://www.hof-berlin.de/tablet/tablet.html</A> (Thanks to
+Christer Olofsson for sending me this URL)</LI>
+<LI>
+<A HREF="http://freshmeat.net/projects/xf86elousb">http://freshmeat.net/projects/xf86elousb</A> (Driver for iTouch USB)</LI>
+<LI>The manual shipped with your touch screen :-)</LI>
+</UL>
+</P>
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,667 @@
+<HTML
+><HEAD
+><TITLE
+>Compile a kernel</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Installing GNU/Linux on the IBM RS/6000 43P model 7248 HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Odds and ends"
+HREF="oddsnends.html"><LINK
+REL="NEXT"
+TITLE="Set up X"
+HREF="set-up-x.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Installing GNU/Linux on the IBM RS/6000 43P model 7248 HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="oddsnends.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="set-up-x.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="KERNEL"
+></A
+>9. Compile a kernel</H1
+><P
+>        In this chapter we will download the Linux kernel sources, add
+        a few patches, and compile and install our own custom kernel
+        on the harddisk. When we have successfully accomplished this
+        exciting event, we don't have to boot from the installation
+        boot floppy anymore.
+      </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="WHY-UPDATE-THE-KERNEL"
+></A
+>9.1. Why update the kernel</H2
+><P
+>        The kernel we have used this far is a complete 2.4 (2.2 for
+        YellowDog) kernel that I have provided. This is a quite stable
+        and good kernel, but it's not sure that it's what you
+        want. You should make your own kernel so you know what patches
+        you need and what modules you can install when you really need
+        them. Here are links to all sources and patches, and a step by
+        step guide to compile your new kernel.
+      </P
+><P
+>        As for the installation we just have done, you have to boot
+	from floppy. Would it not have been nice to be able to boot
+	directly off the hard disk - and by the way, what about sound
+	support? Let's set up this together as quickly as
+	possible.
+      </P
+><P
+>        Before starting downloading files and compiling the kernel, check
+        that you have these packages installed:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>make
+gcc
+cpp
+glibc-devel
+ncurses-devel
+kernel-headers</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+         (This list should probably be longer.)
+      </P
+><P
+>         Note that the names of
+	 this packages may change slightly among the distributions.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="WHAT-FILES-TO-DOWNLOAD"
+></A
+>9.2. What files to download</H2
+><P
+>        We'll use the latest 2.4 kernel sources with a few patches,
+	among those the IBM-E15 frame buffer patch from David Monro, which
+	gives us a working frame buffer console able to run XFree86.  This
+	may sound complicated, but believe me, it's not. Follow the steps
+	below here, and we'll get you up in an hour or so.
+      </P
+><P
+>        We're going to use the standard place for linux kernels, that
+	is /usr/src/ . When downloading the kernel source and patches,
+	place all files in /usr/src .
+      </P
+><P
+>        First we must get the working 2.4 source. To get this, we'll
+        use the rsync tool, so check that you have it installed. Some
+        nice people have set up an rsync server of the BitKeeper
+        Linux/PPC development tree at source.mvista.com. Thanks so
+        very much to them, remember them in your heart and
+        prayers.
+      </P
+><P
+>        Note: You may use the standard Linux kernel source from any
+        ftp.kernel.org mirror. A modern kernel like 2.4.21 should work
+        allright. I've found the devel tree more well functioning on
+        the 7248, so I stick with it.
+      </P
+><P
+>        Warning: Don't do this over a low-end link,
+        like a modem. It'll take forever. So, let's rock and
+        roll. Issue these commands:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>cd /usr/src
+mv linux linux.old
+mkdir linux-2.4
+ln -s linux-2.4 linux
+cd linux
+rsync -avz --delete source.mvista.com::linuxppc_2_4_devel .
+chown -R root.root .
+chmod -R u+w .</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        Note that you'll probably have to wait for some minutes to
+        rsync over all the sources. This is normal.
+      </P
+><P
+>        Then, get David Monro's <A
+HREF="http://www.solinno.co.uk/7043-140/files/2.4.19-2/030-e15fb.diff"
+TARGET="_top"
+>        IBM E15 frame buffer patch</A
+> from Leigh Brown's site
+        page at <A
+HREF="http://www.solinno.co.uk/7043-140/files/2.4.19-2/"
+TARGET="_top"
+>        http://www.solinno.co.uk/7043-140/files/2.4.19-2/</A
+>
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PATCHING-THE-SOURCE"
+></A
+>9.3. Patching the source</H2
+><P
+>        The next step is to patch the source files you just
+        downloaded. First add the IBM E15 patch:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>cd /usr/src/linux
+patch -p1 &#60; ../030-e15fb.diff</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        If you have more patches, add them the same way.
+        Now the kernel source is ready for configuring.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CONFIGURING-THE-KERNEL"
+></A
+>9.4. Configuring the kernel</H2
+><P
+>        The details of configuring the kernel are way outside the
+        scope of this document. To get more help, try <A
+HREF="http://www.tldp.org/HOWTO/Kernel-HOWTO.html"
+TARGET="_top"
+>The Kernel
+        HOWTO</A
+>. Here, we'll just cover the basics to get a
+        working kernel. Download <A
+HREF="http://users.linpro.no/ingvar/43p/images/kernels/ingvar.config-2.4"
+TARGET="_top"
+>        my kernel config file</A
+> into the top directory of the
+        kernel tree , /usr/src/linux .
+      </P
+><P
+>        In the top directory (/usr/src/linux) start the
+        configuration program by issuing the following commands:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>make ibmchrp_config
+cp ingvar.config-2.4 .config
+make menuconfig</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        Inside the kernel configuration system, we check over the
+        different menus to get to know our possibilities. Don't be
+        afraid to change anything. We can copy the original back, and
+        load the configuration system again. There are a few things to
+        check out before we go on compiling and installing:
+      </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="COMMANDSTRING"
+></A
+>9.4.1. Initial kernel command string</H3
+><P
+>          A thing you really should check, and possibly change, is the
+          <EM
+>Initial kernel command string</EM
+>, located
+          in the <EM
+>General setup</EM
+> submenu.  This
+          string is a space-separated list of options which are sent
+          to the kernel at boot time. This is actually configuring the
+          bootloader, and the closest we come to LILO, Grub or Yaboot
+          on the 7248. Change the value of the root device to the
+          device where your root (/) filesystem is mounted. This is
+          done with <EM
+>root=device</EM
+>. An example could
+          be <EM
+>root=/dev/sda3</EM
+>. If unsure, log in on
+          another terminal and check with the <EM
+>mount</EM
+> 
+	  command. 
+	</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNELSOUND"
+></A
+>9.4.2. Support for the integrated sound adapter</H3
+><P
+>          The 7248 is equipped with a built-in Crystal Audio cs4232
+          sound adapter. There is support for this adapter in the
+          Linux kernel. When configuring the kernel, check that the
+          settings for sound are correct. They should look like this:
+          <P
+></P
+><UL
+><LI
+><P
+>Sound: <EM
+>Y</EM
+> </P
+></LI
+><LI
+><P
+>OSS sound modules: <EM
+>Y</EM
+> </P
+></LI
+><LI
+><P
+>Support for Crystal CS4232 based (PnP) cards: 
+	                     <EM
+>M</EM
+></P
+></LI
+></UL
+>
+          And check <EM
+>N</EM
+> for everything else in the sound 
+          section.
+        </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNELFB"
+></A
+>9.4.3. Support for framebuffer graphics</H3
+><P
+>          Some minutes ago we patched in a driver for the IBM E15
+	  framebuffer driver. This is needed to run X (and to get a
+	  nice, smiling Tux when booting).  If you for some reason
+	  don't want (or need) to run X, or you don't prefer a
+	  framebuffer console (it scrolls slower than standard VGA),
+	  remove support for the IBM E15 frame buffer in the
+	  <EM
+>Console drivers</EM
+> submenu.
+        </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNELMISC"
+></A
+>9.4.4. Support for other stuff</H3
+><P
+>          Also check your own preferences on filesystems and other stuff
+          you might have special need for or interest in. The downloaded
+	  config file should have sane values, though.
+	</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KERNELSAVE"
+></A
+>9.4.5. Save changes</H3
+><P
+>          When we have finished configuring, save our new configuration
+          for later use, (at the bottom in the main menu) and select
+          exit. Answer <EM
+>Yes</EM
+> to the question about
+          saving the changes. You are now ready to compile the kernel.
+        </P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="COMPILING-AND-INSTALLING-THE-KERNEL"
+></A
+>9.5. Compiling and installing the kernel</H2
+><P
+>        To compile the kernel is quite straightforward. If you're not in
+        there already, enter the linux directory in the top level of the 
+        kernel tree, and issue this command series:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>cd /usr/src/linux
+make dep &#38;&#38; make clean &#38;&#38; make zImage &#38;&#38; make modules &#38;&#38; make modules_install </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+        Now, go and make yourself a cup of tea or coffee or have a
+        beer or a bible study for some minutes. This can take some
+        time. If everything is alright, you'll finally have a kernel
+        to install when the text stops scrolling after maybe as much
+        as 20 minutes, depending on your kernel configuration.
+      </P
+><P
+>        Now it's time to install your fresh-baked kernel. On most
+        Linux-based systems like, we keep kernels and their setupfiles
+        in the /boot directory. Check what version you run with a look
+        at the Makefile, and add proper version numbers in the
+        commands below:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>head /usr/src/linux/Makefile
+cp /usr/src/linux/arch/ppc/boot/images/zImage.prep /boot/vmlinuz-2.4.21
+cp /usr/src/linux/System.map /boot/System.map-2.2.18</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+        Assuming that sda1 is your boot device with a PReP Boot
+        partition, and your kernel has version 2.4.21, install the new
+        kernel by issuing this command:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>dd if=/boot/zimage-2.4.21 of=/dev/sda1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+        We also want the System map link to point to our new
+        System.map.  Issue these commands: 
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>mv /boot/System.map /boot/System.map.old
+ln -s /boot/System.map-2.4.21 /boot/System.map</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+  
+    </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CONFIGURE-MODULES"
+></A
+>9.6. Configure modules</H2
+><P
+>        Before rebooting we must send some parameters to configure the
+        sound modules. On YellowDog, SuSE and Mandrake, this is done
+        in <EM
+>/etc/modules.conf</EM
+>. In Debian, use
+        <EM
+>/etc/modutils/sound</EM
+>. Edit this file, and
+        add the following lines:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>alias sound cs4232
+pre-install sound /sbin/insmod sound dmabuf=1
+options cs4232 io=0x534 irq=5 dma=1 dma2=0 mpuio=0x330 mpuirq=5</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+      On Debian, run <EM
+>/sbin/update-modules</EM
+> when
+      done.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PRAY-AND-REBOOT"
+></A
+>9.7. Pray and reboot</H2
+><P
+>        There! We are ready to reboot. Light some candles (some people
+        prefers to sacrifice chickens or even goats), remove the boot
+        floppy, and issue the command:
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>reboot</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        If everything worked, the system will go down nicely, and
+        (assuming you compiled in support for the E15 frame buffer)
+        come up again with Tux, the Linux Penguin Mascot smiling to
+        you while booting.
+     </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="oddsnends.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="set-up-x.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Odds and ends</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Set up X</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

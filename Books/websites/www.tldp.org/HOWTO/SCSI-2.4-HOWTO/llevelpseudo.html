@@ -1,0 +1,520 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Pseudo drivers</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux 2.4 SCSI subsystem HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Lower Level drivers"
+HREF="llevel.html"><LINK
+REL="PREVIOUS"
+TITLE="Lower Level drivers"
+HREF="llevel.html"><LINK
+REL="NEXT"
+TITLE="Raw devices"
+HREF="rawdev.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux 2.4 SCSI subsystem HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="llevel.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 10. Lower Level drivers</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="rawdev.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="llevelpseudo"
+></A
+>10.1. Pseudo drivers</H1
+><P
+>&#13;SCSI can be viewed as a command set and a set of hardware buses that convey
+that command set. Those hardware buses can be further divided into those
+used exclusively for SCSI (e.g. ultra wide), those shared with other
+protocols (e.g. USB, IEEE 1394) and those buses not defined by the various
+SCSI standards. In the final category there are several interesting examples
+including ATAPI CD writers and PC parallel bus ZIP drives. Such devices
+use the SCSI command set (or something very close to it) over a foreign bus.
+</P
+><P
+>&#13;This section briefly outlines various pseudo lower level drivers which essentially
+communicate with other Linux subsystems in order to send the SCSI command set
+to devices controlled by those other subsystems. This raises some ownership
+issues that often confuse users and result in many questions to the
+maintainers.
+</P
+><DIV
+CLASS="formalpara"
+><P
+><B
+>IDE-SCSI. </B
+>
+<A
+NAME="idescsi"
+></A
+>
+From configuration point of view, ide-scsi will grab and try to control
+every ATA (a.k.a. IDE) device which doesn't have a "native"
+driver attached (such as ide-cd, ide-tape, etc). So for example, if
+both ide-cd and ide-scsi are compiled into the kernel in a system
+which has an ATAPI cdrom, ide-cd will get to control it. If only
+ide-scsi is compiled in, it will get the device. There are some
+kernel boot time parameters to control which driver gets which device.
+</P
+></DIV
+><P
+>&#13;The preferences of the IDE subsystem can be overridden with one of these
+kernel boot time parameters (of which the first is most interesting for 
+this subsystem):
+<P
+></P
+><UL
+><LI
+><P
+>&#13;hdx=ide-scsi
+</P
+></LI
+><LI
+><P
+>&#13;hdx=ide-cdrom
+</P
+></LI
+><LI
+><P
+>&#13;hdx=ide-floppy
+</P
+></LI
+></UL
+>
+[The term <EM
+>hdx</EM
+> is used
+to refer to one of the IDE/ATA devices in {hda, hdb, hdc ...}.]
+In the 2.4 series "hdx=scsi" was added but it is not very useful, see
+see <A
+HREF="sr.html#sratapi"
+>Section 9.2.4</A
+>.
+</P
+><P
+>&#13;When the driver is running, the device will be accessible using
+the SCSI device (<TT
+CLASS="filename"
+>/dev/sda</TT
+>, <TT
+CLASS="filename"
+>/dev/sr0
+</TT
+>, etc), and not through the corresponding <TT
+CLASS="filename"
+>&#13;/dev/hdx</TT
+> device. Still, the <TT
+CLASS="filename"
+>/dev/hdx
+</TT
+> device will be available, but only for configuration.
+</P
+><P
+>&#13;All the generic IDE configuration parameters (DMA on/off, 32-bit
+I/O, unmasking irq's, etc) are available by using the <TT
+CLASS="filename"
+>&#13;/dev/hdx</TT
+> device, for example to enable DMA:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;        hdparm -d1 /dev/hdx
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+<A
+NAME="AEN659"
+HREF="#FTN.AEN659"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>
+Using <B
+CLASS="command"
+>cat /proc/ide/hdx/settings</B
+> will show the
+available settings.
+All the generic IDE driver settings will be available there, as well
+as the following "ide-scsi specific" settings:
+<P
+></P
+><UL
+><LI
+><P
+>bios_cyl</P
+></LI
+><LI
+><P
+>bios_head</P
+></LI
+><LI
+><P
+>bios_sect</P
+></LI
+><LI
+><P
+>transform</P
+></LI
+><LI
+><P
+>log</P
+></LI
+></UL
+>
+The first three choose the virtual geometry that the drive will
+return to the sd driver, in case it's a disk drive (ZIP, etc).
+"transform" will configure/enable/disable the SCSI to ATAPI CDB
+transformation layer:
+<P
+></P
+><UL
+><LI
+><P
+>bit 0: Enable(1)/Disable(0) transformation for
+ commands not originated from the sg driver.</P
+></LI
+><LI
+><P
+>bit 1: Enable/Disable transformation for commands
+ issued using the sg driver.</P
+></LI
+></UL
+>
+"log" will log debugging information. This is useful also to debug
+user-space programs using the sg driver, as it will list the CDB
+traffic on the bus -- each issued command, along with its completion
+status.
+To enable/disable a specific settings, use something like:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;        echo "log:1" &#62; /proc/ide/hdx/settings
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+To turn off the "using_dma" flag use:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;        echo "using_dma:0" &#62; /proc/ide/hdx/settings
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><DIV
+CLASS="formalpara"
+><P
+><B
+>PPA + IMM. </B
+>
+Iomega ZIP drives come in a variety of flavours including parallel
+port, SCSI, and ATAPI.  The parallel port versions (both old and new)
+are driven by ppa and imm respectively.
+</P
+></DIV
+><P
+>&#13;The parallel port ZIP drives are actually SCSI devices which tunnel
+SCSI commands over the parallel port using interfaces called VPI0
+(older-style) and VPI2 (newer-style).  The ppa driver is the VPI0 host
+implementation and the imm driver is the VPI2 host implementation.
+</P
+><P
+>&#13;The way it works is that the HBA is a chip inside the ZIP drive, so
+that the host adapter and the peripheral are in the same actual case.
+</P
+><DIV
+CLASS="formalpara"
+><P
+><B
+>PPSCSI. </B
+>
+The new, not-yet-integrated, architecture for devices that use SCSI
+over a parallel port cable is ppscsi.  The ppscsi module provides the
+boiler plate code and makes it easy to write implementations for
+different interfaces.
+</P
+></DIV
+><P
+>&#13;Each ppscsi protocol module registers itself with the ppscsi module,
+passing in a list of entry points for the various things that are
+common to all protocol drivers.
+</P
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="ppscsi.jpg"><DIV
+CLASS="caption"
+><P
+>&#13;      The structure of the PPSCSI drivers.
+      </P
+></DIV
+></P
+></DIV
+><P
+>&#13;The plan is that the ppscsi architecture will absorb both the ppa and
+imm drivers and protocol modules; only vpi0 has been written so far.
+See <A
+HREF="http://www.torque.net/parport/ppscsi.html"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>www.torque.net/parport/ppscsi.html</TT
+></A
+>.
+</P
+><DIV
+CLASS="formalpara"
+><P
+><B
+>USB. </B
+>
+USB classifies a group of devices as "mass storage" (e.g. disks) and
+interacts with these using the SCSI command set. The module name is
+"usb-storage".
+See <A
+HREF="http://www.one-eyed-alien.net/~mdharm/linux-usb"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>www.one-eyed-alien.net/~mdharm/linux-usb</TT
+></A
+>.
+</P
+></DIV
+><P
+>&#13;There is also the usb/microtek driver for controlling X6 USB scanners
+from Microtek. When configured, the SANE application uses the sg
+driver to send SCSI commands over USB to control this scanner.
+</P
+><DIV
+CLASS="formalpara"
+><P
+><B
+>I2O. </B
+>
+See kernel source file <TT
+CLASS="filename"
+>/usr/src/linux/drivers/i2o/io2_scsi.c
+</TT
+>.
+</P
+></DIV
+><DIV
+CLASS="formalpara"
+><P
+><B
+>IEEE 1394. </B
+>
+Support for IEEE 1394 devices that use the SBP-2 protocol is now
+available (lk 2.4.7). See the IEEE 1394 paragraph in this
+<A
+HREF="scsibus.html#ieee1394"
+>section</A
+> for more information.
+</P
+></DIV
+><DIV
+CLASS="formalpara"
+><P
+><B
+>iSCSI. </B
+>
+An IETF draft is taking shape for iSCSI. This sends the SCSI command
+set over a TCP network connection. iSCSI seems to be gaining popularity
+quickly and there are several implementations for Linux taking shape.
+One implementation is at
+<A
+HREF="http://sourceforge.net/projects/intel-iscsi/"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>sourceforge.net/projects/intel-iscsi/</TT
+></A
+>. 
+Use your favourite search engine to find other projects.
+</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN659"
+HREF="llevelpseudo.html#AEN659"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;It has been reported that in some distributions the attempt
+to use the hdparm command fails. In this case use the "echo ... &#62;
+/proc/ide/hdx/settings" form.
+</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="llevel.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="rawdev.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Lower Level drivers</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="llevel.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Raw devices</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

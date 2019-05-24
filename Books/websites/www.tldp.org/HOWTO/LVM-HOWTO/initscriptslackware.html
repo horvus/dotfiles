@@ -1,0 +1,296 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Slackware</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="LVM 1 Boot time scripts"
+HREF="boot_scripts.html"><LINK
+REL="PREVIOUS"
+TITLE="Redhat"
+HREF="initscriptredhat.html"><LINK
+REL="NEXT"
+TITLE="SuSE"
+HREF="initscriptsuse.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="initscriptredhat.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. LVM 1 Boot time scripts</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="initscriptsuse.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="initscriptslackware"
+></A
+>7.5. Slackware</H1
+><P
+>&#13;        Slackware 8.1 requires no updating of boot time scripts in order to
+        make LVM work.
+      </P
+><P
+>&#13;        For versions previous to Slackware 8.1, you should apply the
+        following patch to <TT
+CLASS="filename"
+>/etc/rc.d/rc.S</TT
+>
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;cd /etc/rc.d
+cp -a rc.S rc.S.old
+patch -p0 &#60; rc.S.diff
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        (the cp part to make a backup in case).
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;----- snip snip file: rc.S.diff---------------
+--- rc.S.or	Tue Jul 17 18:11:20 2001
++++ rc.S	Tue Jul 17 17:57:36 2001
+@@ -4,6 +4,7 @@
+ #
+ # Mostly written by:  Patrick J. Volkerding, &#60;volkerdi@slackware.com&#62;
+ #
++# Added LVM support &#60;tgs@iafrica.com&#62;
+
+ PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+@@ -28,19 +29,21 @@
+   READWRITE=yes
+ fi
+
++
+ # Check the integrity of all filesystems
+ if [ ! READWRITE = yes ]; then
+-  /sbin/fsck -A -a
++  /sbin/fsck -a /
++  # Check only the root fs first, but no others
+   # If there was a failure, drop into single-user mode.
+   if [ ? -gt 1 ] ; then
+     echo
+     echo
+-    echo "*******************************************************"
+-    echo "*** An error occurred during the file system check. ***"
+-    echo "*** You will now be given a chance to log into the  ***"
+-    echo "*** system in single-user mode to fix the problem.  ***"
+-    echo "*** Running 'e2fsck -v -y &#60;partition&#62;' might help.  ***"
+-    echo "*******************************************************"
++    echo "************************************************************"
++    echo "*** An error occurred during the root file system check. ***"
++    echo "*** You will now be given a chance to log into the       ***"
++    echo "*** system in single-user mode to fix the problem.       ***"
++    echo "*** Running 'e2fsck -v -y &#60;partition&#62;' might help.       ***"
++    echo "************************************************************"
+     echo
+     echo "Once you exit the single-user shell, the system will reboot."
+     echo
+@@ -82,6 +85,44 @@
+     echo -n "get into your machine and start looking for the problem. "
+     read junk;
+   fi
++  # okay / fs is clean, and mounted as rw
++  # This was an addition, limits vgscan to /proc thus
++  # speeding up the scan immensely.
++  /sbin/mount /proc
++
++  # Initialize Logical Volume Manager
++  /sbin/vgscan
++  /sbin/vgchange -ay
++
++  /sbin/fsck -A -a -R
++  #Check all the other filesystem, including the LVM's, excluding /
++
++  # If there was a failure, drop into single-user mode.
++  if [ ? -gt 1 ] ; then
++    echo
++    echo
++    echo "*******************************************************"
++    echo "*** An error occurred during the file system check. ***"
++    echo "*** You will now be given a chance to log into the  ***"
++    echo "*** system in single-user mode to fix the problem.  ***"
++    echo "*** Running 'e2fsck -v -y &#60;partition&#62;' might help.  ***"
++    echo "*** The root filesystem is ok and mounted readwrite ***"
++    echo "*******************************************************"
++    echo
++    echo "Once you exit the single-user shell, the system will reboot."
++    echo
++
++    PS1="(Repair filesystem) #"; export PS1
++    sulogin
++
++    echo "Unmounting file systems."
++    umount -a -r
++    mount -n -o remount,ro /
++    echo "Rebooting system."
++    sleep 2
++    reboot
++  fi
++
+ else
+   echo "Testing filesystem status: read-write filesystem"
+   if cat /etc/fstab | grep ' / ' | grep umsdos 1&#62; /dev/null 2&#62; /dev/null ;
+then
+@@ -111,14 +152,16 @@
+     echo -n "Press ENTER to continue. "
+     read junk;
+   fi
++
+ fi
+
++
+ # remove /etc/mtab* so that mount will create it with a root entry
+ /bin/rm -f /etc/mtab* /etc/nologin /etc/shutdownpid
+
+ # mount file systems in fstab (and create an entry for /)
+ # but not NFS or SMB because TCP/IP is not yet configured
+-/sbin/mount -a -v -t nonfs,nosmbfs
++/sbin/mount -a -v -t nonfs,nosmbfs,proc
+
+ # Clean up temporary files on the /var volume:
+ /bin/rm -f /var/run/utmp /var/run/*.pid /var/log/setup/tmp/*
+--snip snip snip end of file---------------
+
+         </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="initscriptredhat.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="initscriptsuse.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Redhat</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="boot_scripts.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>SuSE</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

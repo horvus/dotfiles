@@ -1,0 +1,751 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE> GCC Frontend HOWTO: Creating our own front end </TITLE>
+ <LINK HREF="GCC-Frontend-HOWTO-8.html" REL=next>
+ <LINK HREF="GCC-Frontend-HOWTO-6.html" REL=previous>
+ <LINK HREF="GCC-Frontend-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="GCC-Frontend-HOWTO-8.html">Next</A>
+<A HREF="GCC-Frontend-HOWTO-6.html">Previous</A>
+<A HREF="GCC-Frontend-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Creating our own front end </A></H2>
+
+<H2><A NAME="ss7.1">7.1 Our Aim </A>
+</H2>
+
+<P>We are going to develop a small new language with the 
+following constructs - assignments, variable declarations, if and 
+while statements etc. We are not going to directly compile our
+program but we are making the GCC to do the required operations
+and produce the machine code. Let's have a name to our language.
+I have given the name "demo", since it shows how to develop a new
+compiler. The syntax I am going to choose is a combination
+of Pascal and C so that it would be familiar to programmers
+of both the languages.
+<P>Our role is to clearly specify the syntax of our language
+and create a 
+tree structure for the language. We will be creating the RTL from
+the tree structure. After that, it is the duty of the back end to
+produce an optimized output. We will be concentrating only on the
+tree structure creation and rtl conversion.
+<P>A number of functions and macros for handling the trees and
+rtl will be specified. Also a short description of what each does
+is  given. The language that is being explained deals with
+only integer values so that we can avoid unnecessary type 
+conversion complications.
+<H2><A NAME="ss7.2">7.2 Expressions </A>
+</H2>
+
+<P>Let me start our language with the basic unit, expression.
+Here we have to perform only tree structure creation. It is possible
+with the help of a function called 'build'.
+<P>build(PLUS_EXPR, type, left, right)  returns a tree for addition 
+operation. Here left and right are two trees supplied by us for
+addition. We have one and only one type - the integer type. So 
+there is no confusion regarding that.
+<P>Similarly, we have build1 used for operations like negations as shown
+<P>build1(NEGATE_EXPR,type,expression) where expression is the tree
+to be negated. It is used in case of unary operators.
+<P>And at last we can create a tree for simple whole numbers as shown
+<P>build_int_2(int num, num >=0 ? 0 : -1) to create a tree for the 
+specific number. Actually, the two parameters passed are the low 
+and high values of type HOST_WIDE_INT. But let us understand it
+like this - We have to set the second parameter of the function
+to show the correct sign. This is actually a macro invoking
+the function build_int_2_wide.
+<P>Now we have an idea regarding the creation of trees for building
+expressions. Let us directly write the parsing segment for tree
+creation for expressions.
+<P>
+<PRE>
+exp:  NUM     { $$ = build_int_2 ($1, $1 >= 0 ? 0 : -1); }
+     | exp '+' exp  { $$ = build (PLUS_EXPR, integer_type_node, $1, $3); }
+     | exp '-' exp  { $$ = build (MINUS_EXPR, integer_type_node, $1, $3); }
+     | exp '*' exp  { $$ = build (MULT_EXPR, integer_type_node, $1, $3); }
+     | exp '/' exp  { $$ = build (TRUNC_DIV_EXPR, integer_type_node, $1, $3); }
+     | exp '%' exp  { $$ = build (TRUNC_MOD_EXPR, integer_type_node, $1, $3); }
+     | '-' exp %prec NEG { $$ = build1 (NEGATE_EXPR, integer_type_node, $2); }
+     | '(' exp ')'  { $$ = $2; }
+</PRE>
+<P>Now I am directly giving the lexical file required by demo language.
+No explanation is provided because of its simplicity.
+<P>
+<P> 
+<PRE>
+
+%%
+[ \n\t]         ;                   // white space 
+[0-9]+          {yylval.ival = atoi(yytext); return NUM;}   // integers
+var             {return VAR;}       // variable declaration
+return          {return RETURN;}    // return
+if              {return IF;}        // if
+then            {return THEN;}      // then
+else            {return ELSE;}      // else
+endif           {return ENDIF;}     // endif
+while           {return WHILE;}     // while
+endwhile        {return ENDWHILE;}  // endwhile
+begin           {return BEGIN;}     // begin
+end             {return END;}       // end
+"&lt;"             {return LT;}        // less than
+"&gt;"             {return GT;}        // greater than
+"=="            {return EQ;}        // equal to
+[a-zA-Z]+       {yylval.name = strdup(yytext); return NAME;} 
+                                // function/variable name
+.               {return yytext[0];} // match all single characters
+%%
+</PRE>
+ 
+<P> Let's also present the grammar we are going to develop so that
+I needn't repeat it always.
+<P>
+<PRE>
+%union{
+        tree exp;       //Tree node developed by us.
+        int ival;       //Integer value for constants.
+        char *name;     //Name of function or variables.
+}
+
+
+
+input:            fndef body ;
+
+fndef:            NAME '(' ')';
+
+body:             BEGIN declarations compstmts END;
+
+declarations:     /*empty */
+                | declarations VAR NAME
+
+compstmts:        /*empty */
+                | compstmts statements;
+
+statements:       exp
+                | assignstmt
+                | ifstmt
+                | whilestmt
+                | returnstmt;
+
+assignstmt:       NAME '=' exp;
+
+whilestmt:        head loopbody;
+head:             WHILE exp
+loopbody:         compstmts ENDWHILE
+
+ifstmt:           ifpart thenpart elsepart;
+ifpart:           IF exp;
+thenpart:         THEN compstmts;
+elsepart:         ELSE compstmts ENDIF;
+
+returnstmt:       RETURN exp;
+
+exp:              NUM
+                | exp '+' exp
+                | exp '-' exp
+                | exp '*' exp
+                | exp '/' exp
+                | NAME;
+</PRE>
+<P>I will be developing our "demo" language in a step by step 
+procedure. Starting from expressions we will move steadily to 
+the end. At each stage a new construct will be introduced in
+the language. So in the final stage the "demo" language obeys
+the above grammar in all respect.
+<P>In the bison code above, I haven't provided the 
+semantic actions for the productions. 
+It will be introduced as we are studying to
+develop trees and rtl conversion. 
+<P>Also in each stage I will be providing you only the 
+required bison segments. You can look at the above grammar to 
+understand the overall working.
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<P>
+<H2><A NAME="ss7.3">7.3 Functions </A>
+</H2>
+
+<P>Let us insert our expression inside a function. A large 
+number of steps have to be invoked for a function. It ranges from
+setting up the parameters to the announcement of our declaration.
+The required tree and rtl functions are described in a step by 
+step manner
+below. Most of the functions dealing with trees start with a 'build'
+and will be returning a tree structure. (I haven't explicitly 
+given this fact everywhere. You should understand it by the way
+the functions involving trees are used.)
+We are going to build the tree using the functions provided by the
+GCC. Using the tree structure we will be creating the rtls.
+<P>For the functions provided by the GCC, the arguments are 
+explained only if it is of any relative importance.
+<P> Let us write the routine for function handling.
+The given code builds a function with name, "name".
+<P>
+<P>
+<PRE>
+build_function_decl (char *name)
+{
+tree param_list;  //param_list is of type tree. Similarly others.
+tree param_type_list;
+tree fntype;
+tree fndecl; // Consider it as a global value.
+             // It will be required quite often.
+</PRE>
+<P>/*First of all we have to arrange the parameters that are involved
+in the function. Suppose, we have "hello(int a, int b)" then a and
+b form the parameters. a and b have to be made available to the 
+function.
+But since this is our first attempt, we are assuming that the function
+doesn't involve any parameters. So param_list is made to be a 
+NULL_TREE (which is a NULL of type tree).
+*/
+<PRE>
+param_list = NULL_TREE;
+</PRE>
+ 
+<P>/*Next is the type of the parameters. The function always take a 
+fixed number of parameters. Since we don't have any parameters in
+the current example, we are invoking the function, tree_cons as
+shown. The first field is a purpose field and the last one is a 
+chain field (for linking together different types like integers).
+We will be explaining more about this when we pass some parameters.
+*/
+<PRE>
+param_type_list = tree_cons(NULL_TREE, void_type_node, NULL_TREE);
+</PRE>
+<P>/*Alright, we are done with the parameters. ie. the parameters and
+the type. We needn't bother about them. Now let's look at the 
+function. The first thing is the type of the function. It depends
+on the return type and the parameter type. We consider our 
+function as one returning an integer value. So the first argument
+of build_function is integer. The second one deals with parameters.
+The type of the parameters is given in the param_type_list.
+*/
+<PRE>
+fntype = build_function_type(integer_type_node, param_type_list);
+</PRE>
+<P>/*Next is the function declaration. It is possible with the 
+function build_decl. The first argument says that it is a 
+function declaration. The second one involves a function,
+get_identifier. It returns a tree whose name is "name". If an
+identifier with that name has been previously referred to, then 
+the same tree node is returned. Since this is the first time we
+are using this, a new tree node is returned. The last argument
+deals with the type of the function.
+*/
+<PRE>
+fndecl = build_decl(FUNCTION_DECL, get_identifier(name), fntype);
+</PRE>
+<P>/*Here comes the flags. They are invoked through special macros
+given below*/
+<P>/*If nonzero, it means external reference. Needn't allocate storage.
+There is a definition elsewhere. But we need to make a definition 
+here itself and hence zero.
+*/
+<PRE>
+DECL_EXTERNAL(fndecl) = 0;
+</PRE>
+<P>/* non zero means function can be accessed from outside the module.*/
+<PRE>
+TREE_PUBLIC(fndecl) = 1;
+</PRE>
+<P>/* non zero means function has been defined and not declared. */
+<PRE>
+TREE_STATIC(fndecl) = 1;
+</PRE>
+<P>/* It declares the argument of the function (which is stored in 
+param_list)*/
+<PRE>
+DECL_ARGUMENTS(fndecl) = param_list;
+</PRE>
+<P>/* It makes the declaration for the return value.*/
+<PRE>
+DECL_RESULT(fndecl) = 
+        build_decl(RESULT_DECL, NULL_TREE, integer_type_node);
+</PRE>
+<P>/*It declares the context of the result. ie. We inform the result,
+that its scope is fndecl.*/
+<PRE>
+DECL_CONTEXT( DECL_RESULT( fndecl)) = fndecl;
+</PRE>
+<P>/*Creates the rtl for the function declaration.
+The first argument gives the tree for the function declaration
+The second parameter deals with assembler symbol name. We don't 
+want it here. We make it NULL. Let's look at third and fourth
+parameters later. Interested readers can refer toplev.c
+*/
+<PRE>
+rest_of_decl_compilation (fndecl, NULL_PTR, 1, 0);
+</PRE>
+<P>/*This gives idea regarding where the declaration is in the source code
+*/
+<PRE>
+DECL_SOURCE_FILE( fndecl) = input_filename;
+DECL_SOURCE_LINE( fndecl) = 1;
+</PRE>
+<P>/* This function is just used to print the name of the function "name",
+on stderr if required
+*/
+<PRE>
+announce_function( fndecl);
+</PRE>
+<P>/* Let the GCC know the name of the function being compiled.*/
+<PRE>
+current_function_decl = fndecl;
+</PRE>
+<P>/* It holds the tree of bindings. Just a method used here to make a
+partial tree. Don't bother about that.
+*/
+<PRE>
+DECL_INITIAL( fndecl) = error_mark_node;
+</PRE>
+<P>/* All tree and rtl are allocated in temporary memory. Used per 
+function.
+*/
+<PRE>
+temporary_allocation();
+</PRE>
+<P>/*pushlevel is explained in call back. Here, it requires a push at the 
+start of any function.
+*/
+<PRE>
+pushlevel(0);
+</PRE>
+<P>/*create function rtl for function definition. */
+<PRE>
+make_function_rtl( fndecl);
+</PRE>
+<P>
+<P>
+<P>/*Generate rtl for the start of a function, fndecl. The second and third
+parameters denote the file and the line 
+*/
+<PRE>
+init_function_start(fndecl, input_filename, 1);
+</PRE>
+<P>/*Let's start the rtl for a new function. It also sets the variables
+used for emitting rtl. The second parameter shows that there is no 
+cleanup associated with. If it is made nonzero, cleanup will be run 
+when a return statement is met. 
+*/
+<PRE>
+expand_function_start(fndecl, 0);
+</PRE>
+<P>
+<P>/*It generates the rtl code for entering a new binding level.*/
+<PRE>
+expand_start_bindings(0);
+
+} //end of build_function_decl
+</PRE>
+<P>
+<P>All the above mentioned functions are invoked when, one
+enters a function. When we are leaving the function certain 
+other things have to be done. These are explained in the code
+below.
+<P>
+<P>build_function()
+{
+<P>/*Let's build the tree and emit the rtl for the return statement.
+In order to avoid an extra tree variable, I have included the tree
+creation and rtl conversion in a single statement. First build a 
+tree of type result for 'fndecl'. I am always returning zero from
+our simple function. If you intend to return any other value, replace
+integer_zero_node with the other corresponding tree structure.
+expand_return creates the rtl for the tree.
+*/
+<PRE>
+expand_return (build (MODIFY_EXPR, void_type_node, DECL_RESULT(fndecl),
+                integer_zero_node));
+</PRE>
+<P>/*Emit rtl for the end of bindings. Just like start bindings */
+<PRE>
+expand_end_bindings (NULL_TREE, 1, 0);
+</PRE>
+<P>
+<P>/* We have pushed. So don't forget to pop */
+<PRE>
+poplevel (1, 0, 1);
+</PRE>
+<P>/*Emit rtl for the end of function. Just like starting */
+<PRE>
+expand_function_end (input_file_name, 1, 0);
+</PRE>
+<P>/*Compile the function, output the assembler code, Free the tree
+storage.
+*/
+<PRE>
+rest_of_compilation (fndecl);
+</PRE>
+<P>/*We are free now */
+<PRE>
+current_function_decl=0;
+</PRE>
+<P>
+<P>/* Free everything in temporary store. Argument 1 shows that, we have
+just finished compiling a function
+*/
+<PRE>
+permanent_allocation (1);
+}
+</PRE>
+<P>We have understood the working of functions and expressions.
+Let's add the required semantic actions for functions and expressions.
+<PRE>
+
+input:  fndef body      { build_function(); };
+fndef:  NAME '(' ')'    { build_function_decl ($1); };
+
+
+exp:  NUM     { $$ = build_int_2 ($1, $1 >= 0 ? 0 : -1); }
+     | exp '+' exp  { $$ = build (PLUS_EXPR, integer_type_node, $1, $3); }
+     | exp '-' exp  { $$ = build (MINUS_EXPR, integer_type_node, $1, $3); }
+     | exp '*' exp  { $$ = build (MULT_EXPR, integer_type_node, $1, $3); }
+     | exp '/' exp  { $$ = build (TRUNC_DIV_EXPR, integer_type_node, $1, $3); }
+     | exp '%' exp  { $$ = build (TRUNC_MOD_EXPR, integer_type_node, $1, $3); }
+     | '-' exp %prec NEG { $$ = build1 (NEGATE_EXPR, integer_type_node, $2); }
+     | '(' exp ')'  { $$ = $2; }
+</PRE>
+<P>
+<H3>Example demo program 1</H3>
+
+<P>
+<PRE>
+foo()
+   begin
+        1+2*3
+   end
+</PRE>
+<P>
+<H2><A NAME="ss7.4">7.4 Variable Declaration </A>
+</H2>
+
+<P>What is our current status? We have with us a function and
+an expression, which is good for nothing. Our language will be
+more beautiful with the presence of variables, which can be assigned 
+and returned.
+<P>So the next step is to declare variables. As usual we have
+to build trees and convert it to rtl. When we are making a 
+variable declaration as 
+<P>
+<PRE>
+var a;    // I prefer PASCAL syntax. Just a matter of taste.
+</PRE>
+<P>we have to store the value of 'a' because when it
+is used later in an expression, say a+1, we have to use the
+same 'a'.
+<P>We can define two arrays of our own var_name[ ] and 
+var_decls[ ] as shown.
+<PRE>
+
+char *var_name[100];    //global array ie. initialized to zero.
+tree var_decls[100];    //global array
+</PRE>
+<P>I hope the reader has understood that the first one is
+used to store the name of variables in "demo" and the second one
+to store the corresponding tree structures that are built.
+<P>Let's directly look at the code.
+<PRE>
+
+void add_var(char *name)
+{
+  int i;
+/*Add the name given, as the last name in the array */
+  for(i=0;var_name[i];i++);
+/* Store the name */
+  var_name[i] = name;
+/*Build the tree structure for the variable declared 
+All the parameters are explained before.
+Thus we have name of the variable stored in var_name[] and
+tree stored in var_decls[ ]*/
+  var_decls[i] =
+  build_decl (VAR_DECL, get_identifier(name), integer_type_node);
+/* Explained before*/
+  DECL_CONTEXT (var_decls[i]) = fndecl;
+/*We are just making the initial value of the variable declared 
+as zero. This is a matter of taste. */
+  DECL_INITIAL (var_decls[i]) = integer_zero_node;
+/*push to the current scope. Explained before*/
+  pushdecl (var_decls[i]);
+/* Emit the rtl for the variable declaration*/
+  expand_decl (var_decls[i]);
+/* Emit the rtl for the initialization. ie. Initialized to zero*/
+  expand_decl_init (var_decls[i]);
+}
+</PRE>
+<P>From now onwards I am not going to give the bison file fully.
+I'll be providing only the segments modified by us in each stage.
+Please do refer the bison file provided above in case of any
+doubt.
+<P>The bison segment for variable declaration is given by
+<PRE>
+declarations:    /*empty */     
+              |  declarations VAR NAME          { add_var($3); };
+</PRE>
+<P>Combining the variable declaration with the above syntax
+for functions and expressions, we have another example of a "demo"
+program.
+<H3>Example demo program 2</H3>
+
+<P>
+<PRE>
+foo()
+  begin
+        var a
+        var b
+        1+2*3-1
+  end
+</PRE>
+<H2><A NAME="ss7.5">7.5 Assignments </A>
+</H2>
+
+<P>A number of variables and expressions one below the 
+other doesn't help us in any way to do anything useful. For that
+we need assignments. Let's study the tree structure building and
+rtl conversion for assignments. 
+<P>The general format of an assignment statement is "a = 10".
+Operations required for it is to store the value, 10 in 'a'. We 
+had created the tree structure for 'a' and stored it in
+var_decls[] at the time of variable declaration. So our duty
+is to retrieve the tree structure of 'a' and assign the value, say 10
+in it. 
+<P>We seek the help of a function called "get_var" to retrieve
+the tree structure of the variable. The code is given below
+<PRE>
+
+tree get_var(char *name)
+{
+  int i;
+/*Search for the name "name" in the variable name table, var_name[]
+  for(i=0;var_name[i];i++)
+/*If found, return the corresponding tree structure of "name"
+     if( !strcmp (var_name[i], name))
+        return var_decls[i];
+}
+</PRE>
+<P>The above function gets us the tree structure of the variable.
+The only task left is to build the tree structure for assignment and
+the rtl conversion. It is achieved by the following function.
+<PRE>
+
+make_assign (tree vartree, tree valtree)
+{
+  tree assign;
+
+/* Create the tree. Explained before.
+  assign = 
+     build (MODIFY_EXPR, integer_type_node, vartree, valtree);
+
+/*Non zero values means that there is a side effect and re evaluation
+  of the whole expression could produce a different value. The 
+  optimization phase takes this into consideration.
+*/      
+  TREE_SIDE_EFFECTS (assign) = 1;
+
+/* Indicates that the tree node is used */
+  TREE_USED (assign) = 1;
+
+/* Emit the rtl for the assign tree */
+  expand_expr_stmt (assign);
+}
+</PRE>
+        
+<P>We have also studied the tree creation and rtl conversion
+for assignment construct. Now it is time to give the semantic
+action in the bison file for assignment.
+<PRE>
+
+assignstmt:     NAME = exp      { make_assign ( get_var($1), $3); };
+</PRE>
+<P>
+<H2><A NAME="ss7.6">7.6 Expressions revisited </A>
+</H2>
+
+<P>The expressions that we are using now is capable of 
+working with numbers only. ie. We can give expressions as "1+2", 
+"1+2*3" etc. But it is not possible for us to work with variable
+names as "a+1", "b+a-5" etc.
+<P>Let us modify our expressions to include variable names 
+also. The task of inclusion is simple. We have to get the tree
+structure of the variable name. We have a function "get_var"  
+in our hand which is capable of doing it. 
+<P>So let us look at the semantic action for this
+<PRE>
+
+exp:    NAME            { $$ = get_var ($1); };
+</PRE>
+<H3>Example demo program 3</H3>
+
+<P>
+<PRE>
+hello()
+  begin
+        var i
+        var j
+        var k
+        i = 10
+        j = 20
+        k = i + j
+  end
+</PRE>
+<P>
+<H2><A NAME="ss7.7">7.7 Return </A>
+</H2>
+
+<P>The above program would be more beautiful if it is possible
+for us to return the sum calculated. So our next step will be the
+inclusion of return construct.
+<P>I have already mentioned about the tree creation for 'return'
+when I explained the 'function'. But at that time we returned only
+zero. Now let us return an expression in the place of zero.
+<PRE>
+ret_stmt (tree expr)
+{
+  tree ret;
+/* build the tree node for return. The arguments are explained 
+    before. 'fndecl' is the global variable that we have defined 
+    before, for our function.
+*/
+  ret = 
+      build (MODIFY_EXPR, integer_type_node, DECL_RESULT(fndecl), 
+              expr);
+
+/*emits the rtl */
+  expand_return (ret);
+}
+</PRE>
+<P>
+<P> Let's look the bison segment straightly
+<PRE>
+
+returnstmt:     RETURN exp      { ret_stmt ($2) ; };
+</PRE>
+<P>
+<H3>Example demo program 4</H3>
+
+<P>
+<PRE>
+hello()
+  begin
+        var i
+        var j
+        var k
+        i = 10
+        j = 20
+        k = i + j
+        return k
+  end
+</PRE>
+<P>
+<H2><A NAME="ss7.8">7.8 Conditional statement </A>
+</H2>
+
+<P>In the case of 'if' construct our task is different from the 
+above. We have to clearly give information to GCC regarding where
+the if construct begins, where the 'else' part begins and where
+the if construct ends.
+<P>GCC supplies us rtl statements, which are capable of 
+performing the above tasks. The rtl statements are given below
+<PRE>
+ 
+
+expand_start_cond (tree cond, int exitflag)
+</PRE>
+<P>It generates an rtl for the start of an if-then. 'cond' is the 
+expression whose truth is to be checked. Consider exitflag to be
+zero.
+<PRE>
+
+expand_start_else ()
+expand_end_cond ()
+</PRE>
+<P>These causes the rtl code generation for start of 'else' and
+for the end of 'if construct' respectively.
+<P>Now we can use the above functions in our bison file.
+<P>
+<PRE>
+
+ifstmt  :       ifpart thenpart elsepart        { expand_end_cond (); };
+ifpart  :       IF exp                  { expand_start_cond ($2, 0); };
+thenpart:       THEN compstmts          { expand_start_else (); };
+elsepart:       ELSE compstmts ENDIF            ;
+</PRE>
+<P>
+<H3>Example demo program 5</H3>
+
+<P>
+<PRE>
+example()
+  begin
+        var x
+        var y
+        x = 100
+        if (x) then     
+                y = 1
+        else
+                y = 0
+        endif
+        return y
+  end
+</PRE>
+<P>
+<H2><A NAME="ss7.9">7.9 Loops </A>
+</H2>
+
+<P>Loops are same as conditional statements. We have to provide
+the start of the loop, end of the loop and the expression to be 
+checked for truthness.
+<P>The rtl statements meant for the above operations are
+<PRE>
+
+struct nesting *expand_start_loop (int exit_flag)
+expand_exit_loop_if_false (struct nesting *whichloop, tree cond)
+expand_end_loop()
+</PRE>
+<P>The first one denotes the rtl for start of a loop. 'exit_flag'
+is zero.  The return type is struct nesting *, which is used in the
+second statement. The second statement is used for generating a conditional
+jump to exit the current loop, if 'cond' evaluates to zero. The third
+statement is the rtl for end of a loop. It generates a jump back to
+the top of the loop. The ideas will be clearer with the bison file.
+<P>
+<PRE>
+
+whilestmt:      head loopbody   { expand_end_loop(); };
+
+head :          WHILE exp       { struct nesting *loop;
+                                  loop = expand_start_loop (0);
+                                  expand_exit_loop_if_false (loop, $2);
+                                };
+
+loopbody:       compstmts ENDWHILE      ;
+</PRE>
+<P>
+<H3>Example demo program 6</H3>
+
+<P>
+<PRE>
+test()
+  begin
+        var i
+        i = 100
+        while (i)
+                i = i-1
+        endwhile
+        return i
+  end
+</PRE>
+        
+<P>
+<HR>
+<A HREF="GCC-Frontend-HOWTO-8.html">Next</A>
+<A HREF="GCC-Frontend-HOWTO-6.html">Previous</A>
+<A HREF="GCC-Frontend-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

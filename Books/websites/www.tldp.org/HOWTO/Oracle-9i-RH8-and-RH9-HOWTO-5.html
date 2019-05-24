@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Oracle 9i under RedHat Linux 8.x and 9.x - Simple Installation HOWTO: Post-installation</TITLE>
+ <LINK HREF="Oracle-9i-RH8-and-RH9-HOWTO-6.html" REL=next>
+ <LINK HREF="Oracle-9i-RH8-and-RH9-HOWTO-4.html" REL=previous>
+ <LINK HREF="Oracle-9i-RH8-and-RH9-HOWTO.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Oracle-9i-RH8-and-RH9-HOWTO-6.html">Next</A>
+<A HREF="Oracle-9i-RH8-and-RH9-HOWTO-4.html">Previous</A>
+<A HREF="Oracle-9i-RH8-and-RH9-HOWTO.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="s5">5. Post-installation</A></H2>
+
+<P>The Oracle Installation Guide describes a very long list of procedures
+to be done after the installation process. Some of them are necessary,
+some of them probably in your instance you will never need, but most
+importantly this document will not repeat them.
+<P>Please refer to the Installation Guide for this procedures. Here I
+will describe steps that are very helpful for the minimal installation
+that I used, and seem enough for the basic database operations.
+<H2><A NAME="ss5.1">5.1 Editing the oratab file</A>
+</H2>
+
+<P>There is one step in particular that is important, so that you may
+start and shutdown the database from the command prompt any time, or to
+allow the database to be autostarted during boot. Go to the /etc directory 
+and edit the file <B>oratab</B>. In the line:
+<P>
+<BLOCKQUOTE><CODE>
+<B>ORTD:/u01/app/oracle/product/9.2.0.1.0:N</B>
+</CODE></BLOCKQUOTE>
+<P>set the last value to Y and it should read:
+<P>
+<BLOCKQUOTE><CODE>
+<B>ORTD:/u01/app/oracle/product/9.2.0.1.0:Y</B>
+</CODE></BLOCKQUOTE>
+<P>Now save the file and go back to your Oracle home directory.
+<H2><A NAME="ss5.2">5.2 Script for automatic startup on boot</A>
+</H2>
+
+<P>It is generally a good idea to automate the database startup at boot
+time on your database server. In this case you will need a script,
+which can be included in the run-level sets. Here is an example only.
+Please, tune it to your own machine and run-levels!
+<P>
+<HR>
+<PRE>
+
+#!/bin/bash
+#
+# Run-level Startup script for the Oracle Instance and Listener
+#
+# chkconfig: 345 91 19
+# description: Startup/Shutdown Oracle listener and instance
+
+ORA_HOME="/u01/app/oracle/product/9.2.0.1.0"
+ORA_OWNR="oracle"
+
+# if the executables do not exist -- display error
+
+if [ ! -f $ORA_HOME/bin/dbstart -o ! -d $ORA_HOME ]
+then
+        echo "Oracle startup: cannot start"
+        exit 1
+fi
+
+# depending on parameter -- startup, shutdown, restart 
+# of the instance and listener or usage display 
+
+case "$1" in
+    start)
+        # Oracle listener and instance startup
+        echo -n "Starting Oracle: "
+        su - $ORA_OWNR -c "$ORA_HOME/bin/lsnrctl start"
+        su - $ORA_OWNR -c $ORA_HOME/bin/dbstart
+        touch /var/lock/subsys/oracle
+        echo "OK"
+        ;;
+    stop)
+        # Oracle listener and instance shutdown
+        echo -n "Shutdown Oracle: "
+        su - $ORA_OWNR -c "$ORA_HOME/bin/lsnrctl stop"
+        su - $ORA_OWNR -c $ORA_HOME/bin/dbshut
+        rm -f /var/lock/subsys/oracle
+        echo "OK"
+        ;;
+    reload|restart)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: $0 start|stop|restart|reload"
+        exit 1
+esac
+exit 0
+</PRE>
+<HR>
+<P>You can simply copy and paste this file into your system and change it
+according to your settings.
+<P>Once you copy and edit the file, move it to the /etc/rc.d/init.d 
+directory and change it's ownership and the attributes to be the same
+as the other files in the directory.
+<P>To do that and the following operations, you will need to be logged as
+root user.
+<P>The fifth line of this code reads:
+<P>
+<BLOCKQUOTE><CODE>
+<B># chkconfig: 345 91 19</B>
+</CODE></BLOCKQUOTE>
+<P>It is used by the chkconfig command when setting the scripts in the
+run-levels. The value 345 lists the run-levels in which we allow
+Oracle to run, so if you want to be able to run an Oracle instances only
+in levels 3 and 5, then change this value to 35. The next value (91)
+describes the order number in the startup sequence. This means that if
+there are 100 startup processes, the Oracle startup will be the 91st
+to run. The next number is the shutdown number, meaning that when the
+system is shutdown and there are for example 100 processes to be
+shutdown, the Oracle process will be 19 in order. These numbers are
+used to set the relative position of the Oracle startup and shutdown
+processes. They are set here as an example. You can change them, but
+keep in mind that Oracle instancse can not be run without some
+processes in the system running beforehand.
+<P>Now execute the following command:
+<P>
+<BLOCKQUOTE><CODE>
+<B>chkconfig -add oracle</B>
+</CODE></BLOCKQUOTE>
+<P>This will add the corresponding links in the run-level directories as
+listed in the beginning of the script.
+<P>To test the newly created automation, you have to reboot your system,
+but remember that before this automation runs, the kernel
+parameters should be set.  In fact you may include the kernel tune
+commands in your <B>start)</B> section of the above script.
+<H2><A NAME="ss5.3">5.3 Testing your installation with SQL*Plus</A>
+</H2>
+
+<P>If you have installed a typical database, there should be a user
+created called <B>scott</B>.  The password is <B>tiger</B>. 
+Just execute the following:
+<P>
+<BLOCKQUOTE><CODE>
+<B>sqlplus scott/tiger</B>
+</CODE></BLOCKQUOTE>
+<P>which should run the SQL*Plus interpreter and log in as user scott.
+You should see the screen like the following:
+<P>
+<HR>
+<PRE>
+
+SQL*Plus: Release 9.2.0.1.0 - Production on Fri Feb 21 10:55:45 2003
+
+Copyright (c) 1982, 2002, Oracle Corporation.  All rights reserved.
+
+Connected to:
+Oracle9i Release 9.2.0.1.0 - Production
+JServer Release 9.2.0.1.0 - Production
+
+SQL>quit
+Disconnected from Oracle9i Release 9.2.0.1.0 - Production
+JServer Release 9.2.0.1.0 - Production
+</PRE>
+<HR>
+<P>Before exiting you can do some SQL on your own to just see the tables
+in this database schema or whatever you have in mind.
+<P>>From this point on it is a matter of your own creativity and purpose.
+<HR>
+<A HREF="Oracle-9i-RH8-and-RH9-HOWTO-6.html">Next</A>
+<A HREF="Oracle-9i-RH8-and-RH9-HOWTO-4.html">Previous</A>
+<A HREF="Oracle-9i-RH8-and-RH9-HOWTO.html#toc5">Contents</A>
+</BODY>
+</HTML>

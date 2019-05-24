@@ -1,0 +1,822 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Using TCP keepalive under Linux</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="TCP Keepalive HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="TCP keepalive overview"
+HREF="overview.html"><LINK
+REL="NEXT"
+TITLE="Programming applications"
+HREF="programming.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>TCP Keepalive HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="overview.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="programming.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="usingkeepalive"
+></A
+>3. Using TCP keepalive under Linux</H1
+><P
+>&#13;    Linux has built-in support for keepalive. You need to enable TCP/IP
+    networking in order to use it. You also need <TT
+CLASS="literal"
+>procfs</TT
+>
+    support and <TT
+CLASS="literal"
+>sysctl</TT
+> support to be able to configure the
+    kernel parameters at runtime.
+  </P
+><P
+>&#13;    The procedures involving keepalive use three user-driven variables:
+
+    <P
+></P
+><DIV
+CLASS="variablelist"
+><DL
+><DT
+><TT
+CLASS="varname"
+>tcp_keepalive_time</TT
+></DT
+><DD
+><P
+>&#13;            the interval between the last data packet sent (simple ACKs are not
+            considered data) and the first keepalive probe; after the connection
+            is marked to need keepalive, this counter is not used any further
+          </P
+></DD
+><DT
+><TT
+CLASS="varname"
+>tcp_keepalive_intvl</TT
+></DT
+><DD
+><P
+>&#13;            the interval between subsequential keepalive probes, regardless of
+            what the connection has exchanged in the meantime
+          </P
+></DD
+><DT
+><TT
+CLASS="varname"
+>tcp_keepalive_probes</TT
+></DT
+><DD
+><P
+>&#13;            the number of unacknowledged probes to send before considering the
+            connection dead and notifying the application layer
+          </P
+></DD
+></DL
+></DIV
+>
+  </P
+><P
+>&#13;    Remember that keepalive support, even if configured in the kernel, is not
+    the default behavior in Linux. Programs must request keepalive control for
+    their sockets using the <TT
+CLASS="literal"
+>setsockopt</TT
+> interface. There are
+    relatively few programs implementing keepalive, but you can easily add
+    keepalive support for most of them following the instructions explained
+    later in this document.
+  </P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="configuringkernel"
+></A
+>3.1. Configuring the kernel</H2
+><P
+>&#13;      There are two ways to configure keepalive parameters inside the kernel via
+      userspace commands:
+
+      <P
+></P
+><UL
+><LI
+><P
+><TT
+CLASS="literal"
+>procfs</TT
+> interface</P
+></LI
+><LI
+><P
+><TT
+CLASS="literal"
+>sysctl</TT
+> interface</P
+></LI
+></UL
+>
+    </P
+><P
+>&#13;      We mainly discuss how this is accomplished on the procfs interface because
+      it's the most used, recommended and the easiest to understand. The sysctl
+      interface, particularly regarding the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+>&#13;      <TT
+CLASS="function"
+>sysctl</TT
+></SPAN
+>(2)</SPAN
+> syscall and not the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>&#13;      sysctl</B
+></SPAN
+>(8)</SPAN
+>
+      tool, is only here for the purpose of background knowledge.
+    </P
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="procfsinterface"
+></A
+>3.1.1. The <TT
+CLASS="literal"
+>procfs</TT
+> interface</H3
+><P
+>&#13;        This interface requires both <TT
+CLASS="literal"
+>sysctl</TT
+> and <TT
+CLASS="literal"
+>&#13;        procfs</TT
+> to be built into the kernel, and <TT
+CLASS="literal"
+>procfs
+        </TT
+> mounted somewhere in the filesystem (usually on <TT
+CLASS="filename"
+>&#13;        /proc</TT
+>, as in the examples below). You can read the values for
+        the actual parameters by <SPAN
+CLASS="QUOTE"
+>"catting"</SPAN
+> files in <TT
+CLASS="filename"
+>&#13;        /proc/sys/net/ipv4/</TT
+> directory:
+
+        <DIV
+CLASS="informalexample"
+><A
+NAME="AEN133"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>cat /proc/sys/net/ipv4/tcp_keepalive_time</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>7200</TT
+>
+
+  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>cat /proc/sys/net/ipv4/tcp_keepalive_intvl</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>75</TT
+>
+
+  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>cat /proc/sys/net/ipv4/tcp_keepalive_probes</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>9</TT
+>
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+      </P
+><P
+>&#13;        The first two parameters are expressed in seconds, and the last is the
+        pure number. This means that the keepalive routines wait for two hours
+        (7200 secs) before sending the first keepalive probe, and then resend it
+        every 75 seconds. If no ACK response is received for nine consecutive
+        times, the connection is marked as broken.
+      </P
+><P
+>&#13;        Modifying this value is straightforward: you need to write new values
+        into the files. Suppose you decide to configure the host so that
+        keepalive starts after ten minutes of channel inactivity, and then send
+        probes in intervals of one minute. Because of the high instability of
+        our network trunk and the low value of the interval, suppose you also
+        want to increase the number of probes to 20.
+      </P
+><P
+>&#13;        Here's how we would change the settings:
+
+        <DIV
+CLASS="informalexample"
+><A
+NAME="AEN147"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>echo 600 &#62; /proc/sys/net/ipv4/tcp_keepalive_time</B
+></TT
+>
+
+  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>echo 60 &#62; /proc/sys/net/ipv4/tcp_keepalive_intvl</B
+></TT
+>
+
+  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>echo 20 &#62; /proc/sys/net/ipv4/tcp_keepalive_probes</B
+></TT
+>
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+      </P
+><P
+>&#13;        To be sure that all succeeds, recheck the files and confirm these new
+        values are showing in place of the old ones.
+      </P
+><P
+>&#13;        Remember that <TT
+CLASS="literal"
+>procfs</TT
+> handles special files, and you
+        cannot perform any sort of operation on them because they're just an interface within the kernel space, not real
+        files, so try your
+        scripts before using them, and try to use simple access methods as in
+        the examples shown earlier.
+      </P
+><P
+>&#13;        You can access the interface through the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+>&#13;        <B
+CLASS="command"
+>sysctl</B
+></SPAN
+>(8)</SPAN
+> tool, specifying what you want to read or write.
+
+        <DIV
+CLASS="informalexample"
+><A
+NAME="AEN163"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>sysctl \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>net.ipv4.tcp_keepalive_time \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>net.ipv4.tcp_keepalive_intvl \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>net.ipv4.tcp_keepalive_probes</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>net.ipv4.tcp_keepalive_time = 7200
+  net.ipv4.tcp_keepalive_intvl = 75
+  net.ipv4.tcp_keepalive_probes = 9</TT
+>
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+      </P
+><P
+>&#13;        Note that <TT
+CLASS="literal"
+>sysctl</TT
+> names are very close to <TT
+CLASS="literal"
+>&#13;        procfs</TT
+> paths. Write is performed using the <TT
+CLASS="option"
+>-w</TT
+>
+        switch of <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>sysctl</B
+>
+        </SPAN
+>(8)</SPAN
+>:
+
+        <DIV
+CLASS="informalexample"
+><A
+NAME="AEN182"
+></A
+><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;  <TT
+CLASS="prompt"
+># </TT
+><TT
+CLASS="userinput"
+><B
+>sysctl -w \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>net.ipv4.tcp_keepalive_time=600 \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>net.ipv4.tcp_keepalive_intvl=60 \</B
+></TT
+>
+  <TT
+CLASS="prompt"
+>&#62; </TT
+><TT
+CLASS="userinput"
+><B
+>net.ipv4.tcp_keepalive_probes=20</B
+></TT
+>
+  <TT
+CLASS="computeroutput"
+>net.ipv4.tcp_keepalive_time = 600
+  net.ipv4.tcp_keepalive_intvl = 60
+  net.ipv4.tcp_keepalive_probes = 20</TT
+>
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+>
+      </P
+><P
+>&#13;        Note that <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>sysctl</B
+>
+        </SPAN
+>(8)</SPAN
+> doesn't use
+        <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="function"
+>sysctl</TT
+></SPAN
+>(2)</SPAN
+> syscall, but reads and writes
+        directly in the <TT
+CLASS="literal"
+>procfs</TT
+> subtree, so you will need
+        <TT
+CLASS="literal"
+>procfs</TT
+> enabled in the kernel and mounted in the
+        filesystem, just as you would if you directly accessed the files within
+        the <TT
+CLASS="literal"
+>procfs</TT
+> interface. <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+>&#13;        <B
+CLASS="command"
+>Sysctl</B
+></SPAN
+>(8)</SPAN
+> is just a different way to do the same thing.
+      </P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="sysctlinterface"
+></A
+>3.1.2. The <TT
+CLASS="literal"
+>sysctl</TT
+> interface</H3
+><P
+>&#13;        There is another way to access kernel variables: <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="function"
+>sysctl</TT
+></SPAN
+>(2
+        )</SPAN
+> syscall. It can be useful when you don't
+        have <TT
+CLASS="literal"
+>procfs</TT
+> available because the communication with
+        the kernel is performed directly via syscall and not through the
+        <TT
+CLASS="literal"
+>procfs</TT
+> subtree. There is currently no program that
+        wraps this syscall (remember that <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>&#13;        sysctl</B
+></SPAN
+>(8)</SPAN
+>
+        doesn't use it).
+      </P
+><P
+>&#13;        For more details about using <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="function"
+>&#13;        sysctl</TT
+></SPAN
+>(2)</SPAN
+>
+        refer to the manpage.
+      </P
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="makepersistchanges"
+></A
+>3.2. Making changes persistent to reboot</H2
+><P
+>&#13;      There are several ways to reconfigure your system every time it boots up.
+      First, remember that every Linux distribution has its own set of init
+      scripts called by <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>init</B
+>
+      </SPAN
+>(8)</SPAN
+>. The most common
+      configurations include the <TT
+CLASS="filename"
+>/etc/rc.d/</TT
+> directory, or
+      the alternative, <TT
+CLASS="filename"
+>/etc/init.d/</TT
+>. In any case, you can
+      set the parameters in any of the startup scripts, because keepalive
+      rereads the values every time its procedures need them. So if you change
+      the value of <TT
+CLASS="varname"
+>tcp_keepalive_intvl</TT
+> when the connection is
+      still up, the kernel will use the new value going forward.
+    </P
+><P
+>&#13;      There are three spots where the initialization commands should logically
+      be placed: the first is where your network is configured, the second is
+      the <TT
+CLASS="filename"
+>rc.local</TT
+> script, usually included in all
+      distributions, which is known as the place where user configuration setups
+      are done. The third place may already exist in your system. Referring back
+      to the <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><B
+CLASS="command"
+>sysctl</B
+>
+      </SPAN
+>(8)</SPAN
+> tool, you can see
+      that the <TT
+CLASS="option"
+>-p</TT
+> switch loads settings from the <TT
+CLASS="filename"
+>&#13;      /etc/sysctl.conf</TT
+> configuration file. In many cases your init
+      script already performs the <B
+CLASS="command"
+>sysctl</B
+> <TT
+CLASS="option"
+>-p</TT
+>
+      (you can <SPAN
+CLASS="QUOTE"
+>"grep"</SPAN
+> it in the configuration directory for
+      confirmation), and so you just have to add the lines in <TT
+CLASS="filename"
+>&#13;      /etc/sysctl.conf</TT
+> to make them load at every boot. For more
+      information about the syntax of <SPAN
+CLASS="citerefentry"
+><SPAN
+CLASS="refentrytitle"
+><TT
+CLASS="filename"
+>&#13;      sysctl.conf</TT
+></SPAN
+>(5)</SPAN
+>, refer to the manpage.
+    </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="overview.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="programming.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>TCP keepalive overview</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Programming applications</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

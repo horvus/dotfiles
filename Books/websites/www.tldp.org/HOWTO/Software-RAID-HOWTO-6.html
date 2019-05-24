@@ -1,0 +1,286 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>The Software-RAID HOWTO: Detecting, querying and testing</TITLE>
+ <LINK HREF="Software-RAID-HOWTO-7.html" REL=next>
+ <LINK HREF="Software-RAID-HOWTO-5.html" REL=previous>
+ <LINK HREF="Software-RAID-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Software-RAID-HOWTO-7.html">Next</A>
+<A HREF="Software-RAID-HOWTO-5.html">Previous</A>
+<A HREF="Software-RAID-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6.</A> <A HREF="Software-RAID-HOWTO.html#toc6">Detecting, querying and testing</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+<P>This section is about life with a software RAID system, that's 
+communicating with the arrays and tinkertoying them.</P>
+<P>Note that when it comes to md devices manipulation, you should always
+remember that you are working with entire filesystems. So, although
+there could be some redundancy to keep your files alive, you must
+proceed with caution.</P>
+
+
+<H2><A NAME="ss6.1">6.1</A> <A HREF="Software-RAID-HOWTO.html#toc6.1">Detecting a drive failure</A>
+</H2>
+
+<P>No mistery here. It's enough with a quick look to the standard log and
+stat files to notice a drive failure.</P>
+<P>It's always a must for <CODE>/var/log/messages</CODE> to fill screens with
+tons of error messages, no matter what happened. But, when it's about
+a disk crash, huge lots of kernel errors are reported. 
+Some nasty examples, for the masochists,
+<PRE>
+   kernel: scsi0 channel 0 : resetting for second half of retries. 
+   kernel: SCSI bus is being reset for host 0 channel 0. 
+   kernel: scsi0: Sending Bus Device Reset CCB #2666 to Target 0 
+   kernel: scsi0: Bus Device Reset CCB #2666 to Target 0 Completed 
+   kernel: scsi : aborting command due to timeout : pid 2649, scsi0, channel 0, id 0, lun 0 Write (6) 18 33 11 24 00 
+   kernel: scsi0: Aborting CCB #2669 to Target 0 
+   kernel: SCSI host 0 channel 0 reset (pid 2644) timed out - trying harder 
+   kernel: SCSI bus is being reset for host 0 channel 0. 
+   kernel: scsi0: CCB #2669 to Target 0 Aborted 
+   kernel: scsi0: Resetting BusLogic BT-958 due to Target 0 
+   kernel: scsi0: *** BusLogic BT-958 Initialized Successfully *** 
+</PRE>
+
+Most often, disk failures look like these,
+<PRE>
+   kernel: sidisk I/O error: dev 08:01, sector 1590410 
+   kernel: SCSI disk error : host 0 channel 0 id 0 lun 0 return code = 28000002 
+</PRE>
+
+or these
+<PRE>
+   kernel: hde: read_intr: error=0x10 { SectorIdNotFound }, CHS=31563/14/35, sector=0
+   kernel: hde: read_intr: status=0x59 { DriveReady SeekComplete DataRequest Error }
+</PRE>
+
+And, as expected, the classic <CODE>/proc/mdstat</CODE> look will also reveal problems,
+<PRE>
+   Personalities : [linear] [raid0] [raid1] [translucent]
+   read_ahead not set
+   md7 : active raid1 sdc9[0] sdd5[8] 32000 blocks [2/1] [U_]
+</PRE>
+
+Later on this section we will learn how to monitor RAID with mdadm so we 
+can receive alert reports about disk failures. Now it's time to learn more 
+about <CODE>/proc/mdstat</CODE> interpretation.</P>
+
+
+<H2><A NAME="ss6.2">6.2</A> <A HREF="Software-RAID-HOWTO.html#toc6.2">Querying the arrays status</A>
+</H2>
+
+<P>You can always take a look at <CODE>/proc/mdstat</CODE>. It won't hurt. Let's learn
+how to read the file. For example,
+<PRE>
+              Personalities : [raid1]
+              read_ahead 1024 sectors
+              md5 : active raid1 sdb5[1] sda5[0]
+                    4200896 blocks [2/2] [UU]
+
+              md6 : active raid1 sdb6[1] sda6[0]
+                    2104384 blocks [2/2] [UU]
+
+              md7 : active raid1 sdb7[1] sda7[0]
+                    2104384 blocks [2/2] [UU]
+
+              md2 : active raid1 sdc7[1] sdd8[2] sde5[0]
+                    1052160 blocks [2/2] [UU]
+
+              unused devices: none
+</PRE>
+
+To identify the spare devices, first look for the [#/#] value on a line.
+The first number is the number of a complete raid device as defined.
+Lets say it is "n".
+The raid role numbers [#] following each device indicate its
+role, or function, within the raid set. Any device with "n" or
+higher are spare disks. 0,1,..,n-1 are for the working array.</P>
+<P>Also, if you have a failure, the failed device will be marked with (F)
+after the [#]. The spare that replaces this device will be the device
+with the lowest role number n or higher that is not marked (F). Once the
+resync operation is complete, the device's role numbers are swapped.</P>
+<P>The order in which the devices appear in the <CODE>/proc/mdstat</CODE> output
+means nothing.</P>
+<P>Finally, remember that you can always use raidtools or mdadm to 
+check the arrays out.
+<PRE>
+        mdadm --detail /dev/mdx
+        lsraid -a /dev/mdx
+</PRE>
+
+These commands will show spare and failed disks loud and clear.</P>
+
+
+<H2><A NAME="ss6.3">6.3</A> <A HREF="Software-RAID-HOWTO.html#toc6.3">Simulating a drive failure</A>
+</H2>
+
+<P>If you plan to use RAID to get fault-tolerance, you may also want to
+test your setup, to see if it really works.  Now, how does one
+simulate a disk failure?</P>
+<P>The short story is, that you can't, except perhaps for putting a fire
+axe thru the drive you want to "simulate" the fault on.  You can never
+know what will happen if a drive dies. It may electrically take the
+bus it is attached to with it, rendering all drives on that bus
+inaccessible. I have never heard of that happening though, but it is
+entirely possible. The drive may also just report a read/write fault
+to the SCSI/IDE layer, which in turn makes the RAID layer handle this
+situation gracefully.  This is fortunately the way things often go.</P>
+<P>Remember, that you must be running RAID-{1,4,5} for your array to be
+able to survive a disk failure.  Linear- or RAID-0 will fail completely
+when a device is missing.</P>
+
+
+<H3>Force-fail by hardware</H3>
+
+<P>If you want to simulate a drive failure, you can just plug out the drive.
+You should do this with the power off. If you are interested in testing
+whether your data can survive with a disk less than the usual number,
+there is no point in being a hot-plug cowboy here. Take the system
+down, unplug the disk, and boot it up again.</P>
+<P>Look in the syslog, and look at <CODE>/proc/mdstat</CODE> to see how the RAID is
+doing. Did it work?</P>
+<P>Faulty disks should appear marked with an <CODE>(F)</CODE> if you look at 
+<CODE>/proc/mdstat</CODE>. 
+Also, users of mdadm should see the device state as <CODE>faulty</CODE>.</P>
+<P>When you've re-connected the disk again (with the power off, of
+course, remember), you can add the "new" device to the RAID again,
+with the raidhotadd command.</P>
+
+
+<H3>Force-fail by software</H3>
+
+<P>Newer versions of raidtools come with a <CODE>raidsetfaulty</CODE> command.
+By using <CODE>raidsetfaulty</CODE> you can just simulate a drive failure without
+unplugging things off.</P>
+<P>Just running the command
+<PRE>
+    raidsetfaulty /dev/md1 /dev/sdc2
+</PRE>
+
+should be enough to fail the disk /dev/sdc2 of the array /dev/md1.
+If you are using mdadm, just type
+<PRE>
+    mdadm --manage --set-faulty /dev/md1 /dev/sdc2
+</PRE>
+
+Now things move up and fun appears. First, you should see something
+like the first line of this on your system's log. Something like the
+second line will appear if you have spare disks configured.
+<PRE>
+    kernel: raid1: Disk failure on sdc2, disabling device. 
+    kernel: md1: resyncing spare disk sdb7 to replace failed disk
+</PRE>
+
+Checking <CODE>/proc/mdstat</CODE> out will show the degraded array. If there was a
+spare disk available, reconstruction should have started.</P>
+<P>Another fresh utility in newest raidtools is <CODE>lsraid</CODE>. Try with
+<PRE>
+    lsraid -a /dev/md1
+</PRE>
+
+users of mdadm can run the command
+<PRE>
+    mdadm --detail /dev/md1
+</PRE>
+
+and enjoy the view.</P>
+<P>Now you've seen how it goes when a device fails. Let's fix things up.</P>
+<P>First, we will remove the failed disk from the array. Run the command
+<PRE>
+    raidhotremove /dev/md1 /dev/sdc2
+</PRE>
+
+users of mdadm can run the command
+<PRE>
+    mdadm /dev/md1 -r /dev/sdc2
+</PRE>
+
+Note that <CODE>raidhotremove</CODE> cannot pull a disk out of a running array.
+For obvious reasons, only crashed disks are to be hotremoved from an 
+array (running raidstop and unmounting the device won't help).</P>
+<P>Now we have a /dev/md1 which has just lost a device. This could be
+a degraded RAID or perhaps a system in the middle of a reconstruction
+process. We wait until recovery ends before setting things back to normal.</P>
+<P>So the trip ends when we send /dev/sdc2 back home. 
+<PRE>
+    raidhotadd /dev/md1 /dev/sdc2
+</PRE>
+
+As usual, you can use mdadm instead of raidtools. This should be the
+command
+<PRE>
+    mdadm /dev/md1 -a /dev/sdc2
+</PRE>
+
+As the prodigal son returns to the array, we'll see it becoming an active
+member of /dev/md1 if necessary. If not, it will be marked as an spare disk.
+That's management made easy.</P>
+
+
+<H2><A NAME="ss6.4">6.4</A> <A HREF="Software-RAID-HOWTO.html#toc6.4">Simulating data corruption</A>
+</H2>
+
+<P>RAID (be it hardware- or software-), assumes that if a write to a disk
+doesn't return an error, then the write was successful. Therefore, if
+your disk corrupts data without returning an error, your data
+<EM>will</EM> become corrupted.  This is of course very unlikely to
+happen, but it is possible, and it would result in a corrupt
+filesystem.</P>
+<P>RAID cannot and is not supposed to guard against data corruption on
+the media. Therefore, it doesn't make any sense either, to purposely
+corrupt data (using <CODE>dd</CODE> for example) on a disk to see how the
+RAID system will handle that.  It is most likely (unless you corrupt
+the RAID superblock) that the RAID layer will never find out about the
+corruption, but your filesystem on the RAID device will be corrupted.</P>
+<P>This is the way things are supposed to work.  RAID is not a guarantee
+for data integrity, it just allows you to keep your data if a disk
+dies (that is, with RAID levels above or equal one, of course).</P>
+
+
+<H2><A NAME="ss6.5">6.5</A> <A HREF="Software-RAID-HOWTO.html#toc6.5">Monitoring RAID arrays</A>
+</H2>
+
+<P>You can run mdadm as a daemon by using the follow-monitor mode.
+If needed, that will make mdadm send email alerts to the system
+administrator when arrays encounter errors or fail. Also, follow mode
+can be used to trigger contingency commands if a disk fails, like
+giving a second chance to a failed disk by removing and reinserting it,
+so a non-fatal failure could be automatically solved.</P>
+<P>Let's see a basic example.
+Running
+<PRE>
+   mdadm --monitor --mail=root@localhost --delay=1800 /dev/md2
+</PRE>
+
+should release a mdadm daemon to monitor /dev/md2.
+The delay parameter means that polling will be done in intervals of
+1800 seconds. Finally, critical events and fatal errors should be
+e-mailed to the system manager. That's RAID monitoring made easy.</P>
+<P>Finally, the <CODE>--program</CODE> or <CODE>--alert</CODE> parameters
+specify the program to be run whenever an event is detected.</P>
+<P>Note that the mdadm daemon will never exit once it decides that
+there are arrays to monitor, so it should normally be run in the
+background. Remember that your are running a daemon, not a
+shell command.</P>
+<P>Using mdadm to monitor a RAID array is simple and effective. However,
+there are fundamental problems with that kind of monitoring - what
+happens, for example, if the mdadm daemon stops?  In order to overcome
+this problem, one should look towards "real" monitoring
+solutions. There is a number of free software, open source, and
+commercial solutions available which can be used for Software RAID
+monitoring on Linux. A search on 
+<A HREF="http://freshmeat.net">FreshMeat</A> should return a good number of matches.</P>
+
+
+<HR>
+<A HREF="Software-RAID-HOWTO-7.html">Next</A>
+<A HREF="Software-RAID-HOWTO-5.html">Previous</A>
+<A HREF="Software-RAID-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

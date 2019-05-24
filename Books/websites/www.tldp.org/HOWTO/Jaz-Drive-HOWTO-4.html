@@ -1,0 +1,188 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Jaz-drive HOWTO: Using a Jaz Disk</TITLE>
+ <LINK HREF="Jaz-Drive-HOWTO-5.html" REL=next>
+ <LINK HREF="Jaz-Drive-HOWTO-3.html" REL=previous>
+ <LINK HREF="Jaz-Drive-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Jaz-Drive-HOWTO-5.html">Next</A>
+<A HREF="Jaz-Drive-HOWTO-3.html">Previous</A>
+<A HREF="Jaz-Drive-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Using a Jaz Disk</A></H2>
+
+<H2><A NAME="ss4.1">4.1 DOS Formatted Disks</A>
+</H2>
+
+<P>Jaz disks come pre-formatted from Iomega with a single partition using
+the DOS FAT16 file system.  The single partition is usually the 4th disk
+partition (for Mac compatibility - the Mac requires data to be on the 4th
+partition, but the PC doesn't care which partition data is on).
+<P>Linux is perfectly happy reading and writing a FAT16 file system, so you
+can use the disk as is.  In order to use the disk, you need to mount it, so
+the first thing you need to do is create a mount point.  For this document,
+we'll mount all our DOS Jaz drives under <CODE>/dos_jaz</CODE>, so let's create
+that mount point (you'll need to be root for most of this stuff).  You'll
+only need to do this once:
+<P><CODE>mkdir /dos_jaz</CODE>
+<P>In a previous section, I mentioned you'd need to remember the Jaz drive's
+raw SCSI device name.  You need that now.  If your drive is
+<CODE>/dev/sda</CODE> then all these examples will work for you.  If not, you'll
+need to replace "sda" with the device ID of your Jaz drive.  Since you need
+to issue these commands as root, you'll want to be sure you have the correct
+names.
+<P>If you have a 2.0 kernel, or have added VFAT support, you can mount the
+Jaz disk this way, and have long filenames under FAT16:
+<P>
+<P><CODE>mount -t vfat /dev/sda4 /dos_jaz</CODE>
+<P>Note that although VFAT allows you to use long filenames, those filenames
+are still case <EM>in</EM>-sensitive, and although 'ls' lists permissions,
+you can't actually change permissions on any of the files.
+<P>If the "vfat" format is not recognized by the mount command, then you'll
+use this command to mount the Jaz disk:
+<P><CODE>mount -t msdos /dev/sda4 /dos_jaz</CODE>
+<P>Once you have issued either of the mount commands, files from the disk
+will appear under the <CODE>/dos_jaz</CODE> directory.  While the disk is
+mounted, you will not be able to eject it.
+<P>When you are done with the disk, you can unmount it with the command:
+<P><CODE>umount /dos_jaz</CODE>
+<P>Once unmounted, you can press the button on the front of the drive to
+eject the cartridge.
+<H2><A NAME="ss4.2">4.2 Repartitioned DOS Jaz Disks</A>
+</H2>
+
+<P>Since a Jaz disk is simply a disk, it can be repartitioned and reformatted
+like a fixed disk.  If this is done, you need to know which partition numbers
+were used during repartitioning to be able to mount the disk.
+<P>For instance, if the partition table was wiped, and a single new partition
+was created as the first partition, the two mount commands from the previous
+section would be:
+<P><CODE>mount -t vfat /dev/sda1 /dos_jaz</CODE>
+<P>and
+<P><CODE>mount -t msdos /dev/sda1 /dos_jaz</CODE>
+<H2><A NAME="ss4.3">4.3 Linux-Native Jaz Disks</A>
+</H2>
+
+<P>Linux-Native Jaz disks allow files to be stored with standard Unix
+permissions and case-sensitive filenames.  The only drawback to Linux-Native
+disks is that they can no longer be used on DOS/Windows machines.
+<P>A Jaz disk looks the same as a hard drive to Linux, so for those of you
+familiar with the Linux disk management tools, none of the following will be
+a surprise.
+<P>
+<P>If you want to erase a Jaz disk and make a Linux native file system on
+it, you use fdisk on the entire disk.  Please be very careful using fdisk,
+especially if you have a SCSI hard drive - we wouldn't want to have any
+"accidents".  :-)  In particular, make sure you are operating on the correct
+device before making changes.  In most cases, you'll use:
+<P><CODE>fdisk /dev/sda</CODE>
+<P>and delete the existing partitions (with the d command).  Then create a new
+partition with the n command, make it primary partition number 1 (using all
+the cylinders), use w to write the partition table to disk, and quit with
+q.
+<P>Once the partition has been created, format it with:
+<P><CODE>mke2fs /dev/sda1</CODE>
+<P>(The 1 is the number that you gave this partition in fdisk).  I prefer to
+create a separate mount point for Linux native Jaz disks, and you'll see why
+a little later when we talk about the <CODE>fstab</CODE>. So let's create that
+mount point now, and then mount the disk:
+<P><CODE>mkdir /jaz</CODE>
+<P><CODE>mount -t ext2 /dev/sda1 /jaz</CODE>
+<P>As usual, when the Jaz disk is mounted, it cannot be ejected.  When you're
+done using the Jaz disk, you unmount it with:
+<P><CODE>umount /jaz</CODE>
+<P>Once unmounted, you can press the button on the front of the drive to
+eject the cartridge.
+<H2><A NAME="ss4.4">4.4 Checking Linux-Native Jaz Disks</A>
+</H2>
+
+<P>Like your other disk drives, once a Linux Jaz disk has been mounted and
+unmounted a certain number of times, the system will mark the disk as
+"dirty".  When this happens, you'll get a message like:
+<P><CODE>Mounting unchecked filesystem, /dev/sda1.  Recommend running e2fsck.</CODE>
+<P>Once you see this message, it's a good idea to go ahead and check the disk.
+The disk must be <EM>unmounted</EM> in order to check it.  Unfortunately, you
+only get the "dirty" message when you mount it, so you can either check the
+disk when you're done using it, or unmount it, check it, then re-mount it.
+Use the following command to check the disk (assuming the partition to be
+checked is the first one):
+<P><CODE>e2fsck /dev/sda1</CODE>
+<H2><A NAME="ss4.5">4.5 Using the fstab to Make Things Easier</A>
+</H2>
+
+<P>Up to now, we've had to be root to mount and unmount the Jaz disks, and
+we've had to type quite a bit to mount the Jaz disks.  By adding a couple of
+entries to the file <CODE>/etc/fstab</CODE>, we can make using the Jaz drive
+<EM>much</EM> easier.
+<H3>DOS Format Disks</H3>
+
+<P>If you've got preformatted DOS disks, and you've created the
+<CODE>/dos_jaz</CODE> mount point, you can add this line to the file
+<CODE>/etc/fstab</CODE>:
+<P><CODE>/dev/sda4 /dos_jaz vfat defaults,user,nosuid,noauto 0 0</CODE>
+<P>With this line in the fstab, <EM>any user</EM> can mount and unmount a
+DOS-format Jaz cartridge with the following commands:
+<P><CODE>mount /dos_jaz</CODE>
+<P><CODE>umount /dos_jaz</CODE>
+<P>This is because we have told Linux what the Jaz device ID and media type
+are in the <CODE>fstab</CODE>, plus we have given the <CODE>user</CODE> option to
+allow any user to mount and unmount the disk.  Naturally, if your Jaz drive
+is other than <CODE>sda</CODE>, you'll need to change that, and this won't work
+for DOS cartridges that have been repartitioned without another entry in
+the fstab that uses a <EM>separate</EM> mount point (e.g. /dos_jaz2).
+<H3>Linux Format Disks</H3>
+
+<P>If you've got Linux formatted disks, and you've created the
+<CODE>/jaz</CODE> mount point, you can add this line to the <CODE>fstab</CODE>:
+<P><CODE>/dev/sda1 /jaz ext2 defaults,user,exec,nosuid,noauto 0 0</CODE>
+<P>With this line in the fstab, <EM>any user</EM> can mount and unmount a
+Linux-format Jaz cartridge with the following commands:
+<P><CODE>mount /jaz</CODE>
+<P><CODE>umount /jaz</CODE>
+<P>Once again, we have told Linux what the Jaz device ID and media type are
+in the <CODE>fstab</CODE>, plus we have given the <CODE>user</CODE> option to allow
+any user to mount and unmount the disk.  Some system administrators may not
+wish to have the <CODE>exec</CODE> option present, as there are some security
+risks with letting any user run an executable of unknown origin from the
+drive, but with the <CODE>nosuid</CODE> option present, these risks are
+minimal.
+<H3>Automatic Mount at Boot Time</H3>
+
+<P>Both of the <CODE>fstab</CODE> examples above have the option <CODE>noauto</CODE>
+in them to prevent the disk from being automatically mounted at boot time.
+In general, this is a good idea because if there is no disk in the drive
+when the computer boots, or the drive is powered off, it can cause varying
+amounts of trouble, depending on which SCSI driver you are using.
+<P>If you're <EM>sure</EM> you want to mount the jaz drive at boot time,
+simply remove the <CODE>noauto</CODE> option, and make sure the drive is on,
+and a cartridge is inserted before booting.  Note that you can only have
+one fstab entry for jaz drive that will auto-mount, or you may encounter
+the same problems as if there was no cartridge in the drive.
+<H2><A NAME="ss4.6">4.6 The Jaz "tools" Disk</A>
+</H2>
+
+<P>With some Jaz drives, the software to run the drive is supplied on a
+Jaz cartridge instead of on CD-ROM.  The "problem" with these disks is that
+software-controlled write protection is enabled on the disk, so that the user
+can't wipe the disk until after the tools are installed at least once.
+<P>There are several ways you can reclaim the Jaz tools disk:
+<UL>
+<LI>Install the tools on a DOS/Windows computer.</LI>
+<LI>Use a DOS/Windows computer with the Jaz tools already installed to
+remove the password protection.</LI>
+<LI>Use one of the Linux Utilities mentioned in a later section to remove
+the password protection.</LI>
+</UL>
+<P>If you have access to one of the password protection removal programs, all
+you need is the password that Iomega uses, and it is:
+<P><CODE>APlaceForYourStuff</CODE>
+<P>Note that capitalization is important.
+<HR>
+<A HREF="Jaz-Drive-HOWTO-5.html">Next</A>
+<A HREF="Jaz-Drive-HOWTO-3.html">Previous</A>
+<A HREF="Jaz-Drive-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

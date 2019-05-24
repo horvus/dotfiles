@@ -1,0 +1,329 @@
+<HTML
+><HEAD
+><TITLE
+>How is this document generated</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Linux ATA RAID HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="For more information"
+HREF="moreinfo.html"></HEAD
+><BODY
+CLASS="APPENDIX"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux ATA RAID HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="moreinfo.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="APPENDIX"
+><H1
+CLASS="APPENDIX"
+><A
+NAME="APP1">A. How is this document generated</H1
+><P
+>So you want to know how I generated this HOWTO? Or, did you download SGML version of this document, modified some portions in it and now want to know how you can create HOWTO?</P
+><P
+>I made sure there are no errors in my SGML by first typing the command <B
+CLASS="COMMAND"
+>nsgmls -s ataraid.sgml</B
+>. I created a script called <TT
+CLASS="FILENAME"
+>makehowto</TT
+> and ran the command <B
+CLASS="COMMAND"
+>./makehowto ataraid.sgml</B
+>.  Here is the my <TT
+CLASS="FILENAME"
+>makehowto</TT
+> script:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#!/bin/bash
+#
+# makehowto by Murty Rompalli
+# (c) All Rights Reserved
+# Free for non commercial use. All other uses must be authorized explicitly
+# by the creator. Contact me for more info. murty@solar.m u r t y.net
+#
+
+function maketut() {
+echo;echo Creating Tutorial Files ...
+jade \
+    -t sgml \
+    -d /usr/lib/sgml/stylesheets/nwalsh-modular/html/ldp.dsl\#html \
+    $1.sgml 
+}
+
+function makehtml {
+echo;echo Creating html file: $1.html ...
+jade \
+    -t sgml \
+    -d /usr/lib/sgml/stylesheets/nwalsh-modular/html/docbook.dsl \
+    -V nochunks \
+    $1.sgml &#62; $1.html 
+}
+
+function maketxt {
+	if [ -f $1.html ]
+	then
+		echo;echo Creating text file: $1.txt ...
+		lynx -dump $1.html &#62; $1.txt
+	else
+		echo;echo $1.html not found, creating ...
+		makehtml $1
+		maketxt $1
+	fi
+}
+
+function makepdf {
+	[ -f $1.ps ] &#38;&#38; gzip $1.ps
+
+	if [ -f $1.ps.gz ]
+	then
+		echo;echo Creating pdf file: $1.pdf ...
+		gzip -dc $1.ps.gz | 
+		gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile=$1.pdf -
+	else
+		echo;echo $1.ps.gz not found creating ...
+		makeps $1
+		makepdf $1
+	fi
+}
+
+function maketex {
+echo;echo Creating TeX file $1.tex ... 
+jade \
+    -t tex \
+    -d /usr/lib/sgml/stylesheets/cygnus-both.dsl\#print \
+    $1.sgml
+gzip $1.tex
+echo $1.tex gzipped to $1.tex.gz
+}
+
+function makedvi {
+echo;echo Creating DVI file $1.dvi ...
+db2dvi $1.sgml  &#62;/dev/null 2&#62;&#38;1
+echo See $1.log for errors
+gzip $1.dvi
+echo $1.dvi gzipped to $1.dvi.gz
+}
+
+function makeps {
+echo;echo Creating PS file $1.ps ...
+db2ps $1.sgml  &#62;/dev/null 2&#62;&#38;1
+echo See $1.log for errors
+gzip $1.ps
+echo $1.ps gzipped to $1.ps.gz
+}
+
+#### Begin Main Program
+
+echo "
+makehowto utility for generating HOWTO from SGML file.
+(c) Murty Rompalli
+"
+
+[ x$1 = x ] &#38;&#38; 
+echo "Error. Usage: $0 abc.sgml '{tut|html|pdf|tex|dvi|ps|all}'
+
+Option 'all' is default if sgml file is the only option supplied.
+
+Options:
+-------
+tut	Make complete tutorial, i.e., generate necessary html files
+html	Make a printable single HTML file
+pdf	Make a PDF file
+tex	Make a TeX source file, gzipped
+dvi	Make a DVI file, gzipped
+ps	Make a PostScript file, gzipped
+all	Generate all possible formats.
+
+" &#38;&#38; exit
+
+file="`echo $1|sed 's/\.sgml$//'`"
+
+[ x$file = x ] &#38;&#38; 
+echo Error. Usage: $0 abc.sgml '{tut|html|tex|dvi|ps|all}' &#38;&#38; exit
+
+[ -f $file.sgml ] || {
+echo Error. $file.sgml does not exist
+exit
+}
+
+[ -r $file.sgml ] || {
+echo Error. $file.sgml not readable
+exit
+}
+
+
+if [ x$2 = x ]
+then
+	action=all
+else
+	action=$2
+fi 
+
+
+case $action in
+tut|tutorial) maketut $file  
+		;;
+html|htm) makehtml $file  
+		;;
+tex|latex) maketex $file 
+		;;
+dvi) makedvi $file 
+		;;
+ps) makeps $file 
+		;;
+text|txt) maketxt $file
+		;;
+pdf) makepdf $file
+		;;
+all) 	maketut $file  
+	makehtml $file  
+	maketex $file  
+	makedvi $file
+	makeps $file
+	maketxt $file
+	makepdf $file
+	;;
+*) echo error 
+	;;
+esac
+
+\rm -f $file.aux
+\rm -f $file.tex
+\rm -f $file.dvi
+
+echo;echo makehowto: Finished
+echo You can review $file.log and delete it.
+echo Thank you for using makehowto.
+echo</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>You can also just type <B
+CLASS="COMMAND"
+>./makehowto ataraid.sgml pdf</B
+>, for example, if you just want create PDF version. Just type <B
+CLASS="COMMAND"
+>./makehowto</B
+> to get more help on using the script. <A
+HREF="files/makehowto"
+TARGET="_top"
+>Click here</A
+> to download this makehowto script.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="moreinfo.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>For more information</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

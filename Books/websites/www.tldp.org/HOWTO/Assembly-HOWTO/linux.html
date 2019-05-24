@@ -1,0 +1,810 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Linux</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux Assembly HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Calling conventions"
+HREF="conventions.html"><LINK
+REL="PREVIOUS"
+TITLE="Calling conventions"
+HREF="conventions.html"><LINK
+REL="NEXT"
+TITLE="DOS and Windows"
+HREF="dos.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Assembly HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="conventions.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Calling conventions</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="dos.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="AEN632"
+></A
+>5.1. Linux</H1
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN634"
+></A
+>5.1.1. Linking to GCC</H2
+><P
+>&#13;This is the preferred way if you are developing mixed C-asm project. Check GCC
+docs and examples from Linux kernel <TT
+CLASS="filename"
+>.S</TT
+> files that go through
+<SPAN
+CLASS="application"
+>gas</SPAN
+> (not those that go through
+<SPAN
+CLASS="application"
+>as86</SPAN
+>).
+</P
+><P
+>&#13;32-bit arguments are pushed down stack in reverse syntactic order (hence
+accessed/popped in the right order), above the 32-bit near return address.
+<TT
+CLASS="literal"
+>%ebp</TT
+>, <TT
+CLASS="literal"
+>%esi</TT
+>, <TT
+CLASS="literal"
+>%edi</TT
+>,
+<TT
+CLASS="literal"
+>%ebx</TT
+> are callee-saved, other registers are caller-saved;
+<TT
+CLASS="literal"
+>%eax</TT
+> is to hold the result, or <TT
+CLASS="literal"
+>%edx:%eax</TT
+>
+for 64-bit results.
+</P
+><P
+>&#13;FP stack: I'm not sure, but I think result is in <TT
+CLASS="literal"
+>st(0)</TT
+>,
+whole stack caller-saved.
+</P
+><P
+>&#13;Note that GCC has options to modify the calling conventions by reserving
+registers, having arguments in registers, not assuming the FPU, etc. Check the
+i386 <TT
+CLASS="filename"
+>.info</TT
+> pages.
+</P
+><P
+>&#13;Beware that you must then declare the <TT
+CLASS="literal"
+>cdecl</TT
+> or
+<TT
+CLASS="literal"
+>regparm(0)</TT
+> attribute for a function that will follow
+standard GCC calling conventions. See
+<TT
+CLASS="literal"
+>C Extensions::Extended Asm::</TT
+> section from the GCC info
+pages. See also how Linux defines its <TT
+CLASS="literal"
+>asmlinkage</TT
+> macro.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN656"
+></A
+>5.1.2. ELF vs a.out problems</H2
+><P
+>&#13;Some C compilers prepend an underscore before every symbol, while others do
+not.
+</P
+><P
+>&#13;Particularly, Linux a.out GCC does such prepending, while Linux ELF GCC does
+not.
+</P
+><P
+>&#13;If you need to cope with both behaviors at once, see how existing packages do.
+For instance, get an old Linux source tree, the Elk, qthreads, or OCaml.
+</P
+><P
+>&#13;You can also override the implicit C-&#62;asm renaming by inserting statements like
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;	void foo asm("bar") (void);
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+to be sure that the C function <TT
+CLASS="function"
+>foo()</TT
+>
+will be called really <TT
+CLASS="function"
+>bar</TT
+> in assembly.
+</P
+><P
+>&#13;Note that the <B
+CLASS="command"
+>objcopy</B
+> utility from the binutils package
+should allow you to transform your a.out objects into ELF objects,
+and perhaps the contrary too, in some cases.
+More generally, it will do lots of file format conversions.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN667"
+></A
+>5.1.3. Direct Linux syscalls</H2
+><P
+>&#13;Often you will be told that using <SPAN
+CLASS="application"
+>C library</SPAN
+>
+(<SPAN
+CLASS="acronym"
+>libc</SPAN
+>) is the only way, and direct system calls are bad.
+This is true. To some extent. In general, you must know that
+<SPAN
+CLASS="application"
+>libc</SPAN
+> is not sacred, and in <EM
+>most</EM
+>
+cases it only does some checks, then calls kernel, and then sets errno. You can
+easily do this in your program as well (if you need to), and your program will
+be dozen times smaller, and this will result in improved performance as well,
+just because you're not using shared libraries (static binaries are faster).
+Using or not using <SPAN
+CLASS="application"
+>libc</SPAN
+> in assembly programming is
+more a question of taste/belief than something practical. Remember, Linux is
+aiming to be POSIX compliant, so does <SPAN
+CLASS="application"
+>libc</SPAN
+>.
+This means that syntax of almost all <SPAN
+CLASS="application"
+>libc</SPAN
+> "system
+calls" exactly matches syntax of real kernel system calls (and vice versa).
+Besides, <SPAN
+CLASS="application"
+>GNU libc</SPAN
+>(<SPAN
+CLASS="application"
+>glibc</SPAN
+>)
+becomes slower and slower from version to version, and eats more and more
+memory; and so, cases of using direct system calls become quite usual.
+However, the main drawback of throwing <SPAN
+CLASS="application"
+>libc</SPAN
+> away
+is that you will possibly need to implement several
+<SPAN
+CLASS="application"
+>libc</SPAN
+> specific functions (that are not just syscall
+wrappers) on your own (<TT
+CLASS="function"
+>printf()</TT
+> and Co.), and you are
+ready for that, aren't you? :-)
+</P
+><P
+>&#13;Here is summary of direct system calls pros and cons.
+</P
+><P
+>&#13;Pros:
+
+<P
+></P
+><UL
+><LI
+><P
+>&#13;the smallest possible size; squeezing the last byte out of the system
+</P
+></LI
+><LI
+><P
+>&#13;the highest possible speed; squeezing cycles out of your favorite benchmark
+</P
+></LI
+><LI
+><P
+>&#13;full control: you can adapt your program/library to your specific language or
+memory requirements or whatever
+</P
+></LI
+><LI
+><P
+>&#13;no pollution by libc cruft
+</P
+></LI
+><LI
+><P
+>&#13;no pollution by C calling conventions (if you're developing your own language
+or environment)
+</P
+></LI
+><LI
+><P
+>&#13;static binaries make you independent from libc upgrades or crashes, or from
+dangling <TT
+CLASS="literal"
+>#!</TT
+> path to an interpreter (and are faster)
+</P
+></LI
+><LI
+><P
+>&#13;just for the fun out of it (don't you get a kick out of assembly programming?)
+</P
+></LI
+></UL
+>
+</P
+><P
+>&#13;Cons:
+
+<P
+></P
+><UL
+><LI
+><P
+>&#13;If any other program on your computer uses the libc, then duplicating the libc
+code will actually wastes memory, not saves it.
+</P
+></LI
+><LI
+><P
+>&#13;Services redundantly implemented in many static binaries are a waste of memory.
+But you can make your libc replacement a shared library.
+</P
+></LI
+><LI
+><P
+>&#13;Size is much better saved by having some kind of bytecode, wordcode, or
+structure interpreter than by writing everything in assembly. (the interpreter
+itself could be written either in C or assembly.) The best way to keep multiple
+binaries small is to not have multiple binaries, but instead to have an
+interpreter process files with <TT
+CLASS="literal"
+>#!</TT
+> prefix. This is how OCaml
+works when used in wordcode mode (as opposed to optimized native code mode),
+and it is compatible with using the libc. This is also how Tom Christiansen's
+Perl PowerTools reimplementation of unix utilities works. Finally, one last way
+to keep things small, that doesn't depend on an external file with a hardcoded
+path, be it library or interpreter, is to have only one binary, and have
+multiply-named hard or soft links to it: the same binary will provide everything
+you need in an optimal space, with no redundancy of subroutines or useless
+binary headers; it will dispatch its specific behavior according to its
+<TT
+CLASS="parameter"
+><I
+>argv[0]</I
+></TT
+>; in case it isn't called with a recognized name,
+it might default to a shell, and be possibly thus also usable as an interpreter!
+</P
+></LI
+><LI
+><P
+>&#13;You cannot benefit from the many functionalities that libc provides besides mere
+linux syscalls: that is, functionality described in section 3 of the manual
+pages, as opposed to section 2, such as malloc, threads, locale, password,
+high-level network management, etc.
+</P
+></LI
+><LI
+><P
+>&#13;Therefore, you might have to reimplement large parts of libc, from
+<TT
+CLASS="function"
+>printf()</TT
+> to <TT
+CLASS="function"
+>malloc()</TT
+> and
+<TT
+CLASS="function"
+>gethostbyname</TT
+>. It's redundant with the libc effort, and
+can be <EM
+>quite</EM
+> boring sometimes. Note that some people have
+already reimplemented "light" replacements for parts of the libc - - check
+them out! (Redhat's minilibc, Rick Hohensee's
+libsys,
+Felix von Leitner's dietlibc,
+
+asmutils
+project is working on pure assembly libc)
+</P
+></LI
+><LI
+><P
+>&#13;Static libraries prevent you to benefit from libc upgrades as well as from libc
+add-ons such as the <SPAN
+CLASS="application"
+>zlibc</SPAN
+> package, that does
+on-the-fly transparent decompression of gzip-compressed files.
+</P
+></LI
+><LI
+><P
+>&#13;The few instructions added by the libc can be a
+<EM
+>ridiculously</EM
+> small speed overhead as compared to the cost
+of a system call. If speed is a concern, your main problem is in your usage of
+system calls, not in their wrapper's implementation.
+</P
+></LI
+><LI
+><P
+>&#13;Using the standard assembly API for system calls is much slower than using the
+libc API when running in micro-kernel versions of Linux such as L4Linux, that
+have their own faster calling convention, and pay high convention-translation
+overhead when using the standard one (L4Linux comes with libc recompiled with
+their syscall API; of course, you could recompile your code with their API,
+too).
+</P
+></LI
+><LI
+><P
+>&#13;See previous discussion for general speed optimization issue.
+</P
+></LI
+><LI
+><P
+>&#13;If syscalls are too slow to you, you might want to hack the kernel sources
+(in C) instead of staying in userland.
+</P
+></LI
+></UL
+>
+</P
+><P
+>&#13;If you've pondered the above pros and cons, and still want to use direct
+syscalls, then here is some advice.
+</P
+><P
+>&#13;<P
+></P
+><UL
+><LI
+><P
+>&#13;You can easily define your system calling functions in a portable way in C
+(as opposed to unportable using assembly), by including
+<TT
+CLASS="filename"
+>asm/unistd.h</TT
+>, and using provided macros.
+</P
+></LI
+><LI
+><P
+>&#13;Since you're trying to replace it, go get the sources for the libc, and
+grok them. (And if you think you can do better, then send feedback to the
+authors!)
+</P
+></LI
+><LI
+><P
+>&#13;As an example of pure assembly code that does everything you want, examine
+.
+</P
+></LI
+></UL
+>
+</P
+><P
+>&#13;Basically, you issue an <TT
+CLASS="function"
+>int 0x80</TT
+>, with the
+<TT
+CLASS="literal"
+>__NR_</TT
+>syscallname number (from <TT
+CLASS="filename"
+>asm/unistd.h</TT
+>)
+in <TT
+CLASS="literal"
+>eax</TT
+>, and parameters (up to six)
+in <TT
+CLASS="literal"
+>ebx</TT
+>, <TT
+CLASS="literal"
+>ecx</TT
+>, <TT
+CLASS="literal"
+>edx</TT
+>,
+<TT
+CLASS="literal"
+>esi</TT
+>, <TT
+CLASS="literal"
+>edi</TT
+>, 
+<TT
+CLASS="literal"
+>ebp</TT
+> respectively.
+</P
+><P
+>&#13;Result is returned in <TT
+CLASS="literal"
+>eax</TT
+>, with a negative result being an
+error, whose opposite is what libc would put into <TT
+CLASS="literal"
+>errno</TT
+>.
+The user-stack is not touched, so you needn't have a valid one when doing a
+syscall.
+</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;<A
+NAME=""
+></A
+>
+Passing sixth parameter in <TT
+CLASS="literal"
+>ebp</TT
+> appeared in Linux 2.4,
+previous Linux versions understand only 5 parameters in registers.
+</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;Linux Kernel Internals,
+and especially 
+How System Calls Are Implemented on i386 Architecture? chapter will give
+you more robust overview.
+</P
+><P
+>&#13;As for the invocation arguments passed to a process upon startup, the general
+principle is that the stack originally contains the number of arguments
+<TT
+CLASS="parameter"
+><I
+>argc</I
+></TT
+>, then the list of pointers that constitute
+<TT
+CLASS="parameter"
+><I
+>*argv</I
+></TT
+>, then a null-terminated sequence of
+null-terminated <TT
+CLASS="literal"
+>variable=value</TT
+> strings for the
+<TT
+CLASS="parameter"
+><I
+>environ</I
+></TT
+>ment. For more details, do examine
+, read the sources of C startup code from your libc
+(<TT
+CLASS="filename"
+>crt0.S</TT
+> or <TT
+CLASS="filename"
+>crt1.S</TT
+>), or those from
+the Linux kernel (<TT
+CLASS="filename"
+>exec.c</TT
+> and
+<TT
+CLASS="filename"
+>binfmt_*.c</TT
+> in <TT
+CLASS="filename"
+>linux/fs/</TT
+>).
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN778"
+></A
+>5.1.4. Hardware I/O under Linux</H2
+><P
+>&#13;If you want to perform direct port I/O under Linux, either it's something very
+simple that does not need OS arbitration, and you should see the
+<TT
+CLASS="literal"
+>IO-Port-Programming</TT
+> mini-HOWTO; or it needs a kernel device
+driver, and you should try to learn more about kernel hacking, device driver
+development, kernel modules, etc, for which there are other excellent HOWTOs
+and documents from the LDP.
+</P
+><P
+>&#13;Particularly, if what you want is Graphics programming, then do join one of the
+GGI or
+XFree86 projects.
+</P
+><P
+>&#13;Some people have even done better, writing small and robust XFree86 drivers in
+an interpreted domain-specific language, GAL, and achieving the efficiency of
+hand C-written drivers through partial evaluation (drivers not only not in asm,
+but not even in C!). The problem is that the partial evaluator they used to
+achieve efficiency is not free software. Any taker for a replacement?
+</P
+><P
+>&#13;Anyway, in all these cases, you'll be better when using GCC inline assembly
+with the macros from <TT
+CLASS="filename"
+>linux/asm/*.h</TT
+> than writing full
+assembly source files.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="AEN788"
+></A
+>5.1.5. Accessing 16-bit drivers from Linux/i386</H2
+><P
+>&#13;Such thing is theoretically possible (proof: see how
+DOSEMU can selectively grant
+hardware port access to programs), and I've heard rumors that someone somewhere
+did actually do it (in the PCI driver? Some VESA access stuff? ISA PnP? dunno).
+If you have some more precise information on that, you'll be most welcome.
+Anyway, good places to look for more information are the Linux kernel sources,
+DOSEMU sources, and sources for various low-level programs under Linux.
+(perhaps GGI if it supports VESA).
+</P
+><P
+>&#13;Basically, you must either use 16-bit protected mode or vm86 mode.
+</P
+><P
+>&#13;The first is simpler to setup, but only works with well-behaved code that won't
+do any kind of segment arithmetics or absolute segment addressing (particularly
+addressing segment 0), unless by chance it happens that all segments used can
+be setup in advance in the LDT.
+</P
+><P
+>&#13;The later allows for more "compatibility" with vanilla 16-bit environments, but
+requires more complicated handling.
+</P
+><P
+>&#13;In both cases, before you can jump to 16-bit code, you must
+
+<P
+></P
+><UL
+><LI
+><P
+>&#13;mmap any absolute address used in the 16-bit code (such as ROM, video buffers,
+DMA targets, and memory-mapped I/O) from <TT
+CLASS="filename"
+>/dev/mem</TT
+> to your
+process' address space,
+</P
+></LI
+><LI
+><P
+>&#13;setup the LDT and/or vm86 mode monitor.
+</P
+></LI
+><LI
+><P
+>&#13;grab proper I/O permissions from the kernel (see the above section)
+</P
+></LI
+></UL
+>
+</P
+><P
+>&#13;Again, carefully read the source for the stuff contributed to the DOSEMU
+project, particularly these mini-emulators for running ELKS and/or simple
+<TT
+CLASS="filename"
+>.COM</TT
+> programs under Linux/i386.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="conventions.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="dos.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Calling conventions</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="conventions.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>DOS and Windows</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

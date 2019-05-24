@@ -1,0 +1,308 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Text-Terminal-HOWTO: Flow Control (Handshaking) </TITLE>
+ <LINK HREF="Text-Terminal-HOWTO-12.html" REL=next>
+ <LINK HREF="Text-Terminal-HOWTO-10.html" REL=previous>
+ <LINK HREF="Text-Terminal-HOWTO.html#toc11" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Text-Terminal-HOWTO-12.html">Next</A>
+<A HREF="Text-Terminal-HOWTO-10.html">Previous</A>
+<A HREF="Text-Terminal-HOWTO.html#toc11">Contents</A>
+<HR>
+<H2><A NAME="flow_control"></A> <A NAME="s11">11.</A> <A HREF="Text-Terminal-HOWTO.html#toc11">Flow Control (Handshaking) </A></H2>
+
+<P> Flow control (= handshaking = pacing)  is to prevent too fast of a
+flow of bytes from overrunning a terminal, computer, modem or other
+device.  Overrunning is when a device can't process what it is
+receiving quickly enough and thus loses bytes and/or makes other
+serious errors.  What flow control does is to halt the flow of bytes
+until the terminal (for example) is ready for some more bytes.  Flow
+control sends its signal to halt the flow in a direction opposite to
+the flow of bytes it wants to stop.  Flow control must both be set at
+the terminal and at the computer.</P>
+<P>There are 2 types of flow control: hardware and software (Xon/Xoff or
+DC1/DC3).  Hardware flow control uses dedicated signal wires such as
+RTS/CTS or DTR/DSR while software flow control signals by sending DC1
+or DC3 control bytes in the normal data wires.  For hardware flow
+control, the cable must be correctly wired.</P>
+<P>The flow of data bytes in the cable between 2 serial ports is
+bi-directional so there are 2 different flows (and wires) to consider:
+<OL>
+<LI> Byte flow from the computer to the terminal</LI>
+<LI> Byte flow from the terminal keyboard to the computer.</LI>
+</OL>
+</P>
+
+<H2><A NAME="ss11.1">11.1</A> <A HREF="Text-Terminal-HOWTO.html#toc11.1">Why Is Flow Control Needed ?</A>
+</H2>
+
+<P> You might ask: "Why not send at a speed slow enough so that the
+device will not be overrun and then flow control is not needed?"  This
+is possible but it's usually significantly slower than sending faster
+and using flow control.  One reason for this is that one can't just
+set the serial port baud rate at any desired speed such as 14,500,
+since only a discrete number of choices are available.  The best
+choice is to select a rate that is a little higher than the device can
+keep up with but then use flow control to make things work right.</P>
+<P>If one decides to not use flow control, then the speed must be set low
+enough to cope with the worst case situation.  For a terminal, this is
+when one sends escape sequences to it to do complex tasks that take more
+time than normal.  In the case of a modem (with data compression but
+no flow control) the speed from the computer to the modem must be slow
+enough so that this same speed is usable on the phone line, since in
+the worst case the data is random and can't be compressed.  If one
+failed to use flow control, the speed (with data compression turned
+on) would be no faster than without using any compression at all.</P>
+<P>Buffers are of some help in handling worst case situations of short
+duration.  The buffer stores bytes that come in too fast to be
+processed at once, and saves them for processing later.</P>
+
+<H2><A NAME="padding"></A> <A NAME="ss11.2">11.2</A> <A HREF="Text-Terminal-HOWTO.html#toc11.2">Padding </A>
+</H2>
+
+<P> Another way to handle a "worst case" situation (without using flow
+control or buffers) is to add a bunch of nulls (bytes of value zero) to
+escape sequences.  Sometimes DEL's are used instead provided they have
+no other function.  See 
+<A HREF="Text-Terminal-HOWTO-14.html#rec_del">Recognize Del</A>.</P>
+<P>The escape sequence starts the terminal doing something, and while the
+terminal is busy doing it, it receives a bunch of nulls which it
+ignores.  When it gets the last null, it has completed its task and is
+ready for the next command.  This is called null padding.  These nulls
+formerly were called "fill characters".  These nulls are added just to
+"waste" time, but it's not all wasted since the terminal is usually
+kept busy doing something else while the nulls are being received.  It
+was much used in the past before flow control became popular.  To be
+efficient, just the right amount of nulls should be added and figuring
+out this is tedious.  It was often done by trial and error since
+terminal manuals are of little or no help.  If flow control doesn't
+work right or is not implemented, padding is one solution.  Some of
+the options to the <CODE>stty</CODE> command involve padding.</P>
+
+<H2><A NAME="ss11.3">11.3</A> <A HREF="Text-Terminal-HOWTO.html#toc11.3">Overrunning a Serial Port</A>
+</H2>
+
+<P> One might wonder how overrunning is possible at a serial port
+since both the sending and receiving serial ports involved in a
+transmission of data bytes are set for the same speed (in bits/sec)
+such as 19,200.  The reason is that although the receiving serial port
+electronics can handle the incoming flow rate, the hardware/software
+that fetches and processes the bytes from the serial port sometimes
+can't cope with the high flow rate.</P>
+<P>One cause of this is that the serial port's hardware buffer is
+quite small.  Older serial ports had a hardware buffer size of only
+one byte (inside the UART chip).  If that one received byte of data in
+the buffer is not removed (fetched) by CPU instructions before the
+next byte arrives, that byte is lost (the buffer is overrun).  Newer
+UART's, namely most 16550's, have 16-byte buffers (but may be set to
+emulate a one-byte buffer) and are less likely to overrun.  It may be
+set to issue an interrupt when the number of bytes in its buffer
+reaches 1, 4, 8, or 14 bytes.  It's the job of another computer chip
+(usually the main CPU chip for a computer) to take these incoming
+bytes out of this small hardware buffer and process them (as well as
+perform other tasks).</P>
+<P>When contents of this small hardware receive buffer reaches the
+specified limit (one byte for old UART'S) an interrupt is issued.
+Then the computer interrupts what it was doing and software checks to
+find out what happened.  It finally determines that it needs to fetch
+a byte (or more) from the serial port's buffer.  It takes these
+byte(s) and puts them into a larger buffer (also a serial port buffer)
+that the kernel maintains in main memory.  For the transmit buffer,
+the serial hardware issues an interrupt when the buffer is empty (or
+nearly so) to tell the CPU to put some more bytes into it to send out.</P>
+<P>Terminals also have serial ports and buffers similar to the computer.
+Since the flow rate of bytes to the terminal is usually much greater
+than the flow in the reverse direction from the keyboard to the host
+computer, it's the terminal that is most likely to suffer overrunning.
+Of course, if you're using a computer as a terminal (by emulation),
+then it is likewise subject to overrunning.</P>
+<P>Risky situations where overrunning is more likely are:  1. When
+another process has disabled interrupts (for a computer).  2. When the
+serial port buffer in main (or terminal) memory is about to overflow.</P>
+
+<H2><A NAME="ss11.4">11.4</A> <A HREF="Text-Terminal-HOWTO.html#toc11.4">Stop Sending</A>
+</H2>
+
+<P> When its appears that the receiver is about to be overwhelmed by
+incoming bytes, it sends a signal to the sender to stop sending.  That
+is flow control and the flow control signals are always sent in a
+direction opposite to the flow of data which they control (although
+not in the same channel or wire).  This signal may either be a control
+character (^S = DC3 = Xoff) sent as an ordinary data byte on the data
+wire (in-band signalling), or a voltage transition from positive to
+negative in the dtr-to-cts (or other) signal wire (out-of-band
+signalling).  Using Xoff is called "software flow control" and using
+the voltage transition in a dedicated signal wire (inside the cable)
+is called hardware flow control.</P>
+
+<H2><A NAME="keybrd_lock"></A> <A NAME="ss11.5">11.5</A> <A HREF="Text-Terminal-HOWTO.html#toc11.5">Keyboard Lock </A>
+</H2>
+
+<P> With terminals, the most common case of "stop sending" is where
+the terminal can't keep up with the characters being sent to it and it
+issues a "stop" to the PC.  Another case of this is where someone
+presses control-S.  Much less common is the opposite case where the PC
+can't keep up with your typing speed and tells the terminal to stop
+sending.  The terminal "locks" its keyboard and a message or light
+should inform you of this.  Anything you type at a locked keyboard is
+ignored.  When the PC catches up on it's work, then the keyboard
+should unlock.  When it doesn't, there is likely some sort of deadlock
+going on.</P>
+<P>Another type of keyboard lock happens when a certain escape sequence
+(or just the ^O control character for Wyse 60) is sent to the
+terminal.  While the previous type of lock is done by the serial
+driver, this type of lock is done by the hardware of a real terminal.
+It's a catch-22 situation if this happens since you can't type any
+commands to escape out of this lock.  Going into setup and resetting
+might work (but it failed on my Wyse 60 and I had to cycle power to
+escape).  One could also send an "unlock keyboard" escape sequence
+from another terminal.</P>
+<P>The term "locked" is also sometimes used for the common case of where
+the computer is told to stop sending to a terminal.  The keyboard is
+not locked so that whatever you type goes to the computer.  Since the
+computer can't send anything back to you, characters you type don't
+display on the screen and it may seem like the keyboard is locked.
+Scrolling is locked (scroll lock) but the keyboard is not locked.</P>
+
+<H2><A NAME="ss11.6">11.6</A> <A HREF="Text-Terminal-HOWTO.html#toc11.6">Resume Sending</A>
+</H2>
+
+<P> When the receiver has caught up with its processing and is ready
+to receive more data bytes it signals the sender.  For software flow
+control this signal is the control character ^Q = DC1 = Xon which is
+sent on the regular data line.  For hardware flow control the voltage
+in a signal line goes from negative (negated) to positive (asserted).
+If a terminal is told to resume sending the keyboard is then unlocked
+and ready to use.</P>
+
+<H2><A NAME="hdw_flow_control"></A> <A NAME="ss11.7">11.7</A> <A HREF="Text-Terminal-HOWTO.html#toc11.7">Hardware Flow Control (RTS/CTS etc.) </A>
+</H2>
+
+<P> Some older terminals have no hardware flow control while others
+used a wide assortment of different pins on the serial port for this.
+For a list of various pins and their names see 
+<A HREF="Text-Terminal-HOWTO-12.html#null_modem_pinout">Standard Null Modem Cable Pin-out</A>.  The
+most popular pin to use seems to be the DTR pin (or both the DTR pin
+and the DSR pin).</P>
+
+<H3>RTS/CTS, DTR, and DTR/DSR Flow Control</H3>
+
+<P> Linux PC's use RTS/CTS flow control, but DTR/DSR flow control
+(used by some terminals) behaves similarly.  DTR flow control (in one
+direction only and also used by some terminals) is only the DTR part
+of DTR/DSR flow control.</P>
+<P>RTS/CTS uses the pins RTS and CTS on the serial (EIA-232) connector.
+RTS means "Request To Send".  When this pin stays asserted (positive
+voltage) at the receiver it means: keep sending data to me.  If RTS is
+negated (voltage goes negative) it negates "Request To Send" which
+means: request not to send to me (stop sending).  When the receiver is
+ready for more input, it asserts RTS requesting the other side to
+resume sending.  For computers and terminals (both DTE type equipment)
+the RTS pin sends the flow control signal to the CTS pin (Clear To
+Send) on the other end of the cable.  That is, the RTS pin on one end
+of the cable is connected to the CTS pin at the other end.</P>
+<P>For a modem (DCE equipment) it's a different scheme since the modem's
+RTS pin receives the signal and its CTS pin sends.  While this may
+seem confusing, there are valid historical reasons for this which are
+too involved to discuss here.</P>
+<P>Terminals usually have either DTR or DTR/DSR flow control.  DTR flow
+control is the same as DTR/DSR flow control but it's only one-way and
+the DSR pin is not used.  For DTR/DSR flow control at a terminal, the
+DTR signal is like the signal sent from the RTS pin and the DSR pin is
+just like the CTS pin.</P>
+
+<H3>Connecting up DTR or DTR/DSR Flow Control </H3>
+
+<P> Some terminals use only DTR flow control.  This is only one-way
+flow control to keep the terminal from being overrun.  It doesn't
+protect the computer from someone typing too fast for the computer to
+handle it.  In a standard file-transfer serial cable the DTR pin at
+the terminal is connected to the DSR pin at the computer.  But Linux
+doesn't support DTR/DSR flow control (although drivers for some
+multiport boards may support DTR/DSR flow control.)  A way around this
+problem is to simply wire the DTR pin at the terminal to connect to
+the CTS pin at the computer and set RTS/CTS flow control (stty
+crtscts).  The fact that it's only one way will not affect anything so
+long as the host doesn't get overwhelmed by your typing speed and drop
+RTS in a vain attempt to lock your keyboard.  See 
+<A HREF="#keybrd_lock">Keyboard Lock</A>.  For DTR/DSR flow control (if
+your terminal supports this two-way flow control) you do the above.
+But you also connect the DSR pin at the terminal to the RTS pin at the
+computer.  Then you are protected if you type too fast.</P>
+
+<H3>Old RTS/CTS handshaking is different</H3>
+
+<P> What is confusing is that there is the original use of RTS where
+it means about the opposite of the previous explanation above.  This
+original meaning is: I Request To Send to you.  This request was
+intended to be sent from a terminal (or computer) to a modem which, if
+it decided to grant the request, would send back an asserted CTS from
+its CTS pin to the CTS pin of the computer: You are Cleared To Send to
+me.  Note that in contrast to the modern RTS/CTS bi-directional flow
+control, this only protects the flow in one direction: from the
+computer (or terminal) to the modem.</P>
+<P>For older terminals, RTS may have this meaning and goes high when the
+terminal has data to send out.  The above use is a form of flow
+control since if the modem wants the computer to stop sending it drops
+CTS (connected to CTS at the computer) and the computer stops sending.</P>
+
+<H3>Reverse Channel</H3>
+
+<P> Old hard-copy terminals may have a reverse channel pin (such as
+pin 19) which behaves like the RTS pin in RTS/CTS flow control.  This
+pin but will also be negated if paper or ribbon runs out.  It's often
+feasible to connect this pin to the CTS pin of the host computer.
+There may be a dip switch to set the polarity of this signal.</P>
+
+<H2><A NAME="ss11.8">11.8</A> <A HREF="Text-Terminal-HOWTO.html#toc11.8">Is Hardware Flow Control Done by Hardware ?</A>
+</H2>
+
+<P> Some think that hardware flow control is done by hardware but
+only a small part of it is done by hardware.  Most of it is actually
+done by your operating system software.  UART chips and associated
+hardware usually know nothing at all about hardware flow control.
+When a hardware flow control signal is received (due to the signal
+wire flipping polarity) the hardware gives an electrical interrupt
+signal to the CPU.  However, the hardware has no idea what this
+interrupt means.  The CPU stops what it was doing and jumps to a table
+in main memory that tells the CPU where to go to find a program which
+will find out what happened and determine what to do about it.  In
+this case this program stops the outgoing flow of bytes.</P>
+<P>But even before this program stops the flow,  it was already stopped by
+the interrupt which interrupted the work of the CPU.  This is one
+reason why hardware flow control stops the flow faster.  It doesn't
+need to wait for a program to do it.  But if that program didn't
+command that the flow be stopped, the flow would resume once
+that program exited.   So the program is essential to stop the flow
+even though it is not the first to actually stop the flow.  After the
+interrupt happens any bytes (up to 16) which were already in the
+serial port's hardware transmit buffer will still get transmitted.  So
+even with hardware flow control the flow doesn't instantly stop.</P>
+<P>Using software flow control requires that each incoming byte be
+checked to see if it's an "off" byte.  These bytes are delayed by
+passing thru the 16-byte receive buffer.  If the "off" byte was the
+first byte into this buffer, there could be a wait while 15 more bytes
+were received.  Then the 16 bytes would get read and the "off" byte
+found.  This extra delay doesn't happen with hardware flow control.</P>
+
+<H2><A NAME="ss11.9">11.9</A> <A HREF="Text-Terminal-HOWTO.html#toc11.9">Obsolete ?? ETX/ACK or ENQ/ACK Flow Control</A>
+</H2>
+
+<P> This is also software flow control and requires a device driver
+that knows about it.  Bytes are sent in packets (via the async serial
+port) with each packet terminated by an ETX (End of Text) control
+character.  When the terminal gets an ETX it waits till it is ready to
+receive the next packet and then returns an ACK (Acknowledge).  When
+the computer gets the ACK, it then send the next packet.  And so on.
+This is not supported by Linux ??   Some HP terminals use the same
+scheme but use ENQ instead of ETX.</P>
+
+<HR>
+<A HREF="Text-Terminal-HOWTO-12.html">Next</A>
+<A HREF="Text-Terminal-HOWTO-10.html">Previous</A>
+<A HREF="Text-Terminal-HOWTO.html#toc11">Contents</A>
+</BODY>
+</HTML>

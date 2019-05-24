@@ -1,0 +1,63 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Brief Introduction to Alpha Systems and Processors: 21064 performance vs 21066 performance</TITLE>
+ <LINK HREF="Alpha-HOWTO-5.html" REL=next>
+ <LINK HREF="Alpha-HOWTO-3.html" REL=previous>
+ <LINK HREF="Alpha-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Alpha-HOWTO-5.html">Next</A>
+<A HREF="Alpha-HOWTO-3.html">Previous</A>
+<A HREF="Alpha-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. 21064 performance vs 21066 performance</A></H2>
+
+<P> The 21064 and the 21066 have the same (EV4) CPU core. If the same program
+is run on a 21064 and a 21066, at the same CPU speed, then the
+difference in performance comes only as a result of system
+Bcache/memory bandwidth. Any code thread that has a high hit-rate on
+the <EM>internal</EM> caches will perform the same. There are 2 big
+performance killers:
+<P>
+<OL>
+<LI> Code that is write-intensive. Even though the 21064 and the 21066
+have write buffers to swallow some of the delays, code that is
+write-intensive will be throttled by write bandwidth at the system
+bus. This arises because the on-chip caches are write-through.
+</LI>
+<LI> Code that wants to treat floats as integers. The Alpha
+architecture does not allow register-register transfers from integer
+registers to floating point registers. Such a conversion has to be
+done via memory (And therefore, because the on-chip caches are
+write-through, via the Bcache).  (Editor's note: it seems that both
+the EV4 and EV45 can perform the conversion through the primary data
+cache (Dcache), provided that the memory is cached already.  In such a
+case, the store in the conversion sequence will update the Dcache and
+the subsequent load is, under certain circumstances, able to read the
+updated d-cache value, thus avoiding a costly roundtrip to the Bcache.
+In particular, it seems best to execute the stq/ldt or stt/ldq
+instructions back-to-back, which is somewhat counter-intuitive.)
+</LI>
+</OL>
+<P>
+<P> If you make the same comparison between a 21064A and a 21066A, there is an
+additional factor due to the different Icache and Dcache sizes between the two
+chips.
+<P>
+<P> Now, the 21164 solves both these problems: it achieve <EM>much</EM>
+higher system bus bandwidths (despite having the same number of signal
+pins - yes, I <EM>know</EM> it's got about twice as many pins as a
+21064, but all those extra ones are power and ground! (yes, really!!))
+and it has write-back caches. The only remaining problem is the answer
+to the question "how much does it cost?"
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Alpha-HOWTO-5.html">Next</A>
+<A HREF="Alpha-HOWTO-3.html">Previous</A>
+<A HREF="Alpha-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

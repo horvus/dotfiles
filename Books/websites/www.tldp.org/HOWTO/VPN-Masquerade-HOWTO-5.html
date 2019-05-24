@@ -1,0 +1,356 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux VPN Masquerade HOWTO: Troubleshooting</TITLE>
+ <LINK HREF="VPN-Masquerade-HOWTO-6.html" REL=next>
+ <LINK HREF="VPN-Masquerade-HOWTO-4.html" REL=previous>
+ <LINK HREF="VPN-Masquerade-HOWTO.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="VPN-Masquerade-HOWTO-6.html">Next</A>
+<A HREF="VPN-Masquerade-HOWTO-4.html">Previous</A>
+<A HREF="VPN-Masquerade-HOWTO.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="s5">5. Troubleshooting</A></H2>
+
+<P>
+<P>
+<H2><A NAME="ss5.1">5.1 Testing</A>
+</H2>
+
+<P>To test VPN Masquerade:
+<P>
+<OL>
+<LI>Bring up your ISP connection from your Linux box and verify that it
+still works properly.
+</LI>
+<LI>Verify that regular masquerading still works properly by, for
+example, trying to browse a Web site or access an FTP server from a
+masqueraded box on your local network.
+</LI>
+<LI>PPTP: Verify that you have masquerading of the PPTP control channel
+properly configured: try to telnet from the PPTP client system to port 1723
+on your PPTP server. Don't expect to see anything, but if you get a timeout
+or an error saying the connection failed, take a look at the masquerade
+rules on your Linux box to ensure that you are indeed masquerading traffic
+from your PPTP client to TCP port 1723 on your PPTP server.
+</LI>
+<LI>PPTP: Attempt to establish a PPTP connection. I recommend you also run
+<CODE>RASMON</CODE> if it is available, as this will give you a minimal amount
+of information about the status of the connection. If you establish a
+PPTP connection on the first try, congratulations! You're done!
+</LI>
+<LI>IPsec: Attempt to establish an IPsec connection.
+</LI>
+</OL>
+<P>
+<P>
+<H2><A NAME="ss5.2">5.2 Possible problems</A>
+</H2>
+
+<P>There are several things that may prevent a VPN session from being established.
+We'll work through them going from the client to the server and back again.
+We will assume you're using a Windows-based client for the examples, as that's
+the most common case.
+<P>
+<OL>
+<LI>Connect information: the &quot;telephone number&quot; in the VPN dialup
+configuration must be the Internet IP address of the VPN server, or the IP
+address of the firewall if the server is being masqueraded.
+</LI>
+<LI>PPTP and strong encryption: unless both client and server have the
+128-bit <CODE>NDISWAN.SYS</CODE> or W'95/'98 PPTP software, you will not be able
+to establish a strongly-encrypted session. Unfortunately in my experience
+this problem does not generate any obvious error messages, it just keeps
+trying and trying and trying... The strong encryption update can be
+obtained from the Microsoft secure site URL given in the &quot;Configuring
+a MS Client&quot; section.
+<P>This may also affect IPsec clients, if they use the MS-supplied encryption
+libraries rather than using their own libraries.
+<P>
+</LI>
+<LI>Routing: verify that the default route on your VPN client is pointing
+at the Linux masquerade box. Run the <CODE>route print</CODE> command and look
+for an <CODE>0.0.0.0</CODE> entry.
+<P>If other masqueraded services (such as HTTP, FTP, IRC, etc.) work from
+your VPN client system then this probably is not the problem.
+<P>
+</LI>
+<LI>Masquerading: there are two parts to the VPN session.
+<P>For IPsec, the authentication and key exchange service (ISAKMP), which is a
+normal UDP session to port 500 on the remote IPsec host, must be configured
+for masquerading as you would any other UDP service (such as DNS).
+<P>For PPTP, the control channel, which is a normal TCP session to port 1723
+on the PPTP server, must be configured for masquerading as you would any
+other TCP service (such as HTTP).
+<P>The encrypted data channel in IPsec is carried over ESP, IP protocol 50.
+The encrypted data channel in PPTP is carried over GRE, IP protocol 47.
+(Note that these are <EM>not</EM> TCP or UDP port numbers!)
+Since the 2.0 Linux kernel only lets you specify <CODE>TCP</CODE>,
+<CODE>UDP</CODE>, <CODE>ICMP</CODE> and <CODE>ALL</CODE> IP protocols when creating
+masquerade rules, you must also masquerade <CODE>ALL</CODE> protocol traffic if
+you are masquerading only specific services. If you are masquerading
+everything, you don't need to worry about this.
+<P>In order to isolate the firewall rules from the kernel masquerade code,
+try establishing a VPN connection with your firewall completely open, then
+if it works, tighten the firewall rules.
+<P>2.0.x ipfwadm completely open firewall:
+<BLOCKQUOTE>
+<PRE>
+ipfwadm -I -p accept
+ipfwadm -O -p accept
+ipfwadm -F -a accept -m
+</PRE>
+</BLOCKQUOTE>
+<P>2.2.x ipchains completely open firewall:
+<BLOCKQUOTE>
+<PRE>
+ipchains -P input   ACCEPT
+ipchains -P output  ACCEPT
+ipchains -P forward MASQ
+</PRE>
+</BLOCKQUOTE>
+<P>Do <EM>not</EM> leave your firewall completely open for any longer than
+it takes to prove that a masqueraded VPN connection can be established!
+<P>
+</LI>
+<LI>Intermediary hops and the Internet:
+All routers between your Linux firewall and the remote IPsec host must
+forward packets carrying IP protocol 50.
+All routers between your Linux firewall and the PPTP server must forward
+packets carrying IP protocol 47.
+If you had IPsec or PPTP working when your VPN client system directly
+dialled your ISP then this probably is not the problem.
+<P>To isolate whether an intermediary hop is blocking GRE traffic, use a
+patched <CODE>traceroute</CODE> to trace the progress of GRE packets. See the
+resources section for information on the traceroute patch. A similar patch
+for ESP is in the works.
+<P>
+</LI>
+<LI>The remote firewall: the firewall at the server end must allow a
+system with the IP address assigned to your Linux box by your ISP to
+connect to port 500/udp on the IPsec host or port 1723/tcp on the PPTP
+server. If you had the VPN working when your VPN client system directly
+dialled your ISP then this probably is not the problem.
+</LI>
+<LI>The server firewall and ESP: the IPsec encrypted data is carried
+over IP protocol 50. If the firewall the remote IPsec host is behind does
+not forward ESP traffic in both directions, IPsec will not work. Again, if
+you had IPsec working when your IPsec client system directly dialled your
+ISP then this probably is not the problem.
+</LI>
+<LI>The server firewall and GRE: the PPTP data channel is carried as a
+GRE-encapsulated (IP protocol 47) PPP session. If the firewall your PPTP
+server is behind does not forward GRE traffic in both directions, PPTP will
+not work. Again, if you had PPTP working when your PPTP client system
+directly dialed your ISP then this probably isn't the problem.
+</LI>
+<LI>The patch: If your IPsec client successfully authenticates you but
+cannot establish a network connection, the patch may not be masquerading
+ESP traffic properly. If your PPTP client establishes the control channel
+(RASMON beeps and the little telephone lights up) and sends GRE traffic
+(the upper light in RASMON blinks) but gets no GRE traffic back (the lower
+light in RASMON does not blink in response) the patch may not be
+masquerading GRE traffic properly.
+<P>Look in <CODE>/var/log/messages</CODE> for log entries showing that VPN
+traffic was seen. Turning on VPN debugging may help you to determine
+whether or not the patch is at fault. Also run a sniffer on your internet
+connection and look for outbound VPN traffic <EM>(see below)</EM>.
+<P>
+</LI>
+<LI>Multiple clients: the older PPTP patch does NOT support masquerading
+of multiple PPTP clients attempting to access the <EM>same</EM> PPTP
+server. If you're trying to do this, you should take a look at your network
+design and consider whether you should set up a PPTP router for your local
+clients. The 2.0 patch incorporates Call-ID masquerading, which allows
+multiple simultaneous sessions. <EM>Note:</EM> do not enable PPTP Call-ID
+masquerade if you are masquerading a PPTP Server. At the current time this
+will prevent the server's outbound traffic from being masqueraded.
+
+</LI>
+</OL>
+<P>
+<P>
+<H2><A NAME="ss5.3">5.3 Troubleshooting</A>
+</H2>
+
+<P>Most problems can be localized by running a packet sniffer
+(e.g. <CODE>tcpdump</CODE> with the <CODE>-v</CODE> option) on your VPN firewall.
+If everything is working properly, you'll see the following traffic:
+<P>
+<UL>
+<LI>Client local network:
+<P>IPsec: UDP (destination UDP port 500) and ESP (IP protocol 50) traffic from
+your IPsec client local network IP to the remote IPsec host's Internet IP. If you
+don't see this, your IPsec client is misconfigured.
+<P>PPTP: TCP (destination TCP port 1723) and GRE (IP protocol 47) traffic from
+your PPTP client local network IP to the PPTP server's Internet IP. If you
+don't see this, your PPTP client is misconfigured.
+<P>
+</LI>
+<LI>ISP side of client firewall: UDP and ESP or TCP and GRE traffic from
+the client firewall Internet IP (remember - we're masquerading) to the
+VPN server's Internet IP. If you don't see this, your masquerade is
+misconfigured or the patch isn't working.
+</LI>
+<LI>ISP side of server firewall: UDP and ESP or TCP and GRE traffic from
+the client Internet IP to the VPN server's Internet IP. If you don't see
+this, the Internet is down <CODE>:)</CODE> or some intermediary is blocking ESP
+or GRE traffic.
+</LI>
+<LI>Boundary network (DMZ) side of server firewall: UDP and ESP or TCP
+and GRE traffic from the client internet IP to the server IP. If you don't
+see this, check your firewall rules for forwarding UDP port 500 and IP
+protocol 50 or TCP port 1723 and IP protocol 47, and the configuration of
+<CODE>ipportfw</CODE> and <CODE>ipfwd</CODE> if you're masquerading the server.
+</LI>
+<LI>Boundary network side of server firewall: UDP (source port 500) and
+ESP or TCP (source port 1723) and GRE traffic from the VPN server IP to
+the client internet IP. If you don't see this, check the VPN server
+configuration, including the packet filtering rules on the VPN server.
+</LI>
+<LI>ISP side of server firewall: UDP and ESP or TCP and GRE traffic from
+the VPN server IP (or firewall IP if the server is masqueraded) to the
+client internet IP. If you don't see this, check your firewall rules for
+forwarding UDP port 500 and IP protocol 50 or TCP port 1723 and IP protocol
+47.
+</LI>
+<LI>ISP side of client firewall: UDP and ESP or TCP and GRE traffic from
+the VPN server IP to the client firewall internet IP. If you don't see
+this, the Internet is acting up again.
+</LI>
+<LI>Client local network: UDP and ESP or TCP and GRE traffic from the VPN
+server internet IP to the VPN client local network IP. If you see the UDP
+traffic but not the ESP traffic, or the TCP traffic but not the GRE
+traffic, the patch isn't working or wasn't properly installed.
+</LI>
+</UL>
+<P>
+<P>You may find it helpful to turn on VPN debugging and recompile your
+kernel. Add the following to <CODE>/etc/syslog.conf</CODE>
+<BLOCKQUOTE>
+<PRE>
+# debugging
+*.=debug           /var/log/debug
+</PRE>
+</BLOCKQUOTE>
+
+and watch <CODE>/var/log/messages</CODE> and <CODE>/var/log/debug</CODE> for log
+messages about the VPN traffic. Note that logging - especially verbose
+logging - will cause a great deal of disk activity and will cause the log
+files to grow very large very quickly. Don't turn on debugging unless you
+need to, and turn it off when you're done.
+<P>
+<P>
+<H2><A NAME="ss5.4">5.4 MS PPTP Clients and domain-name issues</A>
+</H2>
+
+<P>Thanks to Charles Curley 
+<A HREF="mailto:ccurley@trib.com">&lt;ccurley@trib.com&gt;</A> for the following:
+<P>
+<BLOCKQUOTE>
+If you use PPTP (Point to Point Tunneling Protocol) to access a Microsoft
+Networking (SMB) environment and have your own Microsoft Networking
+environment in your local private network (Samba or Windows), give your
+local workgroup a name that does not show up in the remote environment. The
+reason is that while your PPTP client is logged into the remote
+environment, it will see the remote environment's domain name servers, and
+will only see the remote computers in that workgroup.
+<P>You should avoid the lazy option. Microsoft ships Windows set up for a
+default workgroup name of WORKGROUP. Some people will be lazy and accept
+that as their workgroup when they set up their computers. So there is a
+good chance that the remote environment will have a workgroup called
+WORKGROUP, administrators willing or not.
+</BLOCKQUOTE>
+<P>I think that this will apply regardless of the VPN in use, as name services
+aren't dependent on the transport. If your client(s) can see the WINS servers
+on the remote network then you may experience this, PPTP or no PPTP.
+<P>
+<P>
+<H2><A NAME="ss5.5">5.5 MS PPTP Clients and Novell IPX</A>
+</H2>
+
+<P>If you're having trouble with IPX traffic over your PPTP link, please see
+sections 3.5 and 5.2 in this MS Knowledge Base article:
+<A HREF="http://microsoft.com/ntserver/nts/downloads/recommended/dun13win95/ReleaseNotes.asp">http://microsoft.com/ntserver/nts/downloads/recommended/dun13win95/ReleaseNotes.asp</A><P>The same considerations probably apply to Win'98 as well.
+<P>Thanks to David Griswold 
+<A HREF="mailto:dgriswol@ix.netcom.com">&lt;dgriswol@ix.netcom.com&gt;</A><P>
+<P>
+<H2><A NAME="ss5.6">5.6 MS network password issues</A>
+</H2>
+
+<P>When you are using a VPN to access a MS network you should remember that
+you will have to provide two different authentication tokens - one to
+connect to the VPN server (the VPN password) and the other to access
+resources on the remote network once the connection is established (the
+network password).
+<P>The VPN password - the username and password you enter into your VPN client
+when initiating the call to the VPN server - is only used by the VPN server
+to grant you permission to connect to the network via the VPN. It isn't
+used for anything else once you're connected.
+<P>The VPN password is <EM>not</EM> used to prove your identity to other
+computers on the remote network. You must provide another username/password
+pair - your network password - for that.
+<P>There are two ways to supply a network password. Your network password may
+be the same username/password pair you supplied when logging onto the local
+network when you started your computer up. If it is different, you can
+configure your VPN client to ask you for your network password for the
+remote network once the VPN connection is established.
+<P>If you are successfully connecting to the VPN server but you cannot access
+any of the resources provided by the remote network, then you aren't
+providing a valid network username/password pair for the remote network.
+Verify that the username and password for your local network will also work
+on the remote network, or set your VPN client to prompt you for a username
+and password for use on the remote network and &quot;log on&quot; to the
+remote network once the VPN connection is established.
+<P>
+<P>
+<H2><A NAME="ss5.7">5.7 If your IPsec session always dies after a certain amount of time</A>
+</H2>
+
+<P>If you're having trouble with your IPsec tunnel regularly dying, particularly
+if checking the system logs on the firewall shows that ISAKMP packets with
+&quot;zero cookie&quot; values are being seen, here's what's happening:
+<P>Earlier versions of the IPsec Masq patch did not change the timeout for
+masq table entries for ISAKMP UDP packets. The masq table entries for the
+ISAKMP UDP traffic would time out fairly quickly (relative to the data
+channel) and be removed; if the remote IPsec host then decided to initiate
+rekeying before the local IPsec host did, the inbound ISAKMP traffic for
+the rekey couldn't be routed to the masqueraded host. The rekey traffic
+would be discarded, the remote IPsec host would think the link had failed,
+and the connection would eventually be terminated.
+<P>The 2.0.x patch has been modified from its original version to increase the
+timeout on ISAKMP UDP masq table entries. Get the current version of the patch,
+available via the sites given in the Resources section, and repatch and
+recompile your kernel.
+<P>Also verify that your <CODE>IPsec Masq Table Lifetime</CODE> parameter is
+configured to be the same as or slightly longer than your rekey interval.
+<P>
+<P>
+<H2><A NAME="ss5.8">5.8 If VPN masquerade fails to work after you reboot</A>
+</H2>
+
+<P>Did you remember to put <CODE>modprobe ip_masq_pptp.o</CODE> or
+<CODE>modprobe ip_masq_ipsec.o</CODE> commands into your
+<CODE>/etc/rc.d/rc.local</CODE> startup script if you compiled VPN Masq support
+as modules?
+<P>
+<P>
+<H2><A NAME="ss5.9">5.9 If your second PPTP session kills your first session</A>
+</H2>
+
+<P>
+<A HREF="http://andrew2.andrew.cmu.edu/rfc/rfc2637.html">The PPTP RFC</A> specifies that there may only be one control channel
+between two systems. This may mean that only one masqueraded client will be
+able to contact a given PPTP server at a time. See 
+<A HREF="VPN-Masquerade-HOWTO-2.html#multiclientpptp">multiclientpptp</A>
+
+for more details.
+<P>
+<HR>
+<A HREF="VPN-Masquerade-HOWTO-6.html">Next</A>
+<A HREF="VPN-Masquerade-HOWTO-4.html">Previous</A>
+<A HREF="VPN-Masquerade-HOWTO.html#toc5">Contents</A>
+</BODY>
+</HTML>

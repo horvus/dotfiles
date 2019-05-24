@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux IPCHAINS-HOWTO: Common Problems</TITLE>
+ <LINK HREF="IPCHAINS-HOWTO-7.html" REL=next>
+ <LINK HREF="IPCHAINS-HOWTO-5.html" REL=previous>
+ <LINK HREF="IPCHAINS-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="IPCHAINS-HOWTO-7.html">Next</A>
+<A HREF="IPCHAINS-HOWTO-5.html">Previous</A>
+<A HREF="IPCHAINS-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. Common Problems</A></H2>
+
+<P>
+<H2><A NAME="ss6.1">6.1 ipchains -L Freezes!</A>
+</H2>
+
+<P>You're probably blocking DNS lookups; it will eventually time out.
+Try using the `-n' (numeric) flag to ipchains, which suppresses the
+lookup of names.
+<P>
+<P>
+<H2><A NAME="ss6.2">6.2 Inverse doesn't work!</A>
+</H2>
+
+<P>You must put the `!' option by itself, with spaces either side.  A
+classic mistake (warned about in 1.3.10) is:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# ipchains -A input -i !eth0 -j DENY
+#
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>There will never be an interface called `!eth0', but ipchains doesn't
+know that.
+<P>
+<P>
+<H2><A NAME="ss6.3">6.3 Masquerading/Forwarding Doesn't Work!</A>
+</H2>
+
+<P>Make sure that packet forwarding is enabled (in recent kernels it is
+disabled by default, meaning that packets never even try to traverse
+the `forward' chain).  You can override this (as root) by typing
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# echo 1 > /proc/sys/net/ipv4/ip_forward
+#
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>If this works for you, you can put this somewhere in your bootup
+scripts so it is enabled every time; you'll want to set up your
+firewalling before this command runs though, otherwise there's an
+opportunity for packets to slip through.
+<P>
+<P>
+<H2><A NAME="ss6.4">6.4 -j REDIR doesn't work!</A>
+</H2>
+
+<P>You must allow forwarding packets (see above) for redirect to work;
+otherwise the routing code drops the packet.  So if you are just using
+redirect, and don't have any forwarding at all, you should be aware of
+that.
+<P>
+<P>Note that REDIR (being in the input chain) doesn't effect connections
+from a local process.
+<P>
+<H2><A NAME="ss6.5">6.5 Wildcard Interfaces Don't Work!</A>
+</H2>
+
+<P>There was a bug in versions 2.1.102 and 2.1.103 of the kernel (and
+some old patches I produced) which made ipchains commands which
+specified a wildcard interface (such as <CODE>-i ppp+</CODE>) fail.
+<P>
+<P>This is fixed in recent kernels, and in the 2.0.34 patch on the web
+site.  You can also fix it by hand in the kernel source by changing
+line 63 or so in include/linux/ip_fw.h:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+#define IP_FW_F_MASK    0x002F  /* All possible flag bits mask   */
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>This should read ``0x003F''.  Fix this and recompile the kernel.
+<P>
+<H2><A NAME="ss6.6">6.6 TOS Doesn't Work!</A>
+</H2>
+
+<P>This was my mistake: setting the Type of Service field did not
+actually set the Type of Service in kernel versions 2.1.102 through
+2.1.111.  This problem was fixed in 2.1.112.
+<P>
+<H2><A NAME="ss6.7">6.7 ipautofw and ipportfw Don't Work!</A>
+</H2>
+
+<P>For 2.0.x, this is true; I haven't time to create and maintain a jumbo
+patch for ipchains and ipautofw/ipportfw.
+<P>
+<P>For 2.1.x, download Juan Ciarlante's ipmasqadm from 
+<PRE>
+&lt;url url="http://juanjox.linuxhq.com/"
+        name="http://juanjox.linuxhq.com/">
+</PRE>
+
+and use it exactly as you would have used <CODE>ipautofw</CODE> or
+<CODE>ipportfw</CODE>, except instead of <CODE>ipportfw</CODE> you type <CODE>ipmasqadm
+portfw</CODE>, and instead of <CODE>ipautofw</CODE> you type <CODE>ipmasqadm autofw</CODE>.
+<P>
+<H2><A NAME="ss6.8">6.8 xosview is Broken!</A>
+</H2>
+
+<P>Upgrade to version 1.6.0 or above, which doesn't require any firewall
+rules at all for 2.1.x kernels.  This seems to have broken again in
+the 1.6.1 release; please bug the author (it's not my fault!).
+<P>
+<H2><A NAME="ss6.9">6.9 Segmentation Fault With `-j REDIRECT'!</A>
+</H2>
+
+<P>This was a bug in ipchains version 1.3.3.  Please upgrade.
+<P>
+<P>
+<H2><A NAME="no-timeout"></A> <A NAME="ss6.10">6.10 I Can't Set Masquerading Timeouts!</A>
+</H2>
+
+<P>True (for 2.1.x kernels) up to 2.1.123.  In 2.1.124, trying to set the
+masquerading timeouts causes a kernel lockup (change <CODE>return</CODE>
+to <CODE>ret =</CODE> on line 1328 of net/ipv4/ip_fw.c).  In 2.1.125, it
+works fine.
+<P>
+<H2><A NAME="ss6.11">6.11 I Want to Firewall IPX!</A>
+</H2>
+
+<P>So do a number of others, it seems.  My code only covers IP,
+unfortunately.  On the good side, all the hooks are there to firewall
+IPX!  You just need to write the code; I will happily help where
+possible.
+<P>
+<HR>
+<A HREF="IPCHAINS-HOWTO-7.html">Next</A>
+<A HREF="IPCHAINS-HOWTO-5.html">Previous</A>
+<A HREF="IPCHAINS-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

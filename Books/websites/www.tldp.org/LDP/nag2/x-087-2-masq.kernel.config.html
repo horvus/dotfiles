@@ -1,0 +1,398 @@
+<HTML
+><HEAD
+><TITLE
+>Configuring the Kernel for IP Masquerade</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="IP Masquerade and Network Address Translation"
+HREF="x-087-2-ipmasq.html"><LINK
+REL="PREVIOUS"
+TITLE="Side Effects and Fringe Benefits"
+HREF="x-087-2-masq.side.effects.html"><LINK
+REL="NEXT"
+TITLE="Configuring IP Masquerade"
+HREF="x-087-2-masq.configuration.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-masq.side.effects.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. IP Masquerade and Network Address Translation</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-masq.configuration.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-MASQ.KERNEL.CONFIG"
+>11.2. Configuring the Kernel for IP Masquerade</A
+></H1
+><P
+>&#13;
+
+
+
+To use the IP masquerade facility, your kernel must be compiled with masquerade
+support. You must select the following options when configuring a 2.2 series
+kernel:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Networking options  ---&#62;
+	[*] Network firewalls
+	[*] TCP/IP networking
+	[*] IP: firewalling
+	[*] IP: masquerading
+	--- Protocol-specific masquerading support will be built as modules.
+	[*] IP: ipautofw masq support
+	[*] IP: ICMP masquerading</PRE
+></TD
+></TR
+></TABLE
+>
+
+Note that some of the masquerade support is available only as a kernel module.
+This means that you must ensure that you
+&#8220;<TT
+CLASS="LITERAL"
+>make modules</TT
+>&#8221; in addition to the usual
+&#8220;<TT
+CLASS="LITERAL"
+>make zImage</TT
+>&#8221; when building
+your kernel.</P
+><P
+>&#13;The 2.4 series kernels no longer offer IP masquerade support as a kernel
+compile time option. Instead, you should select the network packet
+filtering option:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>Networking options  ---&#62;
+    [M] Network packet filtering (replaces ipchains)</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>In the 2.2 series kernels, a number of protocol-specific helper
+modules are created during kernel compilation. Some protocols begin with
+an outgoing request on one port, and then expect an incoming connection on
+another. Normally these cannot be masqueraded, as there is no way of associating
+the second connection with the first without peering inside the protocols
+themselves. The helper modules do just that; they actually look inside the
+datagrams and allow masquerading to work for supported protocols that
+otherwise would be impossible to masquerade. The supported protocols are:
+
+<DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN9642"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Module</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Protocol</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ip_masq_ftp</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>FTP</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ip_masq_irc</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>IRC</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ip_masq_raudio</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>RealAudio</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ip_masq_cuseeme</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>CU-See-Me</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ip_masq_vdolive</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>For VDO Live</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>ip_masq_quake</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>IdSoftware's Quake</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+>
+
+You must load these modules manually using the <B
+CLASS="COMMAND"
+>insmod</B
+> 
+command to implement them. Note that these modules cannot be loaded using
+the <B
+CLASS="COMMAND"
+>kerneld</B
+> daemon. Each of the modules takes an argument
+specifying what ports it will listen on. For the
+RealAudio&#8482; module you might use:<A
+NAME="X-087-2-MQ01"
+HREF="#FTN.X-087-2-MQ01"
+>[1]</A
+>
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>insmod ip_masq_raudio.o ports=7070,7071,7072</B
+></TT
+>           </PRE
+></TD
+></TR
+></TABLE
+>
+
+The ports you need to specify depend on the protocol. An IP masquerade
+mini-HOWTO written by Ambrose Au explains more about the IP masquerade modules
+and how to configure them.<A
+NAME="X-087-2-FNMQ02"
+HREF="#FTN.X-087-2-FNMQ02"
+>[2]</A
+></P
+><P
+>The <I
+CLASS="EMPHASIS"
+>netfilter</I
+> package includes modules that perform
+similar functions. For example, to provide connection tracking of FTP
+sessions, you'd load and use the <TT
+CLASS="FILENAME"
+>ip_conntrack_&#8201;ftp</TT
+> and
+<TT
+CLASS="FILENAME"
+>ip_nat_&#8201;ftp.o</TT
+> modules.</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-MQ01"
+HREF="x-087-2-masq.kernel.config.html#X-087-2-MQ01"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>RealAudio is a trademark of the Progressive Networks Corporation.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNMQ02"
+HREF="x-087-2-masq.kernel.config.html#X-087-2-FNMQ02"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>You can contact Ambrose at
+<SPAN
+CLASS="SYSTEMITEM"
+>ambrose@writeme.com</SPAN
+>.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-masq.side.effects.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-masq.configuration.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Side Effects and Fringe Benefits</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ipmasq.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Configuring IP Masquerade</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

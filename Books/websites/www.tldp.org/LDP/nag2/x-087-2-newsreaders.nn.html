@@ -1,0 +1,396 @@
+<HTML
+><HEAD
+><TITLE
+>nn Configuration</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Newsreader Configuration"
+HREF="x-087-2-newsreaders.html"><LINK
+REL="PREVIOUS"
+TITLE="trn Configuration"
+HREF="x-087-2-newsreaders.trn.html"><LINK
+REL="NEXT"
+TITLE="Example Network:The Virtual Brewery"
+HREF="x-087-2-appendix.brewery.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-newsreaders.trn.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 24. Newsreader Configuration</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-appendix.brewery.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NEWSREADERS.NN"
+>24.3. nn Configuration</A
+></H1
+><P
+><B
+CLASS="COMMAND"
+>nn</B
+>, written by Kim F. Storm, claims to be a newsreader
+whose ultimate goal is not to read news. Its name stands for
+&#8220;No News,&#8221; and its motto is
+&#8220;No news is good news. <B
+CLASS="COMMAND"
+>nn</B
+> is better.&#8221;</P
+><P
+>To achieve this ambitious goal, <B
+CLASS="COMMAND"
+>nn</B
+> comes with a large
+assortment of maintenance tools that not only allow thread generation,
+but also extensive database consistency checks, accounting,
+gathering of usage statistics, and access restrictions. There is also an
+administration program called <B
+CLASS="COMMAND"
+>nnadmin</B
+>, which allows you
+to perform these tasks interactively. It is very intuitive, so we will not
+dwell on these aspects, but deal only with the generation of the index files.</P
+><P
+>&#13;The <B
+CLASS="COMMAND"
+>nn</B
+> threads database manager is called
+<B
+CLASS="COMMAND"
+>nnmaster</B
+>. It is usually run as a daemon, started from an
+<TT
+CLASS="FILENAME"
+>rc</TT
+> file at boot time. It is invoked as:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>/usr/local/lib/nn/nnmaster -l -r -C</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This enables threading for all newsgroups present in your
+<TT
+CLASS="FILENAME"
+>active</TT
+> file.</P
+><P
+> 
+Equivalently, you may invoke <B
+CLASS="COMMAND"
+>nnmaster</B
+> periodically from
+<B
+CLASS="COMMAND"
+>cron</B
+>, giving it a list of groups to act upon. This list is
+very similar to the subscription list in the <TT
+CLASS="FILENAME"
+>sys</TT
+> file,
+except that it uses blanks instead of commas. Instead of the fake group name
+<I
+CLASS="EMPHASIS"
+>all</I
+>, an empty argument of <TT
+CLASS="LITERAL"
+>""</TT
+> should be
+used to denote all groups.  A sample invocation looks like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>/usr/local/lib/nn/nnmaster !rec.games.go rec comp</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Note that the order is significant. The leftmost group specification that
+matches always wins. Thus, if we had put
+<SPAN
+CLASS="SYSTEMITEM"
+>!rec.games.go</SPAN
+> after
+<SPAN
+CLASS="SYSTEMITEM"
+>rec</SPAN
+>, all articles from this group
+would have been threaded nevertheless.</P
+><P
+>&#13;<B
+CLASS="COMMAND"
+>nn</B
+> offers several methods to remove expired articles from
+its databases.  The first is to update the database by scanning the newsgroup 
+directories and discarding the entries whose corresponding article
+has exceeded its expiration date. This is the default operation obtained by
+invoking <B
+CLASS="COMMAND"
+>nnmaster</B
+> with the <TT
+CLASS="OPTION"
+>&#8211;E</TT
+> option.
+It is reasonably quick, unless you're doing this via NNTP.  </P
+><P
+>The second method behaves exactly like a default expiration run of
+<B
+CLASS="COMMAND"
+>mthreads</B
+>; it removes only those entries that refer
+to articles with numbers below the low-water mark in the
+<TT
+CLASS="FILENAME"
+>active</TT
+> file. It may be enabled using the
+<TT
+CLASS="OPTION"
+>&#8211;e</TT
+> option.</P
+><P
+>Finally, the third strategy discards the entire database and recollects all
+articles. It may be enabled using the <TT
+CLASS="OPTION"
+>&#8211;E3</TT
+> option.</P
+><P
+>The list of groups to be expired is given by the <TT
+CLASS="OPTION"
+>&#8211;F</TT
+>
+option in the same fashion as above.  However, if you have
+<B
+CLASS="COMMAND"
+>nnmaster</B
+> running as daemon, you must kill it (using
+<TT
+CLASS="OPTION"
+>&#8211;k</TT
+>) before expiration can take place, and restart it 
+with the original options afterward.  Thus the proper command to run 
+expiration on all groups using the first method is:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>nnmaster -kF ""</B
+></TT
+>
+# <TT
+CLASS="USERINPUT"
+><B
+>nnmaster -lrC</B
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>There are many more flags that fine-tune the <B
+CLASS="COMMAND"
+>nn</B
+>'s 
+behavior. If you are concerned about removing bad articles or
+assembling article digests, read the <B
+CLASS="COMMAND"
+>nnmaster</B
+> manual page.</P
+><P
+><B
+CLASS="COMMAND"
+>nnmaster</B
+> relies on a file named <TT
+CLASS="FILENAME"
+>GROUPS</TT
+>,
+which is located in <TT
+CLASS="FILENAME"
+>/var/lib/nn</TT
+>. If it does not exist
+when <B
+CLASS="COMMAND"
+>nnmaster</B
+> is first run, it is created. For each
+newsgroup, it contains a line that begins with the group's name, optionally
+followed by a time stamp and flags. You may edit these flags to enable certain
+behavior for the group in question, but you may not change the order in which
+the groups appear.<A
+NAME="X-087-2-FNNR05"
+HREF="#FTN.X-087-2-FNNR05"
+>[1]</A
+> The flags allowed and
+their effects are detailed in the <B
+CLASS="COMMAND"
+>nnmaster</B
+> manual page, too.
+
+ 
+ </P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNNR05"
+HREF="x-087-2-newsreaders.nn.html#X-087-2-FNNR05"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Their order has to agree with that of the entries in the
+(binary) <TT
+CLASS="FILENAME"
+>MASTER</TT
+> file.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-newsreaders.trn.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-appendix.brewery.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>trn Configuration</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-newsreaders.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Example Network:The Virtual Brewery</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

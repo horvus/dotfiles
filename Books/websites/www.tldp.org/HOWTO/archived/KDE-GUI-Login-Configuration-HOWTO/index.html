@@ -1,0 +1,393 @@
+<HTML>
+<HEAD>
+
+<TITLE>
+KDE GUI Login Configuration HOWTO
+</TITLE>
+</HEAD>
+<BODY BGCOLOR=white>
+
+<HR>
+<H1>KDE GUI Login Configuration HOWTO</H1>
+
+<H2>John P. Meshkoff,II  
+<A HREF="mailto:johnm@sivakalpa.org">johnm@sivakalpa.org</A></H2>v1.03 2003/04/13 update icon notes and kde 3.1 handbook notes
+<HR>
+<P>
+<B>Archived Document Notice:</B> This document has been archived by the LDP.
+</P>
+ 
+<HR>
+<EM>This is the KDE GUI Login Configuration HOWTO, a tutorial on customizing the GUI login screen.  Topics include:
+How to add other window managers to the drop-down selection list;
+how to enable user selection icons in the login window;
+and requiring root permission for system shutdown.</EM>
+<HR>
+<P>
+<H2><A NAME="toc1">1.</A> <A HREF="#s1">Copyright</A></H2>
+
+<P>
+<H2><A NAME="toc2">2.</A> <A HREF="#s2">Introduction</A></H2>
+
+<P>
+<H2><A NAME="toc3">3.</A> <A HREF="#s3">Adding new window manager selections to the drop-down list</A></H2>
+
+<P>
+<H2><A NAME="toc4">4.</A> <A HREF="#s4">Enabling user selection icons in the login dialog box</A></H2>
+
+<P>
+<H2><A NAME="toc5">5.</A> <A HREF="#s5">Requiring root permission for shutdown</A></H2>
+
+<P>
+<H2><A NAME="toc6">6.</A> <A HREF="#s6">Bibliography</A></H2>
+
+<HR>
+<H2><A NAME="s1">1.</A> <A HREF="KDE-GUI-Login-Configuration-HOWTO.html#toc1">Copyright</A></H2>
+
+
+<P>Copyright (c) 2002 by John Meshkoff </P>
+<P>Please freely copy and distribute (sell or give away) this document in any format. It's 
+requested that corrections and/or comments be forwarded  to the document maintainer. You 
+may create a derivative work and distribute it provided that you: </P>
+<P>1.  Send your derivative work (in the most suitable format such as sgml) to the LDP (Linux 
+Documentation Project) or the like for posting on the Internet. If not the LDP, then let 
+the LDP know where it is available. </P>
+<P>2.  License the derivative work with this same license or use GPL. Include a copyright notice 
+and at least a pointer to the license used. </P>
+<P>3.  Give due credit to previous authors and major contributors. </P>
+<P>If you're considering making a derived work other than a translation, it's 
+requested that you discuss your plans with the current maintainer.</P>
+
+<HR>
+<H2><A NAME="s2">2.</A> <A HREF="KDE-GUI-Login-Configuration-HOWTO.html#toc2">Introduction</A></H2>
+
+<P>This info is based on my RedHat 6.1 default KDE Workstation installation.  If you are using 
+another distribution, or even another version of RedHat, or a different Workstation install, 
+then you may have to do some detective work. Hopefully, this info will give you what you need 
+to start detecting! This HOWTO began as the result of wondering how to add another window manager 
+or desktop environment to the drop-down list on the GUI login screen; further investigation 
+revealed other configuration options.</P>
+<P>I began my own "detective work" when I found a reference on a RedHat List which 
+mentioned <CODE>/etc/inittab</CODE>, and its role in system startup.  In 
+<CODE>/etc/inittab</CODE> I found the following entries, which define how the 
+X Window System is started in my distribution and version:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+# Run xdm in runlevel 5
+# xdm is now a separate service
+x:5:respawn:/etc/X11/prefdm -nodaemon
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Here is what prefdm looks like:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/X11R6/bin
+
+# Run preferred X display manager
+preferred=
+if [ -f /etc/sysconfig/desktop ]; then
+        if grep -q GNOME /etc/sysconfig/desktop 2>/dev/null; then
+                preferred=gdm
+        elif grep -q KDE /etc/sysconfig/desktop 2> /dev/null; then
+                preferred=kdm
+        elif grep -q AnotherLevel /etc/sysconfig/desktop 2> /dev/null; then
+                preferred=xdm
+        fi
+fi
+if [ -z ":$preferred" ]; then
+        if which gdm >/dev/null 2>&amp;1; then
+                preferred=gdm
+        elif which kdm >/dev/null 2>&amp;1; then
+                preferred=kdm
+        elif which xdm >/dev/null 2>&amp;1; then
+                preferred=xdm
+        fi
+fi
+if [ -n "$preferred" ] &amp;&amp; which $preferred >/dev/null 2>&amp;1; then
+        exec `which $preferred` $*
+fi
+exit 1  
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</P>
+<P>No changes to prefdm are necessary; it determines which display manager is the 
+system default, and which runs the GUI login. During boot-up, prefdm parses
+<CODE>/etc/sysconfig/desktop</CODE>  and selects the display manager listed there;
+in the case of my KDE Workstation  install, this is kdm (KDE Display Manager).
+Note that gdm (Gnome Display Manager)    is not installed on my system; xdm (X
+Display Manager) is installed by default as  part of the X Window System, and
+was apparently used by older versions of Red Hat.  </P>
+
+<HR>
+<H2><A NAME="s3">3.</A> <A HREF="KDE-GUI-Login-Configuration-HOWTO.html#toc3">Adding new window manager selections to the drop-down list</A></H2>
+
+<P>WARNING:  The procedures explained in this HOWTO involve making changes to system 
+configuration files; if you are not experienced in making such changes, some 
+caution is required.  Introducing errors into such files may make your system 
+unstable, or cause it to crash.  The procedures explained in this HOWTO have 
+been tested and should not cause problems if used correctly.</P>
+<P>If you have KDE 2.2 or higher, and you are not comfortable with manual editing of system files, you may open a
+terminal window (xterm or konsole) from your user desktop (NOT the root
+desktop), then type and enter:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+su -c 'kcontrol'
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Enter your root password at the prompt, and make the changes from within the
+KDE Control Center that appears: go to <EM>Applications ==> Login Manager</EM>.  Choose
+the appropriate configuration tab; you can easily configure every aspect of
+the login screen from there.  In Earlier versions of KDE, kcontrol can modify 
+kdmrc, but cannot modify Xsession which is used in those versions; see the 
+note below about changes from KDE 2.2 and higher.</P>
+<P>To see how to manually configure some of these, and see what these
+configuration files do, proceed as follows:</P>
+<P>(Caution:   Some configuration files have changed since the version of kdm
+I'm using, particularly since KDE > 2.0:</P>
+<P>The following is quoted from 
+<A HREF="http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/x11-wm.html">the FreeBSD  Handbook-X11:</A></P>
+<P>"Note:
+In KDE 2.2 this has changed: kdm now uses its own configuration files.  Please
+see the KDE 2.2 documentation for details.")</P>
+<P>Note:
+KDE 3.1 has added kdm documentation, see 
+<A HREF="http://docs.kde.org/en/3.1/kdebase/kdm/">The kdm Handbook</A></P>
+<P>Much of the material in this new handbook applies to the older versions; 
+new features are also described therein.</P>
+<P>Check the documentation for your version to identify the current configuration
+files if you want to manually edit these, or just want to see how they work.  </P>
+
+<P>Do <EM>not</EM> use a <EM>word-processor</EM> program for editing system configuration 
+files; such programs introduce special formatting characters which will corrupt the files.  
+Use a <EM>text-editor</EM>, particularly one which can handle long lines without introducing 
+extra carriage-return or line feed characters into existing code.  Suitable editors include 
+vim (vi improved), vi, and emacs.  There are others, but these are usually installed by default 
+in Linux workstation installations; they each have features which make them especially suitable for 
+writing and editing computer code.  See the bibliography section at the end of this HOWTO for 
+more information.  </P>
+<P>IMPORTANT:  Before making changes to <EM>any</EM> system configuration files, you should make 
+back-up copies of the originals, so you can restore them in case of serious errors!</P>
+<P>The files which we will be changing here are <CODE>/usr/share/config/kdmrc</CODE>, which 
+is where we add selection labels to the drop-down list on the login screen, and
+<CODE>/etc/X11/xdm/Xsession</CODE>, which is where we add the path to the executables 
+for our labels (if you are using a different distribution, the path to these 
+files may be different; just do "<CODE>locate kdmrc</CODE>" and "<CODE>locate Xsession</CODE>" 
+in the shell [i.e., in a terminal emulation, such as <EM>xterm</EM>, or KDE's <EM>konsole</EM>] 
+to find them). </P>
+<P>The default line to change in kdmrc looks like this: </P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+SessionTypes=kde;gnome;anotherlevel;default;failsafe; 
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</P>
+<P>After adding selection labels for two new window managers, windowmaker and blackbox, the line looks like this:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+SessionTypes=kde;gnome;windowmaker;blackbox;anotherlevel;default;failsafe; 
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+ 
+Notice the positions where I have added the labels for the new window managers; all
+entries will appear on the drop-down list in the same order as they
+appear in the SessionTypes list. Next, the actual choosing takes place in
+<CODE>/etc/X11/xdm/Xsession</CODE>. Here is what the appropriate section of
+Xsession  looks like before adding the new entries:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+# now, we see if xdm/gdm/kdm has asked for a specific environment
+#
+case $# in
+1)
+    case $1 in
+    failsafe)
+        exec xterm -geometry 80x24-0-0
+        ;;
+    gnome)
+        exec gnome-session
+        ;;
+    kde)
+        exec startkde
+        ;;   
+    anotherlevel)
+        # we assume that switchdesk is installed.
+        exec /usr/share/apps/switchdesk/Xclients.anotherlevel
+        ;;
+    esac
+esac  
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</P>
+
+<P>Here is what this section of the Xsession file looks like after adding the new
+entries (NOTE that the selection  labels <EM>must</EM> be <EM>exactly</EM> the
+same in Xsession and prefdm, i.e., spelling and case  must be identical):</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+# now, we see if xdm/gdm/kdm has asked for a specific environment
+#
+case $# in
+1)
+    case $1 in
+    failsafe)
+        exec xterm -geometry 80x24-0-0
+        ;;
+    gnome)
+        exec gnome-session
+        ;;
+    kde)
+        exec startkde
+        ;;
+    windowmaker)        
+        exec wmaker
+        ;;
+    blackbox)        
+        exec blackbox
+        ;;    
+    anotherlevel)
+        # we assume that switchdesk is installed.
+        exec /usr/share/apps/switchdesk/Xclients.anotherlevel
+        ;;
+    esac
+esac  
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+
+Note that when the executables are installed in one of the paths shown below, only the 
+executable name is required after "exec"; otherwise the full path must be included, 
+as shown for "Xclients.anotherlevel" (above): </P>
+<P><CODE>/usr/bin/</CODE> </P>
+<P><CODE>/usr/local/bin/</CODE> </P>
+<P><CODE>/usr/X11R6/bin/</CODE></P>
+<P><CODE>/usr/bin/X11/</CODE></P>
+<P>These examples should be enough for you to add your favorite window manager(s) to the 
+KDE graphical login, or to give you a starting point to find out how it's done in your 
+particular installation. </P>
+
+<HR>
+<H2><A NAME="s4">4.</A> <A HREF="KDE-GUI-Login-Configuration-HOWTO.html#toc4">Enabling user selection icons in the login dialog box</A></H2>
+
+<P>In RedHat 6.1, the default KDE login window shows a dialog box with a space to 
+type in the user name, one in which to type the user password, and a drop down 
+list to select the window manager/desktop environment  of choice.  By making the 
+following changes to <CODE>/usr/share/config/kdmrc</CODE>, user icons will appear in 
+the top of the login box.  
+Here is what the default lines that control user icon view  in kdmrc look like (other 
+lines between these two are not shown, and are represented by "..."):</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#Users=root;johndoe
+...
+UserView=false
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Here are the same lines after editing; delete the comment character ("#") in 
+front of "Users=..." and change "johndoe" to your username (if there are more 
+user accounts on your system, you may add their usernames here, separated by semi-colons 
+as shown).  Change "UserView=false" to "UserView=true" as shown here:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+Users=root;johnpipe
+...
+UserView=true
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Now, when you login, you may click on an icon with the mouse to enter the user name; you must still type in your password.</P>
+<P>You can add your own icons in place of the default icons; place you own icons 
+in /usr/share/apps/kdm/pics/users/.  They should be of size 64 x 64, according 
+to the kdm handbook; in KDE 1.x, the default icons are 62 x 63, and my new user icon is 60 
+x 60, so if icons are reasonably close to the specified 64 x 64 size, they 
+will work OK.  The handbook says "kdm is able to handle icons of different 
+sizes, but the result looks messy.", so there is evidently some leeway here. 
+Your icons should be named 'username.xpm', for example my username is 
+"johnpipe" and my new icon is named 'johnpipe.xpm' </P>
+<P>NOTE: at some time since kde 1.x, the icon format has been changed from '.xpm' 
+(XPixMap) to '.png' (portable network graphic).</P>
+
+<HR>
+<H2><A NAME="s5">5.</A> <A HREF="KDE-GUI-Login-Configuration-HOWTO.html#toc5">Requiring root permission for shutdown</A></H2>
+
+<P>The default for the shutdown button on the login box allows anyone to use it to shutdown the system. 
+The section in <CODE>/usr/share/config/kdmrc</CODE>  controlling who may use this button looks like this:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#ShutdownButton=RootOnly
+ShutdownButton=ConsoleOnly 
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+</P>
+<P>To enable only the root user to shutdown the system, change the lines as shown below:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+ShutdownButton=RootOnly
+#ShutdownButton=ConsoleOnly
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+ </P>
+<P>Clicking the shutdown button will now prompt for the root password before shutting down the 
+system.</P>
+
+<HR>
+<H2><A NAME="s6">6.</A> <A HREF="KDE-GUI-Login-Configuration-HOWTO.html#toc6">Bibliography</A></H2>
+
+
+<P>For more HOWTO's, see 
+<A HREF="http://www.tldp.org/">The Linux Documentation Project</A></P>
+<P>Recommended reading: </P>
+<P>
+<UL>
+<LI>
+<A HREF="http://www.tldp.org/HOWTO/XWindow-User-HOWTO/">XWindow-User-HOWTO</A></LI>
+<LI>
+<A HREF="http://www.tldp.org/HOWTO/Emacs-Beginner-HOWTO.html">Emacs Beginner's HOWTO</A></LI>
+<LI>
+<A HREF="http://www.tldp.org/HOWTO/Vim-HOWTO.html">Vim Color Editor HOW-TO (Vi Improved with syntax color highlighting)</A></LI>
+</UL>
+</P>
+<P>Depending on your Linux distribution and version, you may already have the 
+above HOWTO's installed on your system.  If not installed, you may have them
+on your installation CD.</P>
+
+<HR>
+</BODY>
+</HTML>

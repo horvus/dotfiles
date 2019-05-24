@@ -1,0 +1,3259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Booting Linux from DiskOnChip HOWTO</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"></HEAD
+><BODY
+CLASS="article"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="ARTICLE"
+><DIV
+CLASS="TITLEPAGE"
+><H1
+CLASS="title"
+><A
+NAME="AEN2"
+></A
+>Booting Linux from DiskOnChip HOWTO</H1
+><H3
+CLASS="author"
+><A
+NAME="AEN4"
+>Rohit Agarwal</A
+></H3
+><DIV
+CLASS="affiliation"
+><DIV
+CLASS="address"
+><P
+CLASS="address"
+><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:rohdimp_24@rediffmail.com"
+>rohdimp_24@rediffmail.com</A
+>&#62;</TT
+><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</P
+></DIV
+></DIV
+><H3
+CLASS="author"
+><A
+NAME="AEN11"
+>Vishnu Swaminathan</A
+></H3
+><DIV
+CLASS="affiliation"
+><DIV
+CLASS="address"
+><P
+CLASS="address"
+><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:Vishnu.Swaminathan@siemens.com"
+>Vishnu.Swaminathan@siemens.com</A
+>&#62;</TT
+><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</P
+></DIV
+></DIV
+><P
+CLASS="pubdate"
+>20060907<BR></P
+><DIV
+CLASS="revhistory"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+COLSPAN="3"
+><B
+>Revision History</B
+></TH
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+>Revision 1.0</TD
+><TD
+ALIGN="LEFT"
+>2006-09-07</TD
+><TD
+ALIGN="LEFT"
+>Revised by: MG</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+COLSPAN="3"
+>Last review for LDP publication</TD
+></TR
+></TABLE
+></DIV
+><DIV
+><DIV
+CLASS="abstract"
+><A
+NAME="AEN19"
+></A
+><P
+></P
+><P
+>This document discusses how to make the Flash Drives Linux bootable.  We will describe how to boot from such a drive, instead of from the normal hard drive.</P
+><P
+></P
+></DIV
+></DIV
+><HR></DIV
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>1. <A
+HREF="#intro"
+>Introduction</A
+></DT
+><DD
+><DL
+><DT
+>1.1. <A
+HREF="#why"
+>Why this document?</A
+></DT
+><DT
+>1.2. <A
+HREF="#NFTL"
+>NFTL vs. INFTL</A
+></DT
+><DT
+>1.3. <A
+HREF="#aims"
+>Practical goals</A
+></DT
+></DL
+></DD
+><DT
+>2. <A
+HREF="#refconf"
+>Reference configuration</A
+></DT
+><DT
+>3. <A
+HREF="#assumptions"
+>Assumptions</A
+></DT
+><DT
+>4. <A
+HREF="#steps"
+>Using M-Systems DiskOnChip 2000 TSOP as an additional storage drive in Linux</A
+></DT
+><DD
+><DL
+><DT
+>4.1. <A
+HREF="#step1"
+>Step 1: Patch the Kernel</A
+></DT
+><DT
+>4.2. <A
+HREF="#step2"
+>Step 2: Compile the Kernel</A
+></DT
+><DT
+>4.3. <A
+HREF="#step3"
+>Step 3: Create Nodes</A
+></DT
+><DT
+>4.4. <A
+HREF="#step4"
+>Step 4: Reboot with the new kernel</A
+></DT
+><DT
+>4.5. <A
+HREF="#step5"
+>Step 5: Insert M-Systems Driver/Module in the new Kernel</A
+></DT
+><DT
+>4.6. <A
+HREF="#step6"
+>Step 6: Create a filesystem on the DiskOnChip</A
+></DT
+><DT
+>4.7. <A
+HREF="#step7"
+>Step 7: Mount the newly created partition to start accessing DOC</A
+></DT
+></DL
+></DD
+><DT
+>5. <A
+HREF="#install"
+>Install Linux and LILO on DiskOnChip</A
+></DT
+><DD
+><DL
+><DT
+>5.1. <A
+HREF="#copy_firmware"
+>Step 1: Copying the DOC firmware onto DiskOnChip</A
+></DT
+><DT
+>5.2. <A
+HREF="#format"
+>Step 2: Format DiskOnChip using Dos Utilities</A
+></DT
+><DT
+>5.3. <A
+HREF="#patch+compile"
+>Step 3: Patch and Compile the kernel 2.4.18</A
+></DT
+><DT
+>5.4. <A
+HREF="#nodes"
+>Step 4: Create nodes</A
+></DT
+><DT
+>5.5. <A
+HREF="#modconf"
+>Step 5: Modify the /etc/module.conf file</A
+></DT
+><DT
+>5.6. <A
+HREF="#initrd"
+>Step 6: Create the initrd image</A
+></DT
+><DT
+>5.7. <A
+HREF="#insert_driver"
+>Step 7: Insert the DOC driver into the new kernel</A
+></DT
+><DT
+>5.8. <A
+HREF="#createfs"
+>Step 8:  Create a filesystem on the DiskOnChip</A
+></DT
+><DT
+>5.9. <A
+HREF="#rootfs"
+>Step 9:  Build Root Filesystem on the DiskOnChip</A
+></DT
+><DT
+>5.10. <A
+HREF="#rdev"
+>Step 10: Use rdev to specify the DOC root filesystem location to kernel image</A
+></DT
+><DT
+>5.11. <A
+HREF="#lilo"
+>Step 11: Compile lilo-22.3.2</A
+></DT
+><DT
+>5.12. <A
+HREF="#boot.b"
+>Step 12: Copy the boot.b file into boot directory of DOC</A
+></DT
+><DT
+>5.13. <A
+HREF="#liloconf"
+>Step 13:  Modify the /etc/lilo.conf file</A
+></DT
+><DT
+>5.14. <A
+HREF="#bootable"
+>Step 14: Store the new LILO configuration on the DiskOnChip</A
+></DT
+><DT
+>5.15. <A
+HREF="#fstab"
+>Step 15: Modify etc/fstab of DiskOnChip root file system</A
+></DT
+><DT
+>5.16. <A
+HREF="#firmware"
+>Step16:  Update Firmware</A
+></DT
+><DT
+>5.17. <A
+HREF="#boot"
+>Step17: BOOT from DiskOnChip</A
+></DT
+></DL
+></DD
+><DT
+>6. <A
+HREF="#devtools"
+>Install Development ToolChain on DiskOnChip</A
+></DT
+><DD
+><DL
+><DT
+>6.1. <A
+HREF="#getimage"
+>Step1: Obtain the latest copy of root_fs_i386.ext2</A
+></DT
+><DT
+>6.2. <A
+HREF="#fs_swap"
+>Step2: Replace the root filesystem of the DiskOnChip</A
+></DT
+><DT
+>6.3. <A
+HREF="#DOS_fstab"
+>Step3: Modify etc/fstab of DiskOnChip root file system</A
+></DT
+><DT
+>6.4. <A
+HREF="#reboot"
+>Step4: Reboot</A
+></DT
+></DL
+></DD
+><DT
+>7. <A
+HREF="#refs"
+>References</A
+></DT
+><DT
+>A. <A
+HREF="#AEN871"
+>Output of dinfo</A
+></DT
+><DT
+>B. <A
+HREF="#AEN885"
+>License</A
+></DT
+><DT
+>C. <A
+HREF="#AEN890"
+>About Authors</A
+></DT
+><DT
+>D. <A
+HREF="#AEN899"
+>Dedications</A
+></DT
+></DL
+></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="intro"
+></A
+>1. Introduction</H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="why"
+></A
+>1.1. Why this document?</H2
+><P
+>DiskOnChip (DOC) is a flash drive that is manufactured by M-Systems. The use of flash drives is emerging as a substitute for Hard Disks in embedded devices. Embedded Linux is gaining popularity as the operating system of choice in the embedded systems community; as such, there is an increased demand for embedded systems that can boot into Linux from flash drives.</P
+><P
+>Much of the documentation currently available on the subject is either incorrect or incomplete; the presentation of the information which is provided by such documents is likely to confuse novice users.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="NFTL"
+></A
+>1.2. NFTL vs. INFTL</H2
+><P
+>Another fundamental problem is that most of the documents assume the DiskOnChip to be a NFTL (NAND Flash Translation Layer) device, and proceed to describe the booting process for NFTL devices. DiskOnChip architectures come in two variants, each of which requires different booting procedures: NFTL and INFTL (Inverse NFTL). Dan Brown, who has written a boot loader known as DOCBoot, explains the differences between these variants in a README document, which is included with the DOCBoot package: <A
+HREF="http://ftp.arm.linux.org.uk/pub/people/dwmw2/mtd/cvs/mtd/docboot/"
+TARGET="_top"
+>http://ftp.arm.linux.org.uk/pub/people/dwmw2/mtd/cvs/mtd/docboot/</A
+>.</P
+><P
+>An INFTL device is organized as follows:</P
+><A
+NAME="AEN38"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>IPL</P
+><P
+>Media Header</P
+><P
+>Partition 0 (BDK or BDTL)</P
+><P
+>(Optional) Partition 1(BDK or BDTL)</P
+><P
+>.. Up to at most Partition 3</P
+></BLOCKQUOTE
+><P
+>Under Linux MTD partitions are created for each partition listed in the INFTL partition table. Thus up to 5 MTD devices are created.</P
+><P
+>By contrast the NFTL device is organized as follows:</P
+><A
+NAME="AEN46"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>Firmware</P
+><P
+>Media Header</P
+><P
+>BDTL Data</P
+></BLOCKQUOTE
+><P
+>Under Linux, normally two MTD devices will be created.</P
+><P
+>According to the above excerpt, the process used by the boot loader when fetching the kernel image for an INFTL device is different from the method used for NFTL devices, since both devices have different physical layouts. (repetitive)</P
+><P
+>Using a 2.4.x kernel  for an INFTL DiskOnChip device is complicated by the lack of native support in pre-2.6.x kernels (although native NFTL support is present). Such functionality is only available by <EM
+>patching</EM
+> the kernel; an approach which is ill-advised.</P
+><P
+>Patching the kernel with external INFTL support is discouraged; the developers of the MTD driver, the open source driver available for DiskOnChip, are apprehensive of this approach as well. For more information on this matter, feel free to peruse the mailing list conversation on the subject at <A
+HREF="http://lists.infradead.org/pipermail/linux-mtd/2004-August/010165.html"
+TARGET="_top"
+>http://lists.infradead.org/pipermail/linux-mtd/2004-August/010165.html</A
+>.</P
+><P
+>The drivers that provide native INFTL support in the 2.6.x kernels failed to identify the DiskonChip device used for this exercise, and the following message was reported by the system:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;INFTL no longer supports the old DiskOnChip drivers loaded via docprobe.  
+Please use the new diskonchip driver under the NAND subsystem.
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>So then we decided to use the drivers provided by M-Systems (manufacturer of DiskOnChip).  However, according to the documentation provided by the vendor on these drivers, they were designed for NFTL devices only. As such, we decided to write this HOWTO which will address the use of INFTL devices. We have taken special care to remove any ambiguity in the steps and also tried to give reasons for the need of a particular step so as to make things logically clear. We have explained things in such a way that a person with less experience on Linux can also follow the steps.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="aims"
+></A
+>1.3. Practical goals</H2
+><P
+>This document aims to act as a guide to:</P
+><P
+></P
+><UL
+><LI
+><P
+>Use M-Systems DiskOnChip 2000 TSOP as an additional storage drive along with an IDE HDD running Linux on it.</P
+></LI
+><LI
+><P
+>Install Linux on DiskOnChip 2000 TSOP and boot Linux from it.</P
+></LI
+><LI
+><P
+>Install the Development Tool-Chain so as to compile and execute programs directly on DiskOnChip.</P
+></LI
+></UL
+><P
+>The method described here has been tested for DiskOnChip 2000 TSOP 256MB and DiskOnChip 2000 TSOP 384MB.</P
+></DIV
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="refconf"
+></A
+>2. Reference configuration</H1
+><P
+>We used the following hard- and software:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>VIA Eden CPU 1GHz clock speed 256MB RAM</P
+></LI
+><LI
+><P
+>RTD Enhanced Phoenix - AwardBIOS CMOS Setup Utility (v6.00.04.1601)</P
+></LI
+><LI
+><P
+>Kernel 2.4.18 source code downloaded from <A
+HREF="www.kernel.org/pub/linux/kernel/v2.4"
+TARGET="_top"
+>www.kernel.org/pub/linux/kernel/v2.4</A
+></P
+></LI
+><LI
+><P
+>256 MB M-Systems DiskOnChip 2000 TSOP (MD2202-D256)</P
+></LI
+><LI
+><P
+>M-Systems TrueFFS Linux driver version 5.1.4 from <A
+HREF="http://www.m-sys.com/site/en-US/Support/SoftwareDownload/Driver+Download.htm?driver=linux_binary.5_1_4.tgz"
+TARGET="_top"
+>http://www.m-sys.com/site/en-US/Support/SoftwareDownload/Driver+Download.htm?driver=linux_binary.5_1_4.tgz</A
+></P
+></LI
+><LI
+><P
+>LILO version 22.3.2 (distributed with driver)</P
+></LI
+><LI
+><P
+>DiskOnChip DOS utilities version 5.1.4 and BIOS driver version 5.1.4 from <A
+HREF="http://www.m-sys.com/site/en-US/Support/SoftwareDownload/TrueFFS5.x/BIOSDOSdriverandtools.htm"
+TARGET="_top"
+>http://www.m-sys.com/site/en-US/Support/SoftwareDownload/TrueFFS5.x/BIOSDOSdriverandtools.htm</A
+></P
+></LI
+><LI
+><P
+>Dual bootable Hard Disk with Knoppix 3.9 and Windows XP using Grub 0.96 as the Boot Loader</P
+></LI
+><LI
+><P
+>GNU GCC-2.95.3</P
+></LI
+><LI
+><P
+>Latest root_fs_i386 image from <A
+HREF="http://www.uclibc.org/downloads/root_fs_i386.ext2.bz2"
+TARGET="_top"
+>http://www.uclibc.org/downloads/root_fs_i386.ext2.bz2</A
+> or <A
+HREF="http://www.uclibc.org/downloads/root_fs_i386.ext2.tar.gz"
+TARGET="_top"
+>http://www.uclibc.org/downloads/root_fs_i386.ext2.tar.gz</A
+></P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="assumptions"
+></A
+>3. Assumptions</H1
+><P
+>We have made some assumptions related to working directories and mounting points which we would like to mention before listing the entire procedure for putting Linux on DiskOnChip.</P
+><P
+></P
+><UL
+><LI
+><P
+>We will perform all the compilation in <TT
+CLASS="filename"
+>/usr/src</TT
+> of the host machine so downloading of the necessary files must be done into that directory.</P
+></LI
+><LI
+><P
+>All the commands listed are executed assuming <TT
+CLASS="filename"
+>/usr/src</TT
+> as the present working directory.</P
+></LI
+><LI
+><P
+>We will mount the DiskOnChip partition on <TT
+CLASS="filename"
+>/mnt/doc</TT
+>.</P
+></LI
+><LI
+><P
+>The names of the directories will be exactly the same as the files that  have been downloaded so the document will give the actual path as were created on the host system.</P
+></LI
+><LI
+><P
+>DiskOnChip and DOC have been used interchangeably to mean M-Systems DiskOnChip 2000 TSOP.</P
+></LI
+><LI
+><P
+>The DOS utilities have been downloaded and saved in a Windows partition directory.</P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="steps"
+></A
+>4. Using M-Systems DiskOnChip 2000 TSOP as an additional storage drive in Linux</H1
+><P
+>The following are the steps performed for this purpose.</P
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="step1"
+></A
+>4.1. Step 1: Patch the Kernel</H2
+><P
+>Download a fresh copy of Kernel 2.4.18 from <A
+HREF="http://www.kernel.org/pub/linux/kernel/v2.4"
+TARGET="_top"
+>http://www.kernel.org/pub/linux/kernel/v2.4</A
+>.</P
+><P
+>The kernel that is downloaded from the site does not have support for the M-Systems driver so we need to add this functionality.  This is done by adding a patch to the kernel.</P
+><P
+>The steps to conduct patching are as follows:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Untar the kernel source file and the M-systems TrueFFS Linux driver version 5.14.  If the source code is in <TT
+CLASS="filename"
+>.tar.gz</TT
+> format, use</P
+><P
+><B
+CLASS="command"
+>tar <TT
+CLASS="option"
+>-xvzf</TT
+> <TT
+CLASS="filename"
+>linux-2.4.18.tar.gz</TT
+></B
+> </P
+><P
+>If the source code is in <TT
+CLASS="filename"
+>.tar.bz2</TT
+> format, use</P
+><P
+><B
+CLASS="command"
+>bunzip2 <TT
+CLASS="filename"
+>linux-2.4.18.tar.bz2</TT
+></B
+> </P
+><P
+>After using <B
+CLASS="command"
+>bunzip2</B
+>, you will get a file named <TT
+CLASS="filename"
+>linux-2.4.18.tar</TT
+>.  Untar it using the command</P
+><P
+><B
+CLASS="command"
+>tar <TT
+CLASS="option"
+>-xvf</TT
+> <TT
+CLASS="filename"
+>linux-2.4.18.tar</TT
+></B
+> </P
+><P
+>Unarchiving the driver is done using the command</P
+><P
+><B
+CLASS="command"
+>tar <TT
+CLASS="option"
+>-xvzf</TT
+> <TT
+CLASS="filename"
+>linux_binary.5_1_4.tgz</TT
+></B
+> </P
+><P
+>This results in the creation of two directories: <TT
+CLASS="filename"
+>linux</TT
+> and <TT
+CLASS="filename"
+>linux_binary.5_1_4</TT
+>.</P
+></LI
+><LI
+><P
+>The TrueFFS Linux driver package contains three different folders:</P
+><P
+></P
+><UL
+><LI
+><P
+><TT
+CLASS="filename"
+>Documentation</TT
+>: this contains a PDF document describing the various functions of TrueFFS.</P
+></LI
+><LI
+><P
+><TT
+CLASS="filename"
+>dformat_5_1_4_37</TT
+>: this contains a utility <B
+CLASS="command"
+>dformat</B
+>, which is used to update the firmware on the DiskOnChip (DOC) and to create low level partitions on the DOC.</P
+></LI
+><LI
+><P
+><TT
+CLASS="filename"
+>doc-linux-5_1_4_20</TT
+>: this contains patches, <TT
+CLASS="filename"
+>initrd</TT
+> scripts and other utilities.</P
+></LI
+></UL
+></LI
+><LI
+><P
+>Now apply the patch to the kernel.  We will use the <TT
+CLASS="filename"
+>linux-2_4_7-patch</TT
+> file that is present in <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/driver</TT
+>.  The following commands are used for this purpose:</P
+><P
+><B
+CLASS="command"
+>cd <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/driver</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>patch <TT
+CLASS="option"
+>-p1 -d</TT
+> <TT
+CLASS="filename"
+>/usr/src/linux</TT
+> &#60; <TT
+CLASS="filename"
+>linux-2_4_7-patch</TT
+></B
+> </P
+><P
+>This will create a directory named <TT
+CLASS="filename"
+>doc</TT
+> in the <TT
+CLASS="filename"
+>linux/drivers/block</TT
+> directory.</P
+></LI
+><LI
+><P
+>The patch created the <TT
+CLASS="filename"
+>doc</TT
+> directory, but did not copy the source files of the M-Systems driver, which are necessary in order to build the driver, into this directory.  So execute the following command:</P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/driver/doc/* /usr/src/linux/drivers/block/doc</TT
+></B
+> </P
+></LI
+></OL
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Kernel version</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The patch will fail for kernels other than 2.4.18 since the source files where the patch is to be applied may be somewhat different in different kernels. The patch has been provided specifically for kernel 2.4.18.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Before moving on to Step 2, do the following:</P
+><P
+></P
+><UL
+><LI
+><P
+>Login as root.</P
+></LI
+><LI
+><P
+>Make sure that <B
+CLASS="command"
+>gcc</B
+> version is 2.95.3 else the build will fail. Use <B
+CLASS="command"
+>gcc <TT
+CLASS="option"
+>--version</TT
+></B
+> to check this.  If your <B
+CLASS="command"
+>gcc</B
+> version is different compile gcc-2.95.3. Refer to <A
+HREF="http://xlife.zuarvra.net.columns/20020316"
+TARGET="_top"
+>http://xlife.zuarvra.net.columns/20020316</A
+> for this purpose.</P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="step2"
+></A
+>4.2. Step 2: Compile the Kernel</H2
+><P
+>Complete the following tasks for compiling the kernel:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+><B
+CLASS="command"
+>cd <TT
+CLASS="filename"
+>linux</TT
+></B
+></P
+></LI
+><LI
+><P
+><B
+CLASS="command"
+>make <TT
+CLASS="parameter"
+><I
+>menuconfig</I
+></TT
+></B
+></P
+><P
+>Check for the following options:</P
+><P
+></P
+><UL
+><LI
+><P
+>In the <SPAN
+CLASS="QUOTE"
+>"Block devices menu"</SPAN
+>, select:</P
+><P
+></P
+><UL
+><LI
+><P
+>M-Systems driver as module i.e. (M)</P
+></LI
+><LI
+><P
+>Loopback device support as built-in i.e. (*)</P
+></LI
+><LI
+><P
+>RAM disk support as built-in i.e. (*)</P
+></LI
+><LI
+><P
+>Initial RAM disk (initrd) support as built .in i.e. (*)</P
+></LI
+></UL
+></LI
+><LI
+><P
+>In the <SPAN
+CLASS="QUOTE"
+>"Processor type and features menu"</SPAN
+>, select <SPAN
+CLASS="QUOTE"
+>"Disable Symmetric Multiprocessor Support"</SPAN
+>.</P
+></LI
+><LI
+><P
+>In the <SPAN
+CLASS="QUOTE"
+>"filesystem menu"</SPAN
+>, select:</P
+><P
+></P
+><UL
+><LI
+><P
+>Ext3 journaling file system support as built-in</P
+></LI
+><LI
+><P
+>DOS FAT fs support as built-in<SUP
+>a</SUP
+></P
+></LI
+><LI
+><P
+>MSDOS fs support as built-in<SUP
+>b</SUP
+></P
+></LI
+><LI
+><P
+>VFAT (Windows-95) fs support as built-in<SUP
+>c</SUP
+> </P
+></LI
+></UL
+></LI
+></UL
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>File System Menu</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>a,b,c options should be activated if you want to mount your MS Windows partition, else they can be left out.  It is, however, generally recommended to use them.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>An excellent resource on kernel compilation is the <A
+HREF="http://www.digitalhermit.com/linux/Kernel-Build-HOWTO.html"
+TARGET="_top"
+>Kernel Rebuild Guide</A
+>.</P
+><P
+>The configuration file, <TT
+CLASS="filename"
+>linux/.config</TT
+> should essentially contain the following lines (only a part of the config file has been given):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;#
+# Loadable module support
+#
+CONFIG_MODULES=y
+CONFIG_MODVERSIONS=y
+CONFIG_KMOD=y
+
+#
+# Processor type and features
+#
+
+# CONFIG_SMP is not set
+
+
+#
+# Memory Technology Devices (MTD)
+#
+# CONFIG_MTD is not set
+
+#
+# Block devices
+#
+# CONFIG_BLK_DEV_FD is not set
+# CONFIG_BLK_DEV_XD is not set
+# CONFIG_PARIDE is not set
+# CONFIG_BLK_CPQ_DA is not set
+# CONFIG_BLK_CPQ_CISS_DA is not set
+# CONFIG_BLK_DEV_DAC960 is not set
+CONFIG_BLK_DEV_LOOP=y
+# CONFIG_BLK_DEV_NBD is not set
+CONFIG_BLK_DEV_RAM=y
+CONFIG_BLK_DEV_RAM_SIZE=4096
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_BLK_DEV_MSYS_DOC=m
+
+#
+# File systems
+#
+# CONFIG_QUOTA is not set
+# CONFIG_AUTOFS_FS is not set
+# CONFIG_AUTOFS4_FS is not set
+CONFIG_EXT3_FS=y
+CONFIG_FAT_FS=y
+CONFIG_MSDOS_FS=y
+# CONFIG_UMSDOS_FS is not set
+CONFIG_VFAT_FS=y
+# CONFIG_EFS_FS is not set
+# CONFIG_JFFS_FS is not set
+# CONFIG_JFFS2_FS is not set
+# CONFIG_CRAMFS is not set
+CONFIG_TMPFS=y
+# CONFIG_RAMFS is not set
+CONFIG_ISO9660_FS=y
+# CONFIG_JOLIET is not set
+# CONFIG_HPFS_FS is not set
+CONFIG_PROC_FS=y
+# CONFIG_DEVFS_FS is not set
+# CONFIG_DEVFS_MOUNT is not set
+# CONFIG_DEVFS_DEBUG is not set
+CONFIG_DEVPTS_FS=y
+# CONFIG_QNX4FS_FS is not set
+# CONFIG_QNX4FS_RW is not set
+# CONFIG_ROMFS_FS is not set
+CONFIG_EXT2_FS=y
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+><B
+CLASS="command"
+>make <TT
+CLASS="parameter"
+><I
+>dep</I
+></TT
+></B
+></P
+></LI
+><LI
+><P
+><B
+CLASS="command"
+>make <TT
+CLASS="parameter"
+><I
+>bzImage</I
+></TT
+></B
+></P
+></LI
+><LI
+><P
+><B
+CLASS="command"
+>make <TT
+CLASS="parameter"
+><I
+>modules</I
+></TT
+></B
+></P
+></LI
+><LI
+><P
+><B
+CLASS="command"
+>make <TT
+CLASS="parameter"
+><I
+>modules_install</I
+></TT
+></B
+></P
+></LI
+><LI
+><P
+>Copy the newly created <TT
+CLASS="filename"
+>bzImage</TT
+> to the <TT
+CLASS="filename"
+>/bott</TT
+> directory and name it <TT
+CLASS="filename"
+>vmlinuz-2.4.18</TT
+>, using this command:</P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="filename"
+>/arch/i386/boot/bzImage /boot/vmlinuz-2.4.18</TT
+></B
+> </P
+></LI
+></OL
+><P
+>Check for <TT
+CLASS="filename"
+>lib/modules/2.4.18/kernel/drivers/block/doc.o</TT
+>.  This is the M-Systems driver that we need to access DiskOnChip.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="step3"
+></A
+>4.3. Step 3: Create Nodes</H2
+><P
+>Now we will create block devices, which are required to access the DOC
+These block devices will use the M-Systems driver that was built in <A
+HREF="#step2"
+>Section 4.2</A
+> to access the DOC. The script <B
+CLASS="command"
+>mknod_fl</B
+> in <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/driver</TT
+> is used for this purpose.</P
+><P
+>We need to create the block devices with the major number of 62. For this purpose we will pass the argument 62 while creating the nodes:</P
+><P
+><B
+CLASS="command"
+>./mknod_fl <TT
+CLASS="parameter"
+><I
+>62</I
+></TT
+></B
+> </P
+><P
+>This will create the following devices in <TT
+CLASS="filename"
+>/dev/msys</TT
+> with major number 62:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;fla...fla4
+flb...flb4
+flc...flc4
+fld...fld4
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="step4"
+></A
+>4.4. Step 4: Reboot with the new kernel</H2
+><P
+>In order to have the DiskOnChip recognized by Linux OS, we need to insert the DOC driver module into the kernel. Since the currently running kernel doesn.t have support for the M-Systems Driver, we need to boot into new kernel we just compiled in .</P
+><P
+>For this purpose we need to add the following entries in the <TT
+CLASS="filename"
+>/boot/grub/menu.lst</TT
+> file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;title Debian GNU/Linux,Kernel 2.4.18
+root (hd0,7)
+kernel /boot/vmlinuz-2.4.18 root=/dev/hda8
+safedefault
+boot
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Where (hd0,7) is the partition holding the kernel image <TT
+CLASS="filename"
+>vmlinuz-2.4.18</TT
+> and <TT
+CLASS="filename"
+>/dev/hda8</TT
+> is the partition holding the <EM
+>root filesystem</EM
+>.  These partitions may vary from one system to another. Now reboot and choose the kernel 2.4.18 option (the kernel that has been compiled in Step 2) in the <B
+CLASS="command"
+>grub</B
+> menu to boot into the new kernel.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="step5"
+></A
+>4.5. Step 5: Insert M-Systems Driver/Module in the new Kernel</H2
+><P
+>The M-Systems driver by default gets loaded with major number 100, but our newly created nodes (see <A
+HREF="#step3"
+>Section 4.3</A
+>) have a major number 62. Therefore we need to insert this module with a major number 62. This can be done in either of two ways:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>While inserting the module using <B
+CLASS="command"
+>insmod</B
+> also mention the major number for the module which needs to be assigned to it otherwise it will take the default major number of 100:</P
+><P
+><B
+CLASS="command"
+>insmod <TT
+CLASS="parameter"
+><I
+>doc major=62</I
+></TT
+></B
+> </P
+></LI
+><LI
+><P
+>Add the following line to <TT
+CLASS="filename"
+>/etc/modules.conf</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>options doc major=62</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Then use <B
+CLASS="command"
+>modprobe <TT
+CLASS="parameter"
+><I
+>doc</I
+></TT
+></B
+> to insert the modules.</P
+></LI
+></OL
+><P
+>Check for the correct loading of the module using the <B
+CLASS="command"
+>lsmod</B
+> command without options.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="step6"
+></A
+>4.6. Step 6: Create a filesystem on the DiskOnChip</H2
+><P
+>Before we can start using DiskOnChip we need to create a filesystem on it.  We will create an ext2 filesystem since it is small in size.</P
+><P
+>This involves a hidden step of making partitions on the DOC using <B
+CLASS="command"
+>fdisk</B
+>.  The actual steps are as follows:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+><B
+CLASS="command"
+>fdisk <TT
+CLASS="filename"
+>/dev/msys/fla</TT
+></B
+> </P
+><P
+>This command will ask to create partitions.  Create a primary partition number 1 with start cylinder as 1 and final cylinder as 1002.</P
+><P
+>Check the partition table, which should look like this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;Device             Boot  Start      End        Blocks    ID     System
+/dev/msys/fla1            1         1002        255984   83     Linux
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+><LI
+><P
+>Make the filesystem on <TT
+CLASS="filename"
+>/dev/msys/fla1</TT
+> with the command</P
+><P
+><B
+CLASS="command"
+>mke2fs <TT
+CLASS="option"
+>-c</TT
+> <TT
+CLASS="filename"
+>/dev/msys/fla1</TT
+></B
+> </P
+><P
+>Where <TT
+CLASS="filename"
+>fla1</TT
+> is the first primary partition on the DOC. (We have created only one partition in order to avoid unnecessary complexity.)</P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="step7"
+></A
+>4.7. Step 7: Mount the newly created partition to start accessing DOC</H2
+><P
+>Create a new mount point for the DiskOnChip in the <TT
+CLASS="filename"
+>/mnt</TT
+> directory:</P
+><P
+><B
+CLASS="command"
+>mkdir <TT
+CLASS="filename"
+>/mnt/doc</TT
+></B
+> </P
+><P
+>Mount the DOC partition on the newly created directory:</P
+><P
+><B
+CLASS="command"
+>mount <TT
+CLASS="option"
+>-t</TT
+> <TT
+CLASS="parameter"
+><I
+>auto</I
+></TT
+> <TT
+CLASS="filename"
+>/dev/msys/fla1 /mnt/doc</TT
+></B
+> </P
+><P
+>You will now be able to read and write to the DOC as an additional storage drive.</P
+><P
+>When you reboot your system, make the DOC available by inserting the driver into the kernel (see <A
+HREF="#step5"
+>Section 4.5</A
+>) and mounting the device.</P
+></DIV
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="install"
+></A
+>5. Install Linux and LILO on DiskOnChip</H1
+><P
+>In this section we will learn how to install Linux operating system on an unformatted DOC and boot from it using LILO as the boot loader.</P
+><P
+>In order to get to this state, a procedure will be discussed.  Some steps in this procedure resemble the steps discussed previously in this document.  Even so, this should be considered a separate procedure, rather than a continuation of the steps in <A
+HREF="#steps"
+>Section 4</A
+>.</P
+><P
+>In general, to make a device to boot into Linux, it should have the following components:</P
+><P
+></P
+><UL
+><LI
+><P
+>Kernel Image</P
+></LI
+><LI
+><P
+>Root Filesystem</P
+></LI
+><LI
+><P
+>Boot loader to load the kernel Image into memory</P
+></LI
+></UL
+><P
+>This section will basically try to fulfill the above three requirements.</P
+><P
+>The following steps should be followed for achieving the goal of this section.</P
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="copy_firmware"
+></A
+>5.1. Step 1: Copying the DOC firmware onto DiskOnChip</H2
+><P
+>We will use the <B
+CLASS="command"
+>dformat</B
+> utility from <TT
+CLASS="filename"
+>linux_binary.5_1_4/dformat_5_1_4_37</TT
+>.</P
+><P
+>M-Systems does not provide the firmware for using the DOC on Linux platforms. We address this problem by making a copy of the firmware shipped with the M-Systems dos utilities into this directory (<SPAN
+CLASS="QUOTE"
+>"dos utilities"</SPAN
+> is the term used by the M-Systems people so we have also used this name).  On our system we copied it by mounting the windows partition and extracting it from there:</P
+><P
+><B
+CLASS="command"
+>mount <TT
+CLASS="option"
+>-t</TT
+> <TT
+CLASS="parameter"
+><I
+>auto</I
+></TT
+><TT
+CLASS="filename"
+>/dev/hda5 /mnt/d</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="filename"
+>/mnt/d/dos\ utilities/doc514.exb linux_binary.5_1_4/dformat_5_1_4_37/</TT
+></B
+> </P
+><P
+>Now format the drive, using the <B
+CLASS="command"
+>dtformat</B
+> from <TT
+CLASS="filename"
+>linux_binary.5_1_4/dformat_5_1_4_37/</TT
+>:</P
+><P
+><B
+CLASS="command"
+>cd <TT
+CLASS="filename"
+>linux_binary.5_1_4/dformat_5_1_4_37/</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>./dformat <TT
+CLASS="option"
+>-WIN:D000 -S:doc514.exb</TT
+></B
+> </P
+><P
+><TT
+CLASS="parameter"
+><I
+>D000</I
+></TT
+> specifies the address of the DiskOnChip in the BIOS.</P
+><P
+>The following is the BIOS (RTD Enhanced Phoenix - AwardBIOS CMOS Setup Utility (v6.00.04.1601)) setting on our system.</P
+><P
+>The Integrated peripherals of the BIOS menu should have:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;SSD Socket #1 to Bios Extension
+Bios Ext. Window size 8k
+Bios Ext. window [D000:0000]
+Fail safe Boot ROM [Disabled]
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>The Bios Ext. Window denotes the address for your DiskOnChip.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>BIOSes</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The setting may be different depending upon your BIOS version.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Now shutdown the system and boot into Windows XP.</P
+><P
+>From now on you will notice the TrueFFS message and some time delay before the Grub Menu appears.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="format"
+></A
+>5.2. Step 2: Format DiskOnChip using Dos Utilities</H2
+><P
+>Boot into Windows XP. We will use the M-Systems Dos Utilities for formatting the DiskOnChip. The Dos utility <B
+CLASS="command"
+>dformat</B
+> will copy the firmware to the DOC, and then format it as a <EM
+>fat16</EM
+> device.</P
+><P
+>Using the command prompt, run the following command from the DOS utilities folder (assuming that you have already downloaded the DOS utilities):</P
+><P
+><B
+CLASS="command"
+>dformat <TT
+CLASS="option"
+>/WIN:D000 /S:doc514.exb</TT
+></B
+> </P
+><P
+>Check the DOC partition using another utility called <B
+CLASS="command"
+>dinfo</B
+>. A sample <B
+CLASS="command"
+>dinfo</B
+> output is given in the appendix.</P
+><P
+>Again shutdown the system and now boot into Linux.</P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Always shutdown</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>After formatting you should always do a full shutdown (power off) and not just a reboot.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>Even though Step 1 and Step 2 seem to be the same, the only difference being that Step 1 is done from Linux and Step 2 from Windows XP, they both have to be done.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="patch+compile"
+></A
+>5.3. Step 3: Patch and Compile the kernel 2.4.18</H2
+><P
+>This has to be performed in exactly the same manner as described in <A
+HREF="#step1"
+>Section 4.1</A
+> and <A
+HREF="#step2"
+>Section 4.2</A
+>.</P
+><P
+>Also add an entry for the new kernel in <TT
+CLASS="filename"
+>/boot/grub/menu.lst</TT
+> as described in <A
+HREF="#step4"
+>Section 4.4</A
+>.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="nodes"
+></A
+>5.4. Step 4: Create nodes</H2
+><P
+>This is done using the ame procedure as described in <A
+HREF="#step3"
+>Section 4.3</A
+>.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="modconf"
+></A
+>5.5. Step 5: Modify the /etc/module.conf file</H2
+><P
+>The file <TT
+CLASS="filename"
+>/etc/modules.conf</TT
+> has to be modified, adding this line at the end of the file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;options doc major=62
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This is required since our nodes use a major number of 62, while the doc driver module uses a major number of 100. When creating the <TT
+CLASS="filename"
+>initrd</TT
+> image, the driver will be loaded with major number value of 100 (instead of 62) if you do not edit the module configuration file.  This will make it impossible for the nodes to use the driver. The reason for using the initrd image will be explained in the next step.</P
+><P
+>The <B
+CLASS="command"
+>mkinitrd_doc</B
+> script from <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/driver</TT
+> reads the <TT
+CLASS="filename"
+>/etc/modules.conf</TT
+> file and looks for anything that has been mentioned for the DOC driver regarding the major number. By default, <B
+CLASS="command"
+>mkinitrd_doc</B
+> will create an <TT
+CLASS="filename"
+>initrd</TT
+> image that loads the DOC module with a major number of 100. However, with the modifications we have made to the <TT
+CLASS="filename"
+>/etc/modules.conf</TT
+> file, the <TT
+CLASS="filename"
+>initrd</TT
+> image will load the module with a major number of 62.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="initrd"
+></A
+>5.6. Step 6: Create the initrd image</H2
+><P
+>Run the <B
+CLASS="command"
+>mkinitrd_doc</B
+> script from <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/driver/</TT
+>:</P
+><P
+><B
+CLASS="command"
+>./mkinitrd_doc</B
+> </P
+><P
+>This may give warning messages similar to the following, which can be safely ignored:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;  cp: cannot stat ./sbin/insmod.static.: No such file or directory
+  cp: cannot stat ./dev/systty.: No such file or directory
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Check for the newly created <TT
+CLASS="filename"
+>initrd</TT
+> image, <TT
+CLASS="filename"
+>initrd-2.4.18.img</TT
+>, in the <TT
+CLASS="filename"
+>/boot</TT
+> directory. </P
+><P
+>Running the <B
+CLASS="command"
+>mkinitrd_doc</B
+> script produces this image. The reason for making an <TT
+CLASS="filename"
+>initrd</TT
+> image is that the provided M-Systems driver cannot be added as a built-in support in the kernel, which leaves no other option than adding it as a loadable module. If we want to boot from DOC, the kernel should know how to access the DOC at the time of booting to search for <B
+CLASS="command"
+>/sbin/init</B
+> in the root filesystem on the DOC (the root filesystem is necessary to get the Linux system up).</P
+><P
+>In the booting sequence of the Linux, <B
+CLASS="command"
+>/sbin/init</B
+> is the file (a command actually) that the kernel looks for in order to start various services and, finally, give the login shell to the user.  The figure below illustrates the problem:</P
+><DIV
+CLASS="figure"
+><A
+NAME="AEN479"
+></A
+><P
+><B
+>Figure 1. Why we need an initrd image</B
+></P
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="initrd.png"></P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="insert_driver"
+></A
+>5.7. Step 7: Insert the DOC driver into the new kernel</H2
+><P
+>Reboot the system and boot into the newly created kernel.</P
+><P
+>Now insert the doc module:</P
+><P
+><B
+CLASS="command"
+>modprobe <TT
+CLASS="parameter"
+><I
+>doc</I
+></TT
+></B
+> </P
+><P
+>This will give the following messages:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;fl : Flash disk driver for DiskOnChip
+fl: DOC devices(s) found: 1
+fl: _init:registed device at major 62
+.
+.
+.
+.
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>To access the DOC, ensure that the major number assigned to the nodes is 62.</P
+><P
+>In case of a major number of 100 is assigned, check if the <TT
+CLASS="filename"
+>/etc/modules.conf</TT
+> was successfully modified. If it was not, then repeat <A
+HREF="#modconf"
+>Section 5.5</A
+>. You must then also repeat <A
+HREF="#initrd"
+>Section 5.6</A
+> because the <TT
+CLASS="filename"
+>initrd</TT
+> image depends on <TT
+CLASS="filename"
+>/etc/modules.conf</TT
+>.   If the DOC entry were incorrect in this file, the <TT
+CLASS="filename"
+>initrd</TT
+> image will be useless.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="createfs"
+></A
+>5.8. Step 8:  Create a filesystem on the DiskOnChip</H2
+><P
+>Perform <A
+HREF="#step6"
+>Section 4.6</A
+>.  This is required to create partitions on the DOC.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="rootfs"
+></A
+>5.9. Step 9:  Build Root Filesystem on the DiskOnChip</H2
+><P
+>Before starting with this step make sure that you have not mounted <TT
+CLASS="filename"
+>/dev/msys/fla1</TT
+> on any of the mount points, as this step will involve reformatting the DiskOnChip.</P
+><P
+>Also, in order to understand the details of Root File system refer to <A
+HREF="http://www.tldp.org/HOWTO/Bootdisk-HOWTO/index.html"
+TARGET="_top"
+>The Linux Bootdisk How To</A
+> available at <A
+HREF="http://www.tldp.org"
+TARGET="_top"
+>http://www.tldp.org</A
+>.</P
+><P
+>We will use the <B
+CLASS="command"
+>mkdocimg</B
+> script located in <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/build</TT
+>.</P
+><P
+>We will also use the <TT
+CLASS="filename"
+>redhat-7.1.files</TT
+> directory, located in the same directory (i.e. <TT
+CLASS="filename"
+>build</TT
+>), which contains the list of the files that will be copied in the root filesystem that will be created on the DOC.</P
+><P
+><B
+CLASS="command"
+>./mkdocimg <TT
+CLASS="filename"
+>redhat-7.1.files</TT
+></B
+> </P
+><P
+>This step will take a few minutes to complete.</P
+><P
+>Now mount the <TT
+CLASS="filename"
+>/dev/msys/fla1</TT
+> partition on the mount point <TT
+CLASS="filename"
+>/mnt/doc</TT
+> and check the files that have been created:</P
+><P
+><B
+CLASS="command"
+>mount <TT
+CLASS="option"
+>-t</TT
+> <TT
+CLASS="parameter"
+><I
+>auto</I
+></TT
+> <TT
+CLASS="filename"
+>/dev/msys/fla1 /mnt/doc</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>cd <TT
+CLASS="filename"
+>/mnt/doc</TT
+></B
+> </P
+><P
+>The following directories are created on the DOC as a result of running the script:</P
+><P
+><TT
+CLASS="filename"
+>bin dev sbin etc lib usr home mnt tmp var boot</TT
+></P
+><P
+>The most important is the boot directory. This contains the <TT
+CLASS="filename"
+>vmlinuz-2.4.18</TT
+> and <TT
+CLASS="filename"
+>initrd-2.4.18.img</TT
+> which gets copied from the <TT
+CLASS="filename"
+>/boot</TT
+> directory. This directory is required when booting from DiskOnChip.</P
+><P
+>Apart from these files there are some other files which must be deleted:</P
+><P
+></P
+><UL
+><LI
+><P
+><TT
+CLASS="filename"
+>System.map-2.4.18</TT
+></P
+></LI
+><LI
+><P
+><TT
+CLASS="filename"
+>boot.3E00</TT
+></P
+></LI
+></UL
+><P
+>These two files are created later by LILO.</P
+><P
+>The <TT
+CLASS="filename"
+>redhat-7.1.files</TT
+> directory contains a list of files and directories that will be created when we use the <B
+CLASS="command"
+>mkdocimg</B
+> script.</P
+><P
+>This script does not create all the files that are necessary for creating the root filesystem on the DOC. So replace the directories created by the <B
+CLASS="command"
+>mkdocimg</B
+> script, with the directories of the <TT
+CLASS="filename"
+>/</TT
+> filesystem (root filesystem that is currently running).</P
+><P
+>The directories under <TT
+CLASS="filename"
+>/</TT
+>, such as <TT
+CLASS="filename"
+>etc</TT
+>, <TT
+CLASS="filename"
+>sbin</TT
+>, <TT
+CLASS="filename"
+>bin</TT
+> and so on contain lot of files that are not useful and ideally should not be copied while building the root filesystem for DOC. But since we have not discussed the files that are essential and the files that can be removed, we therefore suggest that one should copy the entire contents of the directories. We know that it is a clumsy way of building the root filesystem and will unnecessarily take lot of memory; bear with us as in the next section we will explain how to put the development tools on the DOC.  We will then remove the useless files from the root filesystem of DOC.</P
+><P
+>If you are aware of how to build the root filesystem we would encourage you to copy only the essential files.</P
+><P
+>The following is the set of commands we used to modify the root filesystem:</P
+><P
+><B
+CLASS="command"
+>rm <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/mnt/doc/sbin</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>rm <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/mnt/doc/etc</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>rm <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/mnt/doc/lib</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>rm <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/mnt/doc/dev</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/sbin /mnt/doc</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/etc /mnt/doc</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/dev /mnt/doc</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/lib /mnt/doc</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>rm <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/mnt/doc/lib/modules</TT
+></B
+> </P
+><P
+>Now our filesystem is ready.</P
+><P
+>The total size occupied by this filesystem will be about 35Mb.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="rdev"
+></A
+>5.10. Step 10: Use rdev to specify the DOC root filesystem location to kernel image</H2
+><P
+>This step is required to specify the location of the DOC root filesystem to the kernel we compiled in the step 3. The step can be avoided by giving the details of the root filesystem location in the Boot Loader configuration file, but we had some problems in making the kernel locate the root filesystem at the time of booting so we recommend executing this command:</P
+><P
+><B
+CLASS="command"
+>rdev <TT
+CLASS="filename"
+>/boot/vmlinuz-2.4.18 /dev/msys/fla1</TT
+></B
+> </P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="lilo"
+></A
+>5.11. Step 11: Compile lilo-22.3.2</H2
+><P
+>We are going to use LILO as the boot loader since this is the only BootLoader that can read an INFTL device without many changes to be done to the BootLoader source code.</P
+><P
+>For more information on how LILO and other boot loaders operate, refer to .</P
+><P
+>We need to compile the lilo-22-3.2 source code to get the executable file for LILO.</P
+><P
+>We will use the source code from <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/lilo/lilo-22.3.2</TT
+>.</P
+><P
+>Before starting the build we need to do the following:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Create a <EM
+>soft link</EM
+> for the kernel-2.4.18 source code with the name <TT
+CLASS="filename"
+>linux</TT
+>.</P
+><P
+>When you untar the file <TT
+CLASS="filename"
+>linux-2.4.18.tar.gz</TT
+> it will create a directory <TT
+CLASS="filename"
+>linux</TT
+>. So we need to rename the directory <TT
+CLASS="filename"
+>linux</TT
+> to <TT
+CLASS="filename"
+>linux-2.4.18</TT
+> before creating a soft link with the same name:</P
+><P
+><B
+CLASS="command"
+>mv <TT
+CLASS="filename"
+>linux linux-2.4.18</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>ln <TT
+CLASS="option"
+>-s</TT
+> <TT
+CLASS="filename"
+>linux-2.4.18 linux</TT
+></B
+> </P
+><P
+>If the above steps are not done the build might fail.</P
+></LI
+><LI
+><P
+>Patch file: <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/lilo/lilo-22.3.2/common.h</TT
+>:</P
+><P
+>The lilo-22.3.2 source code that comes with the M-Systems <TT
+CLASS="filename"
+>linux_binary.5_1_4.tgz</TT
+> is buggy as one of the variables <TT
+CLASS="varname"
+>PAGE_SIZE</TT
+> is not defined. We need to patch the LILO source code as follows:</P
+><P
+>Add the following lines in the <TT
+CLASS="filename"
+>common.h</TT
+> after the line <SPAN
+CLASS="QUOTE"
+>"#include .lilo.h."</SPAN
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;+ #ifndef PAGE_SIZE
++ #define PAGE_SIZE 4096U
++ #endif
+#define 0_NACCESS 3
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Where <SPAN
+CLASS="QUOTE"
+>"+"</SPAN
+> indicates the lines to be added.</P
+></LI
+><LI
+><P
+>Make sure that the <B
+CLASS="command"
+>gcc</B
+> version is 2.95.3 by using <B
+CLASS="command"
+>gcc <TT
+CLASS="option"
+>--version</TT
+></B
+>.</P
+></LI
+></OL
+><P
+>Now we can start the build process. Run</P
+><P
+><B
+CLASS="command"
+>make <TT
+CLASS="parameter"
+><I
+>clean</I
+></TT
+> &#38;&#38; make</B
+> </P
+><P
+>This will create a new LILO executable, <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/lilo/lilo-22.3.2/lilo</TT
+>.  Copy this LILO executable into <TT
+CLASS="filename"
+>/sbin/lilo</TT
+> and <TT
+CLASS="filename"
+>/mnt/doc/sbin/lilo</TT
+>:</P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/lilo/lilo-22.3.2/lilo /sbin/lilo</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>cp <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/lilo/lilo-22.3.2/lilo /mnt/doc/sbin/lilo</TT
+></B
+> </P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="boot.b"
+></A
+>5.12. Step 12: Copy the boot.b file into boot directory of DOC</H2
+><P
+>We need to copy the file <TT
+CLASS="filename"
+>boot.b</TT
+> from <TT
+CLASS="filename"
+>linux_binary.5_1_4/doc-linux-5_1_4_20/lilo/</TT
+> to <TT
+CLASS="filename"
+>/mnt/doc/boot</TT
+>.</P
+><P
+>The file contains the essential <EM
+>stage1</EM
+> and <EM
+>stage2</EM
+> of the LILO boot loader.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="liloconf"
+></A
+>5.13. Step 13:  Modify the /etc/lilo.conf file</H2
+><P
+>First, remove the existing <TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+>:</P
+><P
+><B
+CLASS="command"
+>rm <TT
+CLASS="option"
+>-rf</TT
+> <TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+></B
+> </P
+><P
+>Now create a new <TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+>, using a text editor, and add the following lines to it:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;boot=/dev/msys/fla
+compact
+install=/boot/boot.b
+map=/boot/System.map
+disk=/dev/msys/fla
+bios=0x80
+prompt
+delay=50
+timeout=50
+image=/boot/vmlinuz
+label=linux
+root=/dev/msys/fla1
+initrd=/boot/initrd.img
+read-only
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>According to the above lines added to <TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+>, one needs to create soft links for <TT
+CLASS="filename"
+>vmlinuz-2.4.18</TT
+> and <TT
+CLASS="filename"
+>initrd-2.4.18.img</TT
+> in <TT
+CLASS="filename"
+>/mnt/doc/boot</TT
+>:</P
+><P
+><B
+CLASS="command"
+>cd <TT
+CLASS="filename"
+>/mnt/doc/boot</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>ln <TT
+CLASS="option"
+>-s</TT
+> <TT
+CLASS="filename"
+>vmlinuz-2.4.18 vmlinuz</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>ln <TT
+CLASS="option"
+>-s</TT
+> <TT
+CLASS="filename"
+> initrd-2.4.18.img initrd.img</TT
+></B
+> </P
+><P
+>Copy the newly created <TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+> to <TT
+CLASS="filename"
+>mnt/doc/etc/lilo.conf</TT
+>.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="bootable"
+></A
+>5.14. Step 14: Store the new LILO configuration on the DiskOnChip</H2
+><P
+>This step will configure LILO in the MBR of the DiskOnChip and hence make the DiskOnChip bootable.</P
+><P
+>Ensure that <TT
+CLASS="filename"
+>/dev/msys/fla1</TT
+> (root filesystem partition for the DOC) is mounted on the mount point <TT
+CLASS="filename"
+>/mnt/doc</TT
+>.</P
+><P
+>Execute the following command to store the LILO configuration on the DOC:</P
+><P
+><B
+CLASS="command"
+>lilo<TT
+CLASS="option"
+>-v -C</TT
+> <TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+> <TT
+CLASS="option"
+>-r</TT
+> <TT
+CLASS="filename"
+>/mnt/doc</TT
+></B
+> </P
+><P
+><TT
+CLASS="filename"
+>/mnt/doc</TT
+> denotes the location where the BootLoader will be installed, so it is installed on the DiskOnChip, as <TT
+CLASS="filename"
+>/mnt/doc</TT
+> is the mount point for the primary partition of DOC where LILO was configured.</P
+><P
+>It will create the following two files in the boot directory of DOC (i.e. <TT
+CLASS="filename"
+>/mnt/doc/boot</TT
+>):</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+><TT
+CLASS="filename"
+>System.map-2.4.18</TT
+></P
+></LI
+><LI
+><P
+><TT
+CLASS="filename"
+>boot.3E00</TT
+></P
+></LI
+></OL
+><P
+>Now you should make a backup of the entire DiskOnChip to allow for easy restore of the files damaged by possible fatal errors:</P
+><P
+><B
+CLASS="command"
+>cd <TT
+CLASS="filename"
+>/home</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>tar <TT
+CLASS="option"
+>-cvzf</TT
+> <TT
+CLASS="filename"
+>docimg.tgz /mnt/doc</TT
+></B
+> </P
+><P
+>This will create a compressed copy of all the contents of DiskOnChip with the name <TT
+CLASS="filename"
+>docimg.tgz</TT
+> in <TT
+CLASS="filename"
+>/home</TT
+>.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="fstab"
+></A
+>5.15. Step 15: Modify etc/fstab of DiskOnChip root file system</H2
+><P
+>Open the <TT
+CLASS="filename"
+>/mnt/doc/etc/fstab</TT
+> file and edit the line where the mount point is <TT
+CLASS="filename"
+>/</TT
+>.  Change that line to:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;/dev/msys/fla1  /  ext2  rw.noauto 0 1
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="firmware"
+></A
+>5.16. Step16:  Update Firmware</H2
+><P
+>This step is required to update the firmware of the DiskOnChip. We will use the <B
+CLASS="command"
+>dformat</B
+> utility from <TT
+CLASS="filename"
+>linux_binary.5_1_4/dformat_5_1_4_37</TT
+>:</P
+><P
+><B
+CLASS="command"
+>./dformat <TT
+CLASS="option"
+>-W:D000 -S:doc514.exb -Y -NOFORMAT</TT
+></B
+> </P
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Don't format!</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The <TT
+CLASS="option"
+>NOFORMAT</TT
+> flag is important otherwise it will reformat the DiskOnChip device, and the contents will be lost.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>The above command will cause the DiskOnChip to boot in the absence of any other bootable device. So we need to remove the Hard Disk in order to allow the DOC to boot.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="boot"
+></A
+>5.17. Step17: BOOT from DiskOnChip</H2
+><P
+>Check your BIOS manual for enabling booting from a BIOS extension device i.e. DiskOnChip. On our system we had to disable the Hard Disk and CDROM and set the first bootable device as HDD-0.</P
+><P
+>Reboot the system after making the necessary changes in the BIOS.</P
+><P
+>You will get the LILO menu and on pressing enter Linux gets booted from DiskOnChip.</P
+></DIV
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="devtools"
+></A
+>6. Install Development ToolChain on DiskOnChip</H1
+><P
+>This section may be left out if the requirement is not to have a development environment on the DiskOnChip. The following steps will install the necessary libraries and tools that are required for developing and executing programs on DiskOnChip.  This will completely eliminate the concept of having a host system and target system since now the complete application development can be done on the target system itself. For this purpose we will use uClibc which is a C library that has been developed primarily for embedded systems. Also since our root filesystem that was created in the previous section is bulky (35 MB) we will remove the unnecessary files and make it smaller, approximately 11MB.</P
+><P
+>We will use the Buildroot package from www.uclibc.org to replace the existing bulky root filesystem of DOC with a tiny filesystem and to install the necessary development ToolChain which includes uClibc library, gcc, g++, make, ncurses, busybox, GNU tar, GNU grep and the GNU coreutils . For more details on Buildroot refer to <A
+HREF="http://buildroot.uclinux.org/buildroot.html"
+TARGET="_top"
+>http://buildroot.uclinux.org/buildroot.html</A
+>. The <A
+HREF="http://www.uclibc.org"
+TARGET="_top"
+>http://www.uclibc.org</A
+> website provides a precompiled package containing all the tools, which can be downloaded and used. We will use the precompiled package, which is available as <TT
+CLASS="filename"
+>root_fs</TT
+> image. Refer to the <A
+HREF="http://www.uclibc.org/FAQ.html"
+TARGET="_top"
+>uClibc FAQ</A
+> for more details.</P
+><P
+>Follow these steps in order to get the software working on your DOS:</P
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="getimage"
+></A
+>6.1. Step1: Obtain the latest copy of root_fs_i386.ext2</H2
+><P
+>Download <TT
+CLASS="filename"
+>root_fs_i386.ext2.tar.gz</TT
+> from <A
+HREF="www.uclibc.org/downloads/root_fs_i386.ext2.tar.gz"
+TARGET="_top"
+>www.uclibc.org/downloads/root_fs_i386.ext2.tar.gz</A
+>.</P
+><P
+>It is around 22MB in size. This actually gets decompressed to a 100MB size file.</P
+><P
+>Untar the file in <TT
+CLASS="filename"
+>/usr/src</TT
+>:</P
+><P
+><B
+CLASS="command"
+>tar <TT
+CLASS="option"
+>-xvzf</TT
+> <TT
+CLASS="filename"
+>root_fs_i386.ext2.tar.gz</TT
+></B
+> </P
+><P
+>This will create a file <TT
+CLASS="filename"
+>root_fs_i386.ext2</TT
+>.</P
+><P
+>We need to mount this file using a loopback device. Do the following steps:</P
+><P
+><B
+CLASS="command"
+>mkdir <TT
+CLASS="filename"
+>root_fs</TT
+></B
+> </P
+><P
+><B
+CLASS="command"
+>mount <TT
+CLASS="option"
+>-o</TT
+> <TT
+CLASS="parameter"
+><I
+>loop</I
+></TT
+> <TT
+CLASS="filename"
+>root_fs_i386.ext2 root_fs</TT
+></B
+> </P
+><P
+>Now you can access the content of the file <TT
+CLASS="filename"
+>root_fs_i386.ext2</TT
+> through the <TT
+CLASS="filename"
+>root_fs</TT
+> directory. <TT
+CLASS="filename"
+>The root_fs</TT
+> directory contains a number of directories which makes the root filesystem, like <TT
+CLASS="filename"
+>bin</TT
+>, <TT
+CLASS="filename"
+>var</TT
+>, <TT
+CLASS="filename"
+>sbin</TT
+>, <TT
+CLASS="filename"
+>opt</TT
+>, <TT
+CLASS="filename"
+>root</TT
+>, <TT
+CLASS="filename"
+>home</TT
+>, <TT
+CLASS="filename"
+>etc</TT
+>, <TT
+CLASS="filename"
+>usr</TT
+>, <TT
+CLASS="filename"
+>lib</TT
+>, <TT
+CLASS="filename"
+>tmp</TT
+>, <TT
+CLASS="filename"
+>dev</TT
+>, and <TT
+CLASS="filename"
+>proc</TT
+>.</P
+><P
+>The <TT
+CLASS="filename"
+>usr</TT
+> and <TT
+CLASS="filename"
+>lib</TT
+> directories contain the development tools like <B
+CLASS="command"
+>gcc</B
+> and <B
+CLASS="command"
+>g++</B
+>.</P
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="fs_swap"
+></A
+>6.2. Step2: Replace the root filesystem of the DiskOnChip</H2
+><P
+>Replace the <TT
+CLASS="filename"
+>bin</TT
+>, <TT
+CLASS="filename"
+>var</TT
+>, <TT
+CLASS="filename"
+>sbin</TT
+>, <TT
+CLASS="filename"
+>etc</TT
+>, <TT
+CLASS="filename"
+>lib</TT
+>, <TT
+CLASS="filename"
+>usr</TT
+>, <TT
+CLASS="filename"
+>proc</TT
+>, <TT
+CLASS="filename"
+>mnt</TT
+>, <TT
+CLASS="filename"
+>home</TT
+> and <TT
+CLASS="filename"
+>opt</TT
+> directories of the DiskOnChip with the ones of the <TT
+CLASS="filename"
+>root_fs</TT
+> image.</P
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Do not replace boot and dev!</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The <TT
+CLASS="filename"
+>boot</TT
+> directory of the DiskOnChip has to be kept intact since it contains the kernel image, <TT
+CLASS="filename"
+>initrd</TT
+> image and Map file that is used by LILO to load the kernel into memory.</P
+><P
+>The <TT
+CLASS="filename"
+>dev</TT
+> directory should also not be replaced since it contains the device nodes for DOC (The replacement task will take 5-10 minutes.)</P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="DOS_fstab"
+></A
+>6.3. Step3: Modify etc/fstab of DiskOnChip root file system</H2
+><P
+>Open the newly replaced <TT
+CLASS="filename"
+>/mnt/doc/etc/fstab</TT
+> and edit the line where the mount point is <TT
+CLASS="filename"
+>/</TT
+>.  Change that line to:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;/dev/msys/fla1  /  ext2  rw.noauto 0 1
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><HR><H2
+CLASS="sect2"
+><A
+NAME="reboot"
+></A
+>6.4. Step4: Reboot</H2
+><P
+>Reboot from DiskOnChip and enjoy the uClibc development environment.</P
+><P
+>You will get the message</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;Welcome to the Erik.s uClibc development environment.
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>The entire root filesystem + boot directory + development tools take 84Mb of space.</P
+></DIV
+></DIV
+><DIV
+CLASS="sect1"
+><HR><H1
+CLASS="sect1"
+><A
+NAME="refs"
+></A
+>7. References</H1
+><P
+>Apart from the web sites referenced, here are some books and documents we found to be useful:</P
+><P
+></P
+><UL
+><LI
+><P
+>Application Note: Using DiskOnChip Under Linux With M-Systems Driver,RTD Embedded Technologies Inc.,SWM-640000016A</P
+></LI
+><LI
+><P
+>Installation Manual for DiskOnChip TrueFFS driver for Linux ,M-Systems</P
+></LI
+><LI
+><P
+>Building Embedded Linux Systems, Karim Yaghmour.O.reilly,First Edition, April 2003</P
+></LI
+><LI
+><P
+>Installation Manual IM-DOC-021,Using the DiskOnChip with Linux OS,Ron Dick, Esther Spanjer, Vadim Khmelnitsky, M-Systems</P
+></LI
+><LI
+><P
+>Installation Guide available with M-Systems TrueFFS Linux driver version 5.1.4</P
+></LI
+><LI
+><P
+>Understanding the Linux Kernel, Daniel P. Bovet &#38; Marco Cesati, O.reilly, Second Edition, March 2002.</P
+></LI
+><LI
+><P
+>Booting Linux: The History and the Future, Werner Almesberger, June 25,2000</P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="appendix"
+><HR><H1
+CLASS="appendix"
+><A
+NAME="AEN871"
+></A
+>A. Output of dinfo</H1
+><P
+>The following are the details of the internals of a Linux Bootable DiskOnChip 2000 TSOP 256MB (MD2202-D256) produced by the <B
+CLASS="command"
+>dinfo</B
+> utility:</P
+><DIV
+CLASS="figure"
+><A
+NAME="AEN875"
+></A
+><P
+><B
+>Figure A-1. Output of dinfo</B
+></P
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="dinfo.png"></P
+></DIV
+></DIV
+><P
+>According to the screenshot our DOC uses an INFTL translation layer.</P
+></DIV
+><DIV
+CLASS="appendix"
+><HR><H1
+CLASS="appendix"
+><A
+NAME="AEN885"
+></A
+>B. License</H1
+><P
+>This document is copyrighted (c) 2006 by Rohit Agarwal &#38; Vishnu Swaminathan.</P
+><P
+>Permission is granted to copy, distribute and/or modify this document under the terms of the GNU Free Documentation License, Version 1.2 or any later version published by the Free Software Foundation; with no Invariant Sections, with no Front-Cover Texts, and with no Back-Cover Texts. A copy of the license is available at <A
+HREF="http://www.gnu.org/copyleft/fdl.html"
+TARGET="_top"
+>http://www.gnu.org/copyleft/fdl.html</A
+>.</P
+></DIV
+><DIV
+CLASS="appendix"
+><HR><H1
+CLASS="appendix"
+><A
+NAME="AEN890"
+></A
+>C. About Authors</H1
+><P
+>Rohit Agarwal has obtained his Masters in Information Technology from IIIT-Bangalore,India and Bachelors degree in Computer Science from I.E.T. Lucknow,India.He has co-authored another HowTo "Libdc1394 Library support for IEEE1394 camera HowTo" published by TLDP in January,2006. Visit his <A
+HREF="htpp://geocities.com/vickys_box/rohit_agarwal.htm"
+TARGET="_top"
+>homepage</A
+> for more details.</P
+><P
+>Visnu Swaminathan is a PhD and MS from Duke University,North Carolina,USA. He is currently working in Siemens Corporate Technology,India</P
+><P
+>authors can be contacted at </P
+><P
+> rohdimp_24@rediffmail.com (rohit) </P
+><P
+> vishnu.swaminathan@siemens.com <FONT
+COLOR="RED"
+> </FONT
+></P
+></DIV
+><DIV
+CLASS="appendix"
+><HR><H1
+CLASS="appendix"
+><A
+NAME="AEN899"
+></A
+>D. Dedications</H1
+><P
+>I am grateful to all my friends for extending their support to carry out this work. I will specially thank Vikram and Chinmaya for their valuable advices.</P
+><P
+>Finally I will like to dedicate this document to Mr. S.Nagarajan my professor who inspired me to contribute to Open Source Community</P
+><P
+> Rohit Agarwal</P
+></DIV
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,391 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The Linux Cipe+Masquerading mini-HOWTO: Example masquerading firewall scripts</TITLE>
+ <LINK HREF="Cipe+Masq-8.html" REL=next>
+ <LINK HREF="Cipe+Masq-6.html" REL=previous>
+ <LINK HREF="Cipe+Masq.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Cipe+Masq-8.html">Next</A>
+<A HREF="Cipe+Masq-6.html">Previous</A>
+<A HREF="Cipe+Masq.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Example masquerading firewall scripts</A></H2>
+
+<H2><A NAME="ss7.1">7.1 Kernel 2.0, ipfwadm</A>
+</H2>
+
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+
+#!/bin/sh 
+#04/04/1999 
+#example rc.firewall script for the 2.0 kernels using ipfwadm 
+#I cant take full credit for this script.  I had found it a few 
+#years ago and made slight modifications. 
+#Send questions or comments to acj@home.com. 
+
+#--------------------------------------------------------------------- 
+#Variables 
+#--------------------------------------------------------------------- 
+
+#local ethernet interface 
+localip= 
+localif=eth0 
+
+#static ethernet interface 
+staticip= 
+staticif=eth1 
+
+PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin" 
+
+#--------------------------------------------------------------------- 
+#Incoming Firewall Policies 
+#--------------------------------------------------------------------- 
+#flush incoming firewall policies 
+/sbin/ipfwadm -I -f 
+
+#set incoming firewall policy default to deny 
+/sbin/ipfwadm -I -p deny 
+
+#--------------------------------------------------------------------- 
+
+#local interface, local machines, going anywhere is valid 
+/sbin/ipfwadm -I -a accept -V $localip -S $localip/24 -D 0.0.0.0/0 
+#remote interface, claiming to be local machines (IP spoofing) deny and log 
+/sbin/ipfwadm -I -a deny -V $staticip -S $localip/24 -D 0.0.0.0/0 -o 
+#remote interface, any source, going to staticip address is valid 
+/sbin/ipfwadm -I -a accept -V $staticip -S 0.0.0.0/0 -D $staticip/32 
+#loopback interface is valid 
+/sbin/ipfwadm -I -a accept -V 127.0.0.1 -S 0.0.0.0/0 -D 0.0.0.0/0 
+#all other incoming is denied and logged 
+/sbin/ipfwadm -I -a deny -S 0.0.0.0/0 -D 0.0.0.0/0 -o 
+
+#--------------------------------------------------------------------- 
+#Outgoing Firewall Policies 
+#--------------------------------------------------------------------- 
+
+#flush outgoing firewall policies 
+/sbin/ipfwadm -O -f 
+
+#set outgoing firewall policy default to deny 
+/sbin/ipfwadm -O -p deny 
+
+#--------------------------------------------------------------------- 
+
+#local interface, any source going to local net is valid 
+/sbin/ipfwadm -O -a accept -V $localip -S 0.0.0.0/0 -D $localip/24 
+#outgoing to localnet on static interface, stuffed routing, deny 
+/sbin/ipfwadm -O -a deny -V $staticip -S 0.0.0.0/0 -D $localip/24 -o 
+#outgoing from localnet on static interface, stuffed masquerading, deny 
+/sbin/ipfwadm -O -a deny -V $staticip -S $localip/24 -D 0.0.0.0/0 -o 
+#outgoing to localnet on static interface, stuffed masquerading, deny 
+/sbin/ipfwadm -O -a deny -V $staticip -S 0.0.0.0/0 -D $localip/24 -o 
+#anything else outgoing on remote interface is valid 
+/sbin/ipfwadm -O -a accept -V $staticip -S $staticip/32 -D 0.0.0.0/0 
+#loopback interface is valid 
+/sbin/ipfwadm -O -a accept -V 127.0.0.1 -S 0.0.0.0/0 -D 0.0.0.0/0 
+#all other outgoing is denied and logged 
+/sbin/ipfwadm -O -a deny -S 0.0.0.0/0 -D 0.0.0.0/0 -o 
+
+#-------------------------------------------------------------------------- 
+#Forwarding firewall policies 
+#-------------------------------------------------------------------------- 
+
+#flush forwarding policies 
+/sbin/ipfwadm -F -f 
+
+#set forwarding policy default to deny 
+/sbin/ipfwadm -F -p deny 
+
+#masquerade from localnet on local interface to anywhere 
+/sbin/ipfwadm -F -a masquerade -W $staticif -S $localip/24 -D 0.0.0.0/0 
+#all other forwarding is denied 
+/sbin/ipfwadm -F -a deny -S 0.0.0.0/0 -D 0.0.0.0/0 
+
+exit 0 
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss7.2">7.2 Kernel 2.1/2.2, ipchains</A>
+</H2>
+
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+
+#!/bin/sh 
+#04/04/1999 
+#example rc.firewall script for the newer 2.1/2.2 kernels using ipchains
+#that creates user defined chains for each interface.  There are firewall
+#rules for spoofing protection which may be unnecessary since the newer
+#kernels can have kernel spoofing protection enabled.  You might say it's
+#super paranoid checking. 
+#Send questions or comments to acj@home.com. 
+
+#--------------------------------------------------------------------- 
+#Variables 
+#--------------------------------------------------------------------- 
+
+#local ethernet interface 
+localip= 
+localif=eth0 
+
+#static ethernet interface 
+staticip= 
+staticif=eth1 
+
+#loopback interface 
+loopback=lo 
+
+PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin" 
+
+#--------------------------------------------------------------------- 
+#Flush built-in input, output, and forward ipchains; set default policy 
+#Good policy to deny all packets especially while setting up chains 
+#--------------------------------------------------------------------- 
+
+#set incoming firewall policy default to deny 
+ipchains -P input DENY 
+
+#flush incoming firewall policies 
+ipchains -F input 
+
+#--------------------------------------------------------------------- 
+
+#set outgoing firewall policy default to deny 
+ipchains -P output DENY 
+
+#flush outgoing firewall policies 
+ipchains -F output 
+
+#--------------------------------------------------------------------- 
+
+#set forwarding firewall policy default to deny 
+ipchains -P forward DENY 
+
+#flush forwarding firewall policies 
+ipchains -F forward 
+
+#--------------------------------------------------------------------- 
+#flush all policies  -redundant for main policies, but also flushes user 
+#defined policies 
+#ipchains -F 
+
+#remove all user defined policies - you may or may not want to enable this 
+#ipchains -X 
+
+#--------------------------------------------------------------------- 
+#Incoming Firewall Policies 
+#--------------------------------------------------------------------- 
+
+#create new input chain for static ethernet interface 
+ipchains -N $staticif"-i" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $staticif"-i" 
+
+#block incoming tcp SYN packets to all ports on staticif and log 
+#this may be a little harsh but its a nice feature 
+#ipchains -A $staticif"-i" -j DENY -p tcp -y -i $staticif -s 0/0 \
+#-d $staticip : -l 
+
+#remote interface, claiming to be local machines (IP spoofing) deny and log 
+ipchains -A $staticif"-i" -j DENY -i $staticif -s $localip/16 -d 0/0 -l 
+
+#remote interface, any source, going to staticip address is valid 
+ipchains -A $staticif"-i" -j ACCEPT -i $staticif -s 0/0 -d $staticip/32 
+
+#all other incoming is denied and logged 
+ipchains -A $staticif"-i" -j DENY -s 0/0 -d 0/0 -l 
+
+#--------------------------------------------------------------------- 
+
+#create new input chain for local ethernet interface 
+ipchains -N $localif"-i" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $localif"-i" 
+
+#local interface, local machines, going anywhere is valid 
+ipchains -A $localif"-i" -j ACCEPT -i $localif -s $localip/24 -d 0/0 
+
+#all other incoming is denied and logged 
+ipchains -A $localif"-i" -j DENY -s 0/0 -d 0/0 -l 
+
+#--------------------------------------------------------------------- 
+
+#create new input chain for loopback interface 
+ipchains -N $loopback"-i" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $loopback"-i" 
+
+#loopback interface is valid 
+ipchains -A $loopback"-i" -j ACCEPT -i $loopback -s 0/0 -d 0/0 
+
+#all other incoming is denied and logged 
+ipchains -A $loopback"-i" -j DENY -s 0/0 -d 0/0 -l 
+
+#-------------------------------------------------------------------------- 
+#Forwarding firewall policies 
+#-------------------------------------------------------------------------- 
+
+#create new forward chain for static ethernet interface 
+ipchains -N $staticif"-f" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $staticif"-f" 
+
+#masquerade from localnet on static interface to anywhere 
+ipchains -A $staticif"-f" -j MASQ -i $staticif -s $localip/24 -d 0/0 
+
+#all other forwarding is denied and logged 
+ipchains -A $staticif"-f" -j DENY -s 0/0 -d 0/0 -l 
+
+#--------------------------------------------------------------------- 
+
+#create new forward chain for local ethernet interface 
+ipchains -N $localif"-f" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $localif"-f" 
+
+#all other forwarding is denied and logged 
+ipchains -A $localif"-f" -j DENY -s 0/0 -d 0/0 -l 
+
+#--------------------------------------------------------------------- 
+
+#create new forward chain for loopback interface 
+ipchains -N $loopback"-f" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $loopback"-f" 
+
+#all other forwarding is denied and logged 
+ipchains -A $loopback"-f" -j DENY -s 0/0 -d 0/0 -l 
+  
+
+#--------------------------------------------------------------------- 
+#Outgoing Firewall Policies 
+#--------------------------------------------------------------------- 
+
+#create new output chain for static ethernet interface 
+ipchains -N $staticif"-o" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $staticif"-o" 
+
+#outgoing to localnet on remote interface(stuffed routing) deny &amp; log 
+ipchains -A $staticif"-o" -j DENY -i $staticif -s 0/0 -d $localip/24 -l 
+
+#outgoing from local net on remote interface, stuffed masquerading, deny 
+ipchains -A $staticif"-o" -j DENY -i $staticif -s $localip/24 -d 0/0 -l 
+
+#anything else outgoing on remote interface is valid 
+ipchains -A $staticif"-o" -j ACCEPT -i $staticif -s $staticip/32 -d 0/0 
+
+#all other outgoing is denied and logged 
+ipchains -A $staticif"-o" -j DENY -s 0/0 -d 0/0 -l 
+
+#--------------------------------------------------------------------- 
+
+#create new output chain for local ethernet interface 
+ipchains -N $localif"-o" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $localif"-o" 
+
+#local interface, any source going to local net is valid 
+ipchains -A $localif"-o" -j ACCEPT -i $localif -s 0/0 -d $localip/24 
+
+#all other outgoing is denied and logged 
+ipchains -A $localif"-o" -j DENY -s 0/0 -d 0/0 -l 
+
+#--------------------------------------------------------------------- 
+
+#create new output chain for loopback interface 
+ipchains -N $loopback"-o" 
+
+#flush all rules in chain (sanity flush) 
+ipchains -F $loopback"-o" 
+
+#loopback interface is valid 
+ipchains -A $loopback"-o" -j ACCEPT -i $loopback -s 0/0 -d 0/0 
+#all other outgoing is denied and logged 
+ipchains -A $loopback"-o" -j DENY -s 0/0 -d 0/0 -l 
+
+#-------------------------------------------------------------------------- 
+#make sure forwarding is enabled in the kernel 
+#-------------------------------------------------------------------------- 
+
+/bin/echo 1 > /proc/sys/net/ipv4/ip_forward 
+
+#-------------------------------------------------------------------------- 
+#Add pointers to built-in chains to enable user defined chains 
+#change the order in each chain to optimize filtering for an interface 
+#-------------------------------------------------------------------------- 
+
+#add local interface input chain 
+ipchains -A input -i $localif -j $localif"-i" 
+
+#add static interface input chain 
+ipchains -A input -i $staticif -j $staticif"-i" 
+
+#add loopback interface input chain 
+ipchains -A input -i $loopback -j $loopback"-i" 
+
+#------------------------------------------------------------------------- 
+
+#add local interface output chain 
+ipchains -A output -i $localif -j $localif"-o" 
+
+#add static interface output chain 
+ipchains -A output -i $staticif -j $staticif"-o" 
+
+#add loopback interface output chain 
+ipchains -A output -i $loopback -j $loopback"-o" 
+
+#------------------------------------------------------------------------- 
+
+#add local interface forward chain 
+ipchains -A forward -i $localif -j $localif"-f" 
+
+#add static interface forward chain 
+ipchains -A forward -i $staticif -j $staticif"-f" 
+
+#add loopback interface forward chain 
+ipchains -A forward -i $loopback -j $loopback"-f" 
+
+#--------------------------------------------------------------------- 
+#Super Paranoid check --- even though default policy is set for deny, 
+#block all packets on any interface 
+#--------------------------------------------------------------------- 
+
+#all other incoming is denied and logged 
+ipchains -A input -j DENY -s 0/0 -d 0/0 -l 
+
+#all other output is denied and logged 
+ipchains -A output -j DENY -s 0/0 -d 0/0 -l 
+
+#all other forwarding is denied and logged 
+ipchains -A forward -j DENY -s 0/0 -d 0/0 -l 
+
+exit 0
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<HR>
+<A HREF="Cipe+Masq-8.html">Next</A>
+<A HREF="Cipe+Masq-6.html">Previous</A>
+<A HREF="Cipe+Masq.html#toc7">Contents</A>
+</BODY>
+</HTML>

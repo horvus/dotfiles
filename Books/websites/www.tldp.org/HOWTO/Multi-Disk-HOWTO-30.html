@@ -1,0 +1,103 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>HOWTO: Multi Disk System Tuning: Appendix J: Example IV: Server with 4 Drives</TITLE>
+ <LINK HREF="Multi-Disk-HOWTO-31.html" REL=next>
+ <LINK HREF="Multi-Disk-HOWTO-29.html" REL=previous>
+ <LINK HREF="Multi-Disk-HOWTO.html#toc30" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Multi-Disk-HOWTO-31.html">Next</A>
+<A HREF="Multi-Disk-HOWTO-29.html">Previous</A>
+<A HREF="Multi-Disk-HOWTO.html#toc30">Contents</A>
+<HR>
+<H2><A NAME="s30">30. Appendix J: Example IV: Server with 4 Drives</A></H2>
+
+<P>
+<!--
+disk!example!server, 4 drives
+-->
+
+This gives an example of using all techniques described earlier, short of
+RAID. It is admittedly rather complicated but offers in return high
+performance from modest hardware. Dimensioning are skipped but reasonable
+figures can be found in previous examples.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Partition       sda             sdb             sdc             sdd
+                ----            ----            ----            ----
+        1       root            overview        lib             news
+        2       swap            swap            swap            swap
+        3       home            /usr            /var/tmp        /tmp
+        4                       spare root      mail            /var
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Setup is optimised with respect to track positioning but also for
+minimising drive seeks.
+<P>If you want DOS or Windows too you will have to use <CODE>sda1</CODE> for this
+and move the other partitions after that. It will be advantageous to
+use the swap partitions on <CODE>sdb2</CODE>, <CODE>sdc2</CODE> and <CODE>sdd2</CODE> for
+Windows swap, <CODE>TEMPDIR</CODE> and Windows temporary directory under these
+sessions. A number of other HOWTOs describe how you can make several
+operating systems coexist on your machine.
+<P>
+<P>For completeness a 4 drive example using several types of RAID is
+also given which is even more complex than the example above.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Partition       sda             sdb             sdc             sdd
+                ----            ----            ----            ----
+        1       boot            overview        news            news
+        2       overview        swap            swap            swap
+        3       swap            lib             lib             lib
+        4       lib             overview        /tmp            /tmp
+        5       /var/tmp        /var/tmp        mail            /usr
+        6       /home           /usr            /usr            mail
+        7       /usr            /home           /var
+        8       / (root)        spare root
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Here all duplicates are parts of a RAID 0 set with two exceptions,
+swap which is interleaved and home and mail which are implemented
+as RAID 1 for safety.
+<P>Note that boot and root are separated: only the boot file with the
+kernel has to reside within the 1023 cylinder limit. The rest of the
+root files can be anywhere and here they are placed on the slowest
+outermost partition. For simplicity and safety the root partition
+is not on a RAID system.
+<P>With such a complicated comes an equally complicated <CODE>fstab</CODE> file.
+The large number of partitions makes it important to do the <CODE>fsck</CODE>
+passes in the right order, otherwise the process can take perhaps
+ten times as long time to complete as the optimal solution.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+
+/dev/sda8       /               ?       ?               1 1 (a)
+/dev/sdb8       /               ?       noauto          1 2 (b)
+/dev/sda1       boot            ?       ?               1 2 (a)
+/dev/sdc7       /var            ?       ?               1 2 (c)
+/dev/md1        news            ?       ?               1 3 (c+d)
+/dev/md2        /var/tmp        ?       ?               1 3 (a+b)
+/dev/md3        mail            ?       ?               1 4 (c+d)
+/dev/md4        /home           ?       ?               1 4 (a+b)
+/dev/md5        /tmp            ?       ?               1 5 (c+d)
+/dev/md6        /usr            ?       ?               1 6 (a+b+c+d)
+/dev/md7        /lib            ?       ?               1 7 (a+b+c+d)
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>The letters in the brackets indicate what drives will be active
+for each <CODE>fsck</CODE> entry and pass. These letters are <EM>not</EM> present
+in a real <CODE>fstab</CODE> file.
+All in all there are 7 passes.
+<P>
+<P>
+<HR>
+<A HREF="Multi-Disk-HOWTO-31.html">Next</A>
+<A HREF="Multi-Disk-HOWTO-29.html">Previous</A>
+<A HREF="Multi-Disk-HOWTO.html#toc30">Contents</A>
+</BODY>
+</HTML>

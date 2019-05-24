@@ -1,0 +1,780 @@
+<HTML
+><HEAD
+><TITLE
+>More Advanced PPP Configurations</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Point-to-Point Protocol"
+HREF="x-087-2-ppp.html"><LINK
+REL="PREVIOUS"
+TITLE="Debugging Your PPP Setup"
+HREF="x7261.html"><LINK
+REL="NEXT"
+TITLE="TCP/IP Firewall"
+HREF="x-087-2-firewall.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x7261.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. The Point-to-Point Protocol</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-firewall.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN7297"
+>8.10. More Advanced PPP Configurations</A
+></H1
+><P
+>&#13;While configuring PPP to dial in to a network like the Internet is the
+most common application, there are those of you who have more
+advanced requirements. In this section we'll talk about a few of the more
+advanced configurations possible with PPP under Linux.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN7303"
+>8.10.1. PPP Server</A
+></H2
+><P
+>&#13; 
+ 
+Running <B
+CLASS="COMMAND"
+>pppd</B
+> as a server is just a matter of
+configuring a serial tty device to invoke <B
+CLASS="COMMAND"
+>pppd</B
+> with
+appropriate options when an incoming data call has been received. One
+way to do this is to create a special account, say <SPAN
+CLASS="SYSTEMITEM"
+>ppp</SPAN
+>, and give it a script or program as a
+login shell that invokes <B
+CLASS="COMMAND"
+>pppd</B
+> with these
+options. Alternatively, if you intend to support PAP or CHAP
+authentication, you can use the <B
+CLASS="COMMAND"
+>mgetty</B
+> program to
+support your modem and exploit its &#8220;/AutoPPP/&#8221; feature.</P
+><P
+>To build a server using the login method, you add a line similar
+to the following to your <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>
+file:<A
+NAME="X-087-2-FNPP14"
+HREF="#FTN.X-087-2-FNPP14"
+>[1]</A
+>
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ppp:x:500:200:Public PPP Account:/tmp:/etc/ppp/ppplogin</PRE
+></TD
+></TR
+></TABLE
+>
+
+If your system supports shadow passwords, you also need to add an entry
+to the <TT
+CLASS="FILENAME"
+>/etc/shadow</TT
+> file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>ppp:!:10913:0:99999:7:::</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>Of course, the UID and GID you use depends on which user you wish to
+own the connection, and how you've created it. You also have to set the
+password for the mentioned account using the <B
+CLASS="COMMAND"
+>passwd</B
+> command.</P
+><P
+>The <B
+CLASS="COMMAND"
+>ppplogin</B
+> script might look like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>#!/bin/sh
+# ppplogin - script to fire up pppd on login
+mesg n
+stty -echo
+exec pppd -detach silent modem crtscts</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <B
+CLASS="COMMAND"
+>mesg</B
+> command disables other users from writing
+to the tty by using, for instance, the <B
+CLASS="COMMAND"
+>write</B
+>
+command. The <B
+CLASS="COMMAND"
+>stty</B
+> command turns off character
+echoing. This command is necessary; otherwise, everything the peer sends would
+be echoed back to it. The most important <B
+CLASS="COMMAND"
+>pppd</B
+>
+option given is <SPAN
+CLASS="SYSTEMITEM"
+>&#8211;detach</SPAN
+>
+because it prevents <B
+CLASS="COMMAND"
+>pppd</B
+> from detaching from the
+controlling tty.  If we didn't specify this option, it would go to the
+background, making the shell script exit. This in turn would cause the
+serial line to hang up and the connection to be dropped.  The
+<B
+CLASS="COMMAND"
+>silent</B
+> option causes <B
+CLASS="COMMAND"
+>pppd</B
+> to
+wait until it receives a packet from the calling system before it
+starts sending.  This option prevents transmit timeouts from occurring when
+the calling system is slow in firing up its PPP client. The
+<SPAN
+CLASS="SYSTEMITEM"
+>modem</SPAN
+> option makes
+<B
+CLASS="COMMAND"
+>pppd</B
+> drive the modem control lines of the serial
+port.  You should always turn this option on when using
+<B
+CLASS="COMMAND"
+>pppd</B
+> with a modem.  The <TT
+CLASS="OPTION"
+>crtscts</TT
+>
+option turns on hardware handshake.</P
+><P
+>Besides these options, you might want to force some sort of
+authentication, for example, by specifying <TT
+CLASS="OPTION"
+>auth</TT
+> on
+<B
+CLASS="COMMAND"
+>pppd</B
+>&#8201;'s command line or in the global
+options file.  The manual page also discusses more specific options
+for turning individual authentication protocols on and off.</P
+><P
+>If you wish to use <B
+CLASS="COMMAND"
+>mgetty</B
+>, all you need to do is
+configure <B
+CLASS="COMMAND"
+>mgetty</B
+> to support the serial device your modem
+is connected to (see <A
+HREF="x-087-2-serial.getty.html#X-087-2-SERIAL.GETTY.MGETTY"
+>Section 4.6.1</A
+>&#8221; for details),
+configure <B
+CLASS="COMMAND"
+>pppd</B
+> for either PAP or CHAP authentication
+with appropriate options in its <TT
+CLASS="FILENAME"
+>options</TT
+> file, and finally,
+add a section similar to the following to your
+<TT
+CLASS="FILENAME"
+>/etc/mgetty/login.config</TT
+> file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># Configure mgetty to automatically detect incoming PPP calls and invoke
+# the pppd daemon to handle the connection.
+#
+/AutoPPP/ -     ppp   /usr/sbin/pppd auth -chap +pap login</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The first field is a special piece of magic used to detect that
+an incoming call is a PPP one. You must not change the case of this string;
+it is case sensitive. The third column is the username that appears in
+<B
+CLASS="COMMAND"
+>who</B
+> listings when someone has logged in. The rest of the
+line is the command to invoke. In our example, we've ensured that PAP
+authentication is required, disabled CHAP, and specified that the system
+<TT
+CLASS="FILENAME"
+>passwd</TT
+> file should be used for authenticating users.
+This is probably similar to what you'll want. Remember, you can specify
+the options in the <TT
+CLASS="FILENAME"
+>options</TT
+> file or on the command line
+if you prefer.</P
+><P
+>Here is a small checklist of tasks to perform and the sequence you should
+perform them to get PPP dial in working on your machine. Make sure each
+step works before moving on to the next:
+
+<P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Configure the modem for auto-answer mode. On Hayes-compatible modems,
+this is performed using a command like <TT
+CLASS="LITERAL"
+>ATS0=3</TT
+>. If you're
+going to be using the <B
+CLASS="COMMAND"
+>mgetty</B
+> daemon, this isn't necessary.</P
+></LI
+><LI
+><P
+>Configure the serial device with a <B
+CLASS="COMMAND"
+>getty</B
+> type of command to
+answer incoming calls. A commonly used <B
+CLASS="COMMAND"
+>getty</B
+> variant is
+<B
+CLASS="COMMAND"
+>mgetty</B
+>.</P
+></LI
+><LI
+><P
+>Consider authentication. Will your callers authenticate using PAP,
+CHAP, or system login?</P
+></LI
+><LI
+><P
+>Configure <B
+CLASS="COMMAND"
+>pppd</B
+> as server as described in this section.</P
+></LI
+><LI
+><P
+>Consider routing. Will you need to provide a network route to callers?
+Routing can be performed using the <TT
+CLASS="FILENAME"
+>ip-up</TT
+> script.</P
+></LI
+></OL
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN7379"
+>8.10.2. Demand Dialing</A
+></H2
+><P
+>&#13;
+
+
+
+When there is IP
+traffic to be carried across the link, <I
+CLASS="EMPHASIS"
+>demand dialing</I
+> causes your telephone modem to
+dial and to establish a connection to a remote host. Demand dialing is most useful
+when you can't leave your telephone line permanently switched to your
+Internet provider. For example, you might have to pay timed local calls, so it might be cheaper to have the telephone line
+switched on only when you need it and disconnected when you aren't
+using the Internet.</P
+><P
+>Traditional Linux solutions have used the <B
+CLASS="COMMAND"
+>diald</B
+>
+command, which worked well but was fairly tricky to
+configure. Versions 2.3.0 and later of the PPP daemon have built-in
+support for demand dialing and make it very simple to configure. You
+must use a modern kernel for this to work, too. Any of the later 2.0
+kernels will work just fine.</P
+><P
+>To configure <B
+CLASS="COMMAND"
+>pppd</B
+> for demand dialing, all you need to do
+is add options to your <TT
+CLASS="FILENAME"
+>options</TT
+> file or the
+<B
+CLASS="COMMAND"
+>pppd</B
+> command line. The following table summarizes the
+options related to demand dialing:
+
+<DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN7403"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Option</TH
+><TH
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>demand</TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option specifies that the PPP link should be placed in demand dial mode. The PPP network device will be created, but the <TT
+CLASS="LITERAL"
+>connect</TT
+> command will not be used until a datagram is transmitted by the local host. This option is mandatory for demand dialing to work.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>active-filter</TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>expression</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option allows you to specify which data packets are to be considered active traffic. Any traffic matching the specified rule will restart the demand dial idle timer, ensuring that <B
+CLASS="COMMAND"
+>pppd</B
+> waits again before closing the link. The filter syntax has been borrowed from the <B
+CLASS="COMMAND"
+>tcpdump</B
+> command. The default filter matches all datagrams.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>holdoff</TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This option allows you to specify the minimum amount of time, in seconds, to wait before reconnecting this link if it terminates. If the connection fails while <B
+CLASS="COMMAND"
+>pppd</B
+> believes it is in active use, it will be re-established after this timer has expired. This timer does not apply to reconnections after an idle timeout.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="0"
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="LITERAL"
+>idle</TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>n</I
+></TT
+></TD
+><TD
+WIDTH="3"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>If this option is configured, <B
+CLASS="COMMAND"
+>pppd</B
+> will disconnect the link whenever this timer expires. Idle times are specified in seconds. Each new active data packet will reset the timer.</P
+></TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+>
+
+A simple demand dialing configuration would therefore look something
+like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>demand
+holdoff 60
+idle 180</PRE
+></TD
+></TR
+></TABLE
+>
+
+This configuration would enable demand dialing, wait 60 seconds before
+re-establishing a failed connection, and drop the link if 180 seconds pass
+without any active data on the link.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN7441"
+>8.10.3. Persistent Dialing</A
+></H2
+><P
+>&#13;
+
+
+
+<I
+CLASS="EMPHASIS"
+>Persistent dialing</I
+> is what people who have
+permanent dialup connections to a network will want to use. There is a
+subtle difference between demand dialing and persistent dialing. With
+persistent dialing, the connection is automatically established as soon
+as the PPP daemon is started, and the persistent aspect comes into play
+whenever the telephone call supporting the link fails. Persistent dialing ensures that the link is always
+available by automatically rebuilding the connection if it fails.</P
+><P
+>You might be fortunate to not have to pay for your telephone calls;
+perhaps they are local and free, or perhaps they're paid by your
+company. The persistent dialing option is extremely useful in this
+situation. If you do have to pay for your telephone calls, then you
+have to be a little careful. If you pay for your telephone calls on a
+time-charged basis, persistent dialing is almost certainly not what
+you want, unless you're very sure you'll be using the connection fairly
+steadily twenty-four hours a day. If you do pay for calls, but they
+are not time charged, you need to be careful to protect yourself
+against situations that might cause the modem to endlessly redial. The
+<B
+CLASS="COMMAND"
+>pppd</B
+> daemon provides an option that can help reduce
+the effects of this problem.</P
+><P
+>To enable persistent dialing, you must include the <SPAN
+CLASS="SYSTEMITEM"
+>persist</SPAN
+> option in one of your
+<B
+CLASS="COMMAND"
+>pppd</B
+> options files. Including this option alone is
+all you need to have <B
+CLASS="COMMAND"
+>pppd</B
+> automatically
+invoke the command specified by the <SPAN
+CLASS="SYSTEMITEM"
+>connect</SPAN
+> option to rebuild the connection
+when the link fails. If you are concerned about the modem redialing
+too rapidly (in the case of modem or server fault at the
+other end of the connection), you can use the <SPAN
+CLASS="SYSTEMITEM"
+>holdoff</SPAN
+> option to set the minimum amount
+of time that <B
+CLASS="COMMAND"
+>pppd</B
+> will wait before attempting to
+reconnect.  This option won't solve the problem of a fault costing you money
+in wasted phone calls, but it will at least serve to reduce the impact
+of one.</P
+><P
+>A typical configuration might have persistent dialing options that
+look like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>persist
+holdoff 600</PRE
+></TD
+></TR
+></TABLE
+>
+
+The holdoff time is specified in seconds. In our example,
+<B
+CLASS="COMMAND"
+>pppd</B
+> waits a full five minutes before redialing
+after the call drops out.</P
+><P
+>It is possible to combine persistent dialing with demand dialing,
+using <SPAN
+CLASS="SYSTEMITEM"
+>idle</SPAN
+> to drop the link if
+it has been idle for a specified period of time. We doubt many users
+would want to do so, but this scenario is described briefly in the
+<B
+CLASS="COMMAND"
+>pppd</B
+> manual page, if you'd like to pursue it.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNPP14"
+HREF="x7297.html#X-087-2-FNPP14"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> The
+<B
+CLASS="COMMAND"
+>useradd</B
+> or <B
+CLASS="COMMAND"
+>adduser</B
+> utility, if you have it, will
+simplify this task.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x7261.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-firewall.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Debugging Your PPP Setup</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ppp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>TCP/IP Firewall</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

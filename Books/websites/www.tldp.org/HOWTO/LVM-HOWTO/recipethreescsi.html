@@ -1,0 +1,466 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Setting up LVM on three SCSI disks</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Recipes"
+HREF="recipes.html"><LINK
+REL="PREVIOUS"
+TITLE="Recipes"
+HREF="recipes.html"><LINK
+REL="NEXT"
+TITLE="Setting up LVM on three SCSI disks with striping"
+HREF="recipethreescsistripe.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="recipes.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. Recipes</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="recipethreescsistripe.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="recipethreescsi"
+></A
+>13.1. Setting up LVM on three SCSI disks</H1
+><P
+>&#13;        For this recipe, the setup has three SCSI disks that will be put
+        into a logical volume using LVM.  The disks are at /dev/sda,
+        /dev/sdb, and /dev/sdc.
+      </P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1056"
+></A
+>13.1.1. Preparing the disks</H2
+><P
+>&#13;          Before you can use a disk in a volume group you will have to
+          prepare it:
+        </P
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Warning!</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;            <STRONG
+>&#13;              The following will destroy any data on /dev/sda, /dev/sdb,
+              and /dev/sdc
+            </STRONG
+>
+          </P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;          Run pvcreate on the disks
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># pvcreate /dev/sda
+# pvcreate /dev/sdb
+# pvcreate /dev/sdc</B
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          This creates a volume group descriptor area (VGDA) at the start
+          of the disks.
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1066"
+></A
+>13.1.2. Setup a Volume Group</H2
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;              Create a volume group
+              <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgcreate my_volume_group /dev/sda /dev/sdb /dev/sdc/</B
+>
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            </P
+></LI
+><LI
+><P
+>&#13;              Run vgdisplay to verify volume group
+              <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># vgdisplay</B
+>
+<TT
+CLASS="computeroutput"
+># vgdisplay
+--- Volume Group ---
+VG Name	              my_volume_group
+VG Access             read/write
+VG Status             available/resizable
+VG #                  1
+MAX LV                256
+Cur LV                0
+Open LV               0
+MAX LV Size           255.99 GB
+Max PV                256
+Cur PV                3
+Act PV                3
+VG Size               1.45 GB
+PE Size               4 MB
+Total PE              372
+Alloc PE / Size       0 / 0
+Free  PE / Size       372/ 1.45 GB
+VG UUID               nP2PY5-5TOS-hLx0-FDu0-2a6N-f37x-0BME0Y</TT
+>
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+              The most important things to verify are that the first
+              three items are correct and that the VG Size item is the
+              proper size for the amount of space in all four of your
+              disks.
+            </P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1078"
+></A
+>13.1.3. Creating the Logical Volume</H2
+><P
+>&#13;          If the volume group looks correct, it is time to create a
+          logical volume on top of the volume group.
+        </P
+><P
+>&#13;          You can make the logical volume any size you like.  (It is
+          similar to a partition on a non LVM setup.)  For this example we
+          will create just a single logical volume of size 1GB on the
+          volume group.  We will not use striping because it is not
+          currently possible to add a disk to a stripe set after the
+          logical volume is created.
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># lvcreate -L1G -nmy_logical_volume my_volume_group</B
+>
+<TT
+CLASS="computeroutput"
+>lvcreate -- doing automatic backup of "my_volume_group"
+lvcreate -- logical volume "/dev/my_volume_group/my_logical_volume" successfully created</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1085"
+></A
+>13.1.4. Create the File System</H2
+><P
+>&#13;          Create an ext2 file system on the logical volume
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># mke2fs /dev/my_volume_group/my_logical_volume</B
+>
+<TT
+CLASS="computeroutput"
+>mke2fs 1.19, 13-Jul-2000 for EXT2 FS 0.5b, 95/08/09
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+131072 inodes, 262144 blocks
+13107 blocks (5.00%) reserved for the super user
+First data block=0
+9 block groups
+32768 blocks per group, 32768 fragments per group
+16384 inodes per group
+Superblock backups stored on blocks:
+        32768, 98304, 163840, 229376
+
+Writing inode tables: done
+Writing superblocks and filesystem accounting information: done</TT
+>
+               </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1091"
+></A
+>13.1.5. Test the File System</H2
+><P
+>&#13;          Mount the logical volume and check to make sure everything looks
+          correct
+          <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># mount /dev/my_volume_group/my_logical_volume /mnt
+# df</B
+>
+<TT
+CLASS="computeroutput"
+>Filesystem           1k-blocks      Used Available Use% Mounted on
+/dev/hda1              1311552    628824    616104  51% /
+/dev/my_volume_group/my_logical_volume
+                       1040132        20    987276   0% /mnt</TT
+>
+          </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        </P
+><P
+>&#13;          If everything worked properly, you should now have a logical
+          volume with and ext2 file system mounted at 
+          <TT
+CLASS="filename"
+>/mnt</TT
+>.
+        </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="recipes.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="recipethreescsistripe.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Recipes</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="recipes.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Setting up LVM on three SCSI disks with striping</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

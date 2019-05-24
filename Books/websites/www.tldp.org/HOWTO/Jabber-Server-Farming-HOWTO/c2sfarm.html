@@ -1,0 +1,540 @@
+<HTML
+><HEAD
+><TITLE
+>Client-to-Server Farming w/ Round Robin DNS</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Jabber Server Farming How-To"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Implementing the Farm"
+HREF="implementation.html"><LINK
+REL="PREVIOUS"
+TITLE="Implementing the Farm"
+HREF="implementation.html"><LINK
+REL="NEXT"
+TITLE="Connection Redirection"
+HREF="redirection.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Jabber Server Farming How-To</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="implementation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. Implementing the Farm</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="redirection.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="c2sfarm">3.1. Client-to-Server Farming w/ Round Robin DNS</H1
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="c2sfarmdream">3.1.1. The Dream</H2
+><P
+>&#13;                    The first thing that we can do is to split out
+                    the c2s from the server and make it a seperate
+                    process/component.  Once that is done, we can
+                    replicate the c2s processes over multiple
+                    machines.  Each one would connect back to the
+                    main server running the JSM and everything
+                    should work just fine.
+                </P
+><DIV
+CLASS="figure"
+><A
+NAME="AEN64"><P
+><B
+>Figure 3-1. c2s Farming Diagram</B
+></P
+><DIV
+CLASS="mediaobject"
+><P
+><IMG
+SRC="c2s-round-robin.jpeg"></P
+></DIV
+></DIV
+><P
+>Pros:</P
+><P
+></P
+><UL
+><LI
+><P
+>Easy to setup right now.</P
+></LI
+></UL
+><P
+>Cons:</P
+><P
+></P
+><UL
+><LI
+><P
+>&#13;        	                Round Robin will not provide true load
+                            balancing since there is no mechanism in
+                            place to check how many connections a
+                            server has when it forwards a new connection
+                            to it the next time it comes up in the
+                            Round Robin.
+                        </P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="c2sfarmreality">3.1.2. The Reality</H2
+><P
+>&#13;                    This is doable right now.  The 1.5 version of
+                    jabberd has sought to break all of the pieces
+                    out into seperate processes.  This was not
+                    done for farming specifically, but we will not
+                    complain since the jadc2s component can handle
+                    upwards of 10k users.  (The 1.4.x series c2s
+                    could only handle ~1024).
+                </P
+><P
+>&#13;                    Currently there is a forked version of jadc2s
+                    that works with the 1.4.2 server.  It is located
+                    in the jabberd14 CVS repository on JabberStudio.
+                    The following example is running with two jadc2s
+                    boxes, and one central jabberd box.  To set this
+                    up do the following:
+                </P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;                            Get all of the
+                            <A
+HREF="http://jabberd.jabberstudio.org/"
+TARGET="_top"
+>source code for jabberd14</A
+>.
+                            Build the server, configure/make.
+                        </P
+></LI
+><LI
+><P
+>&#13;                            Get the
+                            <A
+HREF="http://download.jabber.org/contrib/xdb_sql-1.2.tar.gz"
+TARGET="_top"
+>source</A
+>
+                            for xdb_sql from
+                            <A
+HREF="http://www.IDEALX.org"
+TARGET="_top"
+>IDEALX</A
+>
+                            , build it, and setup the jabber.xml to use it.
+                        </P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;                                This is a very important step.  xdb_file,
+                                the default xdb that comes with jabberd,
+                                is limited to open file descriptors too.
+                                You can play the same shell games that we
+                                are going to play with jadc2s later, but
+                                if you want a server that can handle
+                                millions or users, then you need something
+                                other than xdb_file.  Enter xdb_sql, which
+                                only uses one file descriptor to connect
+                                to the mysql server.
+                            </P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;                            For more information on how to configure
+                            xdb_sql, please see the README that is
+                            distributed in the release.
+                        </P
+></LI
+><LI
+><P
+>&#13;                            Build jadc2s and distribute the binaries
+                            to the boxes where they will run.
+                        </P
+></LI
+><LI
+><P
+>&#13;                            Setup the main jabberd to accept the jadc2s
+                            component connections.  In the jabber.xml
+                            config file, add the following XML:
+                        </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;&#60;service id="jadc2s-1"&#62;
+    &#60;accept&#62;
+        &#60;ip/&#62;
+        &#60;port&#62;5111&#60;/port&#62;
+        &#60;secret&#62;secret&#60;/secret&#62;
+    &#60;/accept&#62;
+&#60;/service&#62;
+
+&#60;service id="jadc2s-2"&#62;
+    &#60;accept&#62;
+        &#60;ip/&#62;
+        &#60;port&#62;5112&#60;/port&#62;
+        &#60;secret&#62;secret&#60;/secret&#62;
+    &#60;/accept&#62;
+&#60;/service&#62;
+                        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;                            Now you can run the main jabberd and get it
+                            listening for the jadc2s to connect to
+                            it.
+                        </P
+></LI
+><LI
+><P
+>&#13;                            Configure the jadc2s.xml on each box to
+                            connect to the SM, where to listen, etc...
+                        </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;&#60;!--  session manager configuration                                    --&#62;
+&#60;sm&#62;
+    &#60;!--  host and port of the SM                                      --&#62;
+    &#60;host&#62;localhost&#60;/host&#62;
+    &#60;port&#62;5111&#60;/port&#62;
+    &#60;!--  shared secret, for authenticating us                         --&#62;
+    &#60;secret&#62;secret&#60;/secret&#62;
+
+    &#60;!--  our ID, for authenticating us to the sm                      --&#62;
+    &#60;id&#62;jadc2s&#60;/id&#62;
+
+    &#60;!--  how many times to try to connect to the sm (default: 5)      --&#62;
+    &#60;retries&#62;5&#60;/retries&#62;
+&#60;/sm&#62;
+
+&#60;!--  local network settings                                           --&#62;
+&#60;local&#62;
+    &#60;!--  who we identify ourselves as. This should correspond to the  --&#62;
+    &#60;!--  ID (host) that the session manager thinks it is.             --&#62;
+    &#60;id&#62;localhost&#60;/id&#62;
+
+    &#60;!--  IP address to bind to (default: 0.0.0.0)                     --&#62;
+    &#60;!-- &#60;ip&#62;0.0.0.0&#60;/ip&#62; --&#62;
+        
+    &#60;!--  port to bind to (default: 5222)                              --&#62;
+    &#60;port&#62;5222&#60;/port&#62;
+
+    &#60;!--  SSL configuration                                            --&#62;
+    &#60;!--  Specify the port to listen on, and the key file to use for   --&#62;
+    &#60;!--  the certificate.                                             --&#62;
+    &#60;!--  &#60;port/&#62;     (default: 5223)                                  --&#62;
+    &#60;!--  &#60;pemfile/&#62;  (default: ./server.pem)                          --&#62;
+    &#60;!--
+    &#60;ssl&#62;
+        &#60;port&#62;5223&#60;/port&#62;
+        &#60;pemfile&#62;./server.pem&#60;/pemfile&#62;
+    &#60;/ssl&#62;
+    --&#62;
+&#60;/local&#62;
+                        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;                            For more information on how to configure
+                            jadc2s, please see the README in the jadc2s
+                            source directory.
+                        </P
+></LI
+><LI
+><P
+>&#13;                            Open a shell where you can change file
+                            system parameters (root usually) and execute
+                            the following command:
+                        </P
+><DIV
+CLASS="informalexample"
+><A
+NAME="AEN108"><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;                                <TT
+CLASS="prompt"
+>bash$</TT
+> <B
+CLASS="command"
+>echo "24000" &#62; /proc/sys/fs/file-max</B
+>
+                            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+><P
+>&#13;                            This bumps the upper bound on the
+                            number of allowed file descriptors
+                            that can be open at one time.
+                        </P
+></LI
+><LI
+><P
+>&#13;                            Set the limit for the shell you are in
+                            to use more than the default 1024 file
+                            descriptors.
+                        </P
+><DIV
+CLASS="informalexample"
+><A
+NAME="AEN115"><P
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;                                <TT
+CLASS="prompt"
+>bash$</TT
+> <B
+CLASS="command"
+>ulimit -n 11000</B
+>
+                            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+></P
+></DIV
+></LI
+><LI
+><P
+>&#13;                            Tell jadc2s how many file descriptors it
+                            is allowed to use:
+                        </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;&#60;!--  maximum number of file descriptors. Should be a prime        --&#62;
+&#60;!--  number. At least four will be used by jadc2s itself,         --&#62;
+&#60;!--  usually around six or seven (default: 1023)                  --&#62;
+&#60;!--  For a list of prime numbers:                                 --&#62;
+&#60;!--    http://www.utm.edu/research/primes/lists/small/10000.txt   --&#62;
+&#60;max_fds&#62;10007&#60;/max_fds&#62;
+                        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;                            It is important that the number you pick is
+                            a prime number.  To make it easy to find the
+                            prime you want you can visit this page
+                            <A
+HREF="http://www.utm.edu/research/primes/lists/small/10000.txt"
+TARGET="_top"
+>http://www.utm.edu/research/primes/lists/small/10000.txt</A
+>.
+                        </P
+></LI
+><LI
+><P
+>&#13;                            All that's left is to run the server, and the
+                            jadc2s processes.  Everything should work fine.
+                            If it doesn't, then PLEASE tell me at
+                            <TT
+CLASS="email"
+>&#60;<A
+HREF="mailto:reatmon@jabber.org"
+>reatmon@jabber.org</A
+>&#62;</TT
+> so that I can
+                            fix this document.
+                        </P
+></LI
+></OL
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="implementation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="redirection.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Implementing the Farm</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="implementation.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Connection Redirection</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

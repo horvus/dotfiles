@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Installing Linux on ZIP disk using ppa ZIP Drive Mini-Howto: Debian 1.2 Installation</TITLE>
+ <LINK HREF="ZIP-Install-8.html" REL=next>
+ <LINK HREF="ZIP-Install-6.html" REL=previous>
+ <LINK HREF="ZIP-Install.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="ZIP-Install-8.html">Next</A>
+<A HREF="ZIP-Install-6.html">Previous</A>
+<A HREF="ZIP-Install.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Debian 1.2 Installation</A></H2>
+
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+    NOTE: The author of this section sent this to me June, 11th 1997.
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss7.1">7.1 Requirements</A>
+</H2>
+
+<P>
+<UL>
+<LI> Ppa ZIP drive and disk.</LI>
+<LI> 2 blank 1.44 floppy disks</LI>
+<LI> A complete set of Debian install disks (review the Debian install
+docs if you don't remember how to make these)</LI>
+<LI> A couple hours of time</LI>
+</UL>
+<P>
+<H2><A NAME="ss7.2">7.2 Overview</A>
+</H2>
+
+<P>After spending a few hours wrestling with dpkg I decided it would be
+simpler to modify the Debian "Rescue" disk so that it would
+recognize the ppa ZIP drive.  This proved to be very easy.  You can
+then use this modified disk to procede through the normal Debian
+base system install.  Once you've completed installing the base
+system you can use a boot disk to start the new base system and
+complete the installation using dselect.  To use this technique you
+need to build two kernels - one with ppa and initial RAM disk
+support, and another without the RAM disk support.
+<P>If you want, you can skip all the steps in section 2 and let the
+Debian install procedure handle formatting the ZIP disk for you.
+<P>
+<H2><A NAME="ss7.3">7.3 Creating the modified Rescue disk</A>
+</H2>
+
+<P>The Debian rescue disk is a SYSLINUX style boot disk, which uses
+a DOS formatted floppy disk and a special boot loader to avoid
+loading MS-DOS.  These disks are very easy to modify to start your
+own custom boot configuration.  The Debian 'boot-floppies' package
+contains a set of scripts to automate the process of building boot
+disks.  However, its so simple I found it easier to do the process
+by hand.  This deviates a bit from the Debian philosophy, but I'm
+over it :).  There are brief instructions in the 'readme.txt' file
+of the Rescue floppy.
+<P>
+<H3>Use dd (or RAWRITE under DOS) to create a new Rescue disk.</H3>
+
+<P>Review the Debian install docs if you don't remember how to do this.
+<P>
+<H3>Build a new kernel with ZIP ppa support</H3>
+
+<P>Build a new kernel with ZIP ppa support (as in step 3.3.1), but also
+configure RAM disk and initial RAM disk support.  You also need to
+configure the msdos, fat, minix, ext2fs, and procfs filesystems.
+<P>Also configure any modules that you would like in your final
+installation on the ZIP disk.
+<P>Once the kernel is configured, build with:
+<P><B> ==> make dep; make clean</B>
+<P><I><B> ==> make bzImage</B></I>
+<P>Build the modules with:
+<P><B> ==> make modules</B>
+<P>You will install these later.
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+          NOTE: Make sure that you are using 'make bzImage', and
+                not 'make zImage'.
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>Mount the new Rescue disk.</H3>
+
+<P><B> ==> fdmount fd0</B>
+<P>or
+<P><B> ==> mount /dev/fd0 /mnt</B>
+<P>or
+<P><B> ==> whatever :)</B>
+<P>
+<H3>Copy the kernel image</H3>
+
+<P>Copy the kernel image (on the i386 platform it will be located at
+arch/i386/boot/bzImage) to 'linux' on the floppy disk.
+<P>
+<H3>Editing the 'rdev.sh' script</H3>
+
+<P>Open the 'rdev.sh' script located on the Rescue floppy with your favorite
+editor. Change the last line:
+from--:
+<BLOCKQUOTE><CODE>
+<PRE>
+       'rdev /mnt/linux /dev/ram0'
+</PRE>
+</CODE></BLOCKQUOTE>
+
+to--:
+<BLOCKQUOTE><CODE>
+<PRE>
+       'rdev /mnt/linux /dev/sda1'
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>You will also have to change all occurences of /mnt/linux to the
+appropriate path.  Since I mount my floppies under /fd0, I had to
+change /mnt/linux to /fd0/linux.
+<P>
+<H3>Run this modified 'rdev.sh' script.</H3>
+
+<P><B> ==> ./rdev.sh</B>
+<P>
+<H2><A NAME="ss7.4">7.4 Install the base system on the ZIP drive.</A>
+</H2>
+
+<P>Boot your modified Rescue disk.  If all goes correctly you will be
+presented with the familiar Debian menu based install process,
+except that now it is aware of your ppa ZIP drive.  Procede through
+this process as if you were installing the system on a normal hard
+drive, but mount /dev/sda1 as root and initialize /dev/sda2 as swap.
+<P>There is one deviation from the standard install process-- don't
+install and/or configure any loadable modules. You will install the
+modules you built in step 7.3.2 later.
+<P>
+<H2><A NAME="ss7.5">7.5 Creating the boot disk</A>
+</H2>
+
+<P>You can create the boot disk just as described in steps 3.3.1 to
+3.3.2, or, if you want, just use the "Create Boot Disk" option
+during the Debian install. I like this second option because I get
+another SYSLINUX boot disk, allowing me to edit the greeting message
+to describe the nature of my custom boot floppy and allow me to
+enter additional kernel arguments. You can even include help files,
+accessible via the functions keys. You may still wish to rebuild the
+kernel and modify this boot disk by hand later to remove the RAM
+disk support. Your call.
+<P>
+<H2><A NAME="ss7.6">7.6 Reboot the system.</A>
+</H2>
+
+<P>Insert your boot disk and choose the 'Reboot' option from the
+install menu.
+<P>
+<H2><A NAME="ss7.7">7.7 Configure the base system and complete the install process.</A>
+</H2>
+
+<P>When the system reboots you will have a slow but completely
+workable Debian base installation running off of your ppa ZIP drive.
+Proceed normally with the installation at this point. I installed
+all the normal UNIX utilities, along with documentation sets, make,
+gcc, libraries, and various useful file manipulation utilities. The
+result is a very powerful emergency boot system that I can use to
+rescue any of the systems in our department in an emergency.
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+        NOTE: You'll at least need to install 'make' to
+              complete the next step.
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss7.8">7.8 Installing the modules you built in step 7.3.2.</A>
+</H2>
+
+<P>If you installed make in the last step, you should be able to mount
+the hard drive partition containing your kernel build, cd to the
+proper directory and run 'make modules_install'.
+Here's how I did it:
+<P><B> ==> mount /dev/hda2 /mnt </B>
+<P><B> ==> cd /mnt/usr/src/linux </B>
+<P><B> ==> make modules_install </B>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+        NOTE: You won't need to modify the /etc/fstab file, as explained
+              in step 5.  The Debian installation process has already
+              taken care of that.
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>
+<HR>
+<A HREF="ZIP-Install-8.html">Next</A>
+<A HREF="ZIP-Install-6.html">Previous</A>
+<A HREF="ZIP-Install.html#toc7">Contents</A>
+</BODY>
+</HTML>

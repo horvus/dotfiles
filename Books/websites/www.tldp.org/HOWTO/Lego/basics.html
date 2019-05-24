@@ -1,0 +1,258 @@
+<HTML
+><HEAD
+><TITLE
+>The Mindstorms Architecture</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Lego Mindstorm with Linux Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="intro.html"><LINK
+REL="NEXT"
+TITLE="LegOS"
+HREF="legos.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Lego Mindstorm with Linux Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="intro.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="legos.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BASICS"
+>2. The Mindstorms Architecture</A
+></H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN40"
+>2.1. The Basic Hardware</A
+></H2
+><P
+>	In case you don't know, the Lego Mindstorms Kit is a robotics kit from The Lego Group that retails for about 200 US dollars. For that, you get a lot of Lego pieces, a large brick containing a CPU, an LCD, and some connectors (known as the RCX), a couple of motors, and some light and touch sensors that allow you to interact with the outside world. 
+      </P
+><P
+>	The current release of the RCX kit is version 1.5, which will be replaced in spring 2001 by RCX 2.0. For the time being, any time I say "RCX" in this document, I mean "RCX 1.x." The differences between 1.0 and 1.5 are minimal, but the changes between 1.5 and 2.0 may be substantial- the exact extent of the changes is not yet known.
+      </P
+><P
+>	If you want to learn about the hardware in more detail (think: excruciating detail, from folks who have literally disassembled their RCX's in order to see what makes them tick) there are two important web sites to visit: <A
+HREF="http://www.crynwr.com/lego-robotics/"
+TARGET="_top"
+>Russell Nelson's Lego Mindstorms Internals</A
+> and <A
+HREF="http://graphics.stanford.edu/~kekoa/rcx/"
+TARGET="_top"
+>Kekoa Proudfoot's RCX Internals</A
+>. Without these two sites, it is unlikely that much of the software below would exist.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN47"
+>2.2. Standard RCX Programming</A
+></H2
+><P
+>	The key to understanding the various Linux options is to first understand how the Mindstorms kit operates normally with MS Windows. In a nutshell, Lego provides a MS Windows software tool that lets you (or, more likely, a 12-14 year old) graphically assemble programs for the Mindstorm, using a building-block metaphor to create code. Once the program has been "assembled" in this way, the software compiles your program into a byte-code. This byte-code is then downloaded to the robot, where the firmware of the RCX processes the byte-code and controls the machine based on the instructions in the byte-code. Besides parsing byte-code, the RCX firmware has many OS-like functions: it controls the hardware, threading, and in particular, controls the IR port that is used to communicate with the robot. It also has the ability to accept specific commands (as opposed to complete programs) from the IR port or a special remote control, and move the robot based on those commands. 
+      </P
+><P
+>	The standard firmware is currently in version 1.0 (even if you buy it with RIS version 1.5). It has pretty serious limitations- for example, since each variable is stored in a register and not in RAM, there can be only 32 variables. However, you can still do some pretty cool stuff with it, and version 2.0 of the firmware (which is available now for beta from <A
+HREF="http://www.legomindstorms.com/sdk2/"
+TARGET="_top"
+>LEGO</A
+>) will significantly reduce these restrictions as well as be reverse compatible with 1.x hardware.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN52"
+>2.3. Where the Linux Tools Fit In</A
+></H2
+><P
+>	The different Linux Mindstorms programs function as replacments for different portions of the software chain discussed in the previous section. Some completely replace the default firmware with their own OS-like system or language interpreter. Others generate byte-code that matches the standard Lego byte-code, and use the standard firmware to interpret the byte-code once it has been generated. Finally, some merely generate the remote control codes that allow you to control the robot from the host PC, without giving you the option to run anything on the robot itself. These also use the standard Lego firmware.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN55"
+>2.4. Hardware Requirements for the Linux Host</A
+></H2
+><P
+>	Since most of these tools are command line based, hardware requirements are minimal- basically any Linux system should run them. 
+      </P
+><P
+>	The one exception is the serial port, which must be present and may not be on some newer "legacy free" machines. All communication to the RCX is done via the IR tower, which is connected to the machine via a serial port. As a result, if you have no serial port connection, you will be unable to use the RCX unless you can buy an adapter. Furthermore, under certain circumstances, there may be problems with IRQs or serial port conflicts. This is particularly likely if your modem uses /dev/ttyS0. There are three fixes to this: first, attempt to use your second serial port for the IR tower. In most cases, this should work. If that doesn't help, just don't use your modem and your RCX at the same time. If that is unacceptable, then look in your kernel compile options (under "extended dumb serial driver options") for "support for sharing serial interrupts." Make sure it is on, and recompile.
+      </P
+><P
+>	  Because Macs don't have standard serial ports, LinuxPPC users may have to get an adapter and make some modifications in order to use these tools. Dave Baum, NQC author and Mac user, has written <A
+HREF="http://www.enteract.com/~dbaum/nqc/doc/faq.html#irmac"
+TARGET="_top"
+>instructions</A
+> on how to do this.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN61"
+>2.5. The CyberMaster and Scout</A
+></H2
+><P
+>	Besides the RIS, Lego makes two other robotics systems- the CyberMaster (available only in Europe) and the Scout. Unfortunately, I believe that only one of these tools (NQC, discussed in <A
+HREF="nqc.html"
+>Section 5</A
+>) will work with these other tools. Generally speaking, if you are considering buying a Scout, unless you are severely financially restrained, go ahead and buy an RCX- the additional investment is worth it.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN65"
+>2.6. Mindstorms Vision Command</A
+></H2
+><P
+>	The <A
+HREF="http://mindstorms.lego.com/products/vision/index.asp"
+TARGET="_top"
+>Vision Command</A
+> kit is a new addition to the Mindstorms line that uses a USB camera to do some cool stuff. Unfortunately, because USB camera support (in particular, USB Quickcam support) is still shaky under Linux, the product is not yet supported under Linux. If you want to look into hacking it yourself, you may want to look at <A
+HREF="http://hotswap.in.tum.de/~acher/quickcam/quickcam.html"
+TARGET="_top"
+>this page</A
+> which has a driver for a similar Quickcam.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN70"
+>2.7. Important Note about the MS Windows CD</A
+></H2
+><P
+>	Because many of the programs discussed below use the official Lego firmware, you may need your MS Windows CD. You won't need to ever boot MS Windows- your uptime is safe :) However, (if you run NQC or RCX.pm, among others), you may need to mount the CD to get the firmware when your batteries die. If you want to minimize this, find the file <TT
+CLASS="FILENAME"
+>firm0309.lgo</TT
+> on the CD and copy it to a safe place on your Linux partition.
+      </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="intro.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="legos.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>LegOS</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

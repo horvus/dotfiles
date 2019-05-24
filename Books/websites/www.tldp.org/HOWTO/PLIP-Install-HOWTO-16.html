@@ -1,0 +1,188 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE> PLIP Install HOWTO: Installing RedHat 7.0</TITLE>
+ <LINK HREF="PLIP-Install-HOWTO-17.html" REL=next>
+ <LINK HREF="PLIP-Install-HOWTO-15.html" REL=previous>
+ <LINK HREF="PLIP-Install-HOWTO.html#toc16" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="PLIP-Install-HOWTO-17.html">Next</A>
+<A HREF="PLIP-Install-HOWTO-15.html">Previous</A>
+<A HREF="PLIP-Install-HOWTO.html#toc16">Contents</A>
+<HR>
+<H2><A NAME="s16">16. Installing RedHat 7.0</A>   </H2>
+
+<P>This section is written by 
+<A HREF="mailto:leonardjo@hetnet.nl">Leonard den Ottolander</A><P>To install RedHat 7.0 over PLIP the easiest way to go is to use a
+patched bootnet.img which is available via the url 
+<A HREF="http://home.hetnet.nl/~ottolander">http://home.hetnet.nl/~ottolander</A>. This saves the need
+for a driver disk, which might be useful when installing on a
+machine which floppy drive stops functioning after boot (I made this
+bootnet-plip.img to do an install to a Toshiba Libretto 30 which has
+a funny PCMCIA floppy drive that is no longer available after boot).
+<P>This disk is a full bootnet.img for RedHat 7.0, with the modules
+necessary for PLIP added to it. Since there was enough disk space,
+no modules had to be deleted. So you can use this image as if it
+were a full featured bootnet.img. No need for different disks.
+<P>I am not going into detail on the actual installation procedure, but
+there are a few things to note:
+<P>
+<UL>
+<LI><P>The parport module should be loaded before the PLIP
+module. Specify i/o address and irq parameters for the parallel
+port when inserting the parallel port module.
+</LI>
+<LI><P>After inserting the parport_pc module the installer will show the
+"Installation method" screen a second time. This is expected
+behaviour. Choose the PLIP module this second time. No parameters
+need to be specified when inserting the PLIP module.
+</LI>
+<LI><P>When specifying network parameters, do not use a netmask of
+255.255.255.255 as you might normally do for a PLIP connection. If
+you do this by accident you will have to reboot to be able to
+mount the installation directory succesfully. Going back and
+respecifying the parameters will not help you out.
+</LI>
+<LI><P>When doing an NFS install with RedHat 7.0 make sure all files from
+the RedHat directories from both CD's are copied to the NFS mount
+point (cp -a RedHat for both CD's). It is not possible to use the
+mounted CD's.
+</LI>
+</UL>
+<P>
+<P>
+<H2><A NAME="ss16.1">16.1 Creating your own bootnet-plip disk</A>
+    </H2>
+
+<P>This section is a slightly adapted copy of the procedure to create
+a bootnet-plip image for RedHat 6.2 described by Tilmann
+Bubeck. Thanx Tilmann!
+<P>
+<UL>
+<LI><P>1) Mount a copy of the standard bootnet disk and copy all files to
+a temporary directory:
+<PRE>
+        mount -o loop -t vfat /tmp/bootnet.img /mnt/bootnet
+        cp -a /mnt/bootnet /tmp
+       
+</PRE>
+</LI>
+<LI><P>2) Gunzip the initial ramdisk, mount it and copy all files to a
+temporary directory:
+<PRE>
+        mv /tmp/bootnet/initrd.img /tmp/bootnet/initrd.gz
+        gzip -d /tmp/bootnet/initrd.gz
+        mount -o loop /tmp/bootnet/initrd /mnt/initrd
+        cp -a /mnt/initrd /tmp
+       
+</PRE>
+<P>
+</LI>
+<LI><P>3) Gunzip and extract the modules directory with:
+<PRE>
+        cd /tmp
+        zcat /tmp/initrd/modules/modules.cgz | cpio -ivd 
+       
+</PRE>
+<P>
+</LI>
+<LI><P>4) Install the kernel-BOOT-2.2.16-22 rpm and copy the modules
+parport.o, parport_pc.o and plip.o from /lib/modules/2.2.16-22BOOT
+to /tmp/2.2.16-22BOOT, or use the midnight commander to extract
+these files from rpm. When building modified boot disks you will
+always need the modules from the kernel-BOOT rpm.
+<P>
+</LI>
+<LI><P>5) If you need additional space on your bootnet-plip disk, delete
+an unused module from the modules directory, fe:
+<PRE>
+        rm /tmp/2.2.16-22BOOT/old_tulip.o
+       
+</PRE>
+<P>Note that this is not necessary for the RedHat 7.0 bootnet
+disk. There is enough space left for the added modules. Do *not*
+delete modules like sunrpc.o, lockd.o, nfs.o, fat.o, vfat.o and
+the like. This will make your disk useless. Use common sense.
+<P>
+</LI>
+<LI><P>6) Rebuild the modules archive:
+<PRE>
+        find /tmp/2.2.16-22BOOT | cpio -ov -H crc | gzip > \
+        /tmp/initrd/modules/modules.cgz 
+       
+</PRE>
+<P>
+</LI>
+<LI><P>7) Insert a new modules dependency line into modules.dep saying
+that module "parport_pc" needs module "parport":
+<PRE>
+        echo "parport_pc: parport" >> /tmp/initrd/modules/modules.dep 
+       
+</PRE>
+<P>
+</LI>
+<LI><P>8) Insert entries for the parport_pc and plip modules into
+module-info. These entries should look like this:
+<P>
+<PRE>
+    parport_pc
+        plip
+        "Parallel Port, Insert Before PLIP"
+        io "Base I/O address"
+        irq "IRQ level"
+    plip
+        plip
+        "PLIP (Parallel Link Interface Protocol)"
+        io "Base I/O address"
+        irq "IRQ level"
+      
+</PRE>
+<P>You probably may omit the io and irq entries for plip.  Also
+delete any entries that refer to modules that you removed from
+the archive (ie old_tulip in the previous example).
+<P>
+</LI>
+<LI><P>      
+9) Copy the modified module files to the initial ramdisk:
+<PRE>
+       cp -a /tmp/initrd/modules/module* /mnt/initrd/modules
+       
+</PRE>
+<P>
+</LI>
+<LI><P>     
+10) Unmount and gzip the initial ramdisk and copy it to the disk
+image:
+<PRE>
+        umount /mnt/initrd
+        gzip -9 /tmp/bootnet/initrd
+        cp /tmp/bootnet/initrd.gz /mnt/bootnet/initrd.img
+        umount /mnt/bootnet
+       
+</PRE>
+<P>
+</LI>
+<LI><P>     
+11) The file /tmp/bootnet.img is now your new
+bootnet-plip.img. You might want to clean up your temporary
+files:
+<P>
+<PRE>
+        rm -r /tmp/2.2.16-22BOOT
+        rm -r /tmp/initrd
+        rm -r /tmp/bootnet   
+       
+</PRE>
+<P>
+</LI>
+</UL>
+<P>
+<P>
+<HR>
+<A HREF="PLIP-Install-HOWTO-17.html">Next</A>
+<A HREF="PLIP-Install-HOWTO-15.html">Previous</A>
+<A HREF="PLIP-Install-HOWTO.html#toc16">Contents</A>
+</BODY>
+</HTML>

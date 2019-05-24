@@ -1,0 +1,212 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE> Managing Multiple Operating Systems HOWTO: The installation:</TITLE>
+ <LINK HREF="MultiOS-HOWTO-7.html" REL=next>
+ <LINK HREF="MultiOS-HOWTO-5.html" REL=previous>
+ <LINK HREF="MultiOS-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="MultiOS-HOWTO-7.html">Next</A>
+<A HREF="MultiOS-HOWTO-5.html">Previous</A>
+<A HREF="MultiOS-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="s6">6. The installation:</A></H2>
+
+<P>There are three distinct parts to the installation, first building
+the primary O/S on its own dedicated drive.  Second, building a second
+disk with whatever alternative O/S you selected. Finally, reconfiguring
+the BIOS and LILO to support both disks.
+<P>
+<H2><A NAME="ss6.1">6.1 Installing the primary operating system</A>
+</H2>
+
+<P>Installation of the primary/operational O/S is fairly straight forward.
+Treat the system as if it were a single drive system dedicated to Linux.
+Refer to the documentation that came with your distribution or see
+<A HREF="http://www.linuxdoc.org/HOWTO/Installation-HOWTO.html">http://www.linuxdoc.org/HOWTO/Installation-HOWTO.html</A>
+for details on installing Linux.
+<P>
+<P> Because this is ultimately a multiple disk installation, there a few
+steps that need to be taken to trick the install routines into thinking
+that it is, during the installation process, a single disk system.
+<P>
+<P> First, Remove the removable Hard Drive and make sure the remaining
+drive is identified in the BIOS as the secondary boot device (after the
+floppy).  The operating system install program should only see one disk,
+the one you are going to install to.  That way, there is no question
+as to where it will be installed.  Also, it will install everything
+appropriate to a single disk system.
+<P>
+<P>When asked, tell the install program to use the entire disk for
+your operating system.  I accepted the default RedHat partitioning and
+installed the generic LILO on the MBR. 
+<P>
+<P> Once the installation is complete, shutdown and reboot to confirm
+that your system works properly.  At this point you should have a fully
+functional machine that boots directly into Linux.
+<H2><A NAME="ss6.2">6.2 Installing alternative operating systems</A>
+</H2>
+
+<P> Now that you have a fully functional system, you can move on to
+building a second disk with your alternative operating systems.
+<P>
+<P>Select an operating system or two for installation on the second disk.
+I decided on, for no good reason, Windows 98 and BeOS for my initial
+test case.  I partitioned an 8GB drive into two 4GB primary partitions
+and installed Windows 98 in the first partition and BeOS in the second.
+<P>
+<P>Do the same things with this install that you did with the first.
+Disable the first disk in the BIOS so that this installer will not
+even see it.  This is very important.  If you can physically remove or
+disconnect the first disk, do it!  This will protect your primary system
+from any errors on your part or overly greedy operating systems that
+want to take over all the disks they see during the second installation.
+If at some time in the future you decide to create another removable
+disk make sure and repeat this step.
+<P>
+<P>Once this is done install your chosen operating systems as if you
+were installing them on a single drive system.
+<P>
+<P> If you are only installing one operating system on the second disk,
+just plug in the installation disk and let it do its thing.  Windows 95
+or 98 or just about any other operating system, including a second Linux
+should install just fine this way.  Allow Windows 9x to write to the MBR.  If installing Linux, select MBR as the location to install LILO.
+<P>
+<P> I decided to install two operating systems on the second disk so
+that I could confirm the functionality of cascading boot loaders.
+<P>
+<P>I first installed Windows 98 because it automatically overwrites the
+MBR and would have overwritten any boot loader code I eventually placed
+there.  Next, I installed BeOS in the second partition and ran bootman,
+the BeOS boot loader.  With it I built a boot menu for the second disk
+and intentionally overwrote the Windows 98 MBR.
+<P>
+<P>
+<P>Bootman was not essential, I could have used any MBR based boot
+loader but it was available and it works quite will.
+<P>
+<P>Reboot frequently to make sure that everything works properly as
+a single disk system.  I rebooted after each O/S installation to make
+sure it worked properly and also to make sure that the boot loader menu
+worked properly.
+<P>
+<H2><A NAME="ss6.3">6.3 Final BIOS and LILO configuration:</A>
+</H2>
+
+<P>Next, reconfigure the BIOS so that it again recognizes the first disk
+(physically reconnect it if you disconnected it earlier) as the boot
+disk and so that it also recognizes the second disk. How to do this is
+very system specific and dependent on your BIOS and whether you have a
+SCSI/IDE or IDE/IDE setup.  I haven't tried a SCSI/SCSI setup because
+SCSI disks and removable frames are significantly more expensive than
+IDE disks and frames.  I wanted performance for my primary O/S but could
+accept cheap on the other ones.
+<P>
+<P>Make sure and set the second disk type to "Auto" or "Automatic".
+This will force the BIOS to dynamically determine the disk type at
+boot time.  I have been able to successfully use an ancient 512MB
+disk, a 4GB, an 8GB, and even a 100MB IDE Zip disk as the second disk.
+All recognized automatically by the BIOS.
+<P>
+<P>Reboot the system and get back to Linux.  At this point, even though
+there are at least two operating systems installed, this LILO only knows
+about the original Linux and should boot to it automatically.  Watch the
+boot process and you should see a message about automatically identifying
+a disk.  Once booted, check dmesg to make sure Linux recognized the
+second disk.
+<P>
+<P>Once this is done, you need to reconfigure LILO on the first disk
+to make it aware of the second disk. Here are two different lilo.conf
+files, one for a SCSI/IDE and another for an IDE/IDE system.  Each has
+some strengths and weaknesses...
+<P>
+<PRE>
+# lilo.conf file for an internal SCSI disk and a removable disk
+# configured as a master on the primary IDE connection
+
+disk = /dev/sda         #  These four lines are necessary
+   bios = 0x80          #  to get the SCSI disk re-mapped as
+disk = /dev/hda         #  the primary drive even though it
+   bios = 0x81          #  is selected in the BIOS as the
+                        #  boot device.  This might be a BIOS
+                        #  specific problem.
+   
+# Without them you get the following errors from LILO:
+#  
+#  LILO version 21, Copyright 1992-1998 Werner Almesberger
+#
+# ading boot sector from /dev/sda
+# Warning: /dev/sda is not on the first disk
+# And LILO either hangs at LI or repeats endless "01 "'s across the screen
+
+boot=/dev/sda
+map=/boot/map
+install=/boot/boot.b
+prompt
+timeout=50
+image=/boot/vmlinuz-2.2.12-20smp
+   label=Linux
+   root=/dev/sda1
+   initrd=/boot/initrd-2.2.12-20smp.img
+   read-only
+other = /dev/hda
+# other = /dev/hda is the key element.  Instead of redirecting lilo to
+# a specific partition, it redirects it to the MBR on the second disk.
+# that way, LILO doesn't have to know anything about the second disk and
+# we can replace it with another because LILO always goes to the same place
+# regardless of which specific disk is installed.  LILO was the only boot
+# loader I found that would do this.
+   label = Disk2
+   map-drive = 0x80
+      to = 0x81
+   map-drive = 0x81
+      to = 0x80
+# The map-drive lines are necessary to make the second disk think it is
+# actually the boot disk.
+
+
+
+# lilo.conf file for a system with two IDE drives.  Both are masters,
+# /dev/hda on the primary connector and /dev/hdc on the secondary.
+# /dev/hdb is a CDROM slave on the primary IDE connector.
+# disk = /dev/hda       # These lines are not necessary for the
+#    bios = 0x80        # IDE/IDE installation because the BIOS
+# disk = /dev/hdc       # already knows what order they are in
+#    bios = 0x81
+boot=/dev/hda
+map=/boot/map
+install=/boot/boot.b
+prompt
+timeout=50
+image=/boot/vmlinuz-2.2.5-15
+        label=linux
+        root=/dev/hda4
+        read-only
+other = /dev/hdc
+# other = /dev/hdc is again the key.  This just redirects LILO to the
+# MBR of the second disk.  Whatever is there gets control.
+   label = Disk2
+   map-drive = 0x80
+      to = 0x81
+   map-drive = 0x81
+      to = 0x80
+</PRE>
+<P>
+<P>The /dev, boot, map and image entries are system specific and yours
+will probably be different that mine.  The entries in your initial
+/etc/lilo.conf file should give you an accurate guide for your system.
+I copied the "Linux" entry from the original install generated lilo.conf
+file directly into the new lilo.conf.  This should allow you to boot into
+"Linux" and modify your lilo.conf even if the "Disk2" entry fails totally.
+<P>
+<P>Finally, run lilo -vvv to make sure it agrees with everything you
+are trying to do.
+<P>
+<HR>
+<A HREF="MultiOS-HOWTO-7.html">Next</A>
+<A HREF="MultiOS-HOWTO-5.html">Previous</A>
+<A HREF="MultiOS-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Boot + Root + Raid + Lilo : Software Raid mini-HOWTO: Appendix C. - ide RAID10 with initrd</TITLE>
+ <LINK HREF="Boot+Root+Raid+LILO-8.html" REL=next>
+ <LINK HREF="Boot+Root+Raid+LILO-6.html" REL=previous>
+ <LINK HREF="Boot+Root+Raid+LILO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Boot+Root+Raid+LILO-8.html">Next</A>
+<A HREF="Boot+Root+Raid+LILO-6.html">Previous</A>
+<A HREF="Boot+Root+Raid+LILO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Appendix C. - ide RAID10 with initrd</A></H2>
+
+<P>RAID1 over striped RAID0 pair.... the disks in the RAID0 sets are not
+quite the same size, but close enough.
+<P>
+<PRE>
+/dev/md0 is the /boot partition and is autostarted by the kernel
+/dev/md1 and /dev/md3 are the two RAID0 sets autostarted by the kernel
+/dev/md2 is the root partition and is started by initrd
+
+df
+Filesystem           1k-blocks      Used Available Use% Mounted on
+/dev/md2                118531     76485     35925  68% /
+/dev/md0                  1917      1361       457  75% /boot
+
+# ----------------------------
+
+ fdisk -ul /dev/hda
+
+Disk /dev/hda: 4 heads, 46 sectors, 903 cylinders
+Units = sectors of 1 * 512 bytes
+
+   Device Boot    Start       End    Blocks   Id  System
+/dev/hda1            46      4231      2093   fd  Linux raid autodetect
+/dev/hda2          4232    166151     80960   fd  Linux raid autodetect
+
+# ----------------------------
+
+ fdisk -ul /dev/hdb
+
+Disk /dev/hdb: 5 heads, 17 sectors, 981 cylinders
+Units = sectors of 1 * 512 bytes
+
+   Device Boot    Start       End    Blocks   Id  System
+/dev/hdb1            17     83384     41684   fd  Linux raid autodetect
+
+# ----------------------------
+
+ fdisk -ul /dev/hdc
+
+Disk /dev/hdc: 7 heads, 17 sectors, 1024 cylinders
+Units = sectors of 1 * 512 bytes
+
+   Device Boot    Start       End    Blocks   Id  System
+/dev/hdc1            17     84013     41998+  fd  Linux raid autodetect
+/dev/hdc2         84014    121855     18921   82  Linux swap
+
+# ----------------------------
+
+ fdisk -ul /dev/hdd
+
+Disk /dev/hdd: 4 heads, 46 sectors, 903 cylinders
+Units = sectors of 1 * 512 bytes
+
+   Device Boot    Start       End    Blocks   Id  System
+/dev/hdd1            46      4231      2093   fd  Linux raid autodetect
+/dev/hdd2          4232    166151     80960   fd  Linux raid autodetect
+
+# ----------------------------
+                                                         
+# raidtab
+#
+raiddev /dev/md0
+        raid-level      1
+        nr-raid-disks   2
+        persistent-superblock   1
+        chunk-size      8
+        device          /dev/hda1
+        raid-disk       0
+        device          /dev/hdd1
+        raid-disk       1
+
+raiddev /dev/md1
+        raid-level      0
+        nr-raid-disks   2
+        persistent-superblock   1
+        chunk-size      8
+        device          /dev/hdd2
+        raid-disk       0
+        device          /dev/hdb1
+        raid-disk       1
+
+raiddev /dev/md2
+        raid-level      1
+        nr-raid-disks   2
+        persistent-superblock   1
+        chunk-size      8
+        device          /dev/md1
+        raid-disk       0
+        device          /dev/md3
+        raid-disk       1
+
+raiddev /dev/md3
+        raid-level      0
+        nr-raid-disks   2
+        persistent-superblock   1
+        chunk-size      8
+        device          /dev/hda2
+        raid-disk       0
+        device          /dev/hdc1
+        raid-disk       1
+
+# ----------------------------
+
+contents of linuxrc
+
+ cat linuxrc
+#!/bin/sh
+# ver 1.02 2-22-00
+#
+############# really BEGIN 'linuxrc' ###############
+#
+# mount the proc file system
+/bin/mount /proc
+
+# start raid 1 made of raid 0's
+/bin/raidstart /dev/md2
+
+# tell the console what's happening
+/bin/cat /proc/mdstat
+
+# Everything is fine, let the kernel mount /dev/md2
+# tell the kernel to switch to /dev/md2 as the /root device
+# The 0x900 value is the device number calculated by:
+#  256*major_device_number + minor_device number
+echo "/dev/md2 mounted on root"
+echo 0x902>/proc/sys/kernel/real-root-dev
+
+# umount /proc to deallocate initrd device ram space
+/bin/umount /proc
+exit
+
+# ----------------------------
+
+contents of initrd
+
+./bin/ash
+./bin/echo
+./bin/raidstart
+./bin/mount
+./bin/umount
+./bin/cat
+./bin/sh
+./dev/tty1
+./dev/md0
+./dev/md1
+./dev/md2
+./dev/md3
+./dev/md4
+./dev/console
+./dev/hda
+./dev/hda1
+./dev/hda2
+./dev/hda3
+./dev/hdb
+./dev/hdb1
+./dev/hdb2
+./dev/hdb3
+./dev/hdc
+./dev/hdc1
+./dev/hdc2
+./dev/hdc3
+./dev/hdd
+./dev/hdd1
+./dev/hdd2
+./dev/hdd3
+./dev/initrd
+./dev/ram0
+./dev/ram1
+./dev/ram2
+./dev/ram3
+./dev/ram4
+./dev/ram5
+./dev/ram6
+./dev/ram7
+./etc/raidtab
+./etc/fstab
+./lib/ld-2.1.2.so
+./lib/ld-linux.so.1
+./lib/ld-linux.so.1.9.9
+./lib/ld-linux.so.2
+./lib/ld.so
+./lib/libc-2.1.2.so
+./lib/libc.so.6
+./linuxrc
+./proc
+</PRE>
+<HR>
+<A HREF="Boot+Root+Raid+LILO-8.html">Next</A>
+<A HREF="Boot+Root+Raid+LILO-6.html">Previous</A>
+<A HREF="Boot+Root+Raid+LILO.html#toc7">Contents</A>
+</BODY>
+</HTML>

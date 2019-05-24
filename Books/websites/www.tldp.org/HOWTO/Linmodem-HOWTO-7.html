@@ -1,0 +1,189 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linmodem-HOWTO   : FAQ</TITLE>
+ <LINK HREF="Linmodem-HOWTO-8.html" REL=next>
+ <LINK HREF="Linmodem-HOWTO-6.html" REL=previous>
+ <LINK HREF="Linmodem-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Linmodem-HOWTO-8.html">Next</A>
+<A HREF="Linmodem-HOWTO-6.html">Previous</A>
+<A HREF="Linmodem-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. FAQ</A></H2>
+
+<P>
+<H2><A NAME="ss7.1">7.1 I have a winmodem.  Will it work under Linux?</A>
+</H2>
+
+<P>Probably not.  Please see the section "Which Linmodem hardware is supported?" above,
+and check the Linux Modem Compatibility
+<A HREF="http://www.idir.net/~gromitkc/winmodem.html#Database">database</A>
+at
+<A HREF="http://www.idir.net/~gromitkc/winmodem.html">Rob Clark's site</A>.
+<P>
+<H2><A NAME="ss7.2">7.2 I get "NO DIALTONE".</A>
+</H2>
+
+<P>Try setting your BIOS option from "PNP OS" to "non-PNP OS",  from "Windows"
+to "Other OS", or the equivalent.
+<P>Conexant users: See the Conexant section, above.
+<P>
+<H2><A NAME="ss7.3">7.3 I get a "device or resource busy" error.</A>
+</H2>
+
+<P>
+<UL>
+<LI> If you have an ISA modem, did you use the isapnptools to allocate IRQ and DMA
+resources to the card?  See "ISA Plug-n-Play", above, for more information.</LI>
+<LI> Double-check that you created the device file correctly,
+and try to eliminate any IRQ conflicts you might have.  If all looks well, but
+it still doesn't work, check the 
+<A HREF="http://Linmodems.org">Linmodems.org</A>
+mailing list to see if someone
+else has (and has perhaps fixed) the same problem, or try to fix it yourself
+and inform others of your results.</LI>
+</UL>
+<P>
+<H2><A NAME="ss7.4">7.4 I get unresolved symbols when fixscripting/insmoding.</A>
+</H2>
+
+<P>Unresolved symbols are a true danger of version mismatching and are, 
+in general, bad, but are also almost inevitable with binary modules.
+If the fixscript reports unresolved symbols, or the module does not
+work despite the unresolved symbols, you may be out of luck with
+that kernel/module combination; however,
+a few common cases involve symbols like:
+<UL>
+<LI> <CODE>slhc_xxxx</CODE>:  You probably need to insmod the slhc 
+module before inserting the modem/ppp modules; using modprobe
+rather than insmod should also obviate this problem.</LI>
+<LI> <CODE>printk, jiffies</CODE>:  Your kernel may be compiled with
+SMP enabled.  None of the binary modules are known to be SMP-safe, and will
+probably only work on a single-processor machine with a single-processor
+kernel, i.e. SMP disabled.  You should try recompiling your kernel or
+otherwise obtaining a version with SMP disabled.  (Thanks to
+Tom Reinertson (treinertson(at)uswest.net)) </LI>
+<LI> <CODE>tty_xxxx</CODE> with esscom.o: 
+Earlier fixscripts were not able to handle the version-specific symbols
+in this module.  More recent versions are available at
+<A HREF="http://www.test.dclabs.com.au/linmodem/fixscript">http://www.test.dclabs.com.au/linmodem/fixscript</A>) 
+which should be able to fix this module as well. </LI>
+</UL>
+
+If a module works in an unstable fashion,
+it could be that, under some circumstances, you are avoiding those
+symbols, while in others, you slam up against them.  Try out different
+ppp dialup programs (wvdial, kppp), which call a different set of functions
+under similar conditions.  It is also possible that the fixscript, which
+was designed for the lucent module, is not "fixing" the symbols used
+in your module.  If you find no combination that works, consider "downgrading"
+to a kernel which has a closer version match to that of the module.
+<P>
+<H2><A NAME="ss7.5">7.5 My PCTel modem doesn't work.</A>
+</H2>
+
+<P>
+<UL>
+<LI> Do you need to give the module a country code parameter?  See the appendix.</LI>
+<LI> Are you using the right driver module?  There are a few PCTel drivers
+around (see the section "Which Linmodem hardware is supported?" above).
+You might try one of the others and see if that helps.</LI>
+</UL>
+<P>
+<H2><A NAME="ss7.6">7.6 The modem dials and connects fine, but then it drops the connection.</A>
+</H2>
+
+<P>This is an often-reported problem that may have a few, or no, solutions:
+<OL>
+<LI>It is possible that the module is installed correctly and is working,
+but that you have a problem with your ppp configuration.
+In particular, if you find an error in the log along the lines 
+of "peer is not authorized," try changing "auth" to "noauth"
+in  /etc/ppp/options, and/or commenting out "auth" and "lock" (by
+placing a '#' at the beginning of the line).  Corel has a FAQ entry at 
+<A HREF="http://linux.corel.com/support/html/9314.htm">http://linux.corel.com/support/html/9314.htm</A> about
+this.</LI>
+<LI>It has been reported that, with some kernel/module mismatches, a program
+like <CODE>kppp</CODE> will give this error, while an alternative like <CODE>wvdial</CODE>
+does not, for the same modules and hardware.  You may wish to try a different
+ppp dialer and see if that helps. </LI>
+<LI>Lastly, there is the potential relationship with sound support.
+Comparing functionality of ltmodem.o with/without sound
+support in the kernels, dial-in is OK, but ppp is NOT achieved for the kernel
+without sound support.  
+<P>Most Linux distributions do deposit a kernel configuration file along
+with the kernel.  For Debian related distributions, it is the file   
+<PRE>
+  /boot/config-version
+</PRE>
+
+The positive choices can be quickly displayed with:
+<PRE>
+  grep SOUND /boot/config-version |grep -v not
+</PRE>
+
+For the specific example of a 2.2.17 version:
+<P>
+<PRE>
+# grep SOUND  /boot/config-2.2.17 |grep -v not
+CONFIG_SOUND=m
+CONFIG_SOUND_OSS=m
+CONFIG_SOUND_SB=m
+CONFIG_SOUND_MPU401=m
+CONFIG_SOUND_YM3812=m
+CONFIG_SOUND_VMIDI=m
+CONFIG_SOUND_YMPCI=m
+CONFIG_LOWLEVEL_SOUND=y
+</PRE>
+<P>Either CONFIG_SOUND=m or CONFIG_SOUND=yes would show that the kernel
+has sound support (as would simple sound output).
+<P>If none of these helps, you may wish to consider trying to use a kernel version which
+is closer to the module.  Otherwise, try the mailing list at 
+<A HREF="http://Linmodems.org">Linmodems.org</A> for help.
+</LI>
+</OL>
+<P>
+<H2><A NAME="ss7.7">7.7 I get a kernel panic on closing the connection or unloading the driver.</A>
+</H2>
+
+<P>There are a couple of possible solutions to this, neither of which may work:
+<UL>
+<LI> Try a different ppp dialer (wvdial, kppp).</LI>
+<LI> Configure the module so that it stays in the kernel, i.e. so that it
+is not unloaded.</LI>
+</UL>
+<P>
+<H2><A NAME="ss7.8">7.8 Nothing seems to work.  To whom can I turn for help?</A>
+</H2>
+
+<P>
+<UL>
+<LI> Double-check that the modem you have is actually supported by
+the module you have.  See "Which Linmodem Hardware Is Supported?" above.</LI>
+<LI> Try to determine at which stage of the installation process
+things break down.  Check the man pages on the commands used in that
+stage and see if you can determine the source of the problem.</LI>
+</UL>
+<P>If all seems lost, please see the section "Troubleshooting", below , and consider sending
+a message with the complete information described there to the
+mailing list at 
+<A HREF="http://linmodems.org">Linmodems.org</A>.
+<P>
+<H2><A NAME="ss7.9">7.9 Who wrote the driver for my winmodem, and how do I contact him/her?</A>
+</H2>
+
+<P>If a contact address is not given above, you can in general assume
+that it was probably somebody on contract to the manufacturer, who probably
+does not have the
+authority the update/release/change the source code, and who probably doesn't
+have time to reply to your email in any case.  See, for example,
+<A HREF="http://lwn.net/1999/1209/a/lucent.html">http://lwn.net/1999/1209/a/lucent.html</A><P>
+<HR>
+<A HREF="Linmodem-HOWTO-8.html">Next</A>
+<A HREF="Linmodem-HOWTO-6.html">Previous</A>
+<A HREF="Linmodem-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

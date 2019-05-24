@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Red Hat Linux 6.X as an Internet Gateway for a Home Network: Problems</TITLE>
+ <LINK HREF="Home-Network-mini-HOWTO-4.html" REL=previous>
+ <LINK HREF="Home-Network-mini-HOWTO.html#toc5" REL=contents>
+</HEAD>
+<BODY>
+Next
+<A HREF="Home-Network-mini-HOWTO-4.html">Previous</A>
+<A HREF="Home-Network-mini-HOWTO.html#toc5">Contents</A>
+<HR>
+<H2><A NAME="s5">5. Problems</A> </H2>
+
+<P>There are lots and lots of things which can go wrong using a simple document
+like this, because there are plenty of special cases. The majority of possible
+problems adhere to the configuration of the internal and external network devices.
+I will try and respond to people with problems, figure out what went wrong
+and add links down here so that people with special case problems can track
+down help. Feel free to contact me at 
+<A HREF="mailto:pramsey@refractions.net">pramsey@refractions.net</A>.
+<H2><A NAME="ss5.1">5.1 ICQ Does Not Work</A>
+ </H2>
+
+<P>Some portions of ICQ work fine over masquerading. Other portions do not
+work well at all. There is a 
+<A HREF="http://members.xoom.com/djsf/masq-icq/">beta quality ICQ module</A> under development, however, which addresses some
+(but not all) of the deficiencies of running ICQ over masquerading. The <CODE>README</CODE>
+file in the source code distribution describes how to compile the module. Once
+you have it compiled and installed, invoke <CODE>/sbin/modprobe ip_masq_icq</CODE>.
+<H2><A NAME="ss5.2">5.2 I Have Caldera 2.X Not Red Hat 6.X</A>
+ </H2>
+
+<P>Well, firstly congratulations for bucking the trend! Secondly, Nelson Gibbs
+(ngibbs@pacbell.net) sends good news, because most of these instructions will
+work for you. There are some important changes to note however:
+<P>
+<OL>
+<LI>A <CODE>GATEWAY=xxx.xxx.xxx.xxx</CODE> statement in <CODE>/etc/sysconfig/network-scripts/ifcfg-eth0</CODE>
+&amp; <CODE>eth1</CODE> for the interface (local interface uses remote interface IP address
+and remote interface uses service provider's gateway IP).</LI>
+<LI>Make sure <CODE>/etc/sysconfig/daemons/dhcpd</CODE> script lists <CODE>ROUTE_DEVICE</CODE> as <CODE>eth1</CODE>
+<EM>not</EM> <CODE>eth0</CODE>.</LI>
+<LI><CODE>/etc/dhcpd.conf</CODE> requires a subnet statement for both interfaces (I'm not
+entirely sure why as I made my second statement : subnet 216.102.154.201 netmask
+255.255.255.255 { } with no other options and the DHCP server listens
+and sends on eth0 and eth1 as well as the fallback). The DHCP server errors
+out if only one subnet is listed.</LI>
+<LI>Do <EM>not</EM> add host route <CODE>255.255.255.255</CODE>, the <CODE>/etc/rc.d/init.d/dhcpd</CODE> script
+Caldera uses already fixes the problem. <EM>DO</EM> make sure to change all references
+to <CODE>eth0</CODE> in the script to <CODE>eth1</CODE>.</LI>
+</OL>
+<H2><A NAME="ss5.3">5.3 I Want One of My Internal Machines to be my Web Server</A>
+ </H2>
+
+<P>Piece of cake! However, <EM>you need to have a static IP address</EM> for this easy
+set of directions to work. If you have a dynamic IP address, you will need
+some additional scripting to ensure that your IP address gets updated in the
+port forwarding commands when the address changes.
+<P>Bear in mind, forwarding an external port to an inside machine makes your
+"internal" machine less "internal" than before, but it can be done very transparently
+and with little or no performance degredation. One of the side effects of the
+IP masquerading code in the Linux kernel is the ability to do some pretty funky
+stuff with packets as they hit the network layer, and the <CODE>ipmasqadm</CODE> utility
+is built to take advantage of that.
+<P>For some reason <CODE>ipmasqadm</CODE> is not shipped with all the Red Hat and Mandrake
+variants, so will probably have to retrieve it from the maintainer's 
+<A HREF="http://juanjox.kernelnotes.org">web site</A> -- there
+is an 
+<A HREF="http://juanjox.kernelnotes.org/ipmasqadm-0.4.2-2.i386.rpm">RPM</A> available there as well as source code.
+<P>Once you have the RPM, install it, and then add the following lines to
+your <CODE>/etc/rc.d/rc.local</CODE> file:
+<P>
+<PRE>
+/usr/sbin/ipmasqadm portfw -f 
+/usr/sbin/ipmasqadm portfw -a -P tcp -L x.x.x.x 80 -R 192.168.1.x 80 
+ 
+</PRE>
+<P>The first command flushes the port forwarding rules and the second command
+adds a forward from port 80 on the external interface to port 80 on the internal
+machine. Note that the external static IP address goes in the x.x.x.x space
+and the internal machine IP address goes in the 192.168.1.x space.
+<P>Now external requests for port 80 will be transparently sent to port 80
+of the internal machine. Note that you cannot test this by telnetting or connecting
+to your gateway's port 80 from one of your inside machine: the port forwarder
+only honors requests coming in on the <EM>external</EM> interface.
+<HR>
+Next
+<A HREF="Home-Network-mini-HOWTO-4.html">Previous</A>
+<A HREF="Home-Network-mini-HOWTO.html#toc5">Contents</A>
+</BODY>
+</HTML>

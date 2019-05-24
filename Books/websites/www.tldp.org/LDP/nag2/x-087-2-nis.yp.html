@@ -1,0 +1,382 @@
+<HTML
+><HEAD
+><TITLE
+>Setting Up an NIS Client with GNU libc</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Network Information System"
+HREF="x-087-2-nis.html"><LINK
+REL="PREVIOUS"
+TITLE="NIS Server Security"
+HREF="x-087-2-nis.securenets.html"><LINK
+REL="NEXT"
+TITLE="Choosing the Right Maps"
+HREF="x-087-2-nis.nsswitch.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.securenets.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 13. The Network Information System</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x-087-2-nis.nsswitch.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-NIS.YP"
+>13.6. Setting Up an NIS Client with GNU libc</A
+></H1
+><P
+>&#13;
+ 
+We will now describe and discuss the configuration of an NIS client using 
+the GNU libc library support.</P
+><P
+>&#13;
+
+
+Your first step should be to tell the GNU libc NIS client which server to use
+for NIS service. We mentioned earlier that the Linux <B
+CLASS="COMMAND"
+>ypbind</B
+>
+allows you to configure the NIS server to use. The default behavior is to
+query the server on the local network. If the host you are configuring is
+likely to move from one domain to another, such as a laptop, you 
+would leave the <TT
+CLASS="FILENAME"
+>/etc/yp.conf</TT
+> file empty and it would
+query on the local network for the local NIS server wherever it happens to be.</P
+><P
+>A more secure configuration for most hosts is to set the server name in the
+<TT
+CLASS="FILENAME"
+>/etc/yp.conf</TT
+> configuration file. A very simple file for a
+host on the Winery's network may look like this:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># yp.conf - YP configuration for GNU libc library.
+#
+ypserver vbardolino</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>ypserver</SPAN
+> statement tells your host
+to use the host supplied as the NIS server for the local domain. In this
+example we've specified the NIS server as <SPAN
+CLASS="SYSTEMITEM"
+>vbardolino</SPAN
+>. Of course, the IP address corresponding to
+<SPAN
+CLASS="SYSTEMITEM"
+>vbardolino</SPAN
+> must be set
+in the <TT
+CLASS="FILENAME"
+>hosts</TT
+> file; alternatively, you may use the
+IP address itself with the <SPAN
+CLASS="SYSTEMITEM"
+>server</SPAN
+>
+argument.</P
+><P
+>In the form shown in the example, the 
+<B
+CLASS="COMMAND"
+>ypserver</B
+> command tells 
+<B
+CLASS="COMMAND"
+>ypbind</B
+> to use the named server regardless of what the
+current NIS domain may be. If, however, you are moving your machine between
+different NIS domains frequently, you may want to keep information for several
+domains in the <TT
+CLASS="FILENAME"
+>yp.conf</TT
+> file. You can have information on
+the servers for various NIS domains in <TT
+CLASS="FILENAME"
+>yp.conf</TT
+> by
+specifying the information using the
+<SPAN
+CLASS="SYSTEMITEM"
+>domain</SPAN
+> statement. For instance, you
+might change the previous sample file to look like this for a laptop:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># yp.conf - YP configuration for GNU libc library.
+# 
+domain winery server vbardolino 
+domain brewery server vstout </PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This lets you bring up the laptop in either of the two domains by simply
+setting the desired NIS domain at boot time using the
+<B
+CLASS="COMMAND"
+>domainname</B
+> command. The NIS client then uses whichever
+server is relevant for the current domain.</P
+><P
+>There is a third option you may want to use. It covers the case when you
+don't know the name or IP address of the server to use in a particular domain,
+but still want the ability use a fixed server on certain domains. Imagine
+we want to insist on using a specified server while operating within the 
+Winery domain, but want to probe for the server to use while
+in the Brewery domain. We would modify our <TT
+CLASS="FILENAME"
+>yp.conf</TT
+> 
+file again to look like this instead:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># yp.conf - YP configuration for GNU libc library.
+# 
+domain winery server vbardolino 
+domain brewery broadcast</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The <SPAN
+CLASS="SYSTEMITEM"
+>broadcast</SPAN
+> keyword tells
+<B
+CLASS="COMMAND"
+>ypbind</B
+> to use whichever NIS server it finds for the domain.&#13;</P
+><P
+>&#13;
+After creating this basic configuration file and making sure it is
+world-readable, you should run your first test to connect
+to your server. Make sure to choose a map your server distributes, like
+<TT
+CLASS="FILENAME"
+>hosts.byname</TT
+>, and try to retrieve it by using the
+<B
+CLASS="COMMAND"
+>ypcat</B
+> utility:</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>ypcat hosts.byname</B
+></TT
+>
+172.16.2.2      vbeaujolais.vbrew.com    vbeaujolais
+172.16.2.3      vbardolino.vbrew.com     vbardolino
+172.16.1.1      vlager.vbrew.com         vlager
+172.16.2.1      vlager.vbrew.com         vlager
+172.16.1.2      vstout.vbrew.com         vstout
+172.16.1.3      vale.vbrew.com           vale
+172.16.2.4      vchianti.vbrew.com       vchianti</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>&#13;The output you get should resemble that just shown. If you get an error
+message instead that says: <TT
+CLASS="LITERAL"
+>Can't bind to server which serves
+domain</TT
+>, then either the NIS domain name you've set doesn't
+have a matching server defined in <TT
+CLASS="FILENAME"
+>yp.conf</TT
+>, or the server
+is unreachable for some reason. In the latter case, make sure that a
+<B
+CLASS="COMMAND"
+>ping</B
+> to the host yields a positive result, and that it is
+indeed running an NIS server. You can verify the latter by using
+<B
+CLASS="COMMAND"
+>rpcinfo</B
+>, which should produce the following output:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># <TT
+CLASS="USERINPUT"
+><B
+>rpcinfo -u</B
+></TT
+> <TT
+CLASS="REPLACEABLE"
+><I
+>serverhost</I
+></TT
+> <TT
+CLASS="USERINPUT"
+><B
+>ypserv</B
+></TT
+>
+program 100004 version 1 ready and waiting
+program 100004 version 2 ready and waiting</PRE
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.securenets.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.nsswitch.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>NIS Server Security</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-nis.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Choosing the Right Maps</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

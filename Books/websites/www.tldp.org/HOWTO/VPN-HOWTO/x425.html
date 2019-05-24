@@ -1,0 +1,373 @@
+<HTML
+><HEAD
+><TITLE
+>Server: Configure Networking</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="VPN HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Implementation"
+HREF="implemenetation.html"><LINK
+REL="PREVIOUS"
+TITLE="Server: Build the kernel
+			"
+HREF="x397.html"><LINK
+REL="NEXT"
+TITLE="Server: Configure pppd
+			"
+HREF="x459.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>VPN HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x397.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Implementation</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x459.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN425">5.4. Server: Configure Networking</H1
+><P
+>&#13;If you are building a server that has only one network card, I suggest
+that you think about buying another, and rewiring your network.  The
+best way to keep your network private is to keep it on it's own wires. 
+So if you do have two network cards, you'll need to know how to
+configure both of them.  We'll use eth0 for the external interface, and eth1 for
+the internal interface.
+</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN428">5.4.1. Configuring the interfaces</H2
+><P
+>&#13;We first should configure the external interface of the server.  You
+should already know how to do this, and probably already have it done. 
+If you don't, then do so now.  If you don't know how, go back and read
+the <A
+HREF="/HOWTO/NET3-4-HOWTO.html"
+TARGET="_top"
+>Networking HOWTO</A
+>
+</P
+><P
+>&#13;Now we bring up the internal interface.  According to the numbers that
+we've chosen, the internal interface of the server is 192.168.40.254.
+so we have to configure that interface.
+</P
+><P
+>&#13;For 2.0 kernels, use the following:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;# /sbin/ifconfig eth1 192.168.40.254 netmask 255.255.255.0 broadcast 192.168.40.255
+# /sbin/route add -net 192.168.40.0 netmask 255.255.255.0 dev eth1
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;For 2.2 kernels, use the following:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;# /sbin/ifconfig eth1 192.168.40.254 netmask 255.255.255.0 broadcast 192.168.40.255
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;That gets our basic interfaces up.  You can now talk to machines on
+both local networks that are attached to the server.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN438">5.4.2. Setting routes</H2
+><P
+>&#13;We can now talk to machines on our local nets, but we can't get to the rest
+of our internal network.  That requires a few more lines of code.  In order
+to reach the other machines on other subnets, we need have a route that tells
+traffic to go to the Cisco router. Here's that line:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;# /sbin/route add -net 192.168.0.0 gw 192.168.254.254 netmask 255.255.0.0 dev eth1
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;That line tells the kernel that any traffic destined for the 192.168.0.0 network
+should go out eth1, and that it should be handed off to the Cisco.  Traffic for
+our local net still gets where it is supposed to because the routing tables
+are ordered by the size of the netmask.  If we were to have other internal nets
+in our network, we would have a line like the above for each net.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN443">5.4.3. Making filter rules</H2
+><P
+>&#13;Now that we can reach every machine that we could need to, we need to write
+the firewall filtering rules that allow or deny access through the VPN server.
+</P
+><P
+>&#13;To set the rules with <B
+CLASS="command"
+>ipfwadm</B
+>, run it like so:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;# /sbin/ipfwadm -F -f
+# /sbin/ipfwadm -F -p deny
+# /sbin/ipfwadm -F -a accept -S 192.168.40.0/24 -D 192.168.0.0/16
+# /sbin/ipfwadm -F -a accept -b -S 192.168.10.0/24 -D 192.168.0.0/16
+# /sbin/ipfwadm -F -a accept -b -S 192.168.11.0/24 -D 192.168.0.0/16
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;To set the rules with <B
+CLASS="command"
+>ipchains</B
+>, run it like so:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;# /sbin/ipchains -F forward
+# /sbin/ipchains -P forward DENY
+# /sbin/ipchains -A forward -j ACCEPT -s 192.168.40.0/24 -d 192.168.0.0/16
+# /sbin/ipchains -A forward -j ACCEPT -b -s 192.168.10.0/24 -d 192.168.0.0/16
+# /sbin/ipchains -A forward -j ACCEPT -b -s 192.168.11.0/24 -d 192.168.0.0/16
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>&#13;This tells the kernel to deny all traffic except for the traffic that is coming
+from the 192.168.40.0/24 network and destined for the 192.168.0.0/16 network. It
+also tells the kernel that traffic going between the 192.168.10.0/24 and
+192.168.0.0/16 nets is allowed, and the same for the 192.168.11.0 net.  These
+last two are bidirectional rules, this is important for getting the routing
+to work going both ways.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN453">5.4.4. Routing</H2
+><P
+>&#13;For home users, everything will work fine to here.  However
+for the remote offices, we need to do some routing.  First of all, we
+need to tell the main router, or Cisco, that the remote offices are
+behind the VPN server.  So specify routes on the Cisco that tell
+it to send traffic destined for the remote offices to the VPN server.
+Now that that is taken care of, we must tell the VPN server what to do
+with the traffic destined for the remote offices.  To do this, we run the
+<B
+CLASS="command"
+>route</B
+> command on the server.  The only problem is that in order
+for the <B
+CLASS="command"
+>route</B
+> command to work, the link must be up, and if
+it goes down, the route will be lost.  The solution is to add the routes
+when the clients connects, or more simply, to run the route command frequently
+as it's not a problem to run it more than is necessary.  So, create a script
+and add it to your crontab to be run every few minutes,  in the script, put the
+following:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;/sbin/route add -net 192.168.11.0 gw 192.168.10.253 netmask 255.255.255.0
+/sbin/route add -net 192.168.10.0 gw 192.168.11.253 netmask 255.255.255.0
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x397.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x459.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Server: Build the kernel</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="implemenetation.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Server: Configure <B
+CLASS="command"
+>pppd</B
+></TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

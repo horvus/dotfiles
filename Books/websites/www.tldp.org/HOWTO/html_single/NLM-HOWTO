@@ -1,0 +1,840 @@
+<HTML>
+<HEAD>
+
+<TITLE>
+NetWare Loadable Module Programming HOWTO
+</TITLE>
+</HEAD>
+<BODY BGCOLOR=white>
+
+<HR>
+<H1>NetWare Loadable Module Programming HOWTO</H1>
+
+<H2>Martin Hinner, &lt;
+<A HREF="mailto:martin@hinner.info">martin@hinner.info</A>&gt;</H2>Version 0.3, 04 January 2007
+<HR>
+<EM>This document describes how to develop NetWare Loadable Modules under Linux,
+using GNU CC and nlmconv(1) from GNU binutils. This is not an official Novell
+document; I wrote it without any help or cooperation from 
+<A HREF="http://www.novell.com/">Novell, Inc.</A>. Please note that
+Novell Netware is becoming quite obsolete nowadays. In fact I have not updated
+this howto for more than five years till now (2007).</EM>
+<HR>
+<P>
+<H2><A NAME="toc1">1.</A> <A HREF="#s1">Introduction</A></H2>
+
+<UL>
+<LI><A NAME="toc1.1">1.1</A> <A HREF="#ss1.1">C++ Development</A>
+<LI><A NAME="toc1.2">1.2</A> <A HREF="#ss1.2">Related Documentation</A>
+<LI><A NAME="toc1.3">1.3</A> <A HREF="#ss1.3">Copying</A>
+<LI><A NAME="toc1.4">1.4</A> <A HREF="#ss1.4">Contacting the author</A>
+</UL>
+<P>
+<H2><A NAME="toc2">2.</A> <A HREF="#s2">Setting Up Your Linux Box and NetWare Server</A></H2>
+
+<UL>
+<LI><A NAME="toc2.1">2.1</A> <A HREF="#ss2.1">Novell NetWare Server</A>
+<LI><A NAME="toc2.2">2.2</A> <A HREF="#ss2.2">Linux Box With IPX/NCPFS</A>
+<LI><A NAME="toc2.3">2.3</A> <A HREF="#ss2.3">GNU C Compiler</A>
+<LI><A NAME="toc2.4">2.4</A> <A HREF="#ss2.4">nlmconv(1) from GNU binutils</A>
+<LI><A NAME="toc2.5">2.5</A> <A HREF="#ss2.5">The nlm-kit Package</A>
+<LI><A NAME="toc2.6">2.6</A> <A HREF="#ss2.6">Include Files and Documentation from the NDK</A>
+<LI><A NAME="toc2.7">2.7</A> <A HREF="#ss2.7">Access to the NetWare Server (Xconsole or rconsole)</A>
+</UL>
+<P>
+<H2><A NAME="toc3">3.</A> <A HREF="#s3">First Step: Hello world</A></H2>
+
+<UL>
+<LI><A NAME="toc3.1">3.1</A> <A HREF="#ss3.1">hello.c - Source File</A>
+<LI><A NAME="toc3.2">3.2</A> <A HREF="#ss3.2">hello.def - NLM header file</A>
+<LI><A NAME="toc3.3">3.3</A> <A HREF="#ss3.3">Makefile</A>
+<LI><A NAME="toc3.4">3.4</A> <A HREF="#ss3.4">GCC problems</A>
+<LI><A NAME="toc3.5">3.5</A> <A HREF="#ss3.5">Testing the Module</A>
+</UL>
+<P>
+<H2><A NAME="toc4">4.</A> <A HREF="#s4">NLM Header file</A></H2>
+
+<UL>
+<LI><A NAME="toc4.1">4.1</A> <A HREF="#ss4.1">AUTOUNLOAD</A>
+<LI><A NAME="toc4.2">4.2</A> <A HREF="#ss4.2">CHECK</A>
+<LI><A NAME="toc4.3">4.3</A> <A HREF="#ss4.3">CODESTART</A>
+<LI><A NAME="toc4.4">4.4</A> <A HREF="#ss4.4">COPYRIGHT</A>
+<LI><A NAME="toc4.5">4.5</A> <A HREF="#ss4.5">CUSTOM</A>
+<LI><A NAME="toc4.6">4.6</A> <A HREF="#ss4.6">DATASTART</A>
+<LI><A NAME="toc4.7">4.7</A> <A HREF="#ss4.7">DATE</A>
+<LI><A NAME="toc4.8">4.8</A> <A HREF="#ss4.8">DEBUG</A>
+<LI><A NAME="toc4.9">4.9</A> <A HREF="#ss4.9">DESCRIPTION</A>
+<LI><A NAME="toc4.10">4.10</A> <A HREF="#ss4.10">EXIT</A>
+<LI><A NAME="toc4.11">4.11</A> <A HREF="#ss4.11">EXPORT</A>
+<LI><A NAME="toc4.12">4.12</A> <A HREF="#ss4.12">FLAG_OFF</A>
+<LI><A NAME="toc4.13">4.13</A> <A HREF="#ss4.13">FLAG_ON</A>
+<LI><A NAME="toc4.14">4.14</A> <A HREF="#ss4.14">HELP</A>
+<LI><A NAME="toc4.15">4.15</A> <A HREF="#ss4.15">IMPORT</A>
+<LI><A NAME="toc4.16">4.16</A> <A HREF="#ss4.16">INPUT</A>
+<LI><A NAME="toc4.17">4.17</A> <A HREF="#ss4.17">MAP</A>
+<LI><A NAME="toc4.18">4.18</A> <A HREF="#ss4.18">MESSAGES</A>
+<LI><A NAME="toc4.19">4.19</A> <A HREF="#ss4.19">MODULE</A>
+<LI><A NAME="toc4.20">4.20</A> <A HREF="#ss4.20">MULTIPLE</A>
+<LI><A NAME="toc4.21">4.21</A> <A HREF="#ss4.21">NAMELEN</A>
+<LI><A NAME="toc4.22">4.22</A> <A HREF="#ss4.22">OS_DOMAIN</A>
+<LI><A NAME="toc4.23">4.23</A> <A HREF="#ss4.23">OUTPUT</A>
+<LI><A NAME="toc4.24">4.24</A> <A HREF="#ss4.24">PATH</A>
+<LI><A NAME="toc4.25">4.25</A> <A HREF="#ss4.25">PSEUDOPREEMPTION</A>
+<LI><A NAME="toc4.26">4.26</A> <A HREF="#ss4.26">REENTRANT</A>
+<LI><A NAME="toc4.27">4.27</A> <A HREF="#ss4.27">SCREENNAME</A>
+<LI><A NAME="toc4.28">4.28</A> <A HREF="#ss4.28">SHARELIB</A>
+<LI><A NAME="toc4.29">4.29</A> <A HREF="#ss4.29">STACK</A>
+<LI><A NAME="toc4.30">4.30</A> <A HREF="#ss4.30">STACKSIZE</A>
+<LI><A NAME="toc4.31">4.31</A> <A HREF="#ss4.31">STAMPEDDATA</A>
+<LI><A NAME="toc4.32">4.32</A> <A HREF="#ss4.32">START</A>
+<LI><A NAME="toc4.33">4.33</A> <A HREF="#ss4.33">SYNCHRONIZE</A>
+<LI><A NAME="toc4.34">4.34</A> <A HREF="#ss4.34">THREADNAME</A>
+<LI><A NAME="toc4.35">4.35</A> <A HREF="#ss4.35">TYPE</A>
+<LI><A NAME="toc4.36">4.36</A> <A HREF="#ss4.36">VERSION</A>
+<LI><A NAME="toc4.37">4.37</A> <A HREF="#ss4.37">XDCDATA</A>
+</UL>
+<P>
+<H2><A NAME="toc5">5.</A> <A HREF="#s5">Message files</A></H2>
+
+<P>
+<H2><A NAME="toc6">6.</A> <A HREF="#s6">Help Files</A></H2>
+
+<P>
+<H2><A NAME="toc7">7.</A> <A HREF="#s7">XDC Data Files</A></H2>
+
+<P>
+<H2><A NAME="toc8">8.</A> <A HREF="#s8">Header Files (.h)</A></H2>
+
+<P>
+<H2><A NAME="toc9">9.</A> <A HREF="#s9">Import Files (.imp)</A></H2>
+
+<UL>
+<LI><A NAME="toc9.1">9.1</A> <A HREF="#ss9.1">Generating Import Files Using nlmimp(1)</A>
+</UL>
+<HR>
+<H2><A NAME="s1">1.</A> <A HREF="NLM-HOWTO.html#toc1">Introduction</A></H2>
+
+<P>NetWare Loadable Modules (NLMs) are programs which run on Novell NetWare
+server. NLMs become part of the NetWare OS. You can load and unload NLMs while
+the server is running. </P>
+
+<P>"Official" compilers for NLMs are:</P>
+<P>
+<UL>
+<LI> Watcom C/C++</LI>
+<LI> Metrowerks Codewarrior for NetWare (see 
+<A HREF="http://www.metrowerks.com/">http://www.metrowerks.com/</A>)</LI>
+<LI> EPC C/C++ (see 
+<A HREF="http://www.epc.com">http://www.epc.com</A>)</LI>
+<LI> Novell NLMLINK.EXE</LI>
+</UL>
+</P>
+<P>(On a side note, NetWare 5 can also load 32bit DLLs, which can be built using Microsoft Visual
+C++, Borland C++ and other Windows compilers. For more information see
+<A HREF="http://developer.novell.com/ndk/dllcomp.htm">http://developer.novell.com/ndk/dllcomp.htm</A>)</P>
+
+<P>This document describes how to get started with NLM development under Linux (and
+possibly other Unixes). Please note that this project is in very early
+stages of development, so a lot of things may not work as you'd expect.</P>
+
+<P>This document assumes that you are familiar with Novell NetWare, and that you
+have at least basic knowledge of writing NLMs. For more information about
+writing NLMs, see Novell's developer site,
+<A HREF="http://developer.novell.com/">http://developer.novell.com/</A>. You should also have experience
+with Unix and C/C++ programming with GNU CC. You can find a lot of information
+about this topic at 
+<A HREF="http://www.linuxdoc.org/">http://www.linuxdoc.org/</A>.</P>
+
+<H2><A NAME="ss1.1">1.1</A> <A HREF="NLM-HOWTO.html#toc1.1">C++ Development</A>
+</H2>
+
+<P>As far as I know, C++ development with gcc is currently impossible,
+till somebody ports at least the libstdc++ and libgcc
+libraries from the gcc package.</P>
+
+<H2><A NAME="ss1.2">1.2</A> <A HREF="NLM-HOWTO.html#toc1.2">Related Documentation</A>
+</H2>
+
+
+<P>Other documents that might be useful are:</P>
+<P>
+<UL>
+<LI>The <B>IPX-HOWTO</B>, which describes the details of configuring IPX
+protocol on Linux.</LI>
+<LI>The <B>Linux GCC HOWTO</B>, which covers how to set up the GNU C compiler and
+development libraries under Linux, and gives an overview of compiling,
+linking, running and debugging programs under it.</LI>
+<LI>The <B>Assembly HOWTO</B>, which describes how to
+program in assembly language using FREE programming tools, focusing on
+development for or from the Linux Operating System on the i386 platforms.</LI>
+<LI>The <B>Creating NLMs on Linux x86</B>,
+<A HREF="http://home.sch.bme.hu/~keresztg/novell/howto/NLM-Linux-HOWTO.html">http://home.sch.bme.hu/~keresztg/novell/howto/NLM-Linux-HOWTO.html</A>, by Gabor Keresztvalvi
+&lt;keresztg@mail.com&gt;. His page describes the same thing as my HOWTO.
+I found Gabor's page ten days after releasing version 0.1 of this document :( .</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss1.3">1.3</A> <A HREF="NLM-HOWTO.html#toc1.3">Copying</A>
+</H2>
+
+<P>Copyright (c) 2000 Martin Hinner, &lt;
+<A HREF="mailto:martin@hinner.info">martin@hinner.info</A>&gt;, 
+<A HREF="http://martin.hinner.info">http://martin.hinner.info</A>.</P>
+
+<P>This HOWTO is Free documentation; you can redistribute it and/or
+modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 2 of the
+License, or (at your option) any later version.</P>
+<P>This document is distributed in the hope that it will be useful,
+but without any warranty; without even the implied warranty of
+merchantability or fitness for a particular purpose. See the GNU
+General Public License for more details.</P>
+<P>You can obtain a copy of the GNU General Public License by writing
+to the Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA
+02139, USA.</P>
+
+<H2><A NAME="ss1.4">1.4</A> <A HREF="NLM-HOWTO.html#toc1.4">Contacting the author</A>
+</H2>
+
+<P>You can contact me at martin@hinner.info. I welcome any suggestions and corrections,
+but please before you ask a question, try searching the internet first.  You should
+also check my homepage (
+<A HREF="http://martin.hinner.info/">http://martin.hinner.info/</A>) for any updates or additional information.
+Please note that I am very busy with my other projects (like 
+<A HREF="http://www.auto-diagnostics.info">automotive diagnostics</A>, 
+<A HREF="http://www.arm-development.com">ARM-based microprocessors development tools</A>)
+and I have a full time job (I am working for 
+<A HREF="http://www.secons.com">SECONS Ltd.</A> and
+<A HREF="http://www.fintera.com/">Fintera Ltd.</A>).</P>
+
+
+<HR>
+<H2><A NAME="s2">2.</A> <A HREF="NLM-HOWTO.html#toc2">Setting Up Your Linux Box and NetWare Server</A></H2>
+
+<P>You need to install and configure these things for NLM development:</P>
+<P>
+<UL>
+<LI> Linux box with configured IPX and NCPFS</LI>
+<LI> GNU C compiler (gcc) for elf-i386 
+(nearly all i386 Linux Distributions include it)</LI>
+<LI> GNU binutils with nlmconv(1) program</LI>
+<LI> My nlm-kit package</LI>
+<LI> Novell Developer Kit - NDK (include files and documentation)</LI>
+<LI> DOSemu (with rconsole) or X11 server for running NetWare Xconsole.</LI>
+<LI> ... and, finally, NetWare server :-)</LI>
+</UL>
+</P>
+<P>You might also want to download the nlm-examples package from my FTP site:
+<A HREF="ftp://ftp.penguin.cz/pub/users/mhi/nlm/">ftp://ftp.penguin.cz/pub/users/mhi/nlm/</A> or 
+<A HREF="ftp://ftp.funet.fi/pub/mirrors/ftp.penguin.cz/pub/users/mhi/nlm/">ftp://ftp.funet.fi/pub/mirrors/ftp.penguin.cz/pub/users/mhi/nlm/</A>.</P>
+
+<H2><A NAME="ss2.1">2.1</A> <A HREF="NLM-HOWTO.html#toc2.1">Novell NetWare Server</A>
+</H2>
+
+<P>Let's start with the NetWare server. You can use NetWare versions 3.X, 4.X
+or 5.X.
+NetWare 5 (or 5.1) three user "demo" version can be ordered from
+Novell Inc. for a few dollars. Don't be confused with word "demo", it's fully
+functional NetWare, except that it is limited to three users. By the way, this license can
+be upgraded online, at no cost, to five users. You might also try asking your
+local Novell partner for demo CDs (they may be free).</P>
+
+<H2><A NAME="ss2.2">2.2</A> <A HREF="NLM-HOWTO.html#toc2.2">Linux Box With IPX/NCPFS</A>
+</H2>
+
+<P>You need to recompile your kernel with "The IPX protocol" and
+"NCP file system support" options enabled. Don't forget to say YES to
+"NDS authentication support" if you are using the NDS. Then you must
+configure the IPX protocol and mount your NetWare server volumes.
+Make sure that you
+have installed the ncpfs package! I use this script:</P>
+<P>
+<HR>
+<PRE>
+#!/bin/sh
+
+ipx_interface delall   
+ipx_interface add -p eth0 802.2 120 # Frame Ethernet_802.2, ipx net num 120
+insmod ncpfs                        # I have NCPfs compiled as module
+ncpmount -U admin -S elf -P XYZ /nw # mount all ELF's volumes as /nw
+</PRE>
+<HR>
+</P>
+<P>For more information about configuring IPX and NCPFS, see the IPX-HOWTO.</P>
+
+<H2><A NAME="ss2.3">2.3</A> <A HREF="NLM-HOWTO.html#toc2.3">GNU C Compiler</A>
+</H2>
+
+<P>I think that all modern Linuxes for the Intel x86 include gcc, which generates
+ELF32/i386 object files. If you have an older Linux distribution, it may
+use the a.out format instead of ELF. If your Linux doesn't use ELF, get and
+install a newer gcc.</P>
+
+<H2><A NAME="ss2.4">2.4</A> <A HREF="NLM-HOWTO.html#toc2.4">nlmconv(1) from GNU binutils</A>
+</H2>
+
+<P>The nlmconv(1) utility links object files to the NLM format. It is a standard
+part of GNU binutils, but unfortunately it is not included in current distributions (RedHat,
+SuSE, Debian, ...). Get the binutils sources from ftp.gnu.org, and compile them, or
+simply use the pre-compiled nlmconv from my nlm-kit package.</P>
+
+
+<H2><A NAME="ss2.5">2.5</A> <A HREF="NLM-HOWTO.html#toc2.5">The nlm-kit Package</A>
+</H2>
+
+<P>My nlm-kit package is avaliable from
+<A HREF="ftp://ftp.penguin.cz/pub/users/mhi/nlm/">ftp://ftp.penguin.cz/pub/users/mhi/nlm/</A>. It contains necessary
+files for NLM development. Extract it and run <CODE>"make all"</CODE> and
+<CODE>"make install"</CODE>.
+It will create the directory <CODE>/usr/nwsdk/</CODE> and install all import files,
+object files and the nlmimp(1) utility.</P>
+
+<H2><A NAME="ss2.6">2.6</A> <A HREF="NLM-HOWTO.html#toc2.6">Include Files and Documentation from the NDK</A>
+</H2>
+
+
+<P>Getting the NDK is easy:
+<UL>
+<LI> Download it from 
+<A HREF="http://developer.novell.com/ndk/">http://developer.novell.com/ndk/</A>.</LI>
+<LI> Order two NDK CDs from Novell.</LI>
+<LI> Get these CDs at no cost at BrainShare, Novell Developer Workshop
+or at other Novell Developer events.</LI>
+</UL>
+</P>
+
+<P>You need these files from the NDK (all are available online at
+<A HREF="http://developer.novell.com/ndk/clib.htm">http://developer.novell.com/ndk/clib.htm</A>:
+<UL>
+<LI> C language header and import files (cdrom:\files\download\clib.exe)</LI>
+<LI> C language API documentation (cdrom:\files\download\clib_doc.exe)</LI>
+<LI> C language samples (optional) (cdrom:\files\download\clib_sample.exe)</LI>
+</UL>
+</P>
+<P>It's a pity that all the files mentioned above are InstallShield Win32 executables.
+You must find some Windows machine to extract them and then copy the include files
+to <CODE>/usr/nwsdk/include/</CODE> and documentation/samples to anywhere you want.
+The Novell License doesn't allow me to distribute include files or documentation
+with the nlm-kit.</P>
+
+<P>Because the NDK include files don't work under Linux, you need to patch
+them manually by typing "make install-include" in the nlm-kit-X.Y/
+directory.</P>
+
+<H2><A NAME="ss2.7">2.7</A> <A HREF="NLM-HOWTO.html#toc2.7">Access to the NetWare Server (Xconsole or rconsole)</A>
+</H2>
+
+<P>You can access the NetWare server console directly (keyboard and monitor),
+using rconsole.exe (from dosemu), or using telnetd.nlm/Xconsole (you need
+X server for this).</P>
+
+<HR>
+<H2><A NAME="s3">3.</A> <A HREF="NLM-HOWTO.html#toc3">First Step: Hello world</A></H2>
+
+<P>As usual, we will start with the famous "Hello world" program. The source
+code for hello.nlm is available in the nlm-samples package. You can download
+it from 
+<A HREF="ftp://ftp.penguin.cz/pub/users/mhi/nlm/">ftp://ftp.penguin.cz/pub/users/mhi/nlm/</A>.</P>
+
+<H2><A NAME="ss3.1">3.1</A> <A HREF="NLM-HOWTO.html#toc3.1">hello.c - Source File</A>
+</H2>
+
+<P>
+<HR>
+<PRE>
+#define N_PLAT_NLM                                /* Define dest. platform */
+
+#include &lt;nwconio.h>                              /* ConsolePrintf */
+
+int
+main (int argc, char **argv)
+{
+  int i;
+
+  ConsolePrintf ("\rHello world!\n\n");           /* print on system console */
+
+  ConsolePrintf("Arguments:\n");                  /* all arguments */
+  for (i=0;i&lt;argc;i++)
+   ConsolePrintf("argv[%u]=\"%s\"\n",i, argv[i]);
+
+  return 0;                                       /* exit NLM */
+}
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss3.2">3.2</A> <A HREF="NLM-HOWTO.html#toc3.2">hello.def - NLM header file</A>
+</H2>
+
+<P>
+<HR>
+<PRE>
+#
+# hello.def - NLM Header definition file for nlmconv(1)
+# Copyright (c) 2000 Martin Hinner &lt;martin@hinner.info>
+#
+
+# define startup object files
+INPUT   hello.o
+INPUT   /usr/nwsdk/lib/prelude.o            # clib startup code
+
+# all imported functions and import lists
+IMPORT @/usr/nwsdk/imports/clib.imp         # Functions in CLIB.NLM
+IMPORT @/usr/nwsdk/imports/threads.imp      # Functions in THREADS.NLM
+
+# NLM header...
+OUTPUT  hello.nlm                           # output file
+TYPE 0                                      # Ordinary NLM
+VERSION 1,0,0                               # Version 1.0
+COPYRIGHT "Copyright (c) 2000 Martin Hinner &lt;martin@hinner.info>" # (c) ...
+DESCRIPTION "Simple 'Hello world' NLM module." # title of nlm
+SCREENNAME "System Console"                 # Default screen name
+
+MODULE CLIB,THREADS                         # req'd modules
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss3.3">3.3</A> <A HREF="NLM-HOWTO.html#toc3.3">Makefile</A>
+</H2>
+
+<P>
+<HR>
+<PRE>
+# makefile for "hello world" NLM
+
+CC = gcc
+CFLAGS = -Wall -O2 -g -I/usr/nwsdk/include/ -nostdinc -fno-builtin -fpack-struct
+
+hello.nlm:      hello.o hello.def
+        nlmconv --output-target=nlm32-i386 -T hello.def
+
+hello.o:        hello.c
+        $(CC) $(CFLAGS) -c hello.c
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss3.4">3.4</A> <A HREF="NLM-HOWTO.html#toc3.4">GCC problems</A>
+</H2>
+
+<P>You must pass these arguments to the gcc:</P>
+<P>
+<UL>
+<LI> <B>-fno-builtin</B>:
+GCC's fast builtin functions sometimes cause server to abend,
+so we don't want to use them.</LI>
+<LI> <B>-nostdinc</B>:
+Only include files in /usr/nwsdk/include are valid for NLMs (don't
+forget to use also -I/usr/nwsdk/include).</LI>
+<LI> <B>-fpack-struct</B>:
+GCC's struct packing method is not valid for Novell NetWare, so we
+won't use it. Thanks to Gabor Keresztvalvi for this information.</LI>
+<LI> <B>-fno-canary-all-functions</B>:
+If you have Immunix StackGuard GCC, we don't want to use
+it. StackGuard doesn't work under NetWare.</LI>
+</UL>
+ </P>
+
+<H2><A NAME="ss3.5">3.5</A> <A HREF="NLM-HOWTO.html#toc3.5">Testing the Module</A>
+</H2>
+
+<P>Copy hello.nlm to the SYS:\SYSTEM directory on your NetWare server. Then, on
+the system console, type "load hello.nlm". If everything went fine, you should
+see NLM version information, a copyright message and "Hello world".</P>
+
+<HR>
+<H2><A NAME="s4">4.</A> <A HREF="NLM-HOWTO.html#toc4">NLM Header file</A></H2>
+
+<P>The NLM header file contains information for <EM>nlmconv(1)</EM>. Each
+line contains one option or directive; everything after "#" is comment.
+This chapter describes all options and directives.</P>
+
+<P>This chapter is not yet finished, sorry.</P>
+
+<H2><A NAME="ss4.1">4.1</A> <A HREF="NLM-HOWTO.html#toc4.1">AUTOUNLOAD</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>AUTOUNLOAD</B></P>
+
+
+<H2><A NAME="ss4.2">4.2</A> <A HREF="NLM-HOWTO.html#toc4.2">CHECK</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>CHECK &lt;check procedure name&gt;</B></P>
+
+<P>This directive specifies the function to be
+executed when the NLM is unloaded using the <EM>UNLOAD</EM> Server console 
+command. If this function returns zero, the NLM can be unloaded, else
+the NLM is not ready to be unloaded. </P>
+
+<P><EM>Example</EM>:
+<HR>
+<PRE>
+CHECK CheckUnload
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss4.3">4.3</A> <A HREF="NLM-HOWTO.html#toc4.3">CODESTART</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>CODESTART &lt;map file code start offset&gt;</B></P>
+<P>Map file start offset may be decimal or Xhex.</P>
+
+<H2><A NAME="ss4.4">4.4</A> <A HREF="NLM-HOWTO.html#toc4.4">COPYRIGHT</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>COPYRIGHT ["Copyright string"]</B></P>
+<P>The copyright string is displayed on the server console screen when the
+NLM is loaded. If this option is not used, no copyright information is
+displayed.</P>
+
+<P><EM>Example</EM>:
+<HR>
+<PRE>
+COPYRIGHT "Copyright (c) 1998 ABC Inc."
+</PRE>
+<HR>
+</P>
+
+
+<H2><A NAME="ss4.5">4.5</A> <A HREF="NLM-HOWTO.html#toc4.5">CUSTOM</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>CUSTOM &lt;custom data file path&gt;</B></P>
+
+<H2><A NAME="ss4.6">4.6</A> <A HREF="NLM-HOWTO.html#toc4.6">DATASTART</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>DATASTART &lt;map file data start offset&gt;</B></P>
+<P>Map file data start offset may be decimal or Xhex.</P>
+
+<H2><A NAME="ss4.7">4.7</A> <A HREF="NLM-HOWTO.html#toc4.7">DATE</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>DATE &lt;month, day, year&gt;</B></P>
+
+
+<H2><A NAME="ss4.8">4.8</A> <A HREF="NLM-HOWTO.html#toc4.8">DEBUG</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>DEBUG</B></P>
+
+<P>This directive tells the nlmconv(1) to include debugging information in 
+the NLM file.</P>
+<P><EM>Example</EM>:
+<HR>
+<PRE>
+DEBUG
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss4.9">4.9</A> <A HREF="NLM-HOWTO.html#toc4.9">DESCRIPTION</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>DESCRIPTION "NLM Description String"</B></P>
+
+
+<H2><A NAME="ss4.10">4.10</A> <A HREF="NLM-HOWTO.html#toc4.10">EXIT</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>EXIT &lt;exit procedure name&gt;</B></P>
+
+
+<H2><A NAME="ss4.11">4.11</A> <A HREF="NLM-HOWTO.html#toc4.11">EXPORT</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>EXPORT &lt;symbol list&gt;</B></P>
+<P><B>EXPORT @&lt;symbol list file&gt;</B></P>
+
+
+<H2><A NAME="ss4.12">4.12</A> <A HREF="NLM-HOWTO.html#toc4.12">FLAG_OFF</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>FLAG_OFF &lt;decimal number&gt;</B></P>
+
+
+<H2><A NAME="ss4.13">4.13</A> <A HREF="NLM-HOWTO.html#toc4.13">FLAG_ON</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>FLAG_ON &lt;decimal number&gt;</B></P>
+
+
+<H2><A NAME="ss4.14">4.14</A> <A HREF="NLM-HOWTO.html#toc4.14">HELP</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>HELP &lt;help file path&gt;</B></P>
+
+
+<H2><A NAME="ss4.15">4.15</A> <A HREF="NLM-HOWTO.html#toc4.15">IMPORT</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>IMPORT &lt;symbol list&gt; </B></P>
+<P><B>IMPORT @&lt;symbol list file&gt;</B></P>
+
+
+<H2><A NAME="ss4.16">4.16</A> <A HREF="NLM-HOWTO.html#toc4.16">INPUT</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>INPUT &lt;object file&gt; [, &lt;object file&gt; [, ...] ]</B></P>
+<P><B>INPUT @&lt;object list file&gt;</B></P>
+
+<P>This directive lists the input ELF (.o) object files that are to be linked.
+You can also list the object files in the list file, each object file on
+one line.</P>
+
+<P><EM>Example</EM>:</P>
+<P>
+<HR>
+<PRE>
+INPUT @objectfiles.txt
+INPUT main.o
+INPUT /usr/nwsdk/lib/prelude.o
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss4.17">4.17</A> <A HREF="NLM-HOWTO.html#toc4.17">MAP</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>MAP [map file name]</B></P>
+
+
+<H2><A NAME="ss4.18">4.18</A> <A HREF="NLM-HOWTO.html#toc4.18">MESSAGES</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>MESSAGES &lt;message file path&gt;</B></P>
+
+
+<H2><A NAME="ss4.19">4.19</A> <A HREF="NLM-HOWTO.html#toc4.19">MODULE</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>MODULE &lt;autoload NLM list&gt;</B></P>
+
+
+<H2><A NAME="ss4.20">4.20</A> <A HREF="NLM-HOWTO.html#toc4.20">MULTIPLE</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>MULTIPLE</B></P>
+
+
+<H2><A NAME="ss4.21">4.21</A> <A HREF="NLM-HOWTO.html#toc4.21">NAMELEN</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>NAMELEN &lt;decimal number&gt;</B></P>
+<P>Default is 31. Zero is no limit.</P>
+
+
+<H2><A NAME="ss4.22">4.22</A> <A HREF="NLM-HOWTO.html#toc4.22">OS_DOMAIN</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>OS_DOMAIN</B></P>
+
+
+<H2><A NAME="ss4.23">4.23</A> <A HREF="NLM-HOWTO.html#toc4.23">OUTPUT</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>OUTPUT &lt;target file name&gt;</B></P>
+
+
+<H2><A NAME="ss4.24">4.24</A> <A HREF="NLM-HOWTO.html#toc4.24">PATH</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>PATH  [search path;...]</B></P>
+
+<P>for following CUSTOM, HELP, INPUT, MESSAGES, SHARELIB, STAMPEDDATA and XDCDATA.</P>
+
+<H2><A NAME="ss4.25">4.25</A> <A HREF="NLM-HOWTO.html#toc4.25">PSEUDOPREEMPTION</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>PSEUDOPREEMPTION</B></P>
+
+
+<H2><A NAME="ss4.26">4.26</A> <A HREF="NLM-HOWTO.html#toc4.26">REENTRANT</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>REENTRANT</B></P>
+
+
+<H2><A NAME="ss4.27">4.27</A> <A HREF="NLM-HOWTO.html#toc4.27">SCREENNAME</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>SCREENNAME "Initial Screen Name (CLIB)"</B></P>
+
+
+<H2><A NAME="ss4.28">4.28</A> <A HREF="NLM-HOWTO.html#toc4.28">SHARELIB</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>SHARELIB &lt;shared library path&gt;</B></P>
+
+
+<H2><A NAME="ss4.29">4.29</A> <A HREF="NLM-HOWTO.html#toc4.29">STACK</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>STACK &lt;stack size&gt;</B></P>
+
+
+<H2><A NAME="ss4.30">4.30</A> <A HREF="NLM-HOWTO.html#toc4.30">STACKSIZE</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>STACKSIZE &lt;stack size&gt;</B></P>
+
+
+<H2><A NAME="ss4.31">4.31</A> <A HREF="NLM-HOWTO.html#toc4.31">STAMPEDDATA</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>STAMPEDDATA "Stamp" &lt;data file path&gt;</B></P>
+
+<P>Stamp is 8 char max.</P>
+
+<H2><A NAME="ss4.32">4.32</A> <A HREF="NLM-HOWTO.html#toc4.32">START</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>START &lt;start procedure name&gt;</B></P>
+
+<P>Default is _Prelude.</P>
+
+<H2><A NAME="ss4.33">4.33</A> <A HREF="NLM-HOWTO.html#toc4.33">SYNCHRONIZE</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>SYNCHRONIZE</B></P>
+
+
+<H2><A NAME="ss4.34">4.34</A> <A HREF="NLM-HOWTO.html#toc4.34">THREADNAME</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>THREADNAME "Initial Process Name (CLIB)"</B></P>
+
+
+<H2><A NAME="ss4.35">4.35</A> <A HREF="NLM-HOWTO.html#toc4.35">TYPE</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B> TYPE &lt;version&gt;</B></P>
+
+<P>This directive specifies the format (NLM, LAN, DSK, NAM) of
+the NLM file to be generated. Valid values are:</P>
+<P>
+<UL>
+<LI> 0 - NLM</LI>
+<LI> 1 - LAN</LI>
+<LI> 2 - DSK</LI>
+<LI> 3 - NAM</LI>
+</UL>
+</P>
+
+<P><EM>Example</EM>:</P>
+<P>
+<HR>
+<PRE>
+TYPE 0
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss4.36">4.36</A> <A HREF="NLM-HOWTO.html#toc4.36">VERSION</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+
+<P><B>VERSION &lt;major version&gt;, &lt;minor version&gt;
+[, &lt;revision&gt;]</B></P>
+
+<P>The version information is displayed on the server system console when the NLM
+loads. The major and minor version numbers can be 0 - 99. The revision 
+can be 0 - 26 ("a" - "z") and is optional. <B>The version directive is
+required.</B></P>
+<P><EM>Example</EM>:</P>
+<P>
+<HR>
+<PRE>
+VERSION 1,5
+</PRE>
+<HR>
+</P>
+
+<H2><A NAME="ss4.37">4.37</A> <A HREF="NLM-HOWTO.html#toc4.37">XDCDATA</A>
+</H2>
+
+<P><EM>Syntax</EM>:</P>
+<P><B>XDCDATA &lt;XDC data file path&gt;</B></P>
+
+
+<HR>
+<H2><A NAME="s5">5.</A> <A HREF="NLM-HOWTO.html#toc5">Message files</A></H2>
+
+<P>A message file contains (as you guess) text messages generated by the NLM. You can create it
+using DOS programs MSGLIB.EXE and MSGMAKE.EXE. I don't know any similar utility
+for Unix. Sorry, you'll have to use dosemu or DOS machine :-(</P>
+
+<HR>
+<H2><A NAME="s6">6.</A> <A HREF="NLM-HOWTO.html#toc6">Help Files</A></H2>
+
+<P>Help files contain help for use with the NWSNUT user interface library.
+There is no known Linux utility for creating help files. You must use
+the DOS program HELPLIB.EXE, which is available from Novell developer site.</P>
+
+<HR>
+<H2><A NAME="s7">7.</A> <A HREF="NLM-HOWTO.html#toc7">XDC Data Files</A></H2>
+
+<P>XDC files are used by NetWare 5 (or SMP NetWare 4.x), and store information
+about symmetric multiprocessing (SMP). You will probably not need them. At least
+not now :-) Again, there is no Unix utility for creating XDC files,
+you will have to use the MPKXDC.EXE program (also available on the Novell 
+developer site).</P>
+
+
+<HR>
+<H2><A NAME="s8">8.</A> <A HREF="NLM-HOWTO.html#toc8">Header Files (.h)</A></H2>
+
+<P>(todo)</P>
+
+<HR>
+<H2><A NAME="s9">9.</A> <A HREF="NLM-HOWTO.html#toc9">Import Files (.imp)</A></H2>
+
+<P>(todo)</P>
+
+<H2><A NAME="ss9.1">9.1</A> <A HREF="NLM-HOWTO.html#toc9.1">Generating Import Files Using nlmimp(1)</A>
+</H2>
+
+<P>Program nlmimp(1) is part of my nlm-kit package. (todo)</P>
+
+<HR>
+</BODY>
+</HTML>

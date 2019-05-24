@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Secure POP via SSH mini-HOWTO: Using it With Your Mail Software</TITLE>
+ <LINK HREF="Secure-POP+SSH-4.html" REL=next>
+ <LINK HREF="Secure-POP+SSH-2.html" REL=previous>
+ <LINK HREF="Secure-POP+SSH.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Secure-POP+SSH-4.html">Next</A>
+<A HREF="Secure-POP+SSH-2.html">Previous</A>
+<A HREF="Secure-POP+SSH.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Using it With Your Mail Software</A></H2>
+
+<P>
+<P>This section describes setting up your POP client software to use the ssh
+forwarded connection. It's primary focus is fetchmail (ESR's excellent
+mail-retrieval and forwarding utility), since that is the most flexible
+software I have found for dealing with POP. fetchmail can be found at
+<A HREF="http://www.tuxedo.org/~esr/fetchmail/">http://www.tuxedo.org/~esr/fetchmail/</A>.
+It will do you a great service to read the excellent documentation that
+comes with fetchmail.
+<P>
+<H2><A NAME="ss3.1">3.1 Setting up fetchmail</A>
+</H2>
+
+<P>
+<P>The following is my <CODE>.fetchmailrc</CODE>
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+defaults
+        user msingh is manish
+        no rewrite
+
+poll localhost with protocol pop3 and port 11110:
+        preconnect "ssh -C -f msingh@popserver -L 11110:popserver:110 sleep 5"
+        password foobar;
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>Pretty simple, huh? fetchmail has a wealth of commands, but the key ones are
+the <CODE>preconnect</CODE> line and the <CODE>poll</CODE> option.
+<P>We're not connecting directly to the POP server, but instead localhost and
+port 11110. The <CODE>preconnect</CODE> does the forwarding each time fetchmail is run,
+leaving open the connection for 5 seconds, so fetchmail can make it's own
+connect. The rest fetchmail does itself.
+<P>So each time you run fetchmail, you're prompted for your ssh password for
+authentication. If you run fetchmail in the background (like I do), it's
+inconvenient to have to do that. Which brings us to the next section.
+<P>
+<H2><A NAME="ss3.2">3.2 Automating it all</A>
+</H2>
+
+<P>
+<P>ssh can authenticate using many methods. One of these is an RSA public/private
+key pair. You can generate an authentication key for your account using
+<CODE>ssh-keygen</CODE>. An authetication key can have a passphrase associated with
+it, or the passphase can be blank. Whether you want a passphrase depends on
+how secure you think the account you are using locally is.
+<P>If you think your machine is secure, go ahead and have a blank passpharase.
+Then the above <CODE>.fetchmailrc</CODE> works just by running fetchmail. You can
+then run fetchmail in daemon mode when you dial up and mail is fetched
+automatically. You're done.
+<P>However, if you think you need a passphrase, things get more complex. ssh
+can run under control of an <B>agent</B>, which can register keys and
+authenticate whatever ssh connections are made under it. So I have this
+script <CODE>getmail.sh</CODE>:
+<P>
+<BLOCKQUOTE><CODE>
+<HR>
+<PRE>
+#!/bin/sh
+ssh-add
+while true; do fetchmail --syslog --invisible; sleep 5m; done
+</PRE>
+<HR>
+</CODE></BLOCKQUOTE>
+<P>When I dialup, I run:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+$ ssh-agent getmail.sh
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This prompts me for my passphrase once, then checks mail every 5 minutes. When
+the dialup connection is closed, I terminate ssh-agent. (This is automated
+in my ip-up and ip-down scripts)
+<P>
+<H2><A NAME="ss3.3">3.3 Not using fetchmail</A>
+</H2>
+
+<P>
+<P>What if I can't/don't want to use fetchmail? Pine, Netscape, and some other
+clients have their own POP mechanisms. First, consider using fetchmail! It's
+far more flexible, and mail clients shouldn't be doing that kind of stuff
+anyway. Both Pine and Netscape can be configured to use local mail systems.
+<P>But if you must, unless your client has a preconnect feature like fetchmail,
+you're going to have to keep the ssh port forward active for the entire
+time you're connected. Which means using <CODE>sleep 100000000</CODE> to keep the
+connection alive. This might not go over well with your network admins.
+<P>Secondly, some clients (like Netscape) have the port number hardcoded to 110.
+So you need to be root to do port forwarding from privledged ports. This is
+also annoying. But it should work.
+<P>
+<HR>
+<A HREF="Secure-POP+SSH-4.html">Next</A>
+<A HREF="Secure-POP+SSH-2.html">Previous</A>
+<A HREF="Secure-POP+SSH.html#toc3">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,292 @@
+<HTML
+><HEAD
+><TITLE
+>If Your Mail Doesn't Get Through</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Getting EximUp and Running"
+HREF="x-087-2-exim.html"><LINK
+REL="PREVIOUS"
+TITLE="Running Exim"
+HREF="x15909.html"><LINK
+REL="NEXT"
+TITLE="Compiling Exim"
+HREF="x15999.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x15909.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 19. Getting EximUp and Running</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x15999.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN15964"
+>19.2. If Your Mail Doesn't Get Through</A
+></H1
+><P
+>&#13;
+A number of features are available for troubleshooting installation problems.
+The first place to check is Exim's log files. On Linux systems they are
+normally kept in <TT
+CLASS="FILENAME"
+>/var/log/exim/log</TT
+> and are named
+<TT
+CLASS="FILENAME"
+>exim_mainlog</TT
+>, <TT
+CLASS="FILENAME"
+>exim_rejectlog</TT
+>, and
+<TT
+CLASS="FILENAME"
+>exim_paniclog</TT
+>. On other operating systems, they are
+often kept in <TT
+CLASS="FILENAME"
+>/var/spool/exim/log</TT
+>. You can find out
+where the log files are by running the command:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>exim -bP log_file_path</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The main log lists all transactions, the reject log contains details of
+messages that were rejected for policy reasons, and the panic log is
+for messages related to configuration errors and the like.</P
+><P
+>Typical entries in the main log are shown below. Each entry in the log itself 
+is a single line of text, starting with a date and time. They have
+been split into several lines here in order to fit them on the page:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>2000-01-30 15:46:37 12EwYe-0004WO-00 &#60;= jack@vstout.vbrew.com 
+  H=vstout.vbrew.com [192.168.131.111] U=exim P=esmtp S=32100 
+  id=38690D72.286F@vstout.vbrew.com
+2000-01-30 15:46:37 12EwYe-0004WO-00 =&#62; jill &#60;jill@vbrew.com&#62; 
+  D=localuser T=local_delivery
+2000-01-30 15:46:37 12EwYe-0004WO-00 Completed</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>These entries show that a message from
+<SPAN
+CLASS="SYSTEMITEM"
+>jack@vstout.vbrew.com</SPAN
+> 
+to <SPAN
+CLASS="SYSTEMITEM"
+>jill@vbrew.com</SPAN
+> was
+successfully delivered to a mailbox on the local host. Message arrivals 
+are flagged with <TT
+CLASS="LITERAL"
+>&#60;=</TT
+>, and deliveries with
+<TT
+CLASS="LITERAL"
+>=&#62;</TT
+>.</P
+><P
+>There are two kinds of delivery errors: permanent and temporary. A permanent
+delivery error is recorded in a log entry like this, flagged with
+&#8220;<TT
+CLASS="LITERAL"
+>**</TT
+>&#8221;:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>2000-01-30 14:48:28 12EvcH-0003rC-00 ** bill@lager.vbrew.com 
+  R=lookuphost T=smtp: SMTP error from remote mailer after RCPT TO:
+  &#60;bill@lager.vbrew.com&#62;: host lager.vbrew.com [192.168.157.2]: 
+  550 &#60;bill@lager.vbrew.com&#62;... User unknown</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>After a failure like this, Exim sends a delivery failure report, often called a
+<I
+CLASS="EMPHASIS"
+>bounce message</I
+> back to the sender.</P
+><P
+> Temporary errors are
+flagged with &#8220;<TT
+CLASS="LITERAL"
+>==</TT
+>&#8221;:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>2000-01-30 12:50:50 12E9Un-0004Wq-00 == jim@bitter.vbrew.com 
+  T=smtp defer (145): Connection timed out</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>This error is typical for a situation in which Exim properly recognizes
+that the message should be delivered to a remote host, but is not able to
+connect to the SMTP service on that host. The host may be down or there 
+could be a network problem. Whenever a message is
+<I
+CLASS="EMPHASIS"
+>deferred</I
+> like this, it remains on Exim's queue and is
+retried at intervals. However, if it fails to be delivered for a sufficiently
+long time (usually several days), a permanent error occurs and the message is
+bounced.</P
+><P
+>If you are unable to locate your problem from the error message Exim 
+generates, you may want to turn on debugging messages. You can do this 
+using the <TT
+CLASS="OPTION"
+>&#8211;d</TT
+> flag, optionally followed by a number 
+specifying the level of verbosity (a value of 9 gives maximum information). 
+Exim then displays a report of its operation on the screen, which may 
+give you more hints about what is going wrong.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x15909.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x15999.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Running Exim</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-exim.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Compiling Exim</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

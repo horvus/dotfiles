@@ -1,0 +1,643 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>The Software-RAID HOWTO: Tweaking, tuning and troubleshooting</TITLE>
+ <LINK HREF="Software-RAID-HOWTO-8.html" REL=next>
+ <LINK HREF="Software-RAID-HOWTO-6.html" REL=previous>
+ <LINK HREF="Software-RAID-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Software-RAID-HOWTO-8.html">Next</A>
+<A HREF="Software-RAID-HOWTO-6.html">Previous</A>
+<A HREF="Software-RAID-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7.</A> <A HREF="Software-RAID-HOWTO.html#toc7">Tweaking, tuning and troubleshooting</A></H2>
+
+<P><B>This HOWTO is deprecated; the Linux RAID HOWTO is maintained as a wiki by the
+linux-raid community at 
+<A HREF="http://raid.wiki.kernel.org/">http://raid.wiki.kernel.org/</A></B></P>
+
+<H2><A NAME="ss7.1">7.1</A> <A HREF="Software-RAID-HOWTO.html#toc7.1"><CODE>raid-level</CODE> and <CODE>raidtab</CODE></A>
+</H2>
+
+<P>Some GNU/Linux distributions, like RedHat 8.0 and possibly others,
+have a bug in their init-scripts, so that they will fail to start up
+RAID arrays on boot, if your <CODE>/etc/raidtab</CODE> has spaces or tabs before the
+<CODE>raid-level</CODE> keywords.</P>
+<P>The simple workaround for this problem is to make sure that the
+<CODE>raid-level</CODE> keyword appears in the very beginning of the
+lines, without any leading spaces of any kind.</P>
+
+<H2><A NAME="ss7.2">7.2</A> <A HREF="Software-RAID-HOWTO.html#toc7.2">Autodetection</A>
+</H2>
+
+<P>Autodetection allows the RAID devices to be automatically recognized
+by the kernel at boot-time, right after the ordinary partition
+detection is done. </P>
+<P>This requires several things:
+<OL>
+<LI>You need autodetection support in the kernel. Check this</LI>
+<LI>You must have created the RAID devices using persistent-superblock</LI>
+<LI>The partition-types of the devices used in the RAID must be set to
+<B>0xFD</B>  (use fdisk and set the type to "fd")</LI>
+</OL>
+</P>
+<P>NOTE: Be sure that your RAID is NOT RUNNING before changing the
+partition types.  Use <CODE>raidstop /dev/md0</CODE> to stop the device.</P>
+<P>If you set up 1, 2 and 3 from above, autodetection should be set
+up. Try rebooting.  When the system comes up, cat'ing <CODE>/proc/mdstat</CODE>
+should tell you that your RAID is running.</P>
+<P>During boot, you could see messages similar to these:
+<PRE>
+ Oct 22 00:51:59 malthe kernel: SCSI device sdg: hdwr sector= 512
+  bytes. Sectors= 12657717 [6180 MB] [6.2 GB]
+ Oct 22 00:51:59 malthe kernel: Partition check:
+ Oct 22 00:51:59 malthe kernel:  sda: sda1 sda2 sda3 sda4
+ Oct 22 00:51:59 malthe kernel:  sdb: sdb1 sdb2
+ Oct 22 00:51:59 malthe kernel:  sdc: sdc1 sdc2
+ Oct 22 00:51:59 malthe kernel:  sdd: sdd1 sdd2
+ Oct 22 00:51:59 malthe kernel:  sde: sde1 sde2
+ Oct 22 00:51:59 malthe kernel:  sdf: sdf1 sdf2
+ Oct 22 00:51:59 malthe kernel:  sdg: sdg1 sdg2
+ Oct 22 00:51:59 malthe kernel: autodetecting RAID arrays
+ Oct 22 00:51:59 malthe kernel: (read) sdb1's sb offset: 6199872
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdb1,1>
+ Oct 22 00:51:59 malthe kernel: (read) sdc1's sb offset: 6199872
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdc1,2>
+ Oct 22 00:51:59 malthe kernel: (read) sdd1's sb offset: 6199872
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdd1,3>
+ Oct 22 00:51:59 malthe kernel: (read) sde1's sb offset: 6199872
+ Oct 22 00:51:59 malthe kernel: bind&lt;sde1,4>
+ Oct 22 00:51:59 malthe kernel: (read) sdf1's sb offset: 6205376
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdf1,5>
+ Oct 22 00:51:59 malthe kernel: (read) sdg1's sb offset: 6205376
+ Oct 22 00:51:59 malthe kernel: bind&lt;sdg1,6>
+ Oct 22 00:51:59 malthe kernel: autorunning md0
+ Oct 22 00:51:59 malthe kernel: running: &lt;sdg1>&lt;sdf1>&lt;sde1>&lt;sdd1>&lt;sdc1>&lt;sdb1>
+ Oct 22 00:51:59 malthe kernel: now!
+ Oct 22 00:51:59 malthe kernel: md: md0: raid array is not clean --
+  starting background reconstruction 
+</PRE>
+
+This is output from the autodetection of a RAID-5 array that was not
+cleanly shut down (eg. the machine crashed).  Reconstruction is
+automatically initiated.  Mounting this device is perfectly safe,
+since reconstruction is transparent and all data are consistent (it's
+only the parity information that is inconsistent - but that isn't
+needed until a device fails).</P>
+<P>Autostarted devices are also automatically stopped at shutdown.  Don't
+worry about init scripts.  Just use the /dev/md devices as any other
+/dev/sd or /dev/hd devices.</P>
+<P>Yes, it really is that easy.</P>
+<P>You may want to look in your init-scripts for any raidstart/raidstop
+commands. These are often found in the standard RedHat init
+scripts. They are used for old-style RAID, and has no use in new-style
+RAID with autodetection. Just remove the lines, and everything will be
+just fine.</P>
+
+
+<H2><A NAME="ss7.3">7.3</A> <A HREF="Software-RAID-HOWTO.html#toc7.3">Booting on RAID</A>
+</H2>
+
+<P>There are several ways to set up a system that mounts it's root
+filesystem on a RAID device. Some distributions allow for RAID setup
+in the installation process, and this is by far the easiest way to
+get a nicely set up RAID system.</P>
+<P>Newer LILO distributions can handle RAID-1 devices, and thus the
+kernel can be loaded at boot-time from a RAID device. LILO will
+correctly write boot-records on all disks in the array, to allow
+booting even if the primary disk fails.</P>
+<P>If you are using grub instead of LILO, then just start grub and configure 
+it to use the second (or third, or fourth...) disk in the RAID-1 array you 
+want to boot off as its root device and run setup. And that's all.</P>
+<P>For example, on an array consisting of /dev/hda1 and /dev/hdc1 where
+both partitions should be bootable you should just do this:</P>
+<P>
+<PRE>
+grub
+grub>device (hd0) /dev/hdc
+grub>root (hd0,0)       
+grub>setup (hd0)
+</PRE>
+</P>
+<P>Some users have experienced problems with this, reporting that although
+booting with one drive connected worked, booting with <EM>both</EM> 
+two drives failed.
+Nevertheless, running the described procedure with both disks fixed
+the problem, allowing the system to boot from either single drive or 
+from the RAID-1</P>
+<P>Another way of ensuring that your system can always boot is, to create
+a boot floppy when all the setup is done. If the disk on which the
+<CODE>/boot</CODE> filesystem resides dies, you can always boot from the
+floppy. On RedHat and RedHat derived systems, this can be accomplished
+with the <CODE>mkbootdisk</CODE> command.</P>
+
+
+<H2><A NAME="ss7.4">7.4</A> <A HREF="Software-RAID-HOWTO.html#toc7.4">Root filesystem on RAID</A>
+</H2>
+
+<P>In order to have a system booting on RAID, the root filesystem (/)
+must be mounted on a RAID device. Two methods for achieving this is
+supplied bellow. The methods below assume that you install on a normal
+partition, and then - when the installation is complete - move the
+contents of your non-RAID root filesystem onto a new RAID
+device. Please not that this is no longer needed in general, as most
+newer GNU/Linux distributions support installation on RAID devices
+(and creation of the RAID devices during the installation process).
+However, you may still want to use the methods below, if you are
+migrating an existing system to RAID.</P>
+
+<H3>Method 1</H3>
+
+<P>This method assumes you have a spare disk you can install the system
+on, which is not part of the RAID you will be configuring.</P>
+<P>
+<UL>
+<LI>First, install a normal system on your extra disk.</LI>
+<LI>Get the kernel you plan on running, get the raid-patches and the
+tools, and make your system boot with this new RAID-aware
+kernel. Make sure that RAID-support is <B>in</B> the kernel, and is
+not loaded as modules.</LI>
+<LI>Ok, now you should configure and create the RAID you plan to use
+for the root filesystem. This is standard procedure, as described
+elsewhere in this document.</LI>
+<LI>Just to make sure everything's fine, try rebooting the system to
+see if the new RAID comes up on boot. It should.</LI>
+<LI>Put a filesystem on the new array (using
+<CODE>mke2fs</CODE>), and mount it under /mnt/newroot</LI>
+<LI>Now, copy the contents of your current root-filesystem (the
+spare disk) to the new root-filesystem (the array). There are lots of
+ways to do this, one of them is
+<PRE>
+ cd /
+ find . -xdev | cpio -pm /mnt/newroot
+</PRE>
+
+another way to copy everything from / to /mnt/newroot could be
+<PRE>
+  cp -ax / /mnt/newroot
+</PRE>
+</LI>
+<LI>You should modify the <CODE>/mnt/newroot/etc/fstab</CODE> file to
+use the correct device (the <CODE>/dev/md?</CODE> root device) for the
+root filesystem.</LI>
+<LI>Now, unmount the current <CODE>/boot</CODE> filesystem, and mount
+the boot device on <CODE>/mnt/newroot/boot</CODE> instead. This is
+required for LILO to run successfully in the next step.</LI>
+<LI>Update <CODE>/mnt/newroot/etc/lilo.conf</CODE> to point to the right
+devices. The boot device must still be a regular disk (non-RAID
+device), but the root device should point to your new RAID. When
+done, run 
+<PRE>
+ lilo -r /mnt/newroot
+</PRE>
+This LILO run should
+complete 
+with no errors.</LI>
+<LI>Reboot the system, and watch everything come up as expected  :)</LI>
+</UL>
+</P>
+<P>If you're doing this with IDE disks, be sure to tell your BIOS that
+all disks are "auto-detect" types, so that the BIOS will allow your
+machine to boot even when a disk is missing.</P>
+
+<H3>Method 2</H3>
+
+<P>This method requires that your kernel and raidtools understand the
+<CODE>failed-disk</CODE> directive in the <CODE>/etc/raidtab</CODE> file - if you are
+working on a really old system this may not be the case, and you will
+need to upgrade your tools and/or kernel first.</P>
+<P>You can <B>only</B> use this method on RAID levels 1 and above, as
+the method uses an array in "degraded mode" which in turn is only
+possible if the RAID level has redundancy. The idea is to install a
+system on a disk which is purposely marked as failed in the RAID, then
+copy the system to the RAID which will be running in degraded mode,
+and finally making the RAID use the no-longer needed "install-disk",
+zapping the old installation but making the RAID run in non-degraded
+mode.</P>
+<P>
+<UL>
+<LI>First, install a normal system on one disk (that will later
+become part of your RAID). It is important that this disk (or
+partition) is not the smallest one. If it is, it will not be possible
+to add it to the RAID later on!</LI>
+<LI>Then, get the kernel, the patches, the tools etc. etc. You know
+the drill. Make your system boot with a new kernel that has the RAID
+support you need, compiled into the kernel.</LI>
+<LI>Now, set up the RAID with your current root-device as the
+<CODE>failed-disk</CODE> in the <CODE><CODE>/etc/raidtab</CODE></CODE> file. Don't put the
+<CODE>failed-disk</CODE> as the first disk in the <CODE>raidtab</CODE>, that will give
+you problems with starting the RAID. Create the RAID, and put a
+filesystem on it.
+If using mdadm, you can create a degraded array just by running
+something like <CODE>mdadm -C /dev/md0 --level raid1 --raid-disks 2 missing /dev/hdc1</CODE>, note the <CODE>missing</CODE> parameter.</LI>
+<LI>Try rebooting and see if the RAID comes up as it should</LI>
+<LI>Copy the system files, and reconfigure the system to use the
+RAID as root-device, as described in the previous section.</LI>
+<LI>When your system successfully boots from the RAID, you can
+modify the <CODE><CODE>/etc/raidtab</CODE></CODE> file to include the previously
+<CODE>failed-disk</CODE> as a normal <CODE>raid-disk</CODE>. Now,
+<CODE>raidhotadd</CODE> the disk to your RAID.</LI>
+<LI>You should now have a system that can boot from a non-degraded
+RAID.</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss7.5">7.5</A> <A HREF="Software-RAID-HOWTO.html#toc7.5">Making the system boot on RAID</A>
+</H2>
+
+<P>For the kernel to be able to mount the root filesystem, all support
+for the device on which the root filesystem resides, must be present
+in the kernel. Therefore, in order to mount the root filesystem on a
+RAID device, the kernel <EM>must</EM> have RAID support.</P>
+<P>The normal way of ensuring that the kernel can see the RAID device is
+to simply compile a kernel with all necessary RAID support compiled
+in. Make sure that you compile the RAID support <EM>into</EM> the
+kernel, and <EM>not</EM> as loadable modules. The kernel cannot load a 
+module (from the root filesystem) before the root filesystem is
+mounted.</P>
+<P>However, since RedHat-6.0 ships with a kernel that has new-style RAID
+support as modules, I here describe how one can use the standard
+RedHat-6.0 kernel and still have the system boot on RAID.</P>
+
+<H3>Booting with RAID as module</H3>
+
+<P>You will have to instruct LILO to use a RAM-disk in order to achieve
+this. Use the <CODE>mkinitrd</CODE> command to create a ramdisk containing 
+all kernel modules needed to mount the root partition. This can be
+done as:
+<PRE>
+ mkinitrd --with=&lt;module&gt; &lt;ramdisk name&gt; &lt;kernel&gt;
+</PRE>
+
+For example:
+<PRE>
+ mkinitrd --preload raid5 --with=raid5 raid-ramdisk 2.2.5-22
+</PRE>
+</P>
+<P>This will ensure that the specified RAID module is present at
+boot-time, for the kernel to use when mounting the root device.</P>
+
+<H3>Modular RAID on Debian GNU/Linux after move to RAID</H3>
+
+<P>Debian users may encounter problems using an initrd to mount their
+root filesystem from RAID, if they have migrated a standard non-RAID
+Debian install to root on RAID.</P>
+<P>If your system fails to mount the root filesystem on boot (you will
+see this in a "kernel panic" message), then the problem may be that
+the initrd filesystem does not have the necessary support to mount the
+root filesystem from RAID.</P>
+<P>Debian seems to produce its <CODE>initrd.img</CODE> files on the
+assumption that the root filesystem to be mounted is the current one.
+This will usually result in a kernel panic if the root filesystem is
+moved to the raid device and you attempt to boot from that device
+using the same initrd image.  The solution is to use the
+<CODE>mkinitrd</CODE> command but specifying the proposed new root
+filesystem.  For example, the following commands should create and set
+up the new initrd on a Debian system:
+<PRE>
+% mkinitrd -r /dev/md0 -o /boot/initrd.img-2.4.22raid
+% mv /initrd.img /initrd.img-nonraid
+% ln -s /boot/initrd.img-raid /initrd.img"
+</PRE>
+</P>
+
+<H2><A NAME="ss7.6">7.6</A> <A HREF="Software-RAID-HOWTO.html#toc7.6">Converting a non-RAID RedHat System to run on Software RAID</A>
+</H2>
+
+<P>This section was written and contributed by Mark Price, IBM. The text
+has undergone minor changes since his original work.</P>
+<P><B>Notice:</B> the following information is provided "AS IS" with no
+representation or warranty of any kind either express or implied. You
+may use it freely at your own risk, and no one else will be liable for
+any damages arising out of such usage.</P>
+
+<H3>Introduction</H3>
+
+<P>The technote details how to convert a linux system with non RAID devices to
+run with a Software RAID configuration.</P>
+
+<H3>Scope</H3>
+
+<P>This scenario was tested with Redhat 7.1, but should be applicable to any
+release which supports Software RAID (md) devices.</P>
+
+<H3>Pre-conversion example system</H3>
+
+<P>The test system contains two SCSI disks, sda and sdb both of of which are the
+same physical size. As part of the test setup, I configured both disks to have
+the same partition layout, using fdisk to ensure the number of blocks for each
+partition was identical.
+<PRE>
+DEVICE      MOUNTPOINT  SIZE        DEVICE      MOUNTPOINT  SIZE
+/dev/sda1   /           2048MB      /dev/sdb1               2048MB
+/dev/sda2   /boot       80MB        /dev/sdb2               80MB
+/dev/sda3   /var/       100MB       /dev/sdb3               100MB
+/dev/sda4   SWAP        1024MB      /dev/sdb4   SWAP        1024MB
+</PRE>
+
+In our basic example, we are going to set up a simple RAID-1 Mirror, which
+requires only two physical disks.</P>
+
+<H3>Step-1 - boot rescue cd/floppy</H3>
+
+<P>The redhat installation CD provides a rescue mode which boots into linux from
+the CD and mounts any filesystems it can find on your disks.</P>
+<P>At the lilo prompt type
+<PRE>
+    lilo: linux rescue
+</PRE>
+</P>
+<P>With the setup described above, the installer may ask you which disk your root
+filesystem in on, either sda or sdb. Select sda.</P>
+<P>The installer will mount your filesytems in the following way.
+<PRE>
+DEVICE      MOUNTPOINT  TEMPORARY MOUNT POINT
+/dev/sda1   /           /mnt/sysimage
+/dev/sda2   /boot       /mnt/sysimage/boot
+/dev/sda3   /var        /mnt/sysimage/var
+/dev/sda6   /home       /mnt/sysimage/home
+</PRE>
+</P>
+<P><B>Note</B>: - Please bear in mind other distributions may mount
+your filesystems on different mount points, or may require you
+to mount them by hand.</P>
+
+<H3>Step-2 - create a <CODE>/etc/raidtab</CODE> file</H3>
+
+<P>Create the file /mnt/sysimage/etc/raidtab (or wherever your real /etc file
+system has been mounted.</P>
+<P>For our test system, the raidtab file would like like this.
+<PRE>
+raiddev /dev/md0
+    raid-level              1
+    nr-raid-disks           2
+    nr-spare-disks          0
+    chunk-size              4
+    persistent-superblock   1
+    device                  /dev/sda1
+    raid-disk               0
+    device                  /dev/sdb1
+    raid-disk               1
+
+raiddev /dev/md1
+    raid-level              1
+    nr-raid-disks           2
+    nr-spare-disks          0
+    chunk-size              4
+    persistent-superblock   1
+    device                  /dev/sda2
+    raid-disk               0
+    device                  /dev/sdb2
+    raid-disk               1
+
+raiddev /dev/md2
+    raid-level              1
+    nr-raid-disks           2
+    nr-spare-disks          0
+    chunk-size              4
+    persistent-superblock   1
+    device                  /dev/sda3
+    raid-disk               0
+    device                  /dev/sdb3
+    raid-disk               1
+</PRE>
+</P>
+<P><B>Note:</B> - It is important that the devices are in the correct
+order. ie. that <CODE>/dev/sda1</CODE> is <CODE>raid-disk 0</CODE> and
+not <CODE>raid-disk 1</CODE>. This instructs the md driver to sync
+from <CODE>/dev/sda1</CODE>, if it were the other way around it
+would sync from <CODE>/dev/sdb1</CODE> which would destroy your
+filesystem.</P>
+<P>Now copy the raidtab file from your real root filesystem to the current root
+filesystem.
+<PRE>
+(rescue)# cp /mnt/sysimage/etc/raidtab /etc/raidtab
+</PRE>
+</P>
+
+<H3>Step-3 - create the md devices</H3>
+
+<P>There are two ways to do this, copy the device files from /mnt/sysimage/dev
+or use mknod to create them. The md device, is a (b)lock device with major
+number 9.
+<PRE>
+(rescue)# mknod /dev/md0 b 9 0
+(rescue)# mknod /dev/md1 b 9 1
+(rescue)# mknod /dev/md2 b 9 2
+</PRE>
+</P>
+
+<H3>Step-4 - unmount filesystems</H3>
+
+<P>In order to start the raid devices, and sync the drives, it is necessary to
+unmount all the temporary filesystems.
+<PRE>
+(rescue)# umount /mnt/sysimage/var
+(rescue)# umount /mnt/sysimage/boot
+(rescue)# umount /mnt/sysimage/proc
+(rescue)# umount /mnt/sysimage
+</PRE>
+
+Please note, you may not be able to umount
+<CODE>/mnt/sysimage</CODE>. This problem can be caused by the rescue
+system - if you choose to manually mount your filesystems instead of
+letting the rescue system do this automatically, this problem should
+go away.</P>
+
+<H3>Step-5 - start raid devices</H3>
+
+<P>Because there are filesystems on /dev/sda1, /dev/sda2 and /dev/sda3 it is
+necessary to force the start of the raid device.
+<PRE>
+(rescue)# mkraid --really-force /dev/md2
+</PRE>
+</P>
+<P>You can check the completion progress by cat'ing the <CODE>/proc/mdstat</CODE> file. It
+shows you status of the raid device and percentage left to sync.</P>
+<P>Continue with /boot and /
+<PRE>
+(rescue)# mkraid --really-force /dev/md1
+(rescue)# mkraid --really-force /dev/md0
+</PRE>
+</P>
+<P>The md driver syncs one device at a time.</P>
+
+<H3>Step-6 - remount filesystems</H3>
+
+<P>Mount the newly synced filesystems back into the /mnt/sysimage mount points.
+<PRE>
+(rescue)# mount /dev/md0 /mnt/sysimage
+(rescue)# mount /dev/md1 /mnt/sysimage/boot
+(rescue)# mount /dev/md2 /mnt/sysimage/var
+</PRE>
+</P>
+
+<H3>Step-7 - change root</H3>
+
+<P>You now need to change your current root directory to your real root file
+system.
+<PRE>
+(rescue)# chroot /mnt/sysimage
+</PRE>
+</P>
+
+<H3>Step-8 - edit config files</H3>
+
+<P>You need to configure lilo and <CODE>/etc/fstab</CODE> appropriately to boot from and mount
+the md devices.</P>
+<P><B>Note:</B> - The boot device MUST be a non-raided device. The root
+device is your new md0 device.  eg.
+<PRE>
+boot=/dev/sda
+map=/boot/map
+install=/boot/boot.b
+prompt
+timeout=50
+message=/boot/message
+linear
+default=linux
+
+image=/boot/vmlinuz
+    label=linux
+    read-only
+    root=/dev/md0
+</PRE>
+</P>
+<P>Alter <CODE><CODE>/etc/fstab</CODE></CODE>
+<PRE>
+/dev/md0               /                       ext3    defaults        1 1
+/dev/md1               /boot                   ext3    defaults        1 2
+/dev/md2               /var                    ext3    defaults        1 2
+/dev/sda4              swap                    swap    defaults        0 0
+</PRE>
+</P>
+
+<H3>Step-9 - run LILO</H3>
+
+<P>With the <CODE>/etc/lilo.conf</CODE> edited to reflect the new
+<CODE>root=/dev/md0</CODE> and with <CODE>/dev/md1</CODE> mounted as
+<CODE>/boot</CODE>, we can now run <CODE>/sbin/lilo -v</CODE> on the chrooted
+filesystem.</P>
+
+<H3>Step-10 - change partition types</H3>
+
+<P>The partition types of the all the partitions on ALL Drives which are used by
+the md driver must be changed to type 0xFD.</P>
+<P>Use fdisk to change the partition type, using option 't'.
+<PRE>
+(rescue)# fdisk /dev/sda
+(rescue)# fdisk /dev/sdb
+</PRE>
+</P>
+<P>Use the 'w' option after changing all the required partitions to save the
+partion table to disk.</P>
+
+<H3>Step-11 - resize filesystem</H3>
+
+<P>When we created the raid device, the physical partion became slightly smaller
+because a second superblock is stored at the end of the partition. If you
+reboot the system now, the reboot will fail with an error indicating the
+superblock is corrupt.</P>
+<P>Resize them prior to the reboot, ensure that the all md based filesystems
+are unmounted except root, and remount root read-only.
+<PRE>
+(rescue)# mount / -o remount,ro
+</PRE>
+</P>
+<P>You will be required to fsck each of the md devices. This is the reason for
+remounting root read-only. The -f flag is required to force fsck to check a
+clean filesystem.
+<PRE>
+(rescue)# e2fsck -f /dev/md0
+</PRE>
+</P>
+<P>This will generate the same error about inconsistent sizes and possibly
+corrupted superblock.Say N to 'Abort?'.
+<PRE>
+(rescue)# resize2fs /dev/md0
+</PRE>
+</P>
+<P>Repeat for all <CODE>/dev/md</CODE> devices.</P>
+
+<H3>Step-12 - checklist</H3>
+
+<P>The next step is to reboot the system, prior to doing this run through the
+checklist below and ensure all tasks have been completed.
+<UL>
+<LI>All devices have finished syncing. Check <CODE>/proc/mdstat</CODE></LI>
+<LI><CODE><CODE>/etc/fstab</CODE></CODE> has been edited to reflect the changes to the device names.</LI>
+<LI><CODE>/etc/lilo.conf</CODE> has beeb edited to reflect root device change.</LI>
+<LI><CODE>/sbin/lilo</CODE> has been run to update the boot loader.</LI>
+<LI>The kernel has both SCSI and RAID(MD) drivers built into the kernel.</LI>
+<LI>The partition types of all partitions on disks that are part of an md device
+have been changed to 0xfd.</LI>
+<LI>The filesystems have been fsck'd and resize2fs'd.</LI>
+</UL>
+</P>
+
+<H3>Step-13 - reboot</H3>
+
+<P>You can now safely reboot the system, when the system comes up it will
+auto discover the md devices (based on the partition types).</P>
+<P>Your root filesystem will now be mirrored.</P>
+
+
+<H2><A NAME="ss7.7">7.7</A> <A HREF="Software-RAID-HOWTO.html#toc7.7">Sharing spare disks between different arrays</A>
+</H2>
+
+<P>When running mdadm in the follow/monitor mode you can make different
+arrays share spare disks. That will surely make you save storage space without
+losing the comfort of fallback disks.</P>
+<P>In the world of software RAID, this is a brand new never-seen-before feature:
+for securing things to the point of spare disk areas, you just have to provide
+one single idle disk for a bunch of arrays.</P>
+<P>With mdadm is running as a daemon, you have an agent polling arrays at regular
+intervals. Then, as a disk fails on an array without a spare disk, mdadm removes
+an available spare disk from another array and inserts it into the array with the
+failed disk. The reconstruction process begins now in the degraded array as usual.</P>
+<P>To declare shared spare disks, just use the <CODE>spare-group</CODE> parameter
+when invoking mdadm as a daemon.</P>
+
+
+<H2><A NAME="ss7.8">7.8</A> <A HREF="Software-RAID-HOWTO.html#toc7.8">Pitfalls</A>
+</H2>
+
+<P>Never NEVER <B>never</B> re-partition disks that are part of a running
+RAID. If you must alter the partition table on a disk which is a part
+of a RAID, stop the array first, then repartition.</P>
+<P>It is easy to put too many disks on a bus. A normal Fast-Wide SCSI bus
+can sustain 10 MB/s which is less than many disks can do alone
+today. Putting six such disks on the bus will of course not give you
+the expected performance boost. It is becoming equally easy to
+saturate the PCI bus - remember, a normal 32-bit 33 MHz PCI bus has a
+theoretical maximum bandwidth of around 133 MB/sec, considering
+command overhead etc. you will see a somewhat lower real-world
+transfer rate. Some disks today has a throughput in excess of 30
+MB/sec, so just four of those disks will actually max out your PCI
+bus! When designing high-performance RAID systems, be sure to take the
+whole I/O path into consideration - there are boards with more PCI
+busses, with 64-bit and 66 MHz busses, and with PCI-X.</P>
+<P>More SCSI controllers will only give you extra performance, if the
+SCSI busses are nearly maxed out by the disks on them.  You will not
+see a performance improvement from using two 2940s with two old SCSI
+disks, instead of just running the two disks on one controller.</P>
+<P>If you forget the persistent-superblock option, your array may not
+start up willingly after it has been stopped.  Just re-create the
+array with the option set correctly in the raidtab. Please note that
+this will destroy the information on the array!</P>
+<P>If a RAID-5 fails to reconstruct after a disk was removed and
+re-inserted, this may be because of the ordering of the devices in the
+raidtab. Try moving the first "device ..." and "raid-disk ..."
+pair to the bottom of the array description in the raidtab file.</P>
+
+
+
+<HR>
+<A HREF="Software-RAID-HOWTO-8.html">Next</A>
+<A HREF="Software-RAID-HOWTO-6.html">Previous</A>
+<A HREF="Software-RAID-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,641 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Power Management</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Battery Powered Linux Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Battery Powered Linux Mini-HOWTO"
+HREF="index.html"><LINK
+REL="NEXT"
+TITLE="DPMS"
+HREF="displaytypes.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Battery Powered Linux Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="index.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="displaytypes.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="POWERMGM"
+></A
+>1. Power Management</H1
+><P
+>If you have a relatively recent x86 laptop, odds are it supports either
+Advanced Power Management (APM) or Advanced Configuration and Power Interface
+(ACPI). ACPI is the newer of the two technologies and puts power management in
+the hands of the operating system, allowing for more intelligent power
+management than is possible with BIOS controlled APM. This is most useful for 
+battery-powered laptops. 
+You can only have one
+power management interface in control of your machine at a time, so it's
+important you decide which method best suits your situation.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="APM"
+></A
+>1.1. Advanced Power Management (APM)</H2
+><P
+><EM
+>Advanced Power Management (APM)</EM
+>
+allows your computer's BIOS to control your system's power management
+without the knowledge of the operating system.
+The advantages to APM under Linux are that it's stable, well supported by 
+Linux vendors and has a solid history behind it. 
+However, not much development has been done with it over the past few 
+years.</P
+><P
+>To use it, you'll need to enable APM in the kernel:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>      [*] Power Management support
+      &#60;*&#62;   Advanced Power Management BIOS support
+      [ ]     Ignore USER SUSPEND (NEW)
+      [ ]     Enable PM at boot time (NEW)
+      [ ]     Make CPU Idle calls when idle (NEW)
+      [ ]     Enable console blanking using APM (NEW)
+      [ ]     RTC stores time in GMT (NEW)
+      [ ]     Allow interrupts during APM BIOS calls (NEW)
+      [ ]     Use real mode APM BIOS call to power off (NEW)</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Most of the other APM
+options exist as work-arounds for known problems with specific hardware 
+devices,
+so you'll probably only want to enable the first one (CONFIG_APM).</P
+><P
+></P
+><UL
+><LI
+><P
+>Advanced Power Management BIOS support (CONFIG_APM):
+			You'll need to enable this in order to do anything 
+useful 
+			with APM.  User-space programs will receive 
+notification of
+			APM events (e.g., battery status change) and a 
+/proc/apm
+			device will provide you with battery status 
+information.</P
+></LI
+><LI
+><P
+>Ignore USER SUSPEND (CONFIG_APM_IGNORE_USER_SUSPEND):
+			This is a workaround for NEC Versa M 
+notebooks.</P
+></LI
+><LI
+><P
+>Enable PM at boot time (CONFIG_APM_DO_ENABLE):
+			Although it sounds nifty, most machines do
+			not require this feature to be enabled and in fact can 
+hang
+			some systems at boot time.</P
+></LI
+><LI
+><P
+>Make CPU Idle calls when idle (CONFIG_APM_CPU_IDLE): 
+On some machines,
+			this option provides increased power savings.  On 
+others, it will
+			hang the system at boot time.  Use with 
+caution.</P
+></LI
+><LI
+><P
+>Enable console blanking using APM 
+(CONFIG_APM_DISPLAY_BLANK):
+			Instead of blanking the virtual console actually turn 
+off the
+			screen.  This won't work with X-Windows and actually 
+can cause more
+			problems that it solves.</P
+></LI
+><LI
+><P
+>RTC stores time in GMT (CONFIG_APM_RTC_IS_GMT): If you 
+want to
+			store GMT (Greenwich Mean Time) in your RTC (Real Time 
+Clock),
+			say yes here.</P
+></LI
+><LI
+><P
+>Allow interrupts during APM BIOS calls 
+(CONFIG_APM_ALLOW_INTS):
+			This is a workaround for some IBM Thinkpads that hang 
+while
+			suspending.</P
+></LI
+><LI
+><P
+>Use real mode APM BIOS call to power off 
+(CONFIG_APM_REAL_MODE_POWER_OFF):
+			This is a workaround for a number of broken BIOSes.  
+If your computer
+			crashes instead of powering off properly, turn this 
+on.</P
+></LI
+></UL
+><P
+>You'll want to install the APM daemon from
+<A
+HREF="http://www.worldvisions.ca/~apenwarr/apmd/"
+TARGET="_top"
+>http://www.worldvisions.ca/~apenwarr/apmd/</A
+> 
+and configure your system startup scripts to activate it on boot:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+># Start the APM daemon if it exists and if APM is enabled in the kernel
+if [ -x /usr/sbin/apmd -a -d /proc/apm ]; then
+	if cat /proc/apm 1&#62; /dev/null 2&#62; /dev/null ; then
+		echo "Starting APM daemon:  /usr/sbin/apmd"
+		/usr/sbin/apmd
+	fi
+fi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>The APM daemon is actually made up of three primary programs:</P
+><P
+></P
+><UL
+><LI
+><P
+><B
+CLASS="COMMAND"
+>apmd</B
+> - handles power management 
+tasks</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>apm</B
+> - a command-line tool to print 
+the current battery status or suspend the computer</P
+></LI
+><LI
+><P
+><B
+CLASS="COMMAND"
+>xapm</B
+> - a simple battery meter for 
+X</P
+></LI
+></UL
+><P
+>If you're looking for a simple, "works out of the box" approach to power
+management for your Laptop, APM is definitely the way to go.</P
+><P
+>A simple script to notify you how much battery time is remaining can be 
+added to your <TT
+CLASS="FILENAME"
+>~/.profile</TT
+> file:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>if [ -f /proc/apm ]; then
+        DUMMY=`cat /proc/apm | cut -d" " -f 7`
+        # Don't display when fully charged
+        if [ "$DUMMY" != "99%" ]; then
+                LEVEL=`cat /proc/apm | sed -e "s/^.*% //"`
+                echo "Battery at $DUMMY ($LEVEL)"
+        fi
+fi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="ACPI"
+></A
+>1.2. Advanced Configuration and Power Interface (ACPI)</H2
+><P
+><EM
+>Advanced Configuration and Power Interface (ACPI)</EM
+>
+is the successor to APM, which places the responsibility of power management
+away from the BIOS and into the hands of the operating system.
+ACPI Linux is newer than APM Linux, more flexible in responding to power 
+management events, has seen
+much more development as of late, and as a result of all this is prone to its 
+own share of bugs from
+time to time.</P
+><P
+>If you're into cutting-edge development and are not intimidated with 
+kernel
+builds and applying patches against source code, ACPI is worth 
+consideration.</P
+><P
+>There are two parts to ACPI under Linux:  The ACPI driver built into the
+kernel itself, and the ACPI daemon (ACPID).  ACPID in its current incarnation 
+is
+pretty simple:  monitor /proc/acpi/event and do things in response.  Even if
+you don't load the daemon, you'll still get the benefit of ACPI features built
+into the kernel such as processor thermal support.</P
+><P
+>You can determine which version
+of the ACPI driver you are using, along with supported suspend states, by 
+using:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash $ cat /proc/acpi/info
+version: 20030619
+states:  S0 S1 S3 S4 S4 S5</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>ACPI development is progressing at a steady rate, so you might want to 
+consider 
+<A
+HREF="http://sourceforge.net/project/showfiles.php?group_id=36832"
+TARGET="_top"
+>patching</A
+> 
+your kernel against any recent updates to the kernel-level ACPI code.  Once 
+you have downloaded the
+patch for your specific kernel, you can patch it with something like:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ gunzip acpi-[version-kernel].diff.gz
+bash# cd /usr/src/linux-[version]
+bash# patch -Np1 -i ../acpi-[version-kernel].diff</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You'll want to recompile your kernel after this, of course:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>      [*] ACPI Support
+      [ ] CPU Enumeration Only
+      &#60;*&#62;   AC Adapter
+      &#60;*&#62;   Battery
+      &#60;*&#62;   Button
+      &#60;*&#62;   Fan
+      &#60;*&#62;   Processor
+      &#60;*&#62;   Thermal Zone
+      &#60; &#62;   ASUS Laptop Extras
+      &#60; &#62;   Toshiba Laptop Extras
+      [*]   Debug Statements</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>You'll also want to install the ACPID daemon from
+<A
+HREF="http://sourceforge.net/project/showfiles.php?group_id=33140"
+TARGET="_top"
+>http://sourceforge.net/project/showfiles.php?group_id=33140</A
+>
+and configure your system startup scripts to activate it on boot:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>if [ -x /usr/sbin/acpid -a -d /proc/acpi ]; then
+	echo "Starting ACPID Daemon:  /usr/sbin/acpid"
+	/usr/sbin/acpid
+fi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>A bit of history... Microsoft was the first vendor to implement ACPI.  
+This is both good and
+bad.  It is good because when you buy a system, you can pretty much guarantee
+that it has passed Microsoft's hardware compliance tests, including the test
+of its ACPI implementation.  However, these tests come up short in that they
+do not indicate compliance with the ACPI specification, but rather with
+Microsoft's implementation of ACPI.  When that same machine is used with
+Linux, some classes of errors that did not manifest themselves under Windows
+may become apparent.  To protect against this problem, the Linux ACPI driver 
+maintains a "bad BIOS" blacklist of known BIOS's that are known to not be ACPI
+compliant, and as a result will refuse to enable ACPI if your system is 
+listed.</P
+><P
+>Many manufacturers are now validating that their systems run on Linux.
+However, they use major Linux distributions with the default kernel.  This
+means that it is somewhat difficult to get OEMs to ensure that their systems
+work with ACPI-enabled Linux until a major Linux distribution ships an ACPI
+kernel.  This presents a slight dilemma in that Linux distributions want to
+ship kernels that run on as many systems as possible, but there have been some
+positive moves in this area lately.</P
+><P
+>To conserve energy while remaining quickly available, ACPI-compatible 
+PCs may enter system sleep states. The ACPI specification defines five of 
+these states, known as S-states. Unlike processor sleep states, no work is 
+done by the system under S-states. Each state introduces greater power savings 
+but requires commensurately more time to awaken and begin performing work. 
+These are patterned on system states from the APM standard, a predecessor of 
+ACPI.</P
+><P
+>Full details on ACPI sleep states are available at
+<A
+HREF="http://acpi.sourceforge.net/documentation/sleep.html"
+TARGET="_top"
+>http://acpi.sourceforge.net/documentation/sleep.html</A
+>.
+Processor states are described at 
+<A
+HREF="http://acpi.sourceforge.net/documentation/processor.html"
+TARGET="_top"
+>http://acpi.sourceforge.net/documentation/processor.html</A
+>.</P
+><P
+>For more specific background information on ACPI itself, you can visit
+the ACPI website at 
+<A
+HREF="http://www.acpi.info"
+TARGET="_top"
+>http://www.acpi.info</A
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="WHICHONE"
+></A
+>1.3. APM vs. ACPI: Which one?</H2
+><P
+>There are currently two competing standards for providing power 
+management: APM and ACPI.  Both cannot be used at the same time, so which one 
+is best for your situation?  If you have a relatively recent (&#62;2.4.20) kernel 
+and are not intimidated by kernel builds and patching source code, you'll find 
+many benefits with the flexibility of ACPI.  If you just want to enable 
+generic power management, or are using an older machine, choose APM.  Neither 
+method spins down idle hard drives; use hdparm for that instead.  Either way, 
+your system's BIOS must correctly support the power management scheme you'd 
+like to use as well; if your system does not fully support either standard, 
+some of the power management options might crash your system and/or cause data 
+loss.  You have been warned!</P
+><P
+>Even if you don't enable power management on your x86-laptop, Linux will 
+always issue the HLT instruction to your 
+processor whenever nothing needs to be done 
+
+<A
+NAME="AEN101"
+HREF="#FTN.AEN101"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>.  
+
+Many Microsoft Windows CPU cooling program use this technique.  This results 
+in lowering the power consumption  of your CPU.  Note that the system doesn't 
+power down when it receives the HLT instruction; it just stops executing 
+instructions until there is an interrupt.</P
+><P
+>There is generally no advantage to
+enabling either type of power management on servers or workstations that do 
+not fall into
+these categories.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="HYPERTHREAD"
+></A
+>1.4. SMP, Hyper-Threading, IA64 &#38; NUMA</H2
+><P
+>Some SMP system manufacturers may have omitted the pre-ACPI tables used 
+for SMP configurations.  In this case, ACPI is required.</P
+><P
+>If you have a newer system that supports 
+<A
+HREF="http://www.intel.com/technology/hyperthread/"
+TARGET="_top"
+>Hyper-Threading</A
+>, 
+you will need to enable ACPI (and, of course, SMP).  Without it, your Linux system 
+may be unable to discover and initialize all of the virtual processors.</P
+><P
+>IA64 machines require ACPI as well.  Additionally, NUMA servers are 
+starting to require it for proper initialization.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN101"
+HREF="powermgm.html#AEN101"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>source/arch/i386/kernel/process.c</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="displaytypes.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Battery Powered Linux Mini-HOWTO</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>DPMS</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

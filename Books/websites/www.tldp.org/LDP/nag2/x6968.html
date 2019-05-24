@@ -1,0 +1,309 @@
+<HTML
+><HEAD
+><TITLE
+>Link Control Options</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Point-to-Point Protocol"
+HREF="x-087-2-ppp.html"><LINK
+REL="PREVIOUS"
+TITLE="IP Configuration Options"
+HREF="x-087-2-ipconfig.options.html"><LINK
+REL="NEXT"
+TITLE="General Security Considerations"
+HREF="x7037.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-ipconfig.options.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. The Point-to-Point Protocol</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x7037.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN6968"
+>8.6. Link Control Options</A
+></H1
+><P
+>&#13;We already encountered the Link Control Protocol (LCP), which is
+used to negotiate link characteristics and test the link.</P
+><P
+>The two most important options negotiated by LCP are the
+<I
+CLASS="EMPHASIS"
+>Asynchronous Control Character Map</I
+> and the
+<I
+CLASS="EMPHASIS"
+>Maximum Receive Unit</I
+>. There are a number of other
+LCP configuration options, but they are far too specialized to discuss
+here.</P
+><P
+>&#13;
+
+
+
+The Asynchronous Control Character Map, colloquially called the
+<I
+CLASS="EMPHASIS"
+>async map</I
+>, is used on asynchronous links, such as telephone
+lines, to identify control characters that must be escaped (replaced by a
+specific two-character sequence) to avoid them being interpreted by equipment
+used to establish the link. For instance, you may want to avoid the XON and
+XOFF characters used for software handshake because a misconfigured modem
+might choke upon receipt of an XOFF. Other candidates include Ctrl-l (the
+<B
+CLASS="COMMAND"
+>telnet</B
+> escape character). PPP allows you to escape any of
+the characters with ASCII codes 0 through 31 by specifying them in the async
+map.</P
+><P
+>The async map is a 32-bit-wide bitmap expressed in hexadecimal. The least
+significant bit corresponds to the ASCII NULL character, and the most
+significant bit corresponds to ASCII 31 decimal. These 32 ASCII characters are
+the control characters. If a bit is set in the bitmap, it signals that the
+corresponding character must be escaped before it is transmitted across the
+link.</P
+><P
+>To tell your peer that it doesn't have to escape all control characters,
+but only a few of them, you can specify an async map to <B
+CLASS="COMMAND"
+>pppd</B
+>
+using the <TT
+CLASS="OPTION"
+>asyncmap</TT
+> option. For example, if only
+<TT
+CLASS="LITERAL"
+>^S</TT
+> and <TT
+CLASS="LITERAL"
+>^Q</TT
+> (ASCII 17 and 19, commonly
+used for XON and XOFF) must be escaped, use the following option:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>asyncmap 0x000A0000</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>The conversion is simple as long as you can convert binary to hex.
+Lay out 32 bits in front of you. The right-most bit corresponds to ASCII 00
+(NULL), and the left-most bit corresponds to ASCII 32 decimal. Set the bits
+corresponding to the characters you want escaped to one, and all others to zero.
+To convert that into the hexadecimal number <B
+CLASS="COMMAND"
+>pppd</B
+> expects,
+simply take each set of 4 bits and convert them into hex. You should end up
+with eight hexadecimal figures. String them all together and preprend
+&#8220;0x&#8221; to signify it is a hexadecimal number, and you are done.</P
+><P
+>Initially, the async map is set to <TT
+CLASS="LITERAL"
+>0xffffffff</TT
+>&#8212;that
+is, all control characters will be escaped. This is a safe default,
+but is usually much more than you need. Each character that appears in
+the async map results in two characters being transmitted across the
+link, so escaping comes at the cost of increased link utilization
+and a corresponding performance reduction.</P
+><P
+>In most circumstances, an async map of <TT
+CLASS="LITERAL"
+>0x0</TT
+> works
+fine. No escaping is performed.</P
+><P
+>&#13;
+ 
+
+The Maximum Receive Unit (MRU), signals to the peer the maximum size
+of HDLC frames we want to receive.  Although this may remind you of the
+Maximum Transfer Unit (MTU) value, these two have little in common. The
+MTU is a parameter of the kernel networking device and describes the
+maximum frame size the interface is able to transmit. The MRU is more of
+an advice to the remote end not to generate frames larger than the
+MRU; the interface must nevertheless be able to receive frames of up to
+1,500 bytes.</P
+><P
+>&#13;Choosing an MRU is therefore not so much a question of what the link
+is capable of transferring, but of what gives you the best
+throughput. If you intend to run interactive applications over the
+link, setting the MRU to values as low as 296 is a good idea, so that
+an occasional larger packet (say, from an FTP session) doesn't make
+your cursor &#8220;jump.&#8221; To tell <B
+CLASS="COMMAND"
+>pppd</B
+> to
+request an MRU of 296, you give it the option <TT
+CLASS="LITERAL"
+>mru
+296</TT
+>. Small MRUs, however, make sense only if you have VJ
+header compression (it is enabled by default), because otherwise you'd
+waste a large amount of your bandwidth just carrying the IP header for
+each datagram.</P
+><P
+><B
+CLASS="COMMAND"
+>pppd</B
+> also understands a couple of LCP options that configure
+the overall behavior of the negotiation process, such as the maximum number of
+configuration requests that may be exchanged before the link is terminated.
+Unless you know exactly what you are doing, you should leave these options alone.</P
+><P
+>&#13;
+Finally, there are two options that apply to LCP echo messages. PPP
+defines two messages, <I
+CLASS="EMPHASIS"
+>Echo Request</I
+> and
+<I
+CLASS="EMPHASIS"
+>Echo Response</I
+>. <B
+CLASS="COMMAND"
+>pppd</B
+> uses this
+feature to check if a link is still operating.  You can enable this by
+using the <TT
+CLASS="OPTION"
+>lcp-echo-interval</TT
+> option together with a
+time in seconds.  If no frames are received from the remote host
+within this interval, <B
+CLASS="COMMAND"
+>pppd</B
+> generates an Echo
+Request and expects the peer to return an Echo Response.  If the peer
+does not produce a response, the link is terminated after a certain
+number of requests are sent.  This number can be set using the
+<TT
+CLASS="OPTION"
+>lcp-echo-failure</TT
+> option.  By default, this feature is
+disabled altogether.
+&#13;</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-ipconfig.options.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x7037.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>IP Configuration Options</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-ppp.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>General Security Considerations</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

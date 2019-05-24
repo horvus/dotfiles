@@ -1,0 +1,419 @@
+<HTML
+><HEAD
+><TITLE
+>NetMeeting LDAP protocol violations</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="Linux NETMEETING HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="LDAP attributes used by NetMeeting"
+HREF="a410.html"><LINK
+REL="NEXT"
+TITLE="Interoperation with Cisco"
+HREF="a543.html"></HEAD
+><BODY
+CLASS="APPENDIX"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux NETMEETING HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="a410.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="a543.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="APPENDIX"
+><H1
+CLASS="APPENDIX"
+><A
+NAME="AEN490"
+>B. NetMeeting LDAP protocol violations</A
+></H1
+><P
+>        As mentioned, NetMeeting violates the LDAP protocol in several ways.
+        For the record, NetMeeting:
+      </P
+><P
+></P
+><UL
+><LI
+><P
+>	    Doesn't structure Distinguished Names (DNs) properly
+          </P
+><A
+NAME="AEN496"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>	  NetMeeting puts the most significant elements in the DN first,
+	  instead of last, using:
+            </P
+></BLOCKQUOTE
+><A
+NAME="AEN498"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>		C=US, O=Microsoft, CN=xxx@abc.com, OBJECTCLASS=rtperson
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></BLOCKQUOTE
+><A
+NAME="AEN500"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>	  instead of the proper formating, which is:
+            </P
+></BLOCKQUOTE
+><A
+NAME="AEN502"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>              CN=xxx@abc.com, O=Microsoft, C=US
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></BLOCKQUOTE
+></LI
+><LI
+><P
+>            Doesn't include the required "objectclass" attribute
+          </P
+><A
+NAME="AEN506"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>	      Instead, it tacks an "OBJECTCLASS" element to the end of the DN,
+	      as shown above.
+            </P
+></BLOCKQUOTE
+></LI
+><LI
+><P
+>	    Doesn't insert parents into the LDAP server
+          </P
+><A
+NAME="AEN510"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>              This is a clear violation of the LDAP standard, which requires
+              parents to exist before children can be created.  I.e, to insert
+              this DN:
+            </P
+></BLOCKQUOTE
+><A
+NAME="AEN512"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>              CN=xxx@abc.com, O=Microsoft, C=US
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></BLOCKQUOTE
+><A
+NAME="AEN514"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>	      this DN must already exist:
+            </P
+></BLOCKQUOTE
+><A
+NAME="AEN516"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>		O=Microsoft, C=US
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></BLOCKQUOTE
+><A
+NAME="AEN518"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><P
+>	      as must this one:
+            </P
+></BLOCKQUOTE
+><A
+NAME="AEN520"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>	      C=US
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></BLOCKQUOTE
+></LI
+><LI
+><P
+>	    Doesn't understand attribute aliases, and is therefore unable
+	    to recognize that "sn" and "surname" refer to the same attribute.
+          </P
+></LI
+><LI
+><P
+>	    Requires that attributes in a search request be returned in
+	    exactly the same order they were requested, a requirement not
+	    guaranteed by the OpenLDAP server.
+          </P
+></LI
+><LI
+><P
+>	    Specifies "base" scope in search requests, when it really should
+	    use "sub", since it wants a list of entries, not just one
+          </P
+></LI
+><LI
+><P
+>	    Uses the "%" character as wildcard in search requests, instead
+	    of the "*" character specified by the standard.
+          </P
+></LI
+><LI
+><P
+>	    In name attributes ("surname", "givenname"),
+	    encodes accented European characters as 8-bit ISO 8859-1,
+	    instead of multi character UTF-8 sequences
+	    as required by LDAP (RFCs 2252 and 2256).
+	  </P
+></LI
+><LI
+><P
+>	  Uses a non-standard means of refreshing dynamic entries.
+	  </P
+><P
+>	    The Microsoft server maintains an "sttl" attribute, which is a
+	    time to live for the entry in minutes.  A search request for
+	    attribute "sttl" resets the timer.  If the timer goes to zero,
+	    the entry is supposed to disappear from the database.
+	    NetMeeting 2 supplies an "sttl" attribute, but
+	    NetMeeting 3 doesn't actually
+	    create the "sttl" attribute at all.  Also,
+	    the client doesn't bother to give us the whole DN it wants updated,
+	    only supplying the "cn" component.
+          </P
+></LI
+></UL
+><P
+>        Windows 2000 implements a modified DNS SRV
+	(<A
+HREF="http://www.freesoft.org/CIE/RFC/Orig/rfc2782.txt"
+TARGET="_top"
+>RFC 2782</A
+>),
+	an enhanced means of locating network servers, including LDAP.
+
+	Basically, if your NetMeeting server
+	name is "ils.freesoft.org", Microsoft Active Directory will expect
+	to use a subzone called "_msdcs.ils.freesoft.org".  Within this
+	subzone, the domain controller will be called
+	"dc._msdcs.ils.freesoft.org" and its LDAP SRV record will be called
+	"_ldap._tcp.dc._msdcs.ils.freesoft.org", as
+	<A
+HREF="http://support.microsoft.com/support/kb/articles/Q178/1/69.ASP"
+TARGET="_top"
+>described</A
+>
+	by Microsoft.  Got it?  To specify the default port number (389)
+	on the same host, your DNS SRV entry would look something like this:
+      </P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>$ORIGIN ils.freesoft.org.
+
+_ldap._tcp.dc._msdcs     IN     SRV     1 1 389 ils.freesoft.org.
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>        I've recently (March 2001)
+	tested this myself, and found that it doesn't
+	really do much of anything.  The port number appears to be
+	completely ignored.  UDP packets are sent to port 389 on
+	the listed host, but the standards don't specify LDAP over UDP
+	and OpenLDAP doesn't support it.
+      </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="a410.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="a543.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>LDAP attributes used by NetMeeting</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Interoperation with Cisco</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,233 @@
+From: esr@snark.thyrsus.com (Eric S. Raymond)
+Newsgroups: comp.dcom.modems,news.answers
+Subject: Configuring the Telebit Trailblazer for Use with UNIX
+Followup-To: poster
+Expires: 1 June 1992
+
+Archive-name: trailblazer-faq
+Last-update: 
+Version: 3.0
+
+This is revision 3.0 of the everything-you-always-wanted-to-know-about-the
+Trailblazer-but-were-afraid-to-ask posting.
+
+Here's how to set up your system to use a Telebit Trailblazer modem for uucp,
+cu and kermit (almost all of this applies to the Telebit T1000 and T2000 modems
+as well). First, we describe how to set up dial-out use; then, how to
+enable dial-in.
+
+First, get one of your serial ports to talk to the 'Blazer via kermit or cu.
+
+To do this via kermit, you'll need to `set line' to the UNIX device associated
+with the serial port, `set speed' to 9600, and perhaps `set parity' to N. To
+use cu, you'll need a Devices file entry that
+looks like 
+
+Direct tty000 - 9600 direct
+
+and you'll invoke cu as
+
+cu -l/dev/tty00
+
+where tty00 should be replaced with the name of the serial port your modem is
+connected to. It's possible your cu may also need an `-s 9600' option; to see
+what it does as it tries to connect, use -d.
+
+Once connected, you want to enter the following commands:
+
+AT &F Q6 S51=4 S52=2 S53=3 S54=3 S55=3 S58=2 S66=1 S92=1 S95=2 &W &N
+
+Note: these settings work on a System V 3.0 running on generic 80386 AT-bus
+hardware with 8250-based serial ports. See the notes below for what to do about
+strange machines like the T5100 or AT&T 7300.
+
+If you enter incorrect settings, you can correct after hard-resetting the
+'Blazer. Older versions have a microswitch on the back of the modem; on newer
+ones, you just turn off the power, hold down the T/D switch, and power
+on again. Keep T/D pressed until the 'MR' light comes on.
+
+If the 'Blazer hangs up when you type <CR> after the above command, you
+have incorrect settings; probably S53 and/or S58 are wrong. Hard-reset and
+see note 3 below.
+
+Explanation of the settings above follows:
+
+AT &F		; Reset to factory defaults
+AT Q6		; Return result codes only on outgoing calls.
+AT S51=4	; Use constant 9600bps speed to modem (but see Note 1)
+AT S52=2	; Reset to configuration memory values on DTR drop.
+AT S53=3	; DCD on carrier detect, DSR on when modem off-hook.
+AT S54=3	; Pass BREAKs transparently.
+AT S55=3	; Don't allow escape to command mode
+AT S58=2	; Use hardware (RTS/CTS) flow control.
+AT S66=1	; Lock CPU-to-'blazer speed at S51 value
+AT S92=1	; Try PEP tones at end of autobauding sequence (see Note 2)
+AT S95=2	; Enable MNP if other side wants it
+AT &W		; Put these parameters in the configuration memory
+AT &N		; Check the configuration values for correctness
+
+What you're doing is setting the modem up to use a fixed speed of 9600bps to
+talk to the CPU, but autobaud outgoing calls with PEP tones last (the settings
+of registers 51, 66, and 92 accomplish this).
+
+The Q6 command disables generation of some command responses in answer mode.
+The S52=2 tells the modem to reset to default values at the end of a call (this
+is necessary, because some of the dialer scripts will change settings).
+
+The S53=3 is important; without it, UNIX will think the modem line is active
+all the time and uucico/cu/kermit may not be able to get past a deathless getty
+hanging on the port (this happens on Microport 3.0e). However, on some other
+configurations you can and must set S53=0; the AT&T 7300 and T5100 need this,
+but the getty will be interruptible and everything should function normally.
+
+S54=3 prevents the BREAKS that you put in expect/send
+scripts in order to force the callee to autobaud from getting intercepted
+by the modem. S55=3 guarantees that your modem won't be dumped into command
+mode by an escape sequence showing up in binary data.
+
+S58=2 enables the cleanest kind of RS232C flow control between the modem and
+your serial card. If you are using 8251-based port hardware (in particular
+if you are using a Toshiba T5100 or other portable with CMOS-only innards)
+this may not work! See the discussion of flow control below, Note 3.
+
+The significance of the S92 register is covered in Note 1 below. Finally,
+S95=2 enables MNP protocol checks (some dialer scripts turn this off).
+
+These settings make you back-compatible with a Hayes, so that kermit's dial
+command will still work through a vanilla ACU/hayes device connected to the
+Trailblazer port. Other cases are handled by commands in the Dialers scripts.
+
+Do *not* set S67=1! This looks logical but doesn't work. Also, you don't need
+to change S110 or S111 to get compression and 'g' protocol spoofing; by
+default, callers can select it, and the Dialer scripts will do the right
+things for outgoing calls.
+
+Note 1: the promise and peril of 19200
+    If you're willing to give up using kermit(1) 4D (which only supports
+a 9600bps maximum) you can jack the CPU-to-modem speed up to 19200 (S51=5).
+In that case the `9600' speed fields in your Devices and Systems files should
+all change to `19200'. If you have kermit source it is not hard to hack it to
+support 19200 -- but your serial port drivers may not be able to handle this
+without clist overflow!
+
+   Some UNIXes on AT-bus machines are rumored to have problems this way
+(Microport is one such). If you can use RTS/CTS handshaking (see note 3) the
+modem will, effectively, do buffering for you and the problem goes away. If
+you're using a smart multiport card like the ACE, also no problem. But if
+you're stuck with 16Mhz or slower processor, a dumb serial card and no
+handshaking, you may lose characters at any speed above 2400(!) baud.
+
+Note 2: catering to old slow broken modems.
+    You may well be able to run with S92=0, the default (PEP tones first).
+The S92=1 setting is conservative; it guarantees you compatibility with 2400bps
+modems that are either too dumb (so they mistake the PEP multi-carrier burst
+for a V.22 answer tone) or too smart (so they think it's a human voice and hang
+up). V.22 modems built to spec shouldn't do either. The cost of this
+conservatism is that 'Blazers running firmware release 2.2 or older, or
+with the S7 carrier wait time set to less than 60 seconds, may not be
+able to recognize yours; and you impose a longer handshake sequence (with
+increased chance of uucico timeout) on all Trailblazers.
+
+Note 3: handshaking considerations
+    8251-based ports have only one handshake line; the T5100 appears to
+use this for the DSR/DTR pair. Therefore RTS/CTS handshaking won't work.
+If setting S58=2 causes your 'Blazer to hang up, but you are not sure there's
+an 8251 in the woodwork, try S58=1 (half-duplex RTS/CTS). Human dial-ins may
+not like the effects of this setting, however.
+
+    If neither of these work, you *may* (repeat *may*) have a problem. XON/XOFF
+handshaking can cause lossage as UUCP 'g' processing tries to interpret ^S/^Q.
+Therefore you are stuck with S58=0, no handshaking. This is certainly OK if
+the sites you talk to alway use PEP or g-protocol spoofing, these modes
+disable flow control anyhow.
+
+    It is alleged by the uunet people (who have one of the world's largest
+collections of 'Blazers, and thus ought to know) that connections through
+the 'Blazer at 1200/2400 cps work just fine. So you *should* be OK.
+
+Further note: if your installation is outside the U.S.A. you may need to tweak
+the S90 and S91 registers, either to new default values or within the dialer
+scripts. See the Trailblazer documentation for details.
+
+Add the following lines to your Dialers file:
+
+##########
+# 	Telebit Trailblazer Plus, T1000 or T2000
+#
+# assumes Q6 X1 S51=4 S52=2 S53=3 S54=3 S55=3 S58=2 S66=1 S92=1 S95=2 in EEPROM
+#
+tb1200	=W-,	"" \d\K\dATE0 OK ATS92=0S50=2S95=0DT\T CONNECT\s1200
+tb2400	=W-,	"" \d\K\dATE0 OK ATS92=0S50=3S95=0DT\T CONNECT\s2400
+tb2400n	=W-,	"" \d\K\dATE0 OK ATS92=0S50=3DT\T CONNECT\s2400
+tbPEP	=W-,	"" \d\K\dATE0 OK ATS92=0S95=0S50=255S7=60S111=30DT\T\r\n\d\d\d\d\d\d\d\d\c CONNECT\sFAST
+tbPEPc	=W-,	"" \d\K\dATE0 OK ATS92=0S95=0S50=255S7=60S110=1S111=30DT\T\r\n\d\d\d\d\d\d\d\d\c CONNECT\sFAST
+#
+
+The magic parts of these scripts are the delays after connection, which hold
+off handing control to uucico so it won't time out during the PEP negotiation.
+
+Now add the following lines to your Devices file:
+
+# --- Telebit Trailblazer/T1000/T2000 devices ------
+#
+# Devices for access to a 'blazer on tty00
+ACUTB tty00 - 9600 tbPEP
+ACUTBC tty00 - 9600 tbPEPc
+ACUTB2400 tty00 - 9600 tb2400
+ACUTB2400N tty00 - 9600 tb2400n
+ACUTB1200 tty00 - 9600 tb1200
+
+If you have more than one Trailblazer, just duplicate the list above once for
+each tty device connected to one.
+
+All your Systems file entries that are associated with any of the Trailblazer
+devices should have a speed field of 9600 (to match the speed in the Devices
+file). You set the actual speed of the connection by which ACU you pick -- note
+that the PEP entry corresponding to ACUTB autobauds, so you can usually just
+use that.
+
+The ACUTBC entry may be better for mail and news feeds, as it enables data
+compression for up to a 2:1 cut in transmission time. Compressed PEP with
+g-protocol spoofing running on reasonably clean phone lines can often give
+your UUCP a throughput of as much as 14K text characters per second!
+
+The low-speed entries avoid throwing PEP tones at modems that may be confused
+by them. ACUTB2400 should fall back to 1200bps if it needs to. ACUTB2400N may
+be useful for Telenet MNP access. The N- and C-suffix devices request
+compression and MNP modes from the remote respectively.
+
+The above is designed so your ACU entry can be untouched and still work for use
+with the kermit dial command (which doesn't know what to do with the tb*
+devices). If you don't care about kermit, you can call the tbPEP device ACU.
+
+Now for dial-in access. First, you need to create appropriate gettydefs and
+inittab entries. First, add the following to your /etc/gettydefs file:
+
+BLAZER# B9600 HUPCL OPOST ONLCR TAB3 BRKINT IGNPAR ISTRIP IXON IXANY ECHO ECHOE
+	ECHOK ICANON ISIG CS8 CREAD # B9600 HUPCL OPOST ONLCR TAB3 BRKINT
+	IGNPAR ISTRIP IXON IXANY ECHO ECHOE ECHOK ICANON ISIG CS8 CREAD
+	#login: #BLAZER
+
+(whitespace added for clarity; this must be all one line). This instructs a
+getty running at BLAZER speed to look for logins at 9600bps only (you can
+use 19200 instead if your hardware can handle it and you've set S51=5 as
+described above). It differs from a normal entry in that HUPCL is set (this
+is generally a good idea for dial-in lines).
+
+Next, add the following line or one like it to your inittab:
+
+00:23:respawn:/usr/lib/uucp/uugetty -r -t 60 tty00 BLAZER
+
+Now do a `telinit q' from root to start the getty. Finally, use kermit or cu
+to tell the modem
+
+AT S0=1 &W
+
+and you're set. This instructs the Trailblazer to auto-answer on the first
+ring, using as little as possible of uucico's fixed 3-minute timeout.
+
+Note: on Microport UNIX 3.2, you want to use the M-prefixed `modem'
+devices and an ordinary /etc/getty without -r and -t options.
+
+Have fun!
+

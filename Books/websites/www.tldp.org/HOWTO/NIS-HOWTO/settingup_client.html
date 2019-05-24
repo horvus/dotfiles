@@ -1,0 +1,756 @@
+<HTML
+><HEAD
+><TITLE
+>Setting Up the NIS Client</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux NIS(YP)/NYS/NIS+ HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="What do you need to set up NIS?
+"
+HREF="setting_nis.html"><LINK
+REL="NEXT"
+TITLE="What do you need to set up NIS+ ?"
+HREF="nisplus.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux NIS(YP)/NYS/NIS+ HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="setting_nis.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="nisplus.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SETTINGUP_CLIENT"
+></A
+>7. Setting Up the NIS Client</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN231"
+></A
+>7.1. The ypbind daemon
+
+
+
+&#13;</H2
+><P
+>After you have succesfully compiled the software you are now ready
+to install it. A suitable place for the ypbind daemon is the directory
+/usr/sbin. Some people may tell you that you don't need
+ypbind on a system with NYS. This is wrong. ypwhich and ypcat need it
+always.</P
+><P
+>You must do this as root of course. The other binaries (ypwhich,
+ypcat, yppasswd, yppoll, ypmatch) should go in a directory accessible
+by all users, normally /usr/bin.</P
+><P
+>Newer ypbind versions have a configuration file called /etc/yp.conf. You can
+hardcode a NIS server there - for more info see the manual page for ypbind(8).
+You also need this file for NYS.
+An example:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>ypserver 10.10.0.1
+ypserver 10.0.100.8
+ypserver 10.3.1.1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>If the system can resolve the hostnames without NIS, you may use
+the name, otherwise you have to use the IP address. ypbind 3.3 has a bug
+and will only use the last entry (ypserver 10.3.1.1 in the example). All
+other entries are ignored. ypbind-mt handle this correct and uses
+that one, which answerd at first.</P
+><P
+>It might be a good idea to test ypbind before  incorporating it in the
+startup files. To test ypbind do the following:</P
+><P
+>&#13;<P
+></P
+><UL
+><LI
+><P
+>Make sure you have your YP-domain name set. If it is not set then
+issue the command:
+
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>	    /bin/domainname nis.domain&#13;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+
+where <TT
+CLASS="LITERAL"
+>nis.domain</TT
+> should be some string _NOT_ normally
+associated with the DNS-domain name of your machine! The reason for
+this is that it makes it a little harder for external crackers
+to retreive the password database from your NIS servers. If you
+don't know what the NIS domain name is on your network, ask
+your system/network administrator.&#13;</P
+></LI
+><LI
+><P
+>Start up "<B
+CLASS="COMMAND"
+>/sbin/portmap</B
+>" if it is not already running.&#13;</P
+></LI
+><LI
+><P
+>Create the directory <TT
+CLASS="FILENAME"
+>/var/yp</TT
+> if it does not exist.&#13;</P
+></LI
+><LI
+><P
+>Start up <B
+CLASS="COMMAND"
+>/usr/sbin/ypbind</B
+>&#13;</P
+></LI
+><LI
+><P
+>Use the command <B
+CLASS="COMMAND"
+>rpcinfo -p localhost</B
+> to check if
+ypbind was able to register its service with the portmapper. The
+output should look like:
+
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>       program vers proto   port
+        100000    2   tcp    111  portmapper
+        100000    2   udp    111  portmapper
+        100007    2   udp    637  ypbind
+        100007    2   tcp    639  ypbind&#13;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+
+or
+
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>       program vers proto   port
+        100000    2   tcp    111  portmapper
+        100000    2   udp    111  portmapper
+        100007    2   udp    758  ypbind
+        100007    1   udp    758  ypbind
+        100007    2   tcp    761  ypbind
+        100007    1   tcp    761  ypbind&#13;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+
+Depending on the ypbind version you are using.&#13;</P
+></LI
+><LI
+><P
+>You may also run <B
+CLASS="COMMAND"
+>rpcinfo -u localhost ypbind</B
+>.
+This command should produce something like:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>        program 100007 version 2 ready and waiting&#13;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+
+or
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>        program 100007 version 1 ready and waiting
+        program 100007 version 2 ready and waiting&#13;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+
+The output depends on the ypbind version you have installed.
+Important is only the "version 2" message.</P
+></LI
+></UL
+>&#13;</P
+><P
+>At this point you should be able to use NIS client programs like ypcat,
+etc...  For example, <B
+CLASS="COMMAND"
+>ypcat passwd.byname</B
+> will give
+you the entire NIS password database.</P
+><P
+>IMPORTANT: If you skipped the test procedure then make sure you have set
+the domain name, and created the directory</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    /var/yp</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>This directory MUST exist for ypbind to start up succesfully.</P
+><P
+>To check if the domainname is set correct, use the
+<B
+CLASS="COMMAND"
+>/bin/ypdomainname</B
+> from
+yp-tools 2.2. It uses the yp_get_default_domain() function which is more
+restrict. It doesn't allow for example the "(none)" domainname, which
+is the default under Linux and makes a lot of problems.</P
+><P
+>If the test worked you may now want to change your startupd files
+so that ypbind will be started at boot time and your system will
+act as a NIS client. Make sure that the domainname will
+be set before you start ypbind.</P
+><P
+>Well, that's it. Reboot the machine and watch the boot messages to see
+if ypbind is actually started.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN280"
+></A
+>7.2. Setting up a NIS Client using Traditional NIS&#13;</H2
+><P
+>For host lookups you must set (or add) "nis" to the lookup order line
+in your <TT
+CLASS="FILENAME"
+>/etc/host.conf</TT
+> file. Please read the
+manpage "resolv+.8" for more details.</P
+><P
+>Add the following line to <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>
+on your NIS clients:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>+::::::</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>You can also use the + and - characters to include/exclude or change
+users. If you want to exclude the user guest just add -guest to your
+<TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+> file.
+You want to use a different shell (e.g. ksh) for
+the user "linux"?  No problem, just add "+linux::::::/bin/ksh"
+(without the quotes) to your <TT
+CLASS="FILENAME"
+>/etc/passwd</TT
+>. Fields
+that you don't want
+to change have to be left empty. You could also use Netgroups for
+user control.</P
+><P
+>For example, to allow login-access only to miquels, dth and ed, and
+all members of the sysadmin netgroup, but to have the account data
+of all other users available use:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>      +miquels:::::::
+      +ed:::::::
+      +dth:::::::
+      +@sysadmins:::::::
+      -ftp
+      +:*::::::/etc/NoShell</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>Note that in Linux you can also override the password field, as we did
+in this example. We also remove the login "ftp", so it isn't known any
+longer, and anonymous ftp will not work.</P
+><P
+>The netgroup would look like
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>sysadmins (-,software,) (-,kukuk,)</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>IMPORTANT: The netgroup  feature is implemented starting from libc 4.5.26.
+If you have a version of libc earlier than 4.5.26, every user in the
+NIS password database can access your linux machine if you run "ypbind" !</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN300"
+></A
+>7.3. Setting up a NIS Client using NYS&#13;</H2
+><P
+>All that is required is that the NIS configuration file
+(/etc/yp.conf) points to the correct server(s) for its information.
+Also, the Name Services Switch configuration file (/etc/nsswitch.conf)
+must be correctly set up.</P
+><P
+>You should install ypbind. It isn't needed by the libc, but the NIS(YP)
+tools need it.</P
+><P
+>If you wish to use the include/exclude user feature (+/-guest/+@admins),
+you have to use "passwd: compat" and "group: compat" in nsswitch.conf.
+Note that there is no "shadow: compat"! You have to
+use "shadow: files nis" in this case.</P
+><P
+>The NYS sources are part of the libc 5 sources. When run configure,
+say the first time "NO" to the "Values correct" question,
+then say "YES" to "Build a NYS libc from nys".</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN308"
+></A
+>7.4. Setting up a NIS Client using glibc 2.x&#13;</H2
+><P
+>The glibc uses "traditional NIS", so you need to start ypbind. The
+Name Services Switch configuration file (/etc/nsswitch.conf) must be
+correctly set up. If you use the compat mode for passwd, shadow or group,
+you have to add the "+" at the end of this files and you can use
+the include/exclude user feature. The configuration is excatly the same
+as under Solaris 2.x.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN313"
+></A
+>7.5. The nsswitch.conf File
+
+&#13;</H2
+><P
+>The Network Services switch file /etc/nsswitch.conf determines the
+order of lookups performed when a certain piece of information is
+requested, just like the /etc/host.conf file which determines the way
+host lookups are performed. For example, the line</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    hosts: files nis dns</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>specifies that host lookup functions should first look in the local
+/etc/hosts file, followed by a NIS lookup and finally through the domain
+name service (/etc/resolv.conf and named), at which point if no match
+is found an error is returned. This file must be readable for every
+user! You can find more information in the man-page nsswitch.5
+or nsswitch.conf.5.</P
+><P
+>A good /etc/nsswitch.conf file for NIS is:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#
+# /etc/nsswitch.conf
+#
+# An example Name Service Switch config file. This file should be
+# sorted with the most-used services at the beginning.
+#
+# The entry '[NOTFOUND=return]' means that the search for an
+# entry should stop if the search in the previous entry turned
+# up nothing. Note that if the search failed due to some other reason
+# (like no NIS server responding) then the search continues with the
+# next entry.
+#
+# Legal entries are:
+#
+#	nisplus			Use NIS+ (NIS version 3)
+#	nis			Use NIS (NIS version 2), also called YP
+#	dns			Use DNS (Domain Name Service)
+#	files			Use the local files
+#	db			Use the /var/db databases
+#	[NOTFOUND=return]	Stop searching if not found so far
+#
+
+passwd:     compat
+group:      compat
+# For libc5, you must use shadow: files nis
+shadow:     compat
+
+passwd_compat: nis
+group_compat: nis
+shadow_compat: nis
+
+hosts:      nis files dns
+
+services:   nis [NOTFOUND=return] files
+networks:   nis [NOTFOUND=return] files
+protocols:  nis [NOTFOUND=return] files
+rpc:        nis [NOTFOUND=return] files
+ethers:     nis [NOTFOUND=return] files
+netmasks:   nis [NOTFOUND=return] files
+netgroup:   nis
+bootparams: nis [NOTFOUND=return] files
+publickey:  nis [NOTFOUND=return] files
+automount:  files
+aliases:    nis [NOTFOUND=return] files</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+><P
+>passwd_compat, group_compat and shadow_compat are only supported by glibc 2.x.
+If there are no shadow rules in /etc/nsswitch.conf, glibc will use the passwd
+rule for lookups. There are some more lookup module for glibc like hesoid.
+For more information, read the glibc documentation.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN326"
+></A
+>7.6. Shadow Passwords with NIS&#13;</H2
+><P
+>Shadow passwords over NIS are always a bad idea. You loose the security,
+which shadow gives you, and it is supported by only some few Linux C
+Libraries. A good way to avoid shadow passwords over NIS is,
+to put only the local system users in /etc/shadow. Remove the NIS user
+entries from the shadow database, and put the password back in passwd.
+So you can use shadow for the root login, and normal passwd for NIS
+user. This has the advantage that it will work with every NIS client.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN331"
+></A
+>7.6.1. Linux</H3
+><P
+>The only Linux libc which supports shadow passwords over NIS, is the
+GNU C Library 2.x. Linux libc5 has no support for it. Linux
+libc5 compiled with NYS enabled has some code for it. But this code
+is badly broken in some cases and doesn't work with all correct
+shadow entries.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN334"
+></A
+>7.6.2. Solaris</H3
+><P
+>Solaris does not support shadow passwords over NIS.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN337"
+></A
+>7.6.3. PAM&#13;</H3
+><P
+>Linux-PAM 0.75 and newr does support Shadow passwords over NIS if you
+use the pam_unix.so Module or if you install the extra pam_unix2.so
+Module. Old systems using pam_pwdb/libpwdb (for example Red Hat
+Linux 5.x)
+need to change the /etc/pam.d/* entries. All pam_pwdb rules should
+be replaced through a pam_unix_* module.</P
+><P
+>An example /etc/pam.d/login file looks like:</P
+><P
+>&#13;<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#%PAM-1.0
+auth     requisite      pam_unix2.so            nullok #set_secrpc
+auth     required       pam_securetty.so
+auth     required       pam_nologin.so
+auth     required       pam_env.so
+auth     required       pam_mail.so
+account  required       pam_unix2.so
+password required       pam_pwcheck.so          nullok
+password required       pam_unix2.so            nullok use_first_pass use_authtok
+session  required       pam_unix2.so            none # debug or trace
+session  required       pam_limits.so</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>&#13;</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="setting_nis.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="nisplus.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>What do you need to set up NIS?&#13;</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>What do you need to set up NIS+ ?</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

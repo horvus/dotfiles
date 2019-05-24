@@ -1,0 +1,419 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.03 [en] (X11; I; Linux
+2.0.31 i586) [Netscape]">
+   <META NAME="Author" CONTENT="J Hadi Salim">
+   <META NAME="Description" CONTENT="Howto get sendmail and UUCP to work together">
+   <META NAME="Keywords" CONTENT="sendmail,uucp,mailer,linux">
+   <TITLE>Sendmail+UUCP HOWTO</TITLE>
+</HEAD>
+<BODY>
+
+<H1>
+Sendmail + UUCP HOWTO</H1>
+
+<ADDRESS>
+<U>Author:</U> Jamal Hadi Salim (jamal@glcom.com or hadi@cyberus.ca)</ADDRESS>
+
+<BR>&nbsp;
+<H3>
+History:</H3>
+
+<LI>
+Initial edition July/96: works only with non-bind edition of sendmail</LI>
+
+<LI>
+Oct 01 /96: works with the redhat supplied binary</LI>
+
+<LI>
+Oct 07 /96: added/modified a tip on how to compile non-bind sendmail</LI>
+
+<LI>
+Oct 25 /96: added/modified a tip on how to keep sendmail getHostbyAddr()
+happy via a dummy /etc/hosts entry</LI>
+
+<LI>
+Mar 15 /97: I am amazed at the response/feedback i am receiving so i decided
+to refine this further. Fixed some small errors; added diagram + references.</LI>
+
+<LI>
+Oct 25/97: Htmlise+ add blurb on DNS capable machines</LI>
+
+
+<P>
+<HR WIDTH="100%">
+
+<P>After finally settling down and properly reading TFM (the Bat Book,
+to be precise) i have solved the Caramilk secret! The steps below have
+been tested with the binary supplied by RedHat. Perhaps i should send this
+tip to the maintainer of the Sendmail FAQ too since there is absolutely
+no mention of UUCP interworking with sendmail there.
+<BR>&nbsp;
+<H2>
+What this Document tries to show you</H2>
+How to setup a single machine, reffered to as <I>me.com </I>in the example,
+with no direct access to the internet to route mail for you via sendmail
+and UUCP to a 'smarter host' eg your ISP.
+<BR>Optionally you can configure this machine to feed other machines i.e
+you are their 'smart' host or gateway.
+<H2>
+What this Document does not tell you</H2>
+I have been receiving incredible number of questions regarding topics which
+are beyond the focus of this HOWTO. The purpose of this document is not
+to describe them so please try not send me any questions on the following:
+<BR>&nbsp;
+<H3>
+a) How to setup UUCP.</H3>
+Refer to many fine references on this, including:
+<LI>
+UUCP HOWTO (Vince Skahan, )</LI>
+
+<LI>
+Using and managing UUCP (Ed Ravin et al -- publisher O'reilly) which i
+think is the best authority on UUCP</LI>
+
+<LI>
+Linux Network Administrator Guide (Olaf Kirch)</LI>
+
+<BR>&nbsp;
+<H3>
+b) how to setup DNS.</H3>
+Refer to the many fine references on this, including:
+<LI>
+Caching named mini howto (Nicolai Langfeldt)</LI>
+
+<LI>
+The bat book (Sendmail;Costalles, Allman, Rickert;publisher O'reilly)</LI>
+
+<LI>
+DNS and BIND (Publisher O'reilly)</LI>
+
+<LI>
+TCP/IP Network Administration (Hunt, Craig;Publisher O'reilly)</LI>
+
+<LI>
+Linux Network Administrator Guide (Olaf Kirch)</LI>
+
+<LI>
+sendmail Theory and Practice (Avolio and Vixie; publisher Digital press)</LI>
+
+<BR>&nbsp;
+<H3>
+c) how to setup databases (other than the mailertable) to work with sendmail.</H3>
+Refer to the many fine references on this, including:
+<LI>
+The bat book (Sendmail;Costalles, Allman, Rickert -- publisher O'reilly)</LI>
+
+<LI>
+TCP/IP administration (Publisher O'reilly)</LI>
+
+<LI>
+Sendmail Theory and Practice (Avolio and Vixie; publisher Digital press)</LI>
+
+<LI>
+Docs bundled with sendmail d) how to write or modify rulesets or mailers.</LI>
+
+<LI>
+All the above references&nbsp; in c)</LI>
+
+
+<P>You can also find help on the following <B>newsgroups</B>:
+<BR><A HREF="news:comp.mail.sendmail">comp.mail.sendmail</A>
+<BR><A HREF="news:comp.mail.uucp">comp.mail.uucp</A>
+<BR><A HREF="news:comp.os.linux.networking">comp.os.linux.networking</A>
+<BR><B>IRC channels</B>
+<BR>#linux, #unix
+<BR>&nbsp;
+<HR WIDTH="100%">
+<H2>
+THE SETUP</H2>
+This is for a system, hypothecally named <I>me.com</I>, whose mail is sent
+out only via UUCP. <I>mysmarthost </I>is the ISPs hostname as set up in
+the <B>uucp sys file </B>and <I>me.com </I>is the hostname we use or are
+known by in the MX records on the internet.
+<BR><I>mysmarthost</I> hooks to the internet. We really dont care how it
+does it, we just know it knows how to get us there.
+<BR><I>me.com</I>, whose setup we describe in the example, feeds sites
+<I>down.com </I>and <I>system1.org </I>and their subnodes. <I>me.com </I>connects
+to <I>down.com</I> via TCP/IP and connects to <I>system1.org </I>via raw
+UUCP using a phone line.
+<BR>The setup description is shown below:
+<BR>&nbsp;
+<PRE>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ------------------------
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp; Internet&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -----------------------
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | PPP/dedicated line running TCP-IP
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -------------
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |mysmarthost | Authoritative name server for&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *.me.com, *.down.com, *.system1.org
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; --------------
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | UUCP via a phone line receive for&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | system1.org, *.system1.org,*.down.com, down.com
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | as well as me.com and *.me.com
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ------------
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | * *****&nbsp; *&nbsp; |
+&nbsp;&nbsp; ------------ | * me.com *&nbsp; | ------
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; *&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | * *****&nbsp; *&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ------------&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;
+&nbsp;&nbsp; |UUCP via phone line&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | uucp via TCP/IP
+&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;-----------&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -----------
+|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+|system1.org|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | down.com&nbsp; |-------
+|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;----------&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ------------&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | LAN: smtp to nodes
+&nbsp;&nbsp;&nbsp;&nbsp; | UUCP phone line
+&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+-----------&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -------------
+|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+|system1's|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | down's&nbsp;&nbsp;&nbsp; |
+|subnodes |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | LAN&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
+|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ------------
+----------
+</PRE>
+
+<H2>
+&nbsp;pre-requisites</H2>
+<B><FONT SIZE=+1>1)</FONT></B> If you are already running DNS or have a
+pointer to a DNS server (in your /etc/resolv.conf) and are on a live connection
+to the net then skip this part. You are safe. You dont have to do any 'smart'
+thing skip to&nbsp; <B><FONT SIZE=+1>2)</FONT></B>
+<BR>If you are on a machine using uucp for mail then you dont really need
+to compile bind/resolv into sendmail;
+<H3>
+How to survive name canonicalization on a stand-alone machine with no DNS</H3>
+<U>PART I</U>
+<BR>&nbsp;If you get a pre-compiled sendmail with BIND in it you can still
+live with it (As is the case with Redhat supplied sendmail).
+
+<P>a) Refer to my solution for this based on the m4 file described (my
+favorite). Try to use this option unless you really insist on b) or c)
+below OR
+
+<P>b)If you talk to me i could supply you with a non-BIND compiled version
+(8.8.5). Perhaps RedHat should consider supplying two sendmail binaries
+(like slakware) One with BIND and the other with no BIND. OR
+
+<P>c) The quickest solution to get sendmail with no bind is to edit <I>src/conf.h</I>
+lines below to read as i have shown:
+
+<P><I># ifndef NAMED_BIND conf.h:# define NAMED_BIND 0 /* use Berkeley
+Internet Domain Server */</I>
+
+<P><U>PART II</U>:
+<BR>Sendmail would however normally insist on doing name look ups to resolve
+the host part using <I>gethostbyaddr()</I> for each email it sends (even
+if you tell it not to canonify names).
+
+<P>a) use an <I>RFC1597</I> IP address (10.0.0.0-10.255.255.255, 172.16.0.0-172.31.255.255,
+192.168.0.0-192.168.255.255)
+<BR>Edit <I>/etc/hosts </I>and add the following as a sample for the host
+myhost
+<BR><I>10.0.0.1 myhost.me.com myhost</I> or
+<BR>b) If you use NIS (and NIS is compiled into sendmail as seems to be
+the case in Redhat. ) make sure the <I>/etc/nsswitch.conf </I>file contains:
+<BR><I>hosts: files dns</I> and in <I>/etc/hosts</I> and add the following
+as a sample for the host myhost [again using RFC1597 IP addressing scheme]
+<BR><I>10.0.0.1 myhost.me.com myhost</I>
+
+<P><B>NOTE: </B>---- In both a) and b) above it is critical that you list
+the long (fully qualified) in the /etc/hosts file used. i.e the line should
+read <I>10.0.0.1 myhost.me.com myhost</I> and NOT <I>10.0.0.1 myhost </I>you
+will also need to define the sendmail <B>$w </B>macro to hold <I>myhost.me.com</I>
+<BR>add the Following line to your <I>/etc/sendmail.cf </I>after it is
+generated <B><I>Djmyhost.me.com</I></B> (or you can use <B>MASQUAREADE_AS(myhost.me.com)</B>
+in the <I>.mc</I> below)
+
+<P><B>NOTE</B>!!!!! <I>myhost</I> as a domain name is given as an example;
+you dont have to use it as is. Pick your own hostname if you dont have
+one already.
+<BR>
+<HR WIDTH="100%"><B><FONT SIZE=+1></FONT></B>
+
+<P><B><FONT SIZE=+1>2)</FONT></B> Ensure that you have makemap and it is
+capable of supporting hash and or the more common dbm format&nbsp; or even
+btree format (The Redhat version does not support dbm). Makemap is normaly
+distributed with sendmail.
+<BR>&nbsp;
+<BR>&nbsp;
+<H3>
+SETUP (the mc file)</H3>
+I) create your .mc file using your favorite editor; i'll call this file
+<I>my.mc</I>
+
+<P><B>a) No DNS -- standalone</B>
+<BR>
+<HR WIDTH="100%">
+<BR>i<I>nclude(`../m4/cf.m4')</I>
+<BR><I>VERSIONID(`me.com's setup with uucp created by xxxx --no dns ')</I>
+<BR><I>dnl OSTYPE(linux)</I>
+<BR><I>FEATURE(nodns)dnl</I>
+<BR><I>FEATURE(nocanonify)dnl</I>
+<BR><I>FEATURE(always_add_domain)dnl</I>
+<BR><I>FEATURE(mailertable, hash /etc/mailertable)dnl</I>
+<BR><I>MAILER(local)dnl</I>
+<BR><I>MAILER(smtp)dnl</I>
+<BR><I>MAILER(uucp)</I>
+<BR><I>define(`SMART_HOST', uucp-dom:mysmarthost)</I>
+<BR>
+<HR WIDTH="100%">
+
+<P>Let's dissect this:
+<LI>
+<I>include(`../m4/cf.m4')</I> requests for the m4 macro found in ../m4/cf.m4
+to be include to resolve some things</LI>
+
+<LI>
+<I>VERSIONID(`me.com's setup with uucp created by xxxx')dnl</I>&nbsp; This
+is used to distinguish the different versions of .cf file you might end
+up creating.</LI>
+
+<LI>
+<I>OSTYPE(linux)</I> This is used to define/redefine linux specific stuff.
+It is safe to have it here.</LI>
+
+<LI>
+<I>FEATURE(nodns)dnl </I>This says we dont have a DNS server (so in effect
+we are using uucp only for mail. Sendmail must be compiled not to use bind)
+This is now obsolete. I will let it stay here just in case you use an older
+version of sendmail.</LI>
+
+<LI>
+<I>FEATURE(nocanonify)dnl </I>This says Don't pass addresses to <I>$[ ...
+$]</I> for canonification. Normally if you have BIND compiled in sendmail
+would try and expand the alias/IP address to a canonical name using DNS.
+You dont wanna do this if all you have are feeds which connect to you via
+UUCP i.e you are a stand alone.</LI>
+
+<LI>
+<I>FEATURE(always_add_domain)dnl</I> This adds the local domain host name
+even on locally delivered mail Not necessary i just like it; <B><I>This
+might not be a safe feature since spammers, with proper setup conditions,
+can abuse you</I></B>.</LI>
+
+<BR>me.com is not connected to the net via tcp/ip so it is safe
+<LI>
+<I>FEATURE(mailertable, hash /etc/mailertable)dnl</I> the file <I>/etc/mailertable</I>
+is going to be a <I>hash </I>database where we will store routing information
+of certain sites. If you dont have anyone who you feed uucp to then you
+dont need this. More on this later. If you wanted to use the <I>dbm </I>format
+you would have<I> FEATURE(mailertable, dbm /etc/mailertable)dnl&nbsp; </I>If
+you wanted to use the <I>btree</I> format you would have <I>FEATURE(mailertable,
+btree /etc/mailertable)dnl</I></LI>
+
+<LI>
+<I>MAILER(local)dnl MAILER(smtp)dnl MAILER(uucp)</I> These are the mailers
+we use.</LI>
+
+<LI>
+<I>define(`SMART_HOST', uucp-dom:mysmarthost) </I>Our smart host is our
+ISP who is defined in the uucp <B>sys</B> file as <I>system mysmarthost</I>.
+Any messages that we cant handle (i.e ones for domains or mailers we dont
+understand) will be passed on to our smarthost/ISP to figure out. note
+we use&nbsp; uucp-dom as the uucp mailer. This particular mailer uses smtp
+rewriting rules.</LI>
+
+<BR>&nbsp;
+
+<P><B>b) DNS on</B>
+<BR>
+<HR WIDTH="100%">
+<BR><I>include(`../m4/cf.m4')</I>
+<BR><I>VERSIONID(`me.com's setup with uucp created by xxxx --dns enabled')dnl</I>
+<BR><I>OSTYPE(linux)</I>
+<BR><I>FEATURE(always_add_domain)dnl</I>
+<BR><I>FEATURE(mailertable, hash /etc/mailertable)dnl</I>
+<BR><I>MAILER(local)dnl</I>
+<BR><I>MAILER(smtp)dnl</I>
+<BR><I>MAILER(uucp)</I>
+<BR><I>define(`SMART_HOST', uucp-dom:mysmarthost)</I>
+<BR>
+<HR WIDTH="100%">
+<BR>&nbsp;
+<H3>
+II) create your sendmail.cf file</H3>
+a) backup your old <I>/etc/sendmail.cf</I> file
+<BR>b) overwrite the sendmail.cf with the new one: <I>m4 my.mc > /etc/sendmail.cf</I>
+<BR>c) verify that the sendmail.cf file was correctly created based on
+your specifications.
+<BR>Some of the gotchas that i came across were: - <I>missing uucp-dom
+mailer </I>This was because i didnt have the smtp mailer entry. Actually,
+i understand it is important to have it defined before the uucp
+<BR>&nbsp;
+<H3>
+III) create your /etc/mailertable</H3>
+if you dont have uucp sites feeding off you skip this step
+
+<P>a) create/edit the file /etc/mailertable
+
+<P>sample /etc/mailertable
+<BR>
+<HR WIDTH="100%">
+
+<P><I>system1.org uucp-dom:system1</I>
+<BR><I>.system1.org uucp-dom:system1</I>
+<BR><I>down.com uucp-dom:down</I>
+<BR><I>up.down.com&nbsp; error: Host is unknown at me.com</I>
+<BR><I>.down.com uucp-dom:down</I>
+<BR><I>.me.com error: Host unknown at me.com</I>
+<BR>
+<HR WIDTH="100%">
+
+<P>This says anything that is addressed to <I>system1.org</I> or to <I>*.system1.org
+</I>that we receive will be sent using the <I>uucp-dom</I> mailer and be
+delivered to <I>system1</I> (defined in the the uucp <B>sys </B>file) in
+other words we are doing the mail routing for <I>*.system1.org ; </I>similar
+for <I>down.com </I>and its subnodes except for the additional filtering;
+we bounce back any mail for down's subnode <I>up.down.com </I>using sendmail's
+built-in <I>error </I>mailer with the message <B><I>"Host is unknown at
+me.com"</I></B>; This is because we have been asked to do this by the admin
+at <I>down.com.</I> To bounce unknown subdomains to us we use the last
+line in the mailertable (which is what all unknown nodes default to).
+<BR>b) create the database with <B>makemap</B>
+
+<P>if you use <I>hash</I>:
+<BR><I>makemap hash /etc/mailertable &lt; /etc/mailertable</I>
+<BR>if you use <I>dbm:</I>
+<BR><I>makemap dbm /etc/mailertable &lt;/etc/mailertable</I>
+<BR>if you use<I> btree:</I>
+<BR><I>makemap btree /etc/mailertable &lt;/etc/mailertable</I><I></I>
+
+<P>do this every time you change the file.
+<BR><I></I>&nbsp;
+<H3>
+IV) restart sendmail</H3>
+
+<H3>
+V) test sendmail</H3>
+i) sendmail -bv user@destination
+<BR>ii) using sendmail -bt and enter various addresses using 3,0
+<BR>ruleset to see where they end up and the various rulesets and cf walks
+taken.
+
+<P><B>You are set!</B>
+
+<P>
+<HR WIDTH="100%">
+<H3>
+TODO</H3>
+
+
+<P>1) Add info on setting up system down.com (so as to show how to
+<BR>take care of those smtp nodes)
+<BR>2) Add info on how to setup news to be delivered via UUCP
+<BR>(preferably INN). This might require changing the title of the doc.
+<BR>&nbsp;
+</BODY>
+</HTML>

@@ -1,0 +1,239 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Firewall and Proxy Server HOWTO: Installing the TIS Proxy server</TITLE>
+ <LINK HREF="Firewall-HOWTO-11.html" REL=next>
+ <LINK HREF="Firewall-HOWTO-9.html" REL=previous>
+ <LINK HREF="Firewall-HOWTO.html#toc10" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Firewall-HOWTO-11.html">Next</A>
+<A HREF="Firewall-HOWTO-9.html">Previous</A>
+<A HREF="Firewall-HOWTO.html#toc10">Contents</A>
+<HR>
+<H2><A NAME="s10">10. Installing the TIS Proxy server</A></H2>
+
+<P>
+<P>
+<H2><A NAME="ss10.1">10.1 Getting the software</A>
+</H2>
+
+<P>The TIS FWTK is available at <B>
+<A HREF="http://www.tis.com/research/software/ ">http://www.tis.com/research/software/</A></B>.  
+<P><B>Don't make the mistake I did.</B> When you ftp files from TIS, READ THE README's. The TIS fwtk is locked up in a hidden directory on their server.  
+<P>TIS requires you read their agreement at 
+<A HREF="http://www.tis.com/research/software/fwtk_readme.html ">http://www.tis.com/research/software/fwtk_readme.html</A> and then <B>send email to 
+<A HREF="mailto:fwtk-request@tislabs.com">fwtk-request@tislabs.com</A> </B> with only the word <B>accepted</B> in the body of the message to learn the name of this hidden directory. No subject is needed in the message. Their system will then mails you back the directory name (good for 12 hours) to download the source.
+<P>As of this writing, the current version of FWTK is 2.1.
+<P>
+<H2><A NAME="ss10.2">10.2 Compiling the TIS FWTK</A>
+</H2>
+
+<P> 
+Version 2.1 of the FWTK compiles much easier then any of the older versions. 
+<P>EXPLAIN HERE!!!
+<P>Now run <B>make</B>.
+<P>
+<P>
+<H2><A NAME="ss10.3">10.3 Installing the TIS FWTK </A>
+</H2>
+
+<P>Run <B>make install</B>.
+<P>The default installation directory is /usr/local/etc. You could change this (I didn't) to a more secure directory. I chose to change the access to this directory to 'chmod 700'.
+<P>All last is left now is to configure the firewall.
+<P>
+<H2><A NAME="ss10.4">10.4 Configuring the TIS FWTK</A>
+</H2>
+
+<P> 
+Now the fun really begins. We must teach the system to call theses new services and create the tables to control them. 
+<P>I'm not going to try to re-write the TIS FWTK manual here. I will show you the setting I found worked and explain the problems I ran into and how I got around them.
+<P>There are three files that make up these controls. 
+<P>
+<P>
+<UL>
+<LI>/etc/services
+<UL>
+<LI>Tells the system what ports a services is on.</LI>
+</UL>
+</LI>
+</UL>
+
+<UL>
+<LI>/etc/inetd.conf
+<UL>
+<LI>Tells inetd what program to call when someone knocks on a service port.</LI>
+</UL>
+</LI>
+</UL>
+
+<UL>
+<LI>/usr/local/etc/netperm-table
+<UL>
+<LI>Tells the FWTK services who to allow and deny service to.</LI>
+</UL>
+</LI>
+</UL>
+<P>To get the FWTK functioning, you should edit these files from the bottom 
+up. Editing the services file without the inetd.conf or netperm-table file 
+set correctly could make your system inaccessible.
+<P>
+<H3>The netperm-table file</H3>
+
+<P> 
+This file controls who can access the services of the TIS FWTK. You should think about the traffic using the firewall from both sides. People outside your network should identify themselves before gaining access, but the people inside your network might be allowed to just pass through.
+<P>So people can identify themselves, the firewall uses a program called <B>authsrv</B> to keep a database of user IDs and passwords. The authentication section of the netperm-table controls where the database is 
+keep and who can access it.
+<P>I had some trouble closing the access to this service. Note the premit-hosts line I show uses a '*' to give everyone access. The correct setting for this line is '' <CODE>authsrv: premit-hosts localhost</CODE> if you can get it working. 
+<P>
+<PRE>
+  #
+  # Proxy configuration table
+  #
+  # Authentication server and client rules
+  authsrv:      database /usr/local/etc/fw-authdb
+  authsrv:      permit-hosts *
+  authsrv:      badsleep 1200
+  authsrv:      nobogus true
+  # Client Applications using the Authentication server
+  *:            authserver 127.0.0.1 114
+</PRE>
+<P>To initialize the database, su to root, and run <B>./authsrv</B> in the 
+/var/local/etc directory to create the administrative user record. Here is 
+a sample session.
+<P>Read the FWTK documentation to learn how to add users and groups.
+<P>
+<PRE>
+    #
+    # authsrv
+    authsrv# list
+    authsrv# adduser admin &quot;Auth DB admin&quot;
+    ok - user added initially disabled
+    authsrv# ena admin
+    enabled
+    authsrv# proto admin pass
+    changed
+    authsrv# pass admin &quot;plugh&quot;
+    Password changed.
+    authsrv# superwiz admin
+    set wizard
+    authsrv# list
+    Report for users in database
+    user   group  longname           ok?    proto   last 
+    ------ ------ ------------------ -----  ------  -----
+    admin         Auth DB admin      ena    passw   never
+    authsrv# display admin
+    Report for user admin (Auth DB admin)
+    Authentication protocol: password
+    Flags: WIZARD
+    authsrv# ^D
+    EOT
+    #
+</PRE>
+<P>The telnet gateway (tn-gw) controls are straight forward and the first you should set up. 
+<P>In my example, I permit host from inside the private network to pass through without authenticating themselves. (permit-hosts 19961.2.* -passok) But, any other user must enter their user ID and password to use the proxy. (permit-hosts * -auth)
+<P>I also allow one other system (192.1.2.202) to access the firewall directly without going through the firewall at all. The two inetacl-in.telnetd lines do this.  I will explain how these lines are called latter. 
+<P>The Telnet timeout should be keep short.
+<P>
+<PRE>
+  # telnet gateway rules:
+  tn-gw:                denial-msg      /usr/local/etc/tn-deny.txt
+  tn-gw:                welcome-msg     /usr/local/etc/tn-welcome.txt
+  tn-gw:                help-msg        /usr/local/etc/tn-help.txt
+  tn-gw:                timeout 90
+  tn-gw:                permit-hosts 192.1.2.* -passok -xok
+  tn-gw:                permit-hosts * -auth
+  # Only the Administrator can telnet directly to the Firewall via Port 24
+  netacl-in.telnetd: permit-hosts 192.1.2.202 -exec /usr/sbin/in.telnetd
+</PRE>
+<P>The r-commands work the same way as telnet.
+<P>
+<PRE>
+  # rlogin gateway rules:
+  rlogin-gw:    denial-msg      /usr/local/etc/rlogin-deny.txt
+  rlogin-gw:    welcome-msg     /usr/local/etc/rlogin-welcome.txt
+  rlogin-gw:    help-msg        /usr/local/etc/rlogin-help.txt
+  rlogin-gw:    timeout 90
+  rlogin-gw:    permit-hosts 192.1.2.* -passok -xok
+  rlogin-gw:    permit-hosts * -auth -xok
+  # Only the Administrator can telnet directly to the Firewall via Port
+  netacl-rlogind: permit-hosts 192.1.2.202 -exec /usr/libexec/rlogind -a
+</PRE>
+<P>You shouldn't have anyone accessing your firewall directly and that includes FTP so don't put an FTP, server on you firewall. 
+<P>Again, the permit-hosts line allows anyone in the protected network free access to the Internet and all others must authenticate themselves. I included logging of every file sent and received to my controls. (-log { retr stor })
+<P>The ftp timeout controls how long it will take to drop a bad connections as well as how long a connection will stay open with out activity.
+<P>
+<PRE>
+  # ftp gateway rules:
+  ftp-gw:               denial-msg      /usr/local/etc/ftp-deny.txt
+  ftp-gw:               welcome-msg     /usr/local/etc/ftp-welcome.txt
+  ftp-gw:               help-msg        /usr/local/etc/ftp-help.txt
+  ftp-gw:               timeout 300
+  ftp-gw:               permit-hosts 192.1.2.* -log { retr stor }
+  ftp-gw:               permit-hosts * -authall -log { retr stor }
+</PRE>
+<P>Web, gopher and browser based ftp are contorted by the http-gw. The first two lines create a directory to store ftp and web documents as they are passing through the firewall. I make these files owned by root and put the in a directory accessible only by root.
+<P>The Web connection should be kept short. It controls how long the user will wait on a bad connections.
+<P>
+<PRE>
+  # www and gopher gateway rules:
+  http-gw:      userid          root
+  http-gw:      directory       /jail
+  http-gw:      timeout 90
+  http-gw:      default-httpd   www.afs.net
+  http-gw:      hosts           192.1.2.* -log { read write ftp }
+  http-gw:      deny-hosts      * 
+</PRE>
+<P>The ssl-gw is really just a pass anything gateway. Be carefully with it. In this example I allow anyone inside the protected network to connect to any server outside the network except the addresses 127.0.0.* and 192.1.1.* and then only on ports 443 through 563. Ports 443 through 563 are known SSL 
+ports.
+<P>
+<PRE>
+  # ssl gateway rules:
+  ssl-gw:         timeout 300
+  ssl-gw:         hosts           192.1.2.* -dest { !127.0.0.* !192.1.1.* *:443:563 }
+  ssl-gw:         deny-hosts      *
+</PRE>
+<P>Here is an example of how to use the plug-gw to allow connections to a news server.  In this example I allow anyone inside the protected network to connect to only one system and only to it's news port.
+<P>The seconded line allows the news server to pass its data back to the protected network.
+<P>Because most clients expect to stay connected while the user read news, the timeout for a news server should be long.
+<P>
+<PRE>
+ 
+  # NetNews Pluged gateway
+  plug-gw:        timeout 3600
+  plug-gw: port nntp 192.1.2.* -plug-to 24.94.1.22 -port nntp
+  plug-gw: port nntp 24.94.1.22 -plug-to 192.1.2.* -port nntp
+</PRE>
+<P>The finger gateway is simple. Anyone inside the protected network must  login first and then we allow them to use the finger program on the firewall. Anyone else just gets a message.
+<P>
+<PRE>
+  # Enable finger service 
+  netacl-fingerd: permit-hosts 192.1.2.* -exec /usr/libexec/fingerd
+  netacl-fingerd: permit-hosts * -exec /bin/cat /usr/local/etc/finger.txt
+</PRE>
+<P>I haven't setup the Mail and X-windows services so I'm not including examples.  If anyone has a working example, please send me email.
+<P>
+<P>
+<H3>The /etc/services file</H3>
+
+<P> 
+This is where it all begins. When a client connects to the firewall it connects on a known port (less then 1024).  For example telnet connects on port 23. The inetd deamon hears this connection and looks up the name of these service in the /etc/services file. It then calls the program assigned to the name in the /etc/inetd.conf file.
+<P>Some of the services we are creating are not normally in the /etc/services file. You can assign some of them to any port you want. For example, I have assigned the administrator's telnet port (telnet-a) to port 24. You could assign it to port 2323 if you wished. For the administrator (YOU) to connect directly to the firewall you will need to telnet to port 24 not 23 and if you setup your netperm-table file, like I did, you will only be able to this from one system inside your protected network.
+<P>
+<P>
+<PRE>
+ 
+  telnet-a        24/tcp
+  ftp-gw          21/tcp           # this named changed
+  auth            113/tcp   ident    # User Verification
+  ssl-gw          443/tcp
+</PRE>
+<P>
+<P>
+<HR>
+<A HREF="Firewall-HOWTO-11.html">Next</A>
+<A HREF="Firewall-HOWTO-9.html">Previous</A>
+<A HREF="Firewall-HOWTO.html#toc10">Contents</A>
+</BODY>
+</HTML>

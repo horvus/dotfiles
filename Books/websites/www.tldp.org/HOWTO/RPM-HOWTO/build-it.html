@@ -1,0 +1,554 @@
+<HTML
+><HEAD
+><TITLE
+>Building It</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="RPM HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Building RPMs"
+HREF="build.html"><LINK
+REL="NEXT"
+TITLE="Multi-architectural RPM Building"
+HREF="multi-arch.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>RPM HOWTO: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="build.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="multi-arch.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BUILD-IT">7. Building It</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SOURCE-TREE">7.1. The Source Directory Tree</H2
+><P
+>	The first thing you need is a properly configured build tree.  This is
+	configurable using the <SPAN
+CLASS="SYSTEMITEM"
+>/etc/rpmrc</SPAN
+> file.  Most
+	people will just use <SPAN
+CLASS="SYSTEMITEM"
+>/usr/src</SPAN
+>.
+      </P
+><P
+>	You may need to create the following directories to make a build
+	tree:
+      </P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <SPAN
+CLASS="SYSTEMITEM"
+>BUILD</SPAN
+> is the directory where all building
+	    occurs by RPM.  You don't have to do your test building anywhere in
+	    particular, but this is where RPM will do it's building.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <SPAN
+CLASS="SYSTEMITEM"
+>SOURCES</SPAN
+> is the directory where you should
+	    put your original source tar files and your patches.  This is where
+	    RPM will look by default.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <SPAN
+CLASS="SYSTEMITEM"
+>SPECS</SPAN
+> is the directory where all spec files
+	    should go.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <SPAN
+CLASS="SYSTEMITEM"
+>RPMS</SPAN
+> is where RPM will put all binary RPMs
+	    when built.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <SPAN
+CLASS="SYSTEMITEM"
+>SRPMS</SPAN
+> is where all source RPMs will be put.
+	  </P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TEST-BUILD">7.2. Test Building</H2
+><P
+>	The first thing you'll probably want to to is get the source to build
+	cleanly without using RPM.  To do this, unpack the sources, and change
+	the directory name to $NAME.orig.  Then unpack the source again.
+	Use this source to build from.  Go into the source directory and follow
+	the instructions to build it.  If you have to edit things, you'll need a
+	patch.  Once you get it to build, clean the source directory.  Make sure
+	and remove any files that get made from a <B
+CLASS="COMMAND"
+>configure</B
+>
+	script.  Then <B
+CLASS="COMMAND"
+>cd</B
+> back out of the source directory to
+	its parent.  Then you'll do something like:
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>diff -uNr dirname.orig dirname &#62; ../SOURCES/dirname-linux.patch
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>	This will create a patch for you that you can use in your spec file.
+	Note that the "linux" that you see in the patch name is just an
+	identifier.  You might want to use something more descriptive like
+	"config" or "bugs" to describe <EM
+>why</EM
+> you had to
+	make a patch.  It's also a good idea to look at the patch file you are
+	creating before using it to make sure no binaries were included by
+	accident.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="GENERATE-FILE">7.3. Generating the File List</H2
+><P
+>	Now that you have source that will build and you know how to do it,
+	build it and install it.  Look at the output of the install sequence and
+	build your file list from that to use in the spec file.  We usually
+	build the spec file in parallel with all of these steps.  You can create
+	the initial one and fill in the easy parts, and then fill in the other
+	steps as you go.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="BUILD-PKG">7.4. Building the Package with RPM</H2
+><P
+>	Once you have a spec file, you are ready to try and build your
+	package.  The most useful way to do it is with a command like the
+	following:
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>rpm -ba foobar-1.0.spec
+      </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>	There are other options useful with the <TT
+CLASS="PARAMETER"
+><I
+>-b</I
+></TT
+> switch as well:
+      </P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>p</I
+></TT
+> means just run the
+	    <SPAN
+CLASS="SYSTEMITEM"
+>prep</SPAN
+> section of the specfile.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>l</I
+></TT
+> is a list check that does
+	    some checks on <SPAN
+CLASS="SYSTEMITEM"
+>%files</SPAN
+>.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>c</I
+></TT
+> do a prep and compile.  This
+	    is useful when you are unsure of whether your source will build at
+	    all.  It seems useless because you might want to just keep playing
+	    with the source itself until it builds and then start using RPM, but
+	    once you become accustomed to using RPM you will find instances when
+	    you will use it.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>i</I
+></TT
+>do a prep, compile, and
+	    install.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>b</I
+></TT
+> prep, compile, install, and
+	    build a binary package only.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>a</I
+></TT
+>build it all (both source and
+	    binary packages).
+	  </P
+></LI
+></UL
+><P
+>	There are several modifiers to the <TT
+CLASS="PARAMETER"
+><I
+>-b</I
+></TT
+> switch.  They are as follows:
+      </P
+><P
+></P
+><UL
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>--short-circuit</I
+></TT
+> will skip
+	    straight to a specified stage (can only be used with c and i).
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>--clean</I
+></TT
+> removes the build tree
+	    when done.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>--keep-temps</I
+></TT
+> will keep all the
+	    temp files and scripts that were made in /tmp.  You can actually see
+	    what files were created in /tmp using the <TT
+CLASS="PARAMETER"
+><I
+>-v</I
+></TT
+> option.
+	  </P
+></LI
+><LI
+STYLE="list-style-type: disc"
+><P
+>	    <TT
+CLASS="PARAMETER"
+><I
+>--test</I
+></TT
+> does not execute any
+	    real stages, but does keep-temp.
+	  </P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TESTING-IT">7.5. Testing It</H2
+><P
+>	Once you have a source and binary rpm for your package, you need to test
+	it.  The easiest and best way is to use a totally different machine from
+	the one you are building on to test.  After all, you've just done a lot
+	of <B
+CLASS="COMMAND"
+>make install</B
+>'s on your own machine, so it should
+	be installed fairly well.
+      </P
+><P
+>	You can do an <B
+CLASS="COMMAND"
+>rpm -e packagename</B
+> on the package to
+	test, but that can be deceiving because in building the package, you did
+	a <B
+CLASS="COMMAND"
+>make install</B
+>.  If you left something out of your
+	file list, it will not get uninstalled.  You'll then reinstall the
+	binary package and your system will be complete again, but your rpm
+	still isn't.  Make sure and keep in mind that just because you do a
+	<B
+CLASS="COMMAND"
+>rpm -ba package</B
+>, most people installing your package
+	will just be doing the <B
+CLASS="COMMAND"
+>rpm -i package</B
+>.  Make sure you
+	don't do anything in the <SPAN
+CLASS="SYSTEMITEM"
+>build</SPAN
+> or
+	<SPAN
+CLASS="SYSTEMITEM"
+>install</SPAN
+> sections that will need to be done when
+	the binaries are installed by themselves.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="WHAT-TO-DO">7.6. What to do with your new RPMs</H2
+><P
+>	Once you've made your own RPM of something (assuming its something that
+	hasn't already been RPM'ed), you can contribute your work to others
+	(also assuming you RPM'ed something freely distributable).  To do so,
+	you'll want to upload it to <A
+HREF="ftp://ftp.redhat.com"
+TARGET="_top"
+>ftp.redhat.com</A
+>.
+      </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="WHAT-NOW">7.7. What Now?</H2
+><P
+>	Please see the above sections on Testing and What to do with new RPMs.
+	We want all the RPMs available we can get, and we want them to be good
+	RPMs.  Please take the time to test them well, and then take the time to
+	upload them for everyone's benefit.  Also, <EM
+>please</EM
+>
+	make sure you are only uploading <EM
+>freely available
+	software</EM
+>.  Commercial software and shareware should
+	<EM
+>not</EM
+> be uploaded unless they have a copyright
+	expressly stating that this is allowed.  This includes ssh, pgp, etc.
+      </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="build.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="multi-arch.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Building RPMs</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Multi-architectural RPM Building</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

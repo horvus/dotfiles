@@ -1,0 +1,88 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE> Linux DPT Hardware RAID HOWTO : Troubleshooting</TITLE>
+ <LINK HREF="DPT-Hardware-RAID-HOWTO-8.html" REL=next>
+ <LINK HREF="DPT-Hardware-RAID-HOWTO-6.html" REL=previous>
+ <LINK HREF="DPT-Hardware-RAID-HOWTO.html#toc7" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="DPT-Hardware-RAID-HOWTO-8.html">Next</A>
+<A HREF="DPT-Hardware-RAID-HOWTO-6.html">Previous</A>
+<A HREF="DPT-Hardware-RAID-HOWTO.html#toc7">Contents</A>
+<HR>
+<H2><A NAME="s7">7. Troubleshooting</A></H2>
+
+<H2><A NAME="ss7.1">7.1 Upon bootup, no SCSI hosts are detected</A>
+</H2>
+
+<P> This could be due to several reasons, but it's probably because
+the appropriate driver is not configured in the kernel. Check and make
+sure the appropriate driver (EATA-DMA or EATA ISA/EISA/PCI for most
+DPT cards) is configured. 
+<H2><A NAME="ss7.2">7.2 RAID configuration shows up as N different disks</A>
+</H2>
+
+<P> The RAID has not been configured properly.  If you're using a DPT
+storage manager, you need to configure the RAID disks as a single
+logical array.  Michael Neuffer (
+<A HREF="mailto:neuffer@uni-mainz.de">neuffer@uni-mainz.de</A>) writes: "When you configure
+the controller with the SM start it with the parameter /FW0 and/or
+select Solaris as OS. This will cause the array setup to be managed
+internally by the controller." 
+<H2><A NAME="ss7.3">7.3 Machine/controller is shut down in the middle of a format</A>
+</H2>
+
+<P> As stated in the DPT manual, this is clearly a no-no and might
+require the disks to be returned to the manufacturer, since the DPT
+Storage Manager might not be able format it. However, you might be
+able to perform a low level format on it, using a program supplied by
+DPT, called clfmt in their utilities page. Read the
+instructions after unzipping the clfmt.zip file on how to use it (and
+use it wisely). Once you do the low level format, you might be able to
+treat the disks like new. Use this program carefully!  
+<H2><A NAME="ss7.4">7.4 SCSI_ABORT_BUSY errors produced during initial filesystem format</A>
+</H2>
+
+<P> When you do a <CODE>mke2fs</CODE> on the SCSI drive, you may see errors
+of the form:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+scsi: aborting command due to timeout : pid xxx, scsi0, channel 0, id
+2, lun 0
+write (10) xx xx xx xx xx xx xx xx xx
+eata_abort called pid xxx target: 2 lun: 0 reason: 3
+Returning: SCSI_ABORT_BUSY
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>and this might end up causing the machine to freeze.  I (and many
+others) have been able to fix this problem by simply reading one or
+two hundred MB from the RAID array with <CODE>dd</CODE> like this:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+% dd if=/dev/sdX of=/dev/null bs=1024k count=128
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P> During a format, a fast rush of requests for chunks of memory that
+is directly accessible is made, and sometimes the memory manager
+cannot deliver it on time anymore.  The <CODE>dd</CODE> is a workaround
+that will simply create the requests sequentially instead of one huge
+heap at once like the format tends to create it. 
+<H2><A NAME="ss7.5">7.5 If all fails...</A>
+</H2>
+
+<P> Read the SCSI-HOWTO again.  Check the cabling and the termination.
+Try a different machine if you have access to one.  The most common
+cause of problems with SCSI devices and drivers is because of faulty
+or misconfigured hardware.  Finally, you can post to the various
+newsgroups or e-mail me, and I'll do my best to get back to you. 
+<HR>
+<A HREF="DPT-Hardware-RAID-HOWTO-8.html">Next</A>
+<A HREF="DPT-Hardware-RAID-HOWTO-6.html">Previous</A>
+<A HREF="DPT-Hardware-RAID-HOWTO.html#toc7">Contents</A>
+</BODY>
+</HTML>

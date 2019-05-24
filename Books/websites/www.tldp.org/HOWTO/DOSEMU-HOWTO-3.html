@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>The dosemu HOWTO: Hard disk setup</TITLE>
+ <LINK HREF="DOSEMU-HOWTO-4.html" REL=next>
+ <LINK HREF="DOSEMU-HOWTO-2.html" REL=previous>
+ <LINK HREF="DOSEMU-HOWTO.html#toc3" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="DOSEMU-HOWTO-4.html">Next</A>
+<A HREF="DOSEMU-HOWTO-2.html">Previous</A>
+<A HREF="DOSEMU-HOWTO.html#toc3">Contents</A>
+<HR>
+<H2><A NAME="s3">3. Hard disk setup</A></H2>
+
+<H2><A NAME="ss3.1">3.1 How do I use my hard disk with dosemu?</A>
+</H2>
+
+<P>First, mount your dos hard disk partition as a Linux subdirectory.
+For example, you could create a directory in Linux such as /dos (mkdir
+-m 755 /dos) and add a line like
+<PRE>
+   /dev/hda1       /dos     msdos   umask=022
+</PRE>
+
+to your /etc/fstab.  (In this example, the partition is mounted
+read-only.  You may want to mount it read/write by replacing "022"
+with "000" and using the -m 777 option with mkdir).  Now <B>mount
+/dos</B>.  
+The README.txt says:
+<PRE>
+  you just can have a Linux directory containing all what you
+  want to have under your DOS C:. Copy your IO.SYS, MSDOS.SYS or what
+  ever to that directory (e.g. /var/lib/dosemu/bootdir), put
+
+          $_hdimage = "bootdir"
+
+
+  into your /etc/dosemu.conf, and up it goes. DOSEMU makes a lredir'ed
+  drive out of it and can boot from it. You can edit the config.sys and
+  the autoexec.bat within this directory before you start dosemu.  Fur-
+  ther more, you may have a more sohisticated setup. Given you want to
+  run the same DOS drive as you normal have when booting into native
+  DOS, then you just mount you DOS partition under Linux (say to /dos)
+  and put links to its subdirectories into the boot dir. This way you
+  can decide which files/directories have to be visible under DOSEMU and
+  which have to be different. Here's a small and incomplete example
+  bootdir setup:
+
+
+         config.sys
+         autoexec.bat
+         command.com -> /dos/command.com
+         io.sys -> /dos/io.sys
+         msdos.sys -> /dos/msdos.sys
+         dos -> /dos/dos
+         bc -> /dos/bc
+         windows -> /dos/windows
+
+
+  There is, however, one drawback, you can't use the DosC kernel
+  (FreeDos) for it, because it hasn't yet a working redirector (will
+  hopefully be available some time in the future).
+</PRE>
+<P>
+<H2><A NAME="ss3.2">3.2 How can I access the hdimage from Linux?</A>
+</H2>
+
+<P>Use mtools. With a line in <B>/etc/mtools.conf</B> like 
+<PRE>
+
+   drive n:  file="/var/lib/dosemu/hdimage" MTOOLS_SKIP_CHECK=1 \
+   MTOOLS_LOWER_CASE=1 MTOOLS_NO_VFAT=1 partition=1 offset=128
+</PRE>
+
+you can use the mtools on the hdimage, like "mdir n:". "mcopy
+n:/config.emu /tmp" copies the config.emu file from the hdimage to
+/tmp/config.emu. You can edit it there and copy it back. Use a drive
+letter you find sensible. "N:" is only an example.
+<P>
+<H2><A NAME="ss3.3">3.3 Can I use my stacked/double-spaced/super-stored disk?</A>
+</H2>
+
+<P>At this time, compressed drives cannot be accessed via the
+redirector (lredir or emufs) on a standard kernel. There is a patch
+for the kernel to mount compressed files under the name "dmsdosfs".
+Find it on sunsite.unc.edu and its mirrors
+<BLOCKQUOTE><CODE>
+<A HREF="http://sunsite.unc.edu:/pub/Linux/system/filesystems/dosfs/">http://sunsite.unc.edu:/pub/Linux/system/filesystems/dosfs/</A></CODE></BLOCKQUOTE>
+
+A good idea is also to look in 
+<A HREF="http://sunsite.unc.edu:/pub/Linux/Incoming">http://sunsite.unc.edu:/pub/Linux/Incoming</A> for
+a newer version. 
+The "wholedisk" option in older versions of dosemu is no longer
+allowed in recent versions, however, a line like
+<PRE>
+   $_hdimage = "/dev/hda1"
+</PRE>
+
+may work, at the risk that you could lose all data in that partition
+on a dosemu crash.
+<P>If your dos partition is already mounted with write access and you try
+to run dosemu with partition access, dosemu will print a
+warning message and abort.  This prevents DOS and Linux from making
+independent writes to your disk and trashing the data on your dos
+partition(95/8/11).
+<P>---------------------
+<P>If LILO is installed, the above will not work.  However...
+<P>Thomas Mockridge (<B>thomas@aztec.co.za</B>) reported (94/8/5) that
+<P>To boot dosemu with LILO and Stacker 4.0 I did a little work around...
+<P>1. <B>dd</B> the MBR to a file. (or norton utility, etc., first 512 bytes)
+<P>2. Boot dos (from full boot not emu), do a fdisk /mbr, make your dos
+partition active with (dos) fdisk.
+<P>3. Copy the new MBR to a file.
+<P>4. Replace the original MBR
+<P>5. Copy the second MBR to /var/lib/dosemu/partition.hda? (Whichever is
+your dos partition)  
+<P>6. Set dosemu.conf 
+<PRE>
+               disk {partition "/dev/hda? ?"}
+</PRE>
+<P>7. Start dosemu and and voila!  No LILO.
+<P>For recent versions of dosemu you need to change the 
+<PRE>
+               disk {partition "/dev/hda? ?"}
+</PRE>
+
+line to something like
+<PRE>
+               $_hdimage = "/dev/hda1"
+</PRE>
+
+---------------------
+<P>Holger Schemel (<B>q99492@pbhrzx.uni-paderborn.de</B>) reported
+(94/2/10) that
+<P>Works even fine under dosemu with MS-DOS 6.0. If you have problems, then
+you have to edit the file 'DBLSPACE.INI' manually and change the disk
+letter to the letter your drive gets under dosemu.
+<P>---------------------
+<P>Darren J Moffat (<B>moffatd@dcs.gla.ac.uk</B>) also reported
+(94/3/27)
+<P>"...use 6.2 if you can get it!!  Just make sure you have a
+LILO boot disk on hand since dos 6{.2} will change the MBR of the boot
+HZ."
+<P>
+<H2><A NAME="ss3.4">3.4 Creating your own hdimage file.</A>
+</H2>
+
+<P>The easy way is to use mkdexe - see README.txt for details.
+The old-fashioned way (I don't know why anyone would want to do
+it that way any more but here it is, just in case) is as follows:
+<P>There is an extra util program called mkfatimage16 which
+allows for creating a hdimage file headers.  The full information is in the
+manpage (man/mkfatimage16.1) included in your distribution.
+<P>To create a hard disk image file with a geometry corresponding to that of a
+real hard disk of 32 megabytes run:
+<PRE>
+mkfatimage16 -k 32768 > hdimage
+</PRE>
+<P>This is probably too large for most needs; if you need this much
+space, consider using the disk redirector."
+<P>Usually it is a good idea to format the drive after it.
+<P>
+<HR>
+<A HREF="DOSEMU-HOWTO-4.html">Next</A>
+<A HREF="DOSEMU-HOWTO-2.html">Previous</A>
+<A HREF="DOSEMU-HOWTO.html#toc3">Contents</A>
+</BODY>
+</HTML>

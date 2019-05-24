@@ -1,0 +1,629 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Extending a logical volume</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Common Tasks"
+HREF="commontask.html"><LINK
+REL="PREVIOUS"
+TITLE="Removing a logical volume"
+HREF="removelv.html"><LINK
+REL="NEXT"
+TITLE="Reducing a logical volume"
+HREF="reducelv.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="removelv.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. Common Tasks</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="reducelv.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="extendlv"
+></A
+>11.9. Extending a logical volume</H1
+><P
+>&#13;        To extend a logical volume you simply tell the lvextend command how
+        much you want to increase the size. You can specify how much to
+        grow the volume, or how large you want it to grow to:
+        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># lvextend -L12G /dev/myvg/homevol</B
+>
+<TT
+CLASS="computeroutput"
+>lvextend -- extending logical volume "/dev/myvg/homevol" to 12 GB
+lvextend -- doing automatic backup of volume group "myvg"
+lvextend -- logical volume "/dev/myvg/homevol" successfully extended</TT
+>
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        will extend <TT
+CLASS="filename"
+>/dev/myvg/homevol</TT
+> to 12 Gigabytes.
+      </P
+><P
+>&#13;        <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># lvextend -L+1G /dev/myvg/homevol</B
+>
+<TT
+CLASS="computeroutput"
+>lvextend -- extending logical volume "/dev/myvg/homevol" to 13 GB
+lvextend -- doing automatic backup of volume group "myvg"
+lvextend -- logical volume "/dev/myvg/homevol" successfully extended</TT
+>
+        </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+        will add another gigabyte to <TT
+CLASS="filename"
+>/dev/myvg/homevol</TT
+>.
+      </P
+><P
+>&#13;        After you have extended the logical volume it is necessary to
+        increase the file system size to match. how you do this depends on
+        the file system you are using.
+      </P
+><P
+>&#13;        By default, most file system resizing tools will increase the size
+        of the file system to be the size of the underlying logical volume
+        so you don't need to worry about specifying the same size for each
+        of the two commands.
+      </P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>&#13;            <STRONG
+>&#13;              ext2/ext3
+            </STRONG
+>
+          </P
+><P
+>&#13;            Unless you have patched your kernel with the ext2online
+            patch it is necessary to unmount the file system before
+            resizing it.  (It seems that the online resizing patch is
+            rather dangerous, so use at your own risk)
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;   <B
+CLASS="command"
+># umount /dev/myvg/homevol/dev/myvg/homevol
+   # resize2fs /dev/myvg/homevol
+   # mount /dev/myvg/homevol /home</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+><P
+>   
+            If you don't have e2fsprogs 1.19 or later, you can download
+            the ext2resize command from 
+            <A
+HREF="http://ext2resize.sourceforge.net"
+TARGET="_top"
+>ext2resize.sourceforge.net</A
+>
+            and use that:
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;   <B
+CLASS="command"
+># umount /dev/myvg/homevol/dev/myvg/homevol
+   # ext2resize /dev/myvg/homevol
+   # mount /dev/myvg/homevol /home</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+><P
+>&#13;            For ext2 there is an easier way. LVM 1 ships with a utility
+            called e2fsadm which does the lvextend and resize2fs for you
+            (it can also do file system shrinking, see the next section).
+
+            <DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>LVM 2 Caveat</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;                There is currently no e2fsadm equivalent for
+                LVM 2 and the e2fsadm that ships with LVM 1
+                does not work with LVM 2.
+              </P
+></TD
+></TR
+></TABLE
+></DIV
+>
+
+            so the single command
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;   <B
+CLASS="command"
+># e2fsadm -L+1G /dev/myvg/homevol</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            is equivalent to the two commands:
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;   <B
+CLASS="command"
+># lvextend -L+1G /dev/myvg/homevol
+   # resize2fs /dev/myvg/homevol</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            <DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;                You will still need to unmount the file system before
+                running e2fsadm.
+              </P
+></TD
+></TR
+></TABLE
+></DIV
+>
+          </P
+></LI
+><LI
+><P
+>&#13;            <STRONG
+>&#13;              reiserfs
+            </STRONG
+>
+          </P
+><P
+>&#13;            Reiserfs file systems can be resized when mounted or
+            unmounted as you prefer:
+            <P
+></P
+><UL
+><LI
+><P
+>&#13;                  Online:
+                  <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;   <B
+CLASS="command"
+># resize_reiserfs -f /dev/myvg/homevol</B
+>
+                  </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+                </P
+></LI
+><LI
+><P
+>&#13;                  Offline:
+                  <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;   <B
+CLASS="command"
+># umount /dev/myvg/homevol
+   # resize_reiserfs /dev/myvg/homevol
+   # mount -treiserfs /dev/myvg/homevol /home</B
+>
+                  </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+                </P
+></LI
+></UL
+>
+          </P
+></LI
+><LI
+><P
+>&#13;            <STRONG
+>&#13;              xfs
+            </STRONG
+>
+          </P
+><P
+>&#13;            XFS file systems must be mounted to be resized and the
+            mount-point is specified rather than the device name.
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;   <B
+CLASS="command"
+># xfs_growfs /home</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+></LI
+><LI
+><P
+>&#13;            <STRONG
+>&#13;              jfs
+            </STRONG
+>
+          </P
+><P
+>&#13;            Just like XFS the JFS file system must be mounted to be
+	    resized and the mount-point is specified rather than the
+	    device name.  You need at least Version 1.0.21 of the
+	    jfs-utils to do this.
+            <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># mount -o remount,resize /home</B
+>
+            </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+          </P
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Known Kernel Bug</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;              Some kernel versions have problems with this syntax
+              (2.6.0 is known to have this problem). In this case you
+              have to explicitly specify the new size of the
+              filesystem in blocks.  This is extremely error prone as
+              you <EM
+>must</EM
+> know the blocksize of your
+              filesystem and calculate the new size based on those
+              units.
+            </P
+><P
+>&#13;              Example: If you were to resize a JFS file system to 4
+              gigabytes that has 4k blocks, you would write:
+              <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;<B
+CLASS="command"
+># mount -o remount,resize=1048576 /home</B
+>
+              </PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+            </P
+></TD
+></TR
+></TABLE
+></DIV
+></LI
+></OL
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="removelv.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="reducelv.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Removing a logical volume</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="commontask.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Reducing a logical volume</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,462 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Plug-and-Play-HOWTO: How Do I Find Devices and How Are They Configured? </TITLE>
+ <LINK HREF="Plug-and-Play-HOWTO-7.html" REL=next>
+ <LINK HREF="Plug-and-Play-HOWTO-5.html" REL=previous>
+ <LINK HREF="Plug-and-Play-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Plug-and-Play-HOWTO-7.html">Next</A>
+<A HREF="Plug-and-Play-HOWTO-5.html">Previous</A>
+<A HREF="Plug-and-Play-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="current_config"></A> <A NAME="s6">6.</A> <A HREF="Plug-and-Play-HOWTO.html#toc6">How Do I Find Devices and How Are They Configured? </A></H2>
+
+<H2><A NAME="ss6.1">6.1</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.1">Finding and How-Configured Are Related </A>
+</H2>
+
+<P>Once you find your hardware, the same program that found it usually
+tells you how it's configured.  So finding out how it's configured is
+usually the same procedure as finding the hardware.</P>
+
+<H2><A NAME="ss6.2">6.2</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.2">Devices May Have Two "Configurations" </A>
+</H2>
+
+<P> Here "configuration" means the assignment of PnP bus-resources
+(addresses, IRQs, and DMAs).  For each device, there are two parts to
+the configuration question:
+<OL>
+<LI> What does the driver think the hardware configuration is? </LI>
+<LI> What configuration (if any) is actually set in the device
+hardware? </LI>
+</OL>
+
+Each part should have the same answer (the same configuration).  The
+configuration of the device hardware and its driver should obviously
+be the same (and usually is).  But if things are not working right, it
+could be because there's a difference.  This means that the driver has
+incorrect information about the actual configuration of the hardware.
+This spells trouble.  If the software you use doesn't adequately tell
+you what's wrong (or automatically configure it correctly) then you
+need to investigate how your hardware devices and their drivers are
+configured.  While Linux device drivers should "tell all", in some
+cases it may not be easy to determine what has been set in the
+hardware.</P>
+<P>Another problem is that when you view configuration messages on the
+screen you need to know whether the reported configuration is
+that of the device driver, the device hardware, or both.  If the
+device driver has either set the configuration in the hardware or has
+otherwise checked the hardware then the driver should have the correct
+information.</P>
+<P>But sometimes the driver has been provided incorrect resources by a
+script, configuration file, by incorrect resource parameters given to
+a module, or perhaps just hasn't been told what the resources are and
+tries to use incorrect default resources.  For example, one can uses
+"setserial" to tell the serial port driver an incorrect resource
+configuration and the driver accepts it without question.  But the
+serial port doesn't work right (if at all).</P>
+
+<H2><A NAME="ss6.3">6.3</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.3">Finding Hardware </A>
+</H2>
+
+<P>A common problem is that the software doesn't detect your device
+and/or determine the right driver for it.  For PnP devices, detecting
+them is easy via PnP software except for the unusual case where the
+hardware has been disabled.  The BIOS can sometimes be set to disable
+PnP devices or a jumper/switch on the physical device itself could
+disable it.  In such a cases, the hardware can't be detected at all
+until you either reconfigure the BIOS or change a jumper/switch.</P>
+<P>Since the PCI bus is inherently PnP, there are no hidden devices.
+Even though PnP devices are easy to find by PnP methods, if the driver
+doesn't use PnP methods but uses the old method of probing for them at
+likely address, they may not be found.  This is because that, until the
+resources are set in a PnP device (by the BIOS or Linux), the device
+may have no address at all, so probing at likely address yields
+nothing.  For the old ISA bus, some of the devices may be non-PnP and
+thus the old probing methods may find them.  So many drivers still
+probe at likely address, in addition to using PnP methods (= PnP
+probing which is sometimes also just called "probing").</P>
+<P>Ways to Find Hardware Devices (and their configurations): (follow link
+to more details) 
+<UL>
+<LI>Check the BIOS to make sure they are not disabled </LI>
+<LI>Watch the 
+<A HREF="#boot_time_msgs">Boot-time Messages</A> on
+the screen</LI>
+<LI>Look in 
+<A HREF="#proc_dir">The /proc Directory Tree</A></LI>
+<LI> 
+<A HREF="#hw_detect">Tools for Detecting and/or Configuring   all Hardware</A> lsdev, hwinfo, discover, kudzu</LI>
+<LI> 
+<A HREF="#hw_detect_one_type">Tools for Detecting and/or   Configuring One Type of Hardware</A></LI>
+<LI> PCI: 
+<A HREF="#pci_">PCI Bus Inspection</A></LI>
+<LI> ISA Bus: 
+<A HREF="#isa_bus">ISA Bus Introduction</A></LI>
+<LI> ISA Bus: 
+<A HREF="#isa_pnp">PnP cards</A></LI>
+<LI> ISA Bus: For 
+<A HREF="#non_pnp">Non-PnP Cards</A></LI>
+<LI> ISA Bus: For 
+<A HREF="#jumpers_">Cards with jumpers</A></LI>
+<LI> ISA Bus: If 
+<A HREF="#neither_">Neither PnP nor jumpers</A></LI>
+<LI> 
+<A HREF="#check_ms">Use MS Windows</A></LI>
+</UL>
+</P>
+
+<H2><A NAME="boot_time_msgs"></A> <A NAME="ss6.4">6.4</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.4">Boot-time Messages </A>
+ </H2>
+
+<P>Significant info on the configuration may be obtained by reading
+the messages from the BIOS and from Linux that appear on the screen
+when you first start the computer.  These messages often flash by too
+fast to read but once they stop type Shift-PageUp a few times to
+scroll back to them.  To scroll forward thru them type Shift-PageDown.
+Typing "dmesg" at any time to the shell prompt will show only the
+Linux kernel messages and may miss some of the most important ones
+(including ones from the BIOS).  The messages from Linux may sometimes
+only show what the device driver thinks the configuration is, perhaps
+as told it via an incorrect configuration file.  Checking log files in
+/var/log may also be useful.</P>
+<P>For the PCI bus, the notation: 00:1a:0 means the PCI bus 00 (the main
+PCI bus), PCI card (or chip) 1a, and function 0 (the first device) on
+the card or chip.  The 2nd device on the card (or chip) 08 would be:
+00:08:1.</P>
+<P>The BIOS messages display first and will show the actual hardware
+configuration at that time, but isapnp, or pci utilities, or device
+drivers may change it later.  In some cases it doesn't show devices
+that the BIOS didn't configure.</P>
+<P>
+<A NAME="pause_"></A> If the BIOS messages don't show as you back up to
+the start of the BIOS messages using Shift-PageUp, try freezing them
+as they flash by, by hitting the "Pause" key as soon as the first
+words flash on the screen.  Press any key to resume.  It's often
+tricky to hit Pause exactly at the right time.  Be sure to hold down
+the "Shift" key before hitting "Pause" since "Pause" is a shifted key.
+If you miss, hit Ctrl-Alt-Del when Linux starts booting to reboot and
+try again.  Once the messages from Linux start to appear, it's too
+late to use "Pause" since it will not freeze the messages from Linux.</P>
+<P>To set things in the BIOS such as IRQs reserved for legacy hardware,
+serial port addresses, etc. you need to get into the BIOS (CMOS) setup
+menus at boot time.  Each BIOS brand has different keys you need to
+hold down to do this.  There are lists on the Internet.  Sometimes by
+freezing the BIOS messages or watching the screen, the key you need to
+press will be indicated in a message such as "Press DEL for setup".
+But it may flash by so fast that you miss it.  Of course, you don't set
+stuff in the BIOS that you don't understand, or your PC may become
+disabled.</P>
+<P>Messages from the BIOS at boot-time tell you how the hardware
+configuration was then.  The current configuration may still be the
+same since Linux should hopefully accept what the BIOS has done if
+it's OK.  Messages from Linux may be from drivers that used kernel PnP
+functions to inspect and/or set bus-resources.  These should be
+correct, but beware of messages that only show what the driver was
+told from a configuration file.  It could be wrong.  Of course, if the
+device works fine, then it's likely configured the same as the driver.</P>
+
+<H2><A NAME="proc_dir"></A> <A NAME="ss6.5">6.5</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.5">The /proc Tree</A>
+</H2>
+
+<P>Starting with Kernel 2.6, in addition to the /proc directory tree,
+there's also a /sys  tree See 
+<A HREF="#sys_dir">The /sys Tree</A>.   These trees are useful for finding resource
+configurations and devices.  The "files" in them represent data in the
+kernel memory and don't exist at all on you harddrive.  Programs such
+as lspci get their info from the /proc tree so such programs should
+display the results in more readable form than directly inspecting the
+"files" in /proc.  Here are 4 /proc "files" that show resources which
+have been registered in the kernel by device drivers.</P>
+<P>Since Linux's plug-and-play works by letting device drivers allocate
+resources for their device, there may be no listing of resources used
+by some of your hardware if the driver hasn't yet requested that such
+resources be reserved.  For the case of kernel modules (loadable
+device drivers), if the module hasn't loaded yet, the kernel doesn't
+know about any resources it needs.  Sometimes, the module only loads
+when you start an application that needs it.  So if certain hardware
+is missing from these "files" in /proc, it may mean that the hardware
+hasn't yet been used.  For example, even though your floppy drive has
+a floppy disk in it and is ready to use, the interrupt for it will
+not show up unless its in use.  </P>
+<P>/pts shows I/O addresses.  If there's a mistake (wrong
+address) it means trouble since the device will not get bytes sent to
+it.<BR>
+/proc/iomem shows registered IO memory addresses.<BR>
+/proc/interrupts shows the interrupts currently in use.<BR>
+/proc/dma shows the dma (Direct Memory Access) ISA dma channel allocations.</P>
+<P>In the past, the author observed the listing of interrupts that didn't
+exist.  In some cases it showed that a few such interrupts were
+actually sent.  This could be due to the issuing of erroneous
+interrupts due to hardware defects.</P>
+<P>/proc/bus/ has subdirectories (subfolders) input/, pci/, and
+isapnp/.  The format of most of the files in this directory is very
+cryptic, often just a copy of the bytes in the configuration space.
+So, use them only as a last resort.  The input/ subdirectory has
+information on input devices such as the keyboard and mouse.  It's not
+as cryptic as the other directories under /proc/bus/ and might yield
+some useful information about input devices that are PS2 or on the LPC
+bus (See 
+<A HREF="#lpc_">LPC Bus</A>).  Unfortunately, what I've
+seen doesn't say that it's on the LPC bus when it likely is.  In
+/pci/00/ there is one binary file for each pci device where the file
+names are the pci-slot-numbers (also called pci-slot-names).  The 00
+means pci bus 0.</P>
+
+<H2><A NAME="sys_dir"></A> <A NAME="ss6.6">6.6</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.6">The /sys Tree</A>
+</H2>
+
+<P>Starting with kernel 2.6 there's a new /sys directory for PnP
+configuration.  It's a sysfs type of file system and it's something
+like the /proc filesystem since the "files" represent information in
+the kernel memory and are not on your harddrive.  But it's not as
+useful as the /proc filesystem.  Originally (in the 2.5 kernels) it
+was called "driver file system" of type "driverfs".</P>
+<P>In the sysfs, each device which exists on your system has it's own
+directory which contains files showing the resources allocated to it.
+Such device directories have names like 0000:00:12.0@ or 00:06@.  What
+devices are these?  The first is a PCI card in "slot" 12 of your PC.
+The slot may actually be labeled PCI2 inside your PC (2 instead of
+12).  That's because low numbered "slots" are used for built-in
+devices on the motherboard that don't use any physical slots.  In this
+example, "slots" 1-10 would be built-in and actual slots 11-14 are
+labeled 1-4.  By typing "lspci" you'll be able to match the numbers
+(like 0000:00:12.0) to names (like IDE interface).  Type "lspci -v"
+or "lspci -vv" to see more.</P>
+<P>Well then, what is 00:06 ?  It's an ISA card (or built-in device) but
+it's not ISA slot 6 (like the PCI numbering).  When a search was made
+for ISA-PNP devices, it was the 6th one found.  More precisely, it was
+the 7th one found since there's a device numbered: 00:00.  So how does
+one identify them?  Well, you could type: "cat */*" and display all
+the files for all the devices, but even then you don't see the device
+names (but do see info from which you can identify them).  This
+inconvenience will hopefully be fixed in the future.</P>
+<P>Not only do these files supply information on the bus-resource
+configuration (in somewhat cryptic format) and drivers (in "driver"
+directories), but in the future, you should be able to use them to
+change the resource configuration.  Right now (Aug 2004) you can't
+configure the PCI bus with it.  A serious limitation is that per the
+present "driver model" you can't change the resource of a device that
+has been assigned to a driver which likely means that you'll need to
+unload the driver module in order to use it.  If the driver is built
+in, there's no hope.  These serious limitations will hopefully be
+eliminated in the future.  In the kernel documentation is a file:
+"pnp.txt" telling how to configure.  As of Aug. 2004, it was much
+out-of-date but the author is working on an update.  Using the /sys
+tree to configure resources is known as the "Linux Plug and Play User
+Interface".  </P>
+<P>The other part of "Linux Plug and Play" is the kernel interface used
+by device drivers.  This has changed a lot starting with kernel 2.6
+but most drivers are still using the old interface (as of Aug. 2004).
+It's possible also for drivers (or you) to use the "user interface"
+which needs improvement.</P>
+
+<H2><A NAME="pci_"></A> <A NAME="ss6.7">6.7</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.7">PCI Bus Inspection </A>
+ </H2>
+
+<P> It's easy to find out what bus-resources have been assigned to
+devices on the PCI bus with the "lspci" and/or "scanpci" commands
+The options -v or -vv will show more detail.  In some cases, "scanpci"
+will find a device that "lspci" can't find.  That's because "scanpci"
+directly searches for devices on the pci bus (via the configuration
+space) and doesn't use data obtained by the kernel (where it could be
+wrong due to a kernel bug --I've just found such a case).</P>
+<P>This info in more cryptic format is found in "files" located in the
+<CODE>/sys</CODE> and <CODE>/proc</CODE> trees. In
+<CODE>/sys/bus/pci/devices</CODE> the file <CODE>vendor</CODE> will contain the
+vendor id number such as 0x4B8C, etc.  In still more cryptic format
+it's in <CODE>/proc/bus/pci</CODE>.  Such information in older kernels
+prior to kernel 2.6, was in <CODE>/proc/pci</CODE> (non-cryptic but IRQs
+in hexadecimal) or in <CODE>/proc/buspci/devices</CODE> (cryptic display). </P>
+<P>In most cases for PCI you will only see how the hardware is now
+configured and not what resources are required.  In some cases you
+only see the base addresses (the starting addresses of the range) but
+not the ending addresses.  If you see the entire range then you can
+determine how many bytes of address resources are needed. </P>
+
+<H2><A NAME="isa_bus"></A> <A NAME="ss6.8">6.8</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.8">ISA Bus Introduction </A>
+ </H2>
+
+<P>For cards on the ISA bus, it's not as simple as for the PCI bus
+which is inherently PnP.  Later ISA cards were PnP but older ones were
+not.  Also, some cards that are PnP had their PnP disabled by
+special software which runs only on MS.  The non PnP cards are
+configured by jumpers on the card or by MS software.</P>
+
+<H2><A NAME="isa_pnp"></A> <A NAME="ss6.9">6.9</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.9">ISA PnP cards </A>
+ </H2>
+
+<P>If it's a PnP card you may try running <CODE>pnpdump --dumpregs</CODE>
+but it's not a sure thing.  The results may be seem cryptic but they
+can be deciphered.  Don't confuse the read-port address which
+<CODE>pnpdump</CODE> uses for communication with PnP cards with the I/O
+address of the found device.  They are not the same.  </P>
+
+<H2><A NAME="lpc_"></A> <A NAME="ss6.10">6.10</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.10">LPC Bus </A>
+</H2>
+
+<P>LPC (Low Pin Count) is a bus-like interface often used on laptops
+and increasingly used on desktops too.  To find out if you have LPC
+type "lspci" and look for "LPC".  There are other words next to "LPC"
+such as "ISA Bridge ... LPC Interface Controller" or "LPC Bridge",
+etc.  LPC is not really ISA but it substitutes for an ISA bus.</P>
+<P>The old ISA bus was slow and devices that needed more speed were put
+on the newer PCI but.  But devices that didn't need high speed were
+often implemented by chips on the motherboard and remained on the ISA
+bus even though there were no slots for any ISA cards.  Then the LPC
+bus came along to replace what remained of the ISA bus.  LPC is much
+smaller than ISA and just as fast since it runs at 4 times the clock
+speed of ISA.  Its multiplexed bus for data/address and control is
+only 4 bits wide.  To send a byte requires splitting the byte into 2
+half-bytes and then putting them back together.  So its clear why it's
+"Low Pin Count" = LPC.  There's also a few other lines in the bus.</P>
+<P>This small LPC interface is used for slow "legacy" devices such as
+serial ports, parallel ports, and floppy drives.  So a computer using
+LPC will have all fast devices on the PCI bus, etc. and slow (legacy)
+devices on the LPC bus interface.  All LPC devices will be on-board;
+there are no LPC slots.</P>
+<P>LPC has no standards for Plug-and-Play configuring but says that the
+BIOS or ACPI should do the configuring.  Devices on this bus sometimes
+use isapnp.  Linux support for LPC as of late 2004 was very much
+incomplete but Linux has some support for the configuring aspects of
+ACPI.  Sometimes a BIOS menu lets one manually PnP-configure devices
+on the LPC bus but it may not tell you that the device resides on LPC.</P>
+<P>A major chip on the LPC bus is the superio chip which contains legacy
+IO devices: serial and parallel ports, floppy controller, keyboard
+controller, mice, etc.  BIOS data may also reside on the LPC bus.  The
+keyboard and mouse (input devices) should be listed in
+/proc/bus/input/devices but instead of seeing "lpc" it seems to show
+"isa0060/serio0, etc. even though it's on the lpc bus and not the isa
+bus.</P>
+
+<H2><A NAME="ss6.11">6.11</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.11">X-bus</A>
+</H2>
+
+<P>Before the LPC bus became popular, there was an "X-bus" (not
+covered in this HOWTO) which served the same purpose as the LPC bus
+but wasn't so compact as LPC.  Some PCs have both LPC and an X-bus.</P>
+
+<H2><A NAME="non_pnp"></A> <A NAME="ss6.12">6.12</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.12">Non-PnP Cards </A>
+ </H2>
+
+<P>In contrast to PnP cards, non-PnP cards always have their resources
+set in the hardware.  That is they always have an address and IRQ
+unless there is a jumper setting, etc. for disabling the device.
+Sometimes the resources used can be found by probing done by the
+device driver or by other software that does probing.  For example
+"scanport" (Debian only ??) probes most IO port address and may find
+ISA devices.  But be warned that it might hang your PC.  Sometimes it
+will fail to find hardware that's actually there (since the hardware
+has the default 0xff in it's registers).  Even if It finds the
+hardware it will not show the IRQ nor will it positively identify the
+hardware.</P>
+<P>So one way to try to find such hardware is to start a driver, which
+may probe for such hardware.  By looking at the boot-time messages,
+you might see a driver start and find the hardware.  Otherwise, you
+may need to find a driver and start it (for example, by having it load
+as a module).</P>
+<P>Finding the right driver may be difficult.  Sometimes there just isn't
+any driver since some devices aren't (yet ?) supported by Linux.  To
+determine which driver you need, look at any documentation which might
+identify the card.  If this fails, look on the card itself, including
+important names/numbers on the chips.  But the identification of the
+driver module you need may not be anywhere on the card.  You could
+find the FCC id on the card and then search the Internet with the FCC
+id number to try to find more information about the card (or the chips
+on it).</P>
+
+<H2><A NAME="jumpers_"></A> <A NAME="ss6.13">6.13</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.13">Non-PnP Cards with jumpers </A>
+ </H2>
+
+<P>If the card has jumpers to set the resources (configuration) then
+one may look at how the jumpers are set.  There are some cards that
+had both PnP and jumpers.   They worked like jumper cards if PnP was
+somehow disabled.  Sometimes a card has labels on it showing how to
+set the jumpers (or at least gives some clue).  You may need the
+documentation that came with the card (either printed or on a floppy
+disk).  Perhaps you can find it on the Internet.</P>
+
+<H2><A NAME="neither_"></A> <A NAME="ss6.14">6.14</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.14">Neither PnP nor jumpers </A>
+ </H2>
+
+<P>One the most difficult cases is where software running under MS has
+been used to configure either a non-PnP card or a PnP card where PnP
+has been disabled by the same MS software.  So you can't configure it
+by PnP nor by jumpers.  In this case your only hope is to probe for
+addresses as described in 
+<A HREF="#non_pnp">Non-PnP Cards</A>.  Or
+try to find the MS software that configured it.</P>
+
+<H2><A NAME="hw_detect"></A> <A NAME="ss6.15">6.15</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.15">Tools for Detecting and/or Configuring all Hardware</A>
+ </H2>
+
+<P>In a duplication of effort, various major distributions of Linux
+developed their own tools for detection and/or configuration of
+hardware.  This configuring is usually a lot more than just the
+resource type configuring of Plug-and-Play.  It's configuring in
+general which is mostly beyond the scope of this howto.</P>
+<P>Then other distributions, such as Debian, might obtain copies of the
+tool and offer it to their users as an option, or as a troubleshooting
+tool.  These tools likely make use of the standard Linux tools for
+detecting hardware such as "lspci".  In the following list of tools,
+the name of the distribution that developed it is in parentheses, but
+the tool is likely available also in other distributions.</P>
+<P>
+<UL>
+<LI>hardinfo </LI>
+<LI>hwinfo (SuSE) detects move stuff than discover</LI>
+<LI>discover (Progeny, used by Debian)</LI>
+<LI>Kudzu (RedHat) detects and configures</LI>
+<LI>lsdev (standard Linux command)</LI>
+<LI>hwsetup-knoppix (Knoppix, based on Kudzu)</LI>
+</UL>
+</P>
+
+<H2><A NAME="hw_detect_one_type"></A> <A NAME="ss6.16">6.16</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.16">Tools for Detecting and Configuring One Type of Hardware</A>
+</H2>
+
+<P>There are various tools available to find and possibly configure 
+various type of devices.  This configuring is configuring in general
+which is not covered by this howto.</P>
+<P>
+<UL>
+<LI>read-edid (get-edid): gets parameters of VESA monitors (except
+very old ones)</LI>
+<LI>sndconfig: for soundcards</LI>
+<LI>printtool: printers, must have X-window running</LI>
+<LI>pconf-detect: parallel ports</LI>
+<LI>gpm-mouse-test:detects and tests mice</LI>
+<LI>mdetect: detects and configures mice 
+Does it know about the mice devices in /dev/input/?</LI>
+<LI></LI>
+<LI>nictools-pci (and nictools-nopci)  for ethernet cards</LI>
+<LI>hdparm: configure hard drive hardware</LI>
+<LI>hotplug: used by kernel</LI>
+<LI>xvidtune: tune video for use with Xwindows (See
+XFree86-Video-Timings-HOWTO)
+</LI>
+</UL>
+</P>
+
+<H2><A NAME="check_ms"></A> <A NAME="ss6.17">6.17</A> <A HREF="Plug-and-Play-HOWTO.html#toc6.17">Use MS Windows </A>
+ </H2>
+
+<P>Some people have attempted to use Windows to see how bus-resources
+have been set up.  Unfortunately, since PnP hardware forgets its
+bus-resource configuration when powered down, the configuration may
+not be the same under Linux.  For non PnP hardware (or where someone
+has disabled PnP inside the device by jumpers or Windows software),
+then using Windows should work OK.  Even for PnP, it often turns out
+to be the same because in many cases both Windows and Linux simply
+accept what the BIOS has set.  But where Windows and/or Linux do the
+configuring, they may do it differently.  So don't count on PnP
+devices being configured the same.</P>
+
+<HR>
+<A HREF="Plug-and-Play-HOWTO-7.html">Next</A>
+<A HREF="Plug-and-Play-HOWTO-5.html">Previous</A>
+<A HREF="Plug-and-Play-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

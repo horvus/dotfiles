@@ -1,0 +1,79 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>Chapter 13. Address Resolver &amp; Selection</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="prev" href="ch12.html" title="Chapter 12. Netlink-Interface to kernel"><link rel="next" href="ch14.html" title="Chapter 14. Network debugging"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">Chapter 13. Address Resolver &amp; Selection</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch12.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch14.html">Next</a></td></tr></table><hr></div><div class="chapter"><div class="titlepage"><div><div><h1 class="title"><a name="resolver"></a>Chapter 13. Address Resolver &amp; Selection</h1></div></div></div><p>Additional info can be found at</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p><a class="ulink" href="http://www.bieringer.de/linux/IPv6/getaddrinfo/" target="_top">Linux &amp; IPv6: getaddrinfo and search domains - Research</a></p></li><li class="listitem"><p><a class="ulink" href="http://people.redhat.com/drepper/linux-rfc3484.html" target="_top">RFC 3484 on Linux</a> </p></li><li class="listitem"><p>Karl Auer's Blog: <a class="ulink" href="http://biplane.com.au/blog/?p=30" target="_top">Controlling IPv6 source address selection</a> , <a class="ulink" href="http://biplane.com.au/blog/?p=22" target="_top">IPv6 Source Address Selection - what, why, how</a></p></li><li class="listitem"><p>Into6: <a class="ulink" href="http://into6.com.au/?p=288" target="_top">/etc/gai.conf - it ain't what you think it is</a></p></li></ul></div><h2><a name="idp51045600"></a>Address Resolver &amp; Destination Address Selection</h2><p>Name to IPv4 or IPv6 address resolving is usually done using a libc resolver library. Usually the function <span class="emphasis"><em>getaddrinfo</em></span> is used for that. In case of more than one IPv6 address is returned, according to <a class="ulink" href="http://www.faqs.org/rfcs/rfc3484.html" target="_top">RFC 3484 / Default Address Selection for Internet Protocol version 6</a> a sorting should be applied, which can be optionally configured.</p><p>The &#8221;magic&#8221; is controlled by a file named /etc/gai.conf (it can be that it is empty or missing by default). Default is usually somewhere stored in documentation, see &#8221;man gai.conf&#8221; or e.g. /usr/share/doc/glibc-common/gai.conf.</p><p>For controlling sort order by configuration following are needed for testing:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>A host in DNS returning more than one IPv6 address, e.g.</p></li></ul></div><pre class="screen">
+$ dig +short aaaa st1.bieringer.de
+2001:4dd0:ff00:834::2
+2a01:238:423d:8800:85b3:9e6b:3019:8909 
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Lookup via DNS (/etc/hosts won't work)</p></li><li class="listitem"><p>/etc/gai.conf with proper config, e.g.</p></li></ul></div><pre class="screen">
+precedence  ::1/128       50            # default
+precedence  ::/0          40            # default
+precedence  2002::/16     30            # default
+precedence ::/96          20            # default
+precedence ::ffff:0:0/96  10            # default
+precedence 2001:4dd0:ff00:834::/64  80  # dst-A
+precedence 2a01:238:423d:8800::/64  90  # dst-B
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>For tests use e.g. telnet client</p></li></ul></div><pre class="screen">
+$ telnet st1.bieringer.de
+Trying 2a01:238:423d:8800:85b3:9e6b:3019:8909...    (dst-B)
+...
+Trying 2001:4dd0:ff00:834::2...                     (dst-A)
+...
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>If precedence is changed in configuration</p></li></ul></div><pre class="screen">
+precedence 2001:4dd0:ff00:834::/64  90  # dst-A ex 80
+precedence 2a01:238:423d:8800::/64  80  # dst-B ex 90
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>The order is changed accordingly</p></li></ul></div><pre class="screen">
+$ telnet st1.bieringer.de
+Trying 2001:4dd0:ff00:834::2...                     (dst-A)
+...
+Trying 2a01:238:423d:8800:85b3:9e6b:3019:8909...    (dst-B)
+...
+</pre><h2><a name="idp51057248"></a>Source Address Selection</h2><p>Source address selection in Linux is done automatically by kernel and usually only using information from routing tables and try to match the same scope of address.</p><h3><a name="idp51058832"></a>Source Address Selection with &#8221;ip addrlabel&#8221;</h3><p>With extension of internal &#8221;ip addrlabel&#8221; a source address can be bound to a destination address (e.g. selected via mechanisms above). Binding means here: &#8221;same label&#8221; (label is a number).</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Default of &#8221;ip addrlabel&#8221; (here on CentOS 6):</p></li></ul></div><pre class="screen">
+# ip addrlabel
+prefix ::1/128 label 0 
+prefix ::/96 label 3 
+prefix ::ffff:0.0.0.0/96 label 4 
+prefix 2001::/32 label 6 
+prefix 2001:10::/28 label 7 
+prefix 2002::/16 label 2 
+prefix fc00::/7 label 5 
+prefix ::/0 label 1 
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>System is multihomed (here on one interface), router provides 2 prefixes via radvd:</p></li></ul></div><pre class="screen">
+# ip -6 addr show dev eth1 | grep -w inet6 |grep -w global
+    inet6 2001:6f8:12d8:2:5054:ff:fefb:6582/64 scope global dynamic 
+    inet6 2001:6f8:900:8cbc:5054:ff:fefb:6582/64 scope global dynamic 
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Connect now to server (shown above)</p></li></ul></div><pre class="screen">
+$ telnet st1.bieringer.de
+Trying 2001:4dd0:ff00:834::2...                     (dst-A)
+...
+Trying 2a01:238:423d:8800:85b3:9e6b:3019:8909...    (dst-B)
+...
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Related tcpdump with filter &#8221;tcp and dst port 23&#8221; shows only the use of the upper local source IPv6 address</p></li></ul></div><pre class="screen">
+IP6 2001:6f8:12d8:2:5054:ff:fefb:6582.37762 &gt; 2001:4dd0:ff00:834::2.telnet:                  (src-A -&gt; dst-A)
+IP6 2001:6f8:12d8:2:5054:ff:fefb:6582.45754 &gt; 2a01:238:423d:8800:85b3:9e6b:3019:8909.telnet: (src-A -&gt; dst-B)
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Binding now source and destination with &#8221;ip addrlabel&#8221;</p></li></ul></div><pre class="screen">
+# ip addrlabel add prefix 2001:6f8:12d8:2::/64 label 200
+# ip addrlabel add prefix 2001:6f8:900:8cbc::/64 label 300
+# ip addrlabel add prefix 2001:4dd0:ff00:834::/64 label 200
+# ip addrlabel add prefix 2a01:238:423d:8800::/64 label 300
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Resulting &#8221;ip addrlabel&#8221;</p></li></ul></div><pre class="screen">
+# ip addrlabel
+prefix ::1/128 label 0 
+prefix ::/96 label 3 
+prefix ::ffff:0.0.0.0/96 label 4 
+prefix 2a01:238:423d:8800::/64 label 300   # dst-B
+prefix 2001:4dd0:ff00:834::/64 label 200   # dst-A
+prefix 2001:6f8:900:8cbc::/64 label 300    # src-B
+prefix 2001:6f8:12d8:2::/64 label 200      # src-A
+prefix 2001::/32 label 6 
+prefix 2001:10::/28 label 7 
+prefix 2002::/16 label 2 
+prefix fc00::/7 label 5 
+prefix ::/0 label 1 
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Connect now to server again</p></li></ul></div><pre class="screen">
+$ telnet st1.bieringer.de
+Trying 2001:4dd0:ff00:834::2...                     (dst-A)
+...
+Trying 2a01:238:423d:8800:85b3:9e6b:3019:8909...    (dst-B)
+...
+</pre><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Related tcpdump with filter &#8221;tcp and dst port 23&#8221; shows now the use of both local source IPv6 addresses according to the configured pairs A and B</p></li></ul></div><pre class="screen">
+IP6 2001:6f8:12d8:2:5054:ff:fefb:6582.37765   &gt; 2001:4dd0:ff00:834::2.telnet:                  (src-A -&gt; dst-A)
+IP6 2001:6f8:900:8cbc:5054:ff:fefb:6582.39632 &gt; 2a01:238:423d:8800:85b3:9e6b:3019:8909.telnet: (src-B -&gt; dst-B)
+</pre><p>Setup of persistent &#8221;ip addrtable&#8221; is probably currently not supported by Linux distributions, so extension of network init scripts or rc.local must be used for that. A script which uses information from /etc/gai.conf and configure &#8221;ip addrtable&#8221; accordingly can be found here: <a class="ulink" href="http://into6.com.au/?p=288" target="_top">/etc/gai.conf - it ain't what you think it is</a></p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch12.html">Prev</a> </td><td width="20%" align="center"> </td><td width="40%" align="right"> <a accesskey="n" href="ch14.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter 12. Netlink-Interface to kernel </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 14. Network debugging</td></tr></table></div></body></html>

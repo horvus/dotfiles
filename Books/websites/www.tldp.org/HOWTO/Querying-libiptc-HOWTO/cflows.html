@@ -1,0 +1,696 @@
+<HTML
+><HEAD
+><TITLE
+>Controlling flows</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Querying libiptc HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Bandwidth meter"
+HREF="bmeter.html"><LINK
+REL="NEXT"
+TITLE="Some interesting links"
+HREF="somelinks.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Querying libiptc HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="bmeter.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="somelinks.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="CFLOWS">14. Controlling flows</H1
+><P
+>In this chapter we are going to try to control the flows using the Linux
+kernel queue disciplines. Perhaps, depending on how you compiled your
+kernel, you will again need to run <B
+CLASS="COMMAND"
+>make menuconfig</B
+>, 
+re-configure your options, re-compile and re-install your kernel.</P
+><P
+>This chapter <EM
+>is not</EM
+> and 
+<EM
+>does not pretend to be</EM
+> a tutorial about the 
+implementation of <EM
+>QoS (Quality of Service)</EM
+> in Linux. 
+If you don't have previous experience with <EM
+>QoS</EM
+> 
+it's better to read some references at the end of this document to acquire
+the concepts required for <EM
+>QoS</EM
+> implementation.</P
+><P
+>With this advice, I'm not going to explain in detail each of the 
+commands needed to control flows in Linux because it is not the goal of 
+this HOWTO. However, the implementation of some of these techniques will
+serve us to show the bandwidth meter (based on <EM
+>libiptc</EM
+>) 
+behaviour.</P
+><P
+>First check if you have QoS implementation options implemented in your 
+kernel. Run <B
+CLASS="COMMAND"
+>make menuconfig</B
+>, follow the menu to 
+<EM
+>Networking options</EM
+> and look for last menu of this 
+option <EM
+>QoS and/or fair queueing</EM
+>. Here use (or check 
+if they are active) these options:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>       [*] QoS and/or fair queueing
+       &#60;M&#62; CBQ packet scheduler
+       &#60;M&#62; CSZ packet scheduler
+       [*] ATM pseudo-scheduler
+       &#60;M&#62; The simplest PRIO pseudoscheduler
+       &#60;M&#62; RED queue
+       &#60;M&#62; SFQ queue
+       &#60;M&#62; TEQL queue
+       &#60;M&#62; TBF queue
+       &#60;M&#62; GRED queue
+       &#60;M&#62; Diffserv field marker
+       &#60;M&#62; Ingress Qdisc
+       [*] QoS support
+       [*]   Rate estimator
+       [*] Packet classifier API
+       &#60;M&#62;   TC index classifier
+       &#60;M&#62;   Routing table based classifier
+       &#60;M&#62;   Firewall based classifier
+       &#60;M&#62;   U32 classifier
+       &#60;M&#62;   Special RSVP classifier
+       &#60;M&#62;   Special RSVP classifier for IPv6
+       [*]   Traffic policing (needed for in/egress)</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Save your configuration, recompile your kernel and modules, and 
+re-install it. We are going to use the 
+<EM
+>CBQ packet scheduler</EM
+> to implement some queues 
+to control bytes flow in our PC #1 NIC. </P
+><P
+>Personally I preferred the excellent <EM
+>HTB queueing 
+discipline implementation</EM
+> by Martin Devera but actually this 
+implementation is not in standard Linux (but it will be); for 
+implementing it you have to patch your kernel before recompiling and 
+it's better not to complicate things more. However I have to say that 
+this queue discipline is a lot more simple to use than
+<EM
+>CBQ</EM
+> happens to be. More information on 
+<EM
+>HTB queueing discipline</EM
+> are linked at the end of
+this document.</P
+><P
+>Having compiled and re-installed your kernel you have to install the 
+<EM
+>iproute2</EM
+> package that will be used to run the 
+commands needed to implement the queues. Download this package from 
+<A
+HREF="ftp://ftp.inr.ac.ru/ip-routing"
+TARGET="_top"
+>ftp://ftp.inr.ac.ru/ip-routing</A
+>.</P
+><P
+>I'm working with version <EM
+>2.2.4-now-ss001007</EM
+>. To install 
+it follow these instructions:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>cp iproute2-2.2.4-now-ss001007.tar.gz /usr/local/src</B
+>
+bash# <B
+CLASS="COMMAND"
+>tar xzvf iproute2-2.2.4-now-ss001007.tar.gz</B
+>
+bash# <B
+CLASS="COMMAND"
+>cd iproute2</B
+>
+bash# <B
+CLASS="COMMAND"
+>make</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>After <EM
+>make</EM
+> compiles the <EM
+>iproute2</EM
+>
+package successfully the <EM
+>ip</EM
+> utility will be in 
+<TT
+CLASS="FILENAME"
+>iproute2/ip</TT
+> directory and the 
+<EM
+>tc</EM
+> utility in <TT
+CLASS="FILENAME"
+>iproute2/tc</TT
+>
+directory. Copy both of them to <TT
+CLASS="FILENAME"
+>/usr/bin</TT
+> directory:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>cp ip/ip /usr/bin</B
+>
+bash# <B
+CLASS="COMMAND"
+>cp tc/tc /usr/bin</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now, using the <EM
+>tc</EM
+> utility, we are going to create a 
+<EM
+>CBQ</EM
+> queue in the interface <EM
+>eth0</EM
+> of 
+the PC #1 computer. This queue will have 4 classes as children and each of 
+these classes will be used to control the 4 flows from 
+<EM
+>192.168.1.1</EM
+> to <EM
+>192.168.1.2</EM
+> 
+through ports <EM
+>1001</EM
+> to <EM
+>1004</EM
+>.</P
+><P
+>Write and run the following commands:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>tc qdisc add dev eth0 root handle 1:0 cbq bandwidth 10Mbit \
+avpkt 1000 cell 8</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This command creates the main (root) cbq queue 1:0 in the 
+<EM
+>eth0</EM
+> interface; the bandwidth of this queue is 
+10Mbit/sec corresponding to our Ethernet interface.</P
+><P
+>Now write and run:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>tc class add dev eth0 parent 1:0 classid 1:1 cbq bandwidth 10Mbit \
+rate 1000kbit prio 8 allot 1514 cell 8 maxburst 20 avpkt 1000 bounded</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This command create the main cbq class 1:1. The rate of this class
+will be 1000kbit/sec.</P
+><P
+>Now we are going to create 4 classes ownned by this class; the classes
+will have rates of 100kbit, 200kbit, 300kbit and 400kbit respectively.
+Write and run these commands:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>tc class add dev eth0 parent 1:1 classid 1:3 cbq bandwidth 10Mbit \
+rate 100kbit prio 5 allot 1514 cell 8 maxburst 20 avpkt 1000</B
+>
+
+bash# <B
+CLASS="COMMAND"
+>tc class add dev eth0 parent 1:1 classid 1:4 cbq bandwidth 10Mbit \
+rate 200kbit prio 5 allot 1514 cell 8 maxburst 20 avpkt 1000</B
+>
+
+bash# <B
+CLASS="COMMAND"
+>tc class add dev eth0 parent 1:1 classid 1:5 cbq bandwidth 10Mbit \
+rate 300kbit prio 5 allot 1514 cell 8 maxburst 20 avpkt 1000</B
+>
+
+bash# <B
+CLASS="COMMAND"
+>tc class add dev eth0 parent 1:1 classid 1:6 cbq bandwidth 10Mbit \
+rate 400kbit prio 5 allot 1514 cell 8 maxburst 20 avpkt 1000</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Each of these classes will have a <EM
+>sfq</EM
+> queue discipline 
+attached to them to dispatch their packets. Write and run these commands:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>tc qdisc add dev eth0 parent 1:3 handle 30: sfq perturb 15</B
+>
+bash# <B
+CLASS="COMMAND"
+>tc qdisc add dev eth0 parent 1:4 handle 40: sfq perturb 15</B
+>
+bash# <B
+CLASS="COMMAND"
+>tc qdisc add dev eth0 parent 1:5 handle 50: sfq perturb 15</B
+>
+bash# <B
+CLASS="COMMAND"
+>tc qdisc add dev eth0 parent 1:6 handle 60: sfq perturb 15</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>These commands create 4 <EM
+>sfq</EM
+> queue disciplines, one 
+for each class. <EM
+>sfq</EM
+> queue discipline is some kind of 
+<EM
+>fair controlling queue</EM
+>. It tries to give to each connection 
+in an interface same oportunity to their packets to be dispatched to at all.</P
+><P
+>Finally we are going to create filters to assign flows to ports 
+<EM
+>1001</EM
+>, <EM
+>1002</EM
+>, <EM
+>1003</EM
+> 
+and <EM
+>1004</EM
+> to classes <EM
+>1:3</EM
+>, 
+<EM
+>1:4</EM
+>, <EM
+>1:5</EM
+> and 
+<EM
+>1:6</EM
+> respectively. Write and run as follows:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>tc filter add dev eth0 parent 1:0 protocol ip prio 1 u32 match ip \
+dport 1001 0xffff flowid 1:3</B
+>
+
+bash# <B
+CLASS="COMMAND"
+>tc filter add dev eth0 parent 1:0 protocol ip prio 1 u32 match ip \
+dport 1002 0xffff flowid 1:4</B
+>
+
+bash# <B
+CLASS="COMMAND"
+>tc filter add dev eth0 parent 1:0 protocol ip prio 1 u32 match ip \
+dport 1003 0xffff flowid 1:5</B
+>
+
+bash# <B
+CLASS="COMMAND"
+>tc filter add dev eth0 parent 1:0 protocol ip prio 1 u32 match ip \
+dport 1004 0xffff flowid 1:6</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>After running all these commands, now check your <EM
+>bw</EM
+> 
+meter (you must be running <EM
+>netcat</EM
+> listening at ports 
+<EM
+>1001</EM
+> to <EM
+>1004</EM
+> in PC #2 and
+talking in PC #1 as was explained in previous chapter and <EM
+>bw</EM
+> 
+running in <EM
+>current -c</EM
+> mode). You will have something 
+like this:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>Current flow values ...
+   1099.9k:  108.8k  196.5k  337.9k  456.8k 
+   1104.2k:  115.3k  184.9k  339.9k  464.1k 
+   1102.1k:  117.3k  174.7k  339.7k  470.5k 
+   1114.4k:  113.6k  191.7k  340.7k  468.4k 
+   1118.4k:  113.7k  194.3k  340.5k  469.9k </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><EM
+>bw</EM
+> show us how flows are controlling using queue 
+disciplines of the Linux kernel. As you see, 
+<EM
+>CBQ queue discipline</EM
+> is not a very precise queue but 
+you more or less have a flow of approximately 
+<EM
+>1000=100+200+300+400</EM
+> on interface 
+<EM
+>eth0</EM
+>.</P
+><P
+>To step back, write and run as follows:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>tc qdisc del dev eth0 root handle 1:0 cbq</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>on PC #1, to delete the main (root) queue discipline and owned classes 
+and filters.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>killall nc</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>on PC #2 and PC #1, to stop <EM
+>netcat</EM
+>.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>iptables -F</B
+>
+bash# <B
+CLASS="COMMAND"
+>iptables -X</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>on PC #1, to clear <EM
+>iptables</EM
+> rules and chains.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# <B
+CLASS="COMMAND"
+>Ctrl-C</B
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>on PC #1, tty1 to stop <EM
+>bw</EM
+> bandwidth meter.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="bmeter.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="somelinks.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Bandwidth meter</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Some interesting links</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

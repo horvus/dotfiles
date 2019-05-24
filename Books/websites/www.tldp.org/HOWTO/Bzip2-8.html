@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Bzip2 mini-HOWTO: Using bzip2 with grep</TITLE>
+ <LINK HREF="Bzip2-9.html" REL=next>
+ <LINK HREF="Bzip2-7.html" REL=previous>
+ <LINK HREF="Bzip2.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Bzip2-9.html">Next</A>
+<A HREF="Bzip2-7.html">Previous</A>
+<A HREF="Bzip2.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. Using bzip2 with grep</A></H2>
+
+<P>The following utility, which I call bgrep, is a slight modification
+of the zgrep which comes with Linux.  You can use it to grep through
+files without bunzip2'ing them first.
+<P>
+<PRE>
+#!/bin/sh
+
+# bgrep -- a wrapper around a grep program that decompresses files as needed
+PATH="/usr/bin:$PATH"; export PATH
+
+prog=`echo $0 | sed 's|.*/||'`
+case "$prog" in
+        *egrep) grep=${EGREP-egrep}     ;;
+        *fgrep) grep=${FGREP-fgrep}     ;;
+        *)      grep=${GREP-grep}       ;;
+esac
+pat=""
+while test $# -ne 0; do
+  case "$1" in
+  -e | -f) opt="$opt $1"; shift; pat="$1"
+           if test "$grep" = grep; then  # grep is buggy with -e on SVR4
+             grep=egrep
+           fi;;
+  -*)      opt="$opt $1";;
+   *)      if test -z "$pat"; then
+             pat="$1"
+           else
+             break;
+           fi;;
+  esac
+  shift
+done
+
+if test -z "$pat"; then
+  echo "grep through bzip2 files"
+  echo "usage: $prog [grep_options] pattern [files]"
+  exit 1
+fi
+
+list=0
+silent=0
+op=`echo "$opt" | sed -e 's/ //g' -e 's/-//g'`
+case "$op" in
+  *l*) list=1
+esac
+case "$op" in
+  *h*) silent=1
+esac
+
+if test $# -eq 0; then
+  bzip2 -cd | $grep $opt "$pat"
+  exit $?
+fi
+
+res=0
+for i do
+  if test $list -eq 1; then
+    bzip2 -cdfq "$i" | $grep $opt "$pat" > /dev/null &amp;&amp; echo $i
+    r=$?
+  elif test $# -eq 1 -o $silent -eq 1; then
+    bzip2 -cd "$i" | $grep $opt "$pat"
+    r=$?
+  else
+    bzip2 -cd "$i" | $grep $opt "$pat" | sed "s|^|${i}:|"
+    r=$?
+  fi
+  test "$r" -ne 0 &amp;&amp; res="$r"
+done
+exit $res
+</PRE>
+<P>
+<HR>
+<A HREF="Bzip2-9.html">Next</A>
+<A HREF="Bzip2-7.html">Previous</A>
+<A HREF="Bzip2.html#toc8">Contents</A>
+</BODY>
+</HTML>

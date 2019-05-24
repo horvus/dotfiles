@@ -1,0 +1,220 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Modem-HOWTO: Uugetty for Dial-In (from the old Serial-HOWTO) </TITLE>
+ <LINK HREF="Modem-HOWTO-14.html" REL=next>
+ <LINK HREF="Modem-HOWTO-12.html" REL=previous>
+ <LINK HREF="Modem-HOWTO.html#toc13" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Modem-HOWTO-14.html">Next</A>
+<A HREF="Modem-HOWTO-12.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc13">Contents</A>
+<HR>
+<H2><A NAME="uugetty_"></A> <A NAME="s13">13.</A> <A HREF="Modem-HOWTO.html#toc13">Uugetty for Dial-In (from the old Serial-HOWTO) </A></H2>
+
+<P> Be aware that you could use mgetty as a (better?) alternative to
+<CODE>uugetty</CODE>.  <CODE>mgetty</CODE> is newer and more popular than uugetty.
+See 
+<A HREF="Modem-HOWTO-12.html#getty_">Getty</A> for a brief comparison of these 2
+gettys.</P>
+
+<H2><A NAME="ss13.1">13.1</A> <A HREF="Modem-HOWTO.html#toc13.1">Installing getty_ps</A>
+</H2>
+
+<P> Since uugetty is part of getty_ps you'll first have to install
+getty_ps.  If you don't have it, get the latest version from <CODE>
+<A HREF="ftp://metalab.unc.edu:/pub/Linux/system/serial">metalab.unc.edu:/pub/Linux/system/serial</A></CODE>.  In particular,
+if you want to use high speeds (57600 and 115200 bps), you must get
+version 2.0.7j or later.  You must also have libc 5.x or greater.</P>
+
+<P> By default, <CODE>getty_ps</CODE> will be configured to be Linux FSSTND
+(File System Standard) compliant, which means
+that the binaries will be in <CODE>/sbin</CODE>, and the config files
+will be named <CODE>/etc/conf.{uu}getty.ttyS</CODE><EM>N</EM>.  This is not
+apparent from the documentation!  It will also expect lock files to go
+in <CODE>/var/lock</CODE>.  Make sure you have the <CODE>/var/lock</CODE>
+directory.</P>
+<P>If you don't want FSSTND compliance, binaries will go
+in <CODE>/etc</CODE>, config files will go in
+<CODE>/etc/default/{uu}getty.ttyS</CODE><EM>N</EM>, and lock files will go in
+<CODE>/usr/spool/uucp</CODE>.  I recommend doing things this way if you
+are using UUCP, because UUCP will have problems if you move
+the lock files to where it isn't looking for them.</P>
+<P><CODE>getty_ps</CODE> can also use <CODE>syslogd</CODE> to log messages.  See the man
+pages for <CODE>syslogd(1)</CODE> and <CODE>syslog.conf(5)</CODE> for setting up
+<CODE>syslogd</CODE>, if you don't have it running already.  Messages
+are logged with priority LOG_AUTH, errors use LOG_ERR, and debugging
+uses LOG_DEBUG.  If you don't want to use <CODE>syslogd</CODE> you
+can edit <CODE>tune.h</CODE> in the <CODE>getty_ps</CODE> source files to use a log
+file for messages instead, namely <CODE>/var/adm/getty.log</CODE> by
+default.</P>
+<P>Decide on if you want FSSTND compliance and syslog capability.
+You can also choose a combination of the two.  Edit the <CODE>Makefile</CODE>,
+<CODE>tune.h</CODE> and <CODE>config.h</CODE> to reflect your decisions.  Then
+compile and install according to the instructions included with the
+package.</P>
+
+<H2><A NAME="ss13.2">13.2</A> <A HREF="Modem-HOWTO.html#toc13.2">Setting up uugetty</A>
+</H2>
+
+<P>With <CODE>uugetty</CODE> you may dial out with your modem while <CODE>uugetty</CODE>
+is watching the port for logins.  <CODE>uugetty</CODE> does important lock
+file checking.  Update <CODE>/etc/gettydefs</CODE> to include an entry for
+your modem.  For help with the meaning of the entries that you put
+into <CODE>/etc/gettydefs</CODE>, see the "serial_suite" collected by Vern
+Hoxie.  How to get it is in section See
+<A HREF="Modem-HOWTO-12.html#getty_em_">About getty_em</A>.  When you are done editing <CODE>/etc/gettydefs</CODE>, you
+can verify that the syntax is correct by doing:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+linux# getty -c /etc/gettydefs
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H3>Modern Modems</H3>
+
+<P> If you have a 9600 bps or faster modem with data compression,
+you can lock your serial port to one speed.  For example:
+<BLOCKQUOTE><CODE>
+<PRE>
+# 115200 fixed speed
+F115200# B115200 CS8 # B115200 SANE -ISTRIP HUPCL #@S @L @B login: #F115200
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>If you have your modem set up to do RTS/CTS hardware flow control, you
+can add <CODE>CRTSCTS</CODE> to the entries:
+<BLOCKQUOTE><CODE>
+<PRE>
+# 115200 fixed speed with hardware flow control
+F115200# B115200 CS8 CRTSCTS # B115200 SANE -ISTRIP HUPCL CRTSCTS #@S @L @B login: #F115200
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H3>Old slow modems</H3>
+
+<P> If you have a slow modem (under 9600 bps) Then, instead of one
+line for a single speed, your need several lines to try a number of
+speeds.  Note that these lines are linked to each other by the last
+"word" in the line such as #4800.  Blank lines are needed between
+each entry.  Are the higher modem-to-serial_port speeds in this
+example really needed for a slow modem ??  The uugetty documentation
+shows them so I'm not yet deleting them.</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# Modem entries
+115200# B115200 CS8 # B115200 SANE -ISTRIP HUPCL #@S @L @B login: #57600
+
+57600# B57600 CS8 # B57600 SANE -ISTRIP HUPCL #@S @L @B login: #38400
+
+38400# B38400 CS8 # B38400 SANE -ISTRIP HUPCL #@S @L @B login: #19200
+
+19200# B19200 CS8 # B19200 SANE -ISTRIP HUPCL #@S @L @B login: #9600
+
+9600# B9600 CS8 # B9600 SANE -ISTRIP HUPCL #@S @L @B login: #4800
+
+4800# B4800 CS8 # B4800 SANE -ISTRIP HUPCL #@S @L @B login: #2400
+
+2400# B2400 CS8 # B2400 SANE -ISTRIP HUPCL #@S @L @B login: #1200
+
+1200# B1200 CS8 # B1200 SANE -ISTRIP HUPCL #@S @L @B login: #115200
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H3>Login Banner</H3>
+
+<P> If you want, you can make <CODE>uugetty</CODE> print interesting things in
+the login banner.  In Greg's  examples, he has the system name, the
+serial line, and the current bps rate.  You can add other things:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+       @B    The current (evaluated at the time the @B is seen) bps rate.
+       @D    The current date, in MM/DD/YY.
+       @L    The serial line to which uugetty is attached.
+       @S    The system name.
+       @T    The current time, in HH:MM:SS (24-hour).
+       @U    The number of currently signed-on users.  This is  a
+             count of the number of entries in the /etc/utmp file
+             that have a non-null ut_name field.
+       @V    The value of VERSION, as given in the defaults file.
+       To display a single '@' character, use either '\@' or '@@'.
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+<H2><A NAME="ss13.3">13.3</A> <A HREF="Modem-HOWTO.html#toc13.3">Customizing uugetty</A>
+</H2>
+
+<P> There are lots of parameters you can tweak for each port you have.
+These are implemented in separate config files for each port.
+The file <CODE>/etc/conf.uugetty</CODE> will be used by <EM>all</EM>
+instances of <CODE>uugetty</CODE>, and <CODE>/etc/conf.uugetty.ttyS</CODE><EM>N</EM>
+will only be used by that one port.  Sample default config files can
+be found with the <CODE>getty_ps</CODE> source files, which come with most
+Linux distributions.  Due to space concerns,
+they are not listed here.  Note that if you are using older versions
+of <CODE>uugetty</CODE> (older than 2.0.7e), or aren't using FSSTND, then the
+default file will be <CODE>/etc/default/uugetty.ttyS</CODE><EM>N</EM>.  Greg's
+<CODE>/etc/conf.uugetty.ttyS3</CODE> looked like this:
+<BLOCKQUOTE><CODE>
+<PRE>
+# sample uugetty configuration file for a Hayes compatible modem to allow
+# incoming modem connections
+#
+# line to initialize
+INITLINE=ttyS3
+# timeout to disconnect if idle...
+TIMEOUT=60
+# modem initialization string...
+# format: &lt;expect> &lt;send> ... (chat sequence)
+INIT="" AT\r OK\r\n
+WAITFOR=RING
+CONNECT="" ATA\r CONNECT\s\A
+# this line sets the time to delay before sending the login banner
+DELAY=1
+#DEBUG=010
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Add the following line to your <CODE>/etc/inittab</CODE>, so that
+<CODE>uugetty</CODE> is run on your serial port, substituting in the correct
+information for your environment - run-levels (2345 or 345, etc.)
+config file location, port, speed, and default terminal type:</P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+S3:2345:respawn:/sbin/uugetty -d /etc/default/uugetty.ttyS3 ttyS3 F115200 vt100
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Restart <CODE>init</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+linux# init q
+</PRE>
+</CODE></BLOCKQUOTE>
+
+For the speed parameter in your <CODE>/etc/inittab</CODE>, you want to use
+the highest bps rate that your modem supports.</P>
+<P>Now Linux will be watching your serial port for connections.
+Dial in from another machine and login to you Linux system.</P>
+
+<P> <CODE>uugetty</CODE> has a lot more options, see the man
+page for <CODE>uugetty)</CODE> (often just called <CODE>getty</CODE>) for a full
+description.  Among other things there is a scheduling feature, and a
+ringback feature.</P>
+
+<HR>
+<A HREF="Modem-HOWTO-14.html">Next</A>
+<A HREF="Modem-HOWTO-12.html">Previous</A>
+<A HREF="Modem-HOWTO.html#toc13">Contents</A>
+</BODY>
+</HTML>

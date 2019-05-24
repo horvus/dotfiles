@@ -1,0 +1,489 @@
+<HTML
+><HEAD
+><TITLE
+>How do I set it up?</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.52"><LINK
+REL="HOME"
+TITLE="Linux kerneld mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="What is kerneld?"
+HREF="introduction.html"><LINK
+REL="NEXT"
+TITLE="How does kerneld know what module
+     to load?"
+HREF="configuration.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux kerneld mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="introduction.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="configuration.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SETUP"
+>How do I set it up?</A
+></H1
+><P
+>First get the necessary parts: A suitable kernel and the
+      latest <SPAN
+CLASS="PRODUCTNAME"
+>modules</SPAN
+> package.  Then you
+      should install the module utilities as per the instructions
+      included in the package. Pretty simple: Just unpack the sources
+      and run <B
+CLASS="COMMAND"
+>make install</B
+>. This compiles and
+      installs the following programs in <TT
+CLASS="FILENAME"
+>/sbin</TT
+>:
+      <B
+CLASS="COMMAND"
+>genksysm</B
+>, <B
+CLASS="COMMAND"
+>insmod</B
+>,
+      <B
+CLASS="COMMAND"
+>lsmod</B
+>, <B
+CLASS="COMMAND"
+>modprobe</B
+>,
+      <B
+CLASS="COMMAND"
+>depmod</B
+> and <B
+CLASS="COMMAND"
+>kerneld</B
+>. I
+      recommend you add some lines to your startup-scripts to do some
+      necessary setup whenever you boot Linux. Add the following lines
+      to your <TT
+CLASS="FILENAME"
+>/etc/rc.d/rc.S</TT
+> file (if you are
+      running Slackware), or to
+      <TT
+CLASS="FILENAME"
+>/etc/rc.d/rc.sysinit</TT
+> if you are running
+      SysVinit, i.e. Debian, Corel, RedHat, Mandrake or Caldera:
+      </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>        # Start kerneld - this should happen very early in the
+        # boot process, certainly BEFORE you run fsck on filesystems
+        # that might need to have disk drivers autoloaded
+        if [ -x /sbin/kerneld ]
+        then
+                /sbin/kerneld
+        fi
+
+        # Your standard fsck commands go here
+        # And you mount command to mount the root fs read-write
+
+        # Update kernel-module dependencies file
+        # Your root-fs MUST be mounted read-write by now
+        if [ -x /sbin/depmod ]
+        then
+                /sbin/depmod -a
+        fi</PRE
+></TD
+></TR
+></TABLE
+><P
+>These commands may already be installed in your SysV init
+      scripts. The first part starts kerneld itself. The second calls
+      <B
+CLASS="COMMAND"
+>depmod -a</B
+> at startup to build a list of all
+      available modules and analyzes their inter-dependencies. The
+      depmod map then tells kerneld if one module needs to have
+      another loaded before it will itself load. </P
+><DIV
+CLASS="NOTE"
+><BLOCKQUOTE
+CLASS="NOTE"
+><P
+><B
+>Note: </B
+>Recent versions of kerneld have an option to link with the
+      GNU gdbm library, <SPAN
+CLASS="PRODUCTNAME"
+>libgdbm</SPAN
+>. If you
+      enable this when building the module utilities,
+      <I
+CLASS="EMPHASIS"
+>kerneld will not start if libgdbm is not
+      available</I
+> which may well be the case if you have
+      <TT
+CLASS="FILENAME"
+>/usr</TT
+> on a separate partition and start
+      kerneld before <TT
+CLASS="FILENAME"
+>/usr</TT
+> is mounted. The
+      recommended solution is to move
+      <TT
+CLASS="FILENAME"
+>/usr/lib/libgdbm</TT
+> to
+      <TT
+CLASS="FILENAME"
+>/lib</TT
+>, or to link kerneld
+      statically.</P
+></BLOCKQUOTE
+></DIV
+><P
+>Next, unpack the kernel sources, configure and build a
+      kernel to your liking. If you have never done this before, you
+      should definitely read the README file at the top level of the
+      Linux sources. When you run <I
+CLASS="EMPHASIS"
+>make xconfig</I
+>
+      to configure the kernel, you should pay attention to some
+      questions that appear early on: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  Enable loadable module support (CONFIG_MODULES) [Y/n/?] Y</PRE
+></TD
+></TR
+></TABLE
+><P
+>You need to select the loadable module support, or there
+      will be no modules for kerneld to load! Just say Yes. </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  Kernel daemon support (CONFIG_KERNELD) [Y/n/?] Y</PRE
+></TD
+></TR
+></TABLE
+><P
+>This, of course, is also necessary. Then, a lot of the
+      things in the kernel can be built as modules - you will see
+      questions like </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  Normal floppy disk support (CONFIG_BLK_DEV_FD) [M/n/y/?] </PRE
+></TD
+></TR
+></TABLE
+><P
+>where you can answer with an <SPAN
+CLASS="KEYSYM"
+>M</SPAN
+> for
+      <SPAN
+CLASS="QUOTE"
+>"Module"</SPAN
+>. Generally, only the drivers necessary for
+      you to boot up your system should be built into the kernel; the rest
+      can be built as modules. </P
+><DIV
+CLASS="CAUTION"
+><P
+></P
+><TABLE
+CLASS="CAUTION"
+BORDER="1"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="CENTER"
+><B
+>Essential drivers</B
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+><P
+>Essential drivers
+        required to boot your system must be compiled into the core
+        kernel and cannot be loaded as modules. Typically this will
+        include the hard-disk driver and the driver for the root
+        filesystem.  If you have a dual-boot machine and rely on files
+        found in the foreign partition, you must also compile support
+        for that filesystem into the core kernel.</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>When you have gone through the <B
+CLASS="COMMAND"
+>make
+      config</B
+>, compile and install the new
+      kernel and the modules with <B
+CLASS="COMMAND"
+>make dep clean bzlilo
+      modules modules_install</B
+>.</P
+><P
+>Phew. </P
+><DIV
+CLASS="TIP"
+><BLOCKQUOTE
+CLASS="TIP"
+><P
+><B
+>Compiling a Kernel Image: </B
+>The
+        <B
+CLASS="COMMAND"
+>make zImage</B
+> command will stop short of
+        installing a kernel and will leave the new kernel image in the
+        file <TT
+CLASS="FILENAME"
+>arch/i386/boot/zImage</TT
+>.  To use this
+        image, you will
+        need to copy it to where you keep your boot-image and install it
+        manually with LILO. </P
+><P
+>For more information about configuring, building and
+        installing your own kernel, check out the Kernel-HOWTO posted
+        regularly to <TT
+CLASS="FILENAME"
+>comp.os.linux.answers</TT
+>, and
+        available from <A
+HREF="http://www.linuxdoc.org"
+TARGET="_top"
+>the Linux
+        Documentation Project</A
+> and its mirrors.</P
+></BLOCKQUOTE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TESTING"
+>Trying out kerneld</A
+></H2
+><P
+>Now reboot with the new kernel. When the system comes back
+      up, you can run <B
+CLASS="COMMAND"
+>ps ax</B
+>, and you should see a
+      line for kerneld: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>    PID TTY STAT  TIME COMMAND
+     59  ?  S     0:01 /sbin/kerneld</PRE
+></TD
+></TR
+></TABLE
+><P
+>One of the nice things with kerneld is that once you have
+      the kernel and the daemon installed, very little setup is
+      needed. For a start, try using one of the drivers that you built
+      as a module; it is more likely than not that it will work
+      without further configuration. If I build the floppy driver as a
+      module, I could put a DOS floppy in the drive and type</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  osiris:~ $ mdir a:
+   Volume in drive A has no label
+   Volume Serial Number is 2E2B-1102
+   Directory for A:/
+
+  binuti~1 gz       1942 02-14-1996  11:35a binutils-2.6.0.6-2.6.0.7.diff.gz
+  libc-5~1 gz      24747 02-14-1996  11:35a libc-5.3.4-5.3.5.diff.gz
+          2 file(s)        26689 bytes</PRE
+></TD
+></TR
+></TABLE
+><P
+>The floppy driver works! It gets loaded automatically
+      by kerneld when I try to use the floppy disk. </P
+><P
+>To see that the floppy module is indeed loaded, you can
+      run <B
+CLASS="COMMAND"
+>/sbin/lsmod</B
+> to list all currently
+      loaded modules: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>  osiris:~ $ /sbin/lsmod 
+  Module:        #pages:  Used by:
+  floppy            11    0 (autoclean)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <SPAN
+CLASS="QUOTE"
+>"(autoclean)"</SPAN
+> means that the module will
+      automatically be removed by kerneld when it has not been used
+      for more than one minute.  So the 11 pages of memory (= 44kB,
+      one page is 4 kB) will only be used while I access the floppy
+      drive - if I don't use the floppy for more than a minute, they
+      are freed. Quite nice, if you are short of memory for your
+      applications! </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="introduction.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="configuration.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>What is kerneld?</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>How does kerneld know what module
+     to load?</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

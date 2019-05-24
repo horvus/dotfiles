@@ -1,0 +1,571 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Set Up The Head Node</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Beowulf HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Requirements"
+HREF="x58.html"><LINK
+REL="NEXT"
+TITLE="Set Up Slave Nodes"
+HREF="x137.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Beowulf HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x58.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x137.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN70"
+></A
+>4. Set Up The Head Node</H1
+><P
+>So let's get "wolfing." Choose the most powerful box to be the head
+    node. Install Linux there and choose every package you want. The only
+    requirement is that you choose "Network Servers" [in Red Hat terminology]
+    because you need to have NFS and ssh. That's all you need. In my case, I
+    was going to do development of the Beowulf application, so I added X and C
+    development.</P
+><P
+>It is my experience that you do not actually need NFS, but I found
+    it invaluable for copying files between nodes, and for automating the
+    install process. Later in this document I will describe how you can run a
+    simple Beowulf application without the use of NFS, but a more complex
+    application may use NFS or actually depend upon it.</P
+><P
+>Those of you researching Beowulf systems will also know how you can
+    have a second network card on the head node so you can access it from the
+    outside world. This is not required for the operation of a cluster.</P
+><P
+>I learned the hard way: use a password that obeys the strong
+    password constraints for your Linux distribution. I used an easily typed
+    password like "a" for my user, and the whole thing did not work. When I
+    changed my password to a legal password, with mixed numbers, characters,
+    upper and lower case, it worked.</P
+><P
+>If you use lam as your message passing interface, you will read in
+    the manual to turn OFF the firewalls, because they use random port numbers
+    to communicate between nodes. Here is a rule: If the manual tells you to
+    do something, DO IT! The lam manual also tells you to run as a non-root
+    user. Make the same user for every box. Build every box on the cluster
+    with that same user and password. I named that non root user "wolf".
+    </P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN77"
+></A
+>4.1. Hosts</H2
+><P
+>First we modify /etc/hosts. In it, you will see the comments
+      telling you to leave the "localhost" line alone. Ignore that advice and
+      change it to not include the name of your box in the loopback
+      address.</P
+><P
+>Modify the line that says: <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>127.0.0.1 wolf00 localhost.localdomain localhost</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>...to now say: <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>127.0.0.1 localhost.localdomain localhost </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Then add all the boxes you want on your cluster. Note: This is not
+      required for the operation of a Beowulf cluster; only convenient, so
+      that you may type a simple "wolf01" when you refer to a box on your
+      cluster instead of the more tedious 192.168.0.101:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>192.168.0.100 wolf00
+192.168.0.101 wolf01
+192.168.0.102 wolf02
+192.168.0.103 wolf03
+192.168.0.104 wolf04</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN86"
+></A
+>4.2. Groups</H2
+><P
+>In order to responsibly set up your cluster, especially if you are
+      a "user" of your boxes [see Definitions], you should have some measure
+      of security.</P
+><P
+>After you create your user, create a group, and add the user to
+      the group. Then, you may modify your files and directories to only be
+      accessible by the users within that group:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>groupadd beowulf 
+usermod -g beowulf wolf </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>...and add the following to /home/wolf/.bash_profile:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>umask 007</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Now any files created by the user "wolf" [or any user within the
+      group] will be automatically only writeable by the group
+      "beowulf".</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN94"
+></A
+>4.3. NFS</H2
+><P
+>Refer to the following web site: <A
+HREF="http://www.ibiblio.org/mdw/HOWTO/NFS-HOWTO/server.html"
+TARGET="_top"
+>http://www.ibiblio.org/mdw/HOWTO/NFS-HOWTO/server.html</A
+></P
+><P
+>Print that up, and have it at your side. I will be directing you
+      how to modify your system in order to create an NFS server, but I have
+      found this site invaluable, as you may also.</P
+><P
+>Make a directory for everybody to share:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>mkdir /mnt/wolf 
+chmod 770 /mnt/wolf 
+chown wolf:beowulf /mnt/wolf -R </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Go to the /etc directory, and add your "shared" directory to the
+      exports file:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>cd /etc 
+cat &#62;&#62; exports 
+/mnt/wolf 192.168.0.100/192.168.0.255 (rw) 
+&#60;control d&#62;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN103"
+></A
+>4.4. IP Addresses</H2
+><P
+>My network is 192.168.0.nnn because it is one of the "private" IP
+      ranges. Thomas Sterling talks about it on page 106 of his book. It is
+      inside my firewall, and works just fine.</P
+><P
+>My head node, which I call "wolf00" is 192.168.0.100, and every
+      other node is named "wolfnn", with an ip of 192.168.0.100 + nn. I am
+      following the sage advice of many of the web pages out there, and
+      setting myself up for an easier task of scaling up my cluster.</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN107"
+></A
+>4.5. Services</H2
+><P
+>Make sure that services we want are up:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>chkconfig -add sshd 
+chkconfig -add nfs 
+chkconfig -add rexec 
+chkconfig -add rlogin 
+chkconfig -level 3 rsh on 
+chkconfig -level 3 nfs on 
+chkconfig -level 3 rexec on 
+chkconfig -level 3 rlogin on</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>...And, during startup, I saw some services that I know I don't
+      want, and in my opinion, could be removed. You may add or remove others
+      that suit your needs; just include the ones shown above.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>chkconfig -del atd 
+chkconfig -del rsh
+chkconfig -del sendmail</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN113"
+></A
+>4.6. SSH</H2
+><P
+>To be responsible, we make ssh work. While logged in as root, you
+      must modify the /etc/ssh/sshd_config file. The lines:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>#RSAAuthentication yes 
+#AuthorizedKeysFile .ssh/authorized_keys</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>...are commented out, so uncomment them [remove the #].</P
+><P
+>Reboot, and log back in as wolf, because the operation of your
+      cluster will always be done from the user "wolf". Also, the hosts file
+      modifications done earlier must take effect. Logging out and back in
+      will not do this. To be sure, reboot the box, and make sure your prompt
+      shows hostname "wolf00".</P
+><P
+>To generate your public and private SSH keys, do this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>ssh-keygen -b 1024 -f ~/.ssh/id_rsa -t rsa -N "" </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>...and it will display a few messages, and tell you that it created
+      the public / private key pair. You will see these files, id_rsa and
+      id_rsa.pub, in the /home/wolf/.ssh directory.</P
+><P
+>Copy the id_rsa.pub file into a file called "authorized_keys"
+      right there in the .ssh directory. We will be using this file later.
+      Verify that the contents of this file show the hostname [the reason we
+      rebooted the box]. Modify the security on the files, and the
+      directory:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>chmod 644 ~/.ssh/auth* 
+chmod 755 ~/.ssh </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>According to the LAM user group, only the head node needs to log
+      on to the slave nodes; not the other way around. Therefore when we copy
+      the public key files, we only copy the head node's key file to each
+      slave node, and set up the agent on the head node. This is MUCH easier
+      than copying all authorized_keys files to all nodes. I will describe
+      this in more detail later.</P
+><P
+>Note: I only am documenting what the LAM distribution of the
+      message passing interface requires; if you chose another message passing
+      interface to build your cluster, your requirements may differ.</P
+><P
+>At the end of /home/wolf/.bash_profile, add the following
+      statements [again this is lam-specific; your requirements may
+      vary]:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>export LAMRSH='ssh -x' 
+ssh-agent sh -c 'ssh-add &#38;&#38; bash'</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN128"
+></A
+>4.7. MPI</H2
+><P
+>Lastly, put your message passing interface on the box. As stated
+      in 1.2 Requirements, I used lam. You can get lam from here:</P
+><P
+><A
+HREF=" http://www.lam-mpi.org/"
+TARGET="_top"
+>&#13;      http://www.lam-mpi.org/</A
+></P
+><P
+>...but you can use any other message passing interface or parallel
+      virtual machine software you want. Again, I am showing you what worked
+      for me.</P
+><P
+>You can either build LAM from the supplied source, or use their
+      precompiled RPM package. It is not in the scope of this document to
+      describe that; I just got the source and followed the directions, and in
+      another experiment I installed their rpm. Both of them worked fine.
+      Remember the whole reason we are doing this is to learn; go forth and
+      learn.</P
+><P
+>You may also read more documentation regarding LAM and other
+      message passing interface software <A
+HREF="http://www.tldp.org/HOWTO/Scientific-Computing-with-GNU-Linux/systems.html"
+TARGET="_top"
+>here.</A
+></P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x58.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x137.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Requirements</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Set Up Slave Nodes</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

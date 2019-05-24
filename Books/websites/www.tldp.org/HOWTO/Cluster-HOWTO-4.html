@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE> Linux Cluster HOWTO : Set up, configuration, and maintenance</TITLE>
+ <LINK HREF="Cluster-HOWTO-5.html" REL=next>
+ <LINK HREF="Cluster-HOWTO-3.html" REL=previous>
+ <LINK HREF="Cluster-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Cluster-HOWTO-5.html">Next</A>
+<A HREF="Cluster-HOWTO-3.html">Previous</A>
+<A HREF="Cluster-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4.</A> <A HREF="Cluster-HOWTO.html#toc4">Set up, configuration, and maintenance</A></H2>
+
+<H2><A NAME="ss4.1">4.1</A> <A HREF="Cluster-HOWTO.html#toc4.1">Disk configuration</A>
+</H2>
+
+<P> This section describes disk partitioning strategies. Our goal is
+to keep the virtual structures of the machines organised such that
+they are all logical. We're finding that the physical mappings to the
+logical structures are not sustainable as hardware and software
+(operating system) change. Currently, our strategy is as follows: </P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+farm/cluster machines:
+
+partition 1 on system disk     - swap  (2 * RAM)
+partition 2 on system disk     - /     (remaining disk space)
+partition 1 on additional disk - /maxa (total disk)
+
+servers:
+
+partition 1 on system disk        - swap  (2 * RAM)
+partition 2 on system disk        - /     (4-8 GB)
+partition 3 on system disk        - /home (remaining disk space)
+partition 1 on additional disk 1  - /maxa (total disk)
+partition 1 on additional disk 2  - /maxb (total disk)
+partition 1 on additional disk 3  - /maxc (total disk)
+partition 1 on additional disk 4  - /maxd (total disk)
+partition 1 on additional disk 5  - /maxe (total disk)
+partition 1 on additional disk 6  - /maxf (total disk)
+partition 1 on additional disk(s) - /maxg (total disk space)
+
+desktops:
+
+partition 1 on system disk        - swap   (2 * RAM)
+partition 2 on system disk        - /      (4-8 GB)
+partition 3 on system disk        - /spare (remaining disk space)
+partition 1 on additional disk 1  - /maxa  (total disk)
+partition 1 on additional disk(s) - /maxb  (total disk space)
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P> Note that in the case of servers and desktops, maxg and maxb can
+be a single disk or a conglomeration of disks. </P>
+<H2><A NAME="ss4.2">4.2</A> <A HREF="Cluster-HOWTO.html#toc4.2">Package configuration </A>
+</H2>
+
+<P> Install a minimal set of packages for the farm. Users are allowed
+to configure desktops as they wish, provided the virtual structure is
+kept the same described above is kept the same.  </P>
+<H2><A NAME="ss4.3">4.3</A> <A HREF="Cluster-HOWTO.html#toc4.3">Operating system installation and maintenance</A>
+</H2>
+
+<H3>Personal cloning strategy</H3>
+
+<P> I believe in having a completely distributed system. This means
+each machine contains a copy of the operating system.  Installing the
+OS on each machine manually is cumbersome. To optimise this process,
+what I do is first set up and install one machine exactly the way I
+want to.  I then create a tar and gzipped file of the entire system
+and place it on a bootable CD-ROM which I then clone on each machine
+in my cluster. </P>
+<P> The commands I use to create the tar file are as follows: </P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+tar -czvlps --same-owner --atime-preserve -f /maxa/slash.tgz /
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P> I use a script called <CODE>go</CODE> that takes a machine
+number as its argument and untars the <CODE>slash.tgz</CODE> file on the
+CD-ROM and replaces the hostname and IP address in the appropriate
+locations. A version of the <CODE>go</CODE> script and the input files for
+it can be accessed at: 
+<A HREF="http://www.ram.org/computing/linux/cluster/">http://www.ram.org/computing/linux/linux/cluster/</A>. This script
+will have to be edited based on your cluster design. </P>
+<P> To make this work, I use Martin Purschke's Custom Rescue Disk
+(
+<A HREF="http://www.phenix.bnl.gov/~purschke/RescueCD/">http://www.phenix.bnl.gov/~purschke/RescueCD/</A>) to create a
+bootable CD image containing the .tgz file representing the cloned
+system, as well as the <CODE>go</CODE> script and other associated files.
+This is burned onto a CD-ROM. </P>
+<P> There are several documents that describe how to create your own
+custom bootable CD, including the Linux Bootdisk HOWTO (
+<A HREF="http://www.linuxdoc.org/HOWTO/Bootdisk-HOWTO/">http://www.linuxdoc.org/HOWTO/Bootdisk-HOWTO/</A>), which also
+contains links to other pre-made boot/root disks. </P>
+<P> Thus you have a system where all you have to do is insert a CDROM,
+turn on the machine, have a cup of coffee (or a can of coke) and come
+back to see a full clone. You then repeat this process for as many
+machines as you have. This procedure has worked extremely well for me
+and if you have someone else actually doing the work (of inserting and
+removing CD-ROMs) then it's ideal. In my system, I specify the IP
+address by specifying the number of the machine, but this could be
+completely automated through the use of DHCP. </P>
+<P> Rob Fantini (
+<A HREF="mailto:rob@fantinibakery.com">rob@fantinibakery.com</A>) has contributed modifications of the
+scripts above that he used for cloning a Mandrake 8.2 system
+accessible at 
+<A HREF="http://www.ram.org/computing/linux/cluster/fantini_contribution.tgz">http://www.ram.org/computing/linux/cluster/fantini_contribution.tgz</A>.</P>
+<H3>Cloning and maintenance packages</H3>
+
+<H3>FAI </H3>
+
+<P> FAI (
+<A HREF="http://www.informatik.uni-koeln.de/fai/">http://www.informatik.uni-koeln.de/fai/</A>) is an automated
+system to install a Debian GNU/Linux operating system on a PC
+cluster. You can take one or more virgin PCs, turn on the power and
+after a few minutes Linux is installed, configured and running on the
+whole cluster, without any interaction necessary.</P>
+
+<H3>SystemImager </H3>
+
+<P> SystemImager (
+<A HREF="http://systemimager.org">http://systemimager.org</A>) is software that automates Linux
+installs, software distribution, and production deployment. </P>
+<H3>DHCP vs. hard-coded IP addresses</H3>
+
+<P> If you have DHCP set up, then you don't need to reset the IP
+address and that part of it can be removed from the <CODE>go</CODE>
+script. </P>
+<P> DHCP has the advantage that you don't muck around with IP
+addresses at all provided the DHCP server is configured
+appropriately. It has the disadvantage that it relies on a centralised
+server (and like I said, I tend to distribute things as much as
+possible). Also, linking hardware ethernet addresses to IP addresses can
+make it inconvenient if you wish to replace machines or change
+hostnames routinely. </P>
+<H2><A NAME="known_hardware_issues"></A> <A NAME="ss4.4">4.4</A> <A HREF="Cluster-HOWTO.html#toc4.4">Known hardware issues </A>
+</H2>
+
+<P> The hardware in general has worked really well for us. Specific
+issues are listed below: </P>
+<P> The AMD dual 1.2 GHz machines run really hot. Two of them in a
+room increase the temperature significantly. Thus while they might be
+okay as desktops, the cooling and power consumption when using them as
+part of a large cluster is a consideration. The AMD Palmino
+configuration described previously seems to work really well, but I
+definitely recommend getting two fans in the case--this solved all our
+instability problems. </P>
+<H2><A NAME="known_software_issues"></A> <A NAME="ss4.5">4.5</A> <A HREF="Cluster-HOWTO.html#toc4.5">Known software issues </A>
+</H2>
+
+<P> Some tar executables apparently don't create a tar file the nice
+way they're supposed to (especially in terms of referencing and
+de-referencing symbolic links). The solution to this I've found is to
+use a tar executable that does, like the one from RedHat 7.0. </P>
+<HR>
+<A HREF="Cluster-HOWTO-5.html">Next</A>
+<A HREF="Cluster-HOWTO-3.html">Previous</A>
+<A HREF="Cluster-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

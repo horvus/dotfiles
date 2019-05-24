@@ -1,0 +1,73 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>1. Berkeley Internet Name Domain (BIND) daemon &#8221;named&#8221;</title><link rel="stylesheet" type="text/css" href="style.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"><link rel="home" href="index.html" title="Linux IPv6 HOWTO (en)"><link rel="up" href="ch22.html" title="Chapter 22. Hints for IPv6-enabled daemons"><link rel="prev" href="ch22.html" title="Chapter 22. Hints for IPv6-enabled daemons"><link rel="next" href="ch22s02.html" title="2. Internet super daemon (xinetd)"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">1. Berkeley Internet Name Domain (BIND) daemon &#8221;named&#8221;</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch22.html">Prev</a> </td><th width="60%" align="center">Chapter 22. Hints for IPv6-enabled daemons</th><td width="20%" align="right"> <a accesskey="n" href="ch22s02.html">Next</a></td></tr></table><hr></div><div class="sect1"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="hints-daemons-bind"></a>1. Berkeley Internet Name Domain (BIND) daemon &#8221;named&#8221;</h2></div></div></div><p>IPv6 is supported since version 9. Always use newest available version. At least version 9.1.3 must be used, older versions can contain remote exploitable security holes.</p><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51415744"></a>1.1. Listening on IPv6 addresses</h3></div></div></div><p>Note: unlike in IPv4 current versions doesn't allow to bind a server socket to dedicated IPv6 addresses, so only <span class="emphasis"><em>any</em></span> or <span class="emphasis"><em>none</em></span> are valid. Because this can be a security issue, check the Access Control List (ACL) section below, too!</p><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51417664"></a>1.1.1. Enable BIND named for listening on IPv6 address</h4></div></div></div><p>To enable IPv6 for listening, following options are requested to change</p><pre class="screen">
+options {
+        # sure other options here, too
+        listen-on-v6 { any; };
+};
+</pre><p>This should result after restart in e.g.</p><pre class="screen">
+# netstat -lnptu |grep "named\W*$" 
+tcp 0 0 :::53         :::*      LISTEN 1234/named
+¬ # incoming TCP requests
+udp 0 0 1.2.3.4:53    0.0.0.0:*        1234/named
+¬ # incoming UDP requests to IPv4 1.2.3.4
+udp 0 0 127.0.0.1:53  0.0.0.0:*        1234/named
+¬ # incoming UDP requests to IPv4 localhost
+udp 0 0 0.0.0.0:32868 0.0.0.0:*        1234/named
+¬ # dynamic chosen port for outgoing queries
+udp 0 0 :::53         :::*             1234/named
+¬ # incoming UDP request to any IPv6
+</pre><p>And a simple test looks like</p><pre class="screen">
+# dig localhost @::1
+</pre><p>and should show you a result.</p></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51422176"></a>1.1.2. Disable BIND named for listening on IPv6 address</h4></div></div></div><p>To disable IPv6 for listening, following options are requested to change</p><pre class="screen">
+options {
+        # sure other options here, too
+        listen-on-v6 { none; };
+};
+</pre></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51423856"></a>1.2. IPv6 enabled Access Control Lists (ACL)</h3></div></div></div><p>IPv6 enabled ACLs are possible and should be used whenever it's possible. An example looks like following:</p><pre class="screen">
+acl internal-net { 
+        127.0.0.1; 
+        1.2.3.0/24;  
+        2001:0db8:100::/56; 
+        ::1/128; 
+        ::ffff:1.2.3.4/128; 
+};
+acl ns-internal-net { 
+        1.2.3.4;  
+        1.2.3.5;  
+        2001:0db8:100::4/128; 
+        2001:0db8:100::5/128; 
+};
+</pre><p>This ACLs can be used e.g. for queries of clients and transfer zones to secondary name-servers. This prevents also your caching name-server to be used from outside using IPv6.</p><pre class="screen">
+options {
+        # sure other options here, too
+        listen-on-v6 { none; };
+        allow-query { internal-net; }; 
+        allow-transfer { ns-internal-net; }; 
+};
+</pre><p>It's also possible to set the <span class="emphasis"><em>allow-query </em></span>and <span class="emphasis"><em>allow-transfer</em></span> option for most of single zone definitions, too.</p></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51428256"></a>1.3. Sending queries with dedicated IPv6 address</h3></div></div></div><p>This option is not required, but perhaps needed:</p><pre class="screen">
+query-source-v6 address &lt;ipv6address|*&gt; port &lt;port|*&gt;;
+</pre></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51429888"></a>1.4. Per zone defined dedicated IPv6 addresses</h3></div></div></div><p>It's also possible to define per zone some IPv6 addresses.</p><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51430784"></a>1.4.1. Transfer source address </h4></div></div></div><p>Transfer source address is used for outgoing zone transfers:</p><pre class="screen">
+transfer-source-v6 &lt;ipv6addr|*&gt; [port port];
+</pre></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51432368"></a>1.4.2. Notify source address </h4></div></div></div><p>Notify source address is used for outgoing notify messages:</p><pre class="screen">
+notify-source-v6 &lt;ipv6addr|*&gt; [port port];
+</pre></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51433952"></a>1.5. IPv6 DNS zone files examples</h3></div></div></div><p>Some information can be also found at <a class="ulink" href="http://www.isi.edu/~bmanning/v6DNS.html" target="_top">IPv6 DNS Setup Information (article)</a>. Perhaps also helpful is the <a class="ulink" href="http://tools.fpsn.net/ipv6-inaddr/" target="_top">IPv6 Reverse DNS zone builder for BIND 8/9 (webtool)</a>.</p></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51435984"></a>1.6. Serving IPv6 related DNS data</h3></div></div></div><p>For IPv6 new types and root zones for reverse lookups are defined:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>AAAA and reverse IP6.INT: specified in <a class="ulink" href="http://www.faqs.org/rfcs/rfc1886.html" target="_top">RFC 1886 / DNS Extensions to support IP version 6</a>, usable since BIND version 4.9.6</p></li><li class="listitem"><p>A6, DNAME (DEPRECATED NOW!) and reverse IP6.ARPA: specified in <a class="ulink" href="http://www.faqs.org/rfcs/rfc2874.html" target="_top">RFC 2874 / DNS Extensions to Support IPv6 Address Aggregation and Renumbering</a>, usable since BIND 9, but see also an information about the current state at <a class="ulink" href="http://www.ietf.org/ids.by.wg/dnsext.html" target="_top">Domain Name System Extension (dnsext)</a></p></li></ul></div><p>Perhaps filled later more content, for the meantime take a look at given RFCs and</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>AAAA and reverse IP6.INT: <a class="ulink" href="http://www.isi.edu/~bmanning/v6DNS.html" target="_top">IPv6 DNS Setup Information</a></p></li><li class="listitem"><p>A6, DNAME (DEPRECATED NOW!) and reverse IP6.ARPA: take a look into chapter 4 and 6 of the BIND 9 Administrator Reference Manual (ARM) distributed with the bind-package or get this here: <a class="ulink" href="http://www.isc.org/sw/bind/arm93/" target="_top">BIND manual version 9.3</a></p></li></ul></div><p>Because IP6.INT is deprecated (but still in use), a DNS server which will support IPv6 information has to serve both reverse zones.</p><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51442976"></a>1.6.1. Current best practice</h4></div></div></div><p>Because there are some troubles around using the new formats, current best practice is:</p><p>Forward lookup support:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>AAAA</p></li></ul></div><p>Reverse lookup support:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Reverse nibble format for zone ip6.int (FOR BACKWARD COMPATIBILITY)</p></li><li class="listitem"><p>Reverse nibble format for zone ip6.arpa (RECOMMENDED)</p></li></ul></div></div></div><div class="sect2"><div class="titlepage"><div><div><h3 class="title"><a name="idp51446352"></a>1.7. Checking IPv6-enabled connect</h3></div></div></div><p>To check, whether BIND named is listening on an IPv6 socket and serving data see following examples.</p><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51447360"></a>1.7.1. IPv6 connect, but denied by ACL</h4></div></div></div><p>Specifying a dedicated server for the query, an IPv6 connect can be forced:</p><pre class="screen">
+$ host -t aaaa www.6bone.net 2001:0db8:200:f101::1 
+Using domain server: 
+Name: 2001:0db8:200:f101::1 
+Address: 2001:0db8:200:f101::1#53 
+Aliases:
+
+Host www.6bone.net. not found: 5(REFUSED)
+</pre><p>Related log entry looks like following:</p><pre class="screen">
+Jan 3 12:43:32 gate named[12347]: client
+¬ 2001:0db8:200:f101:212:34ff:fe12:3456#32770: 
+ query denied
+</pre><p>If you see such entries in the log, check whether requests from this client should be allowed and perhaps review your ACL configuration.</p></div><div class="sect3"><div class="titlepage"><div><div><h4 class="title"><a name="idp51450800"></a>1.7.2. Successful IPv6 connect</h4></div></div></div><p>A successful IPv6 connect looks like following:</p><pre class="screen">
+$ host -t aaaa www.6bone.net 2001:0db8:200:f101::1 
+Using domain server: 
+Name: 2001:0db8:200:f101::1 
+Address: 2001:0db8:200:f101::1#53 
+Aliases:
+
+www.6bone.net. is an alias for 6bone.net. 
+6bone.net. has AAAA address 3ffe:b00:c18:1::10
+</pre></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch22.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ch22.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ch22s02.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter 22. Hints for IPv6-enabled daemons </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 2. Internet super daemon (xinetd)</td></tr></table></div></body></html>

@@ -1,0 +1,293 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Active and spare objects</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="EVMS User Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The MD region manager"
+HREF="appxmdreg.html"><LINK
+REL="PREVIOUS"
+TITLE="Creating an MD region"
+HREF="createmdreg.html"><LINK
+REL="NEXT"
+TITLE="Faulty objects"
+HREF="faultobjs.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>EVMS User Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="createmdreg.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Appendix B. The MD region manager</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="faultobjs.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="activepsareobjs"
+></A
+>B.3. Active and spare objects</H1
+><P
+>&#13;An active object in a RAID region is one that is actively used by the
+region and contains data or parity information.
+When creating a new RAID region, all the objects selected from the
+main available-objects panel will be active objects.
+Linear-RAID and RAID-0 regions only have active objects, and if any
+of those active objects fail, the region is unavailable.
+</P
+><P
+>&#13;On the other hand, the redundant RAID levels (1 and 4/5) can have spare
+objects in addition to their active objects.
+A spare is an object that is assigned to the region, but does not
+contain any live data or parity.  Its primary purpose is to act as a
+"hot standby" in case one of the active objects fails.
+</P
+><P
+>&#13;In the event of a failure of one of the child objects, the MD kernel
+driver removes the failed object from the region.
+Because these RAID levels provide redundancy (either in the form of
+mirrored data or parity information), the whole region can continue
+providing normal access to the data.
+However, because one of the active objects is missing, the region is
+now "degraded."
+</P
+><P
+>&#13;If a region becomes degraded and a spare object has been assigned to
+that region, the kernel driver will automatically activate that spare object.
+This means the spare object is turned into an active object.  However,
+this newly active object does not have any data or parity information,
+so the kernel driver must "sync" the data to this object.
+For RAID-1, this means copying all the data from one of the current
+active objects to this new active object.
+For RAID-4/5, this means using the data and parity information from the
+current active objects to fill in the missing data and parity on the
+new active object.
+While the sync process is taking place, the region remains in the
+degraded state.
+Only when the sync is complete does the region return to the full
+"clean" state.
+</P
+><P
+>&#13;You can follow the progress of the sync process by examining the
+<TT
+CLASS="filename"
+>/proc/mdstat</TT
+> file.
+You can also control the speed of the sync process using the files
+<TT
+CLASS="filename"
+>/proc/sys/dev/raid/speed_limit_min</TT
+> and
+<TT
+CLASS="filename"
+>/proc/sys/dev/raid/speed_limit_max</TT
+>.  To speed up the
+process, echo a larger number into the <TT
+CLASS="filename"
+>speed_limit_min</TT
+>
+file.
+</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="addspareobjs"
+></A
+>B.3.1. Adding spare objects</H2
+><P
+>&#13;As discussed above, a spare object can be assigned to a RAID-1 or 
+RAID-4/5 region when the region is created.
+In addition, a spare object can also be added to an already existing
+RAID region.
+The effect of this operation is the same as if the object were
+assigned when the region was created.
+</P
+><P
+>&#13;If the RAID region is clean and operating normally, the kernel driver
+will add the new object as a regular spare, and it will act as a hot-standby
+for future failures.
+If the RAID region is currently degraded, the kernel driver will
+immediately activate the new spare object and begin syncing the data
+and parity information.
+</P
+><P
+>&#13;For both RAID-1 and RAID-4/5 regions, use the "addspare" plug-in function
+to add a new spare object to the region.  The only argument is the
+name of the desired object, and only one spare object can be added at a time.
+For RAID-1 regions, the new spare object must be at least as big as the
+region, and for RAID-4/5 regions, the new spare object must be at least
+as big as the smallest active object.
+</P
+><P
+>&#13;Spare objects can be added while the RAID region is active and in use.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="remspareobjs"
+></A
+>B.3.2. Removing spare objects</H2
+><P
+>&#13;If a RAID-1 or RAID-4/5 region is clean and operating normally, and
+that region has a spare object, the spare object can be removed from
+the region if you need to use that object for another purpose.
+</P
+><P
+>&#13;For both RAID-1 and RAID-4/5 regions, use the "remspare" plug-in
+function to remove a spare object from the region.
+The only argument is the name of the desired object, and only one spare
+object can be removed at a time.
+After the spare is removed, that object will show up in the Available-Objects
+list in the EVMS user interfaces.
+</P
+><P
+>&#13;Spare objects can be removed while the RAID region is active and in use.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="addactobjsr1"
+></A
+>B.3.3. Adding active objects to RAID-1</H2
+><P
+>&#13;In RAID-1 regions, every active object has a full copy of the data for
+the region.
+This means it is easy to simply add a new active object, sync the
+data to this new object, and thus increase the "width" of the mirror.
+For instance, if you have a 2-way RAID-1 region, you can add a new
+active object, which will increase the region to a 3-way mirror, which
+increases the amount of redundancy offered by the region.
+</P
+><P
+>&#13;The first process of adding a new active object can be done in one of
+two ways.  First, the "addactive" plug-in function adds any
+available object in EVMS to the region as a new active object.
+The new object must be at least as big as the size of the RAID-1 region.
+Second, if the RAID-1 region has a spare object, that object can be
+converted to an active member of the region using the "activatespare"
+plug-in function.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="createmdreg.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="faultobjs.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Creating an MD region</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="appxmdreg.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Faulty objects</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

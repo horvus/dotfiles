@@ -1,0 +1,590 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Construction</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Pocket Linux Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Filling in the Gaps"
+HREF="phase7.html"><LINK
+REL="PREVIOUS"
+TITLE="Design"
+HREF="x1601.html"><LINK
+REL="NEXT"
+TITLE="Implementation"
+HREF="x1737.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Pocket Linux Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1601.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. Filling in the Gaps</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1737.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN1654"
+></A
+>8.3. Construction</H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1656"
+></A
+>8.3.1. Write a "more" script</H2
+><P
+>Create the following script with a text editor and save it as
+      <TT
+CLASS="filename"
+>~/staging/bin/more.sh</TT
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>#!/bin/sh
+#
+# more.sh - emulates the basic functions of the "more" binary without
+#           requiring ncurses or termcap libraries.
+#
+# Assume input is coming from STDIN unless a valid file is given as
+# a command-line argument. 
+if [ -f $1 ]; then
+  INPUT="$1"
+else
+  INPUT="/dev/stdin"
+fi
+#
+# Set IFS to newline only. See BASH(1) manpage for details on IFS.
+IFS=$'\n'
+#
+# If terminal dimensions are not already set as shell variables, take
+# a guess of 80x25.
+if [ "$COLUMNS" = "" ]; then
+  let COLUMNS=80;
+fi
+if [ "$LINES" = "" ]; then
+  let LINES=25;
+fi
+#
+# Initialize line counter variable
+let LINE_COUNTER=$LINES
+#
+# Read the input file one line at a time and display on STDOUT until
+# the page fills up. Display "Press &#60;Enter&#62;" message on STDERR and wait
+# for keypress from STDERR.  Continue until the end of the input file.
+# Any input line greater than $COLUMNS characters in length is wrapped
+# and counts as multiple lines.
+#
+while read -n $COLUMNS LINE_BUFFER; do
+  echo "$LINE_BUFFER"
+  let LINE_COUNTER=$LINE_COUNTER-1
+  if [ $LINE_COUNTER -le 1 ]; then
+    echo "Press &#60;ENTER&#62; for next page or &#60;CTRL&#62;+C to quit."&#62;/dev/stderr
+    read&#60;/dev/stderr
+    let LINE_COUNTER=$LINES
+  fi
+done&#60;$INPUT
+#
+# end of more.sh</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Create a symbolic link for <TT
+CLASS="filename"
+>more</TT
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> ln -s more.sh ~/staging/bin/more</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1667"
+></A
+>8.3.2. Create additional device files</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> ln -s /proc/self/fd ~/staging/dev/fd
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s fd/0 ~/staging/dev/stdin
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s fd/1 ~/staging/dev/stdout
+<TT
+CLASS="prompt"
+>bash#</TT
+> ln -s fd/2 ~/staging/dev/stderr
+bash# mknod -m644 ~/staging/dev/zero c 1 5</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1675"
+></A
+>8.3.3. Install ps</H2
+><P
+>Get the latest procps source package from <A
+HREF="http://procps.sourceforge.net/"
+TARGET="_top"
+>http://procps.sourceforge.net/</A
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd /usr/src/procps-3.2.3
+<TT
+CLASS="prompt"
+>bash#</TT
+> make SHARED=0 CC="gcc -mcpu=i386"
+<TT
+CLASS="prompt"
+>bash#</TT
+> cd ps
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp ps ~/staging/bin</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1685"
+></A
+>8.3.4. Install sed</H2
+><P
+>Download GNU's sed from <A
+HREF="ftp://ftp.gnu.org/gnu/sed/"
+TARGET="_top"
+>ftp://ftp.gnu.org/gnu/sed/</A
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd /usr/src/sed-4.1.2
+<TT
+CLASS="prompt"
+>bash#</TT
+> export CC="gcc -mcpu=i386"
+<TT
+CLASS="prompt"
+>bash#</TT
+> ./configure --host=i386-pc-linux-gnu
+<TT
+CLASS="prompt"
+>bash#</TT
+> make
+<TT
+CLASS="prompt"
+>bash#</TT
+> cd sed
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp sed ~/staging/bin</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1697"
+></A
+>8.3.5. Install ed</H2
+><P
+>The ed package also comes from GNU at <A
+HREF="ftp://ftp.gnu.org/gnu/ed/"
+TARGET="_top"
+>ftp://ftp.gnu.org/gnu/ed/</A
+></P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd /usr/src/ed-0.2
+<TT
+CLASS="prompt"
+>bash#</TT
+> ./configure --host=i386-pc-linux-gnu
+<TT
+CLASS="prompt"
+>bash#</TT
+> make
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp ed ~/staging/bin</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1707"
+></A
+>8.3.6. Strip binaries to save space</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> strip ~/staging/bin/*</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1712"
+></A
+>8.3.7. Ensure proper permissions</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> chown 0:0 ~/staging/bin/*
+<TT
+CLASS="prompt"
+>bash#</TT
+> chmod -R 755 ~/staging/bin
+<TT
+CLASS="prompt"
+>bash#</TT
+> chmod 4750 ~/staging/bin/su</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1719"
+></A
+>8.3.8. Create the root disk image</H2
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> cd /
+<TT
+CLASS="prompt"
+>bash#</TT
+> dd if=/dev/zero of=/dev/ram7 bs=1k count=4096
+<TT
+CLASS="prompt"
+>bash#</TT
+> mke2fs -m0 /dev/ram7 4096
+<TT
+CLASS="prompt"
+>bash#</TT
+> mount /dev/ram7 /mnt
+<TT
+CLASS="prompt"
+>bash#</TT
+> cp -dpR ~/staging/* /mnt
+<TT
+CLASS="prompt"
+>bash#</TT
+> umount /dev/ram7
+<TT
+CLASS="prompt"
+>bash#</TT
+> dd if=/dev/ram7 of=~/phase7-image bs=1k
+<TT
+CLASS="prompt"
+>bash#</TT
+> gzip -9 ~/phase7-image</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="AEN1731"
+></A
+>8.3.9. Copy the image to diskette</H2
+><P
+>Insert the diskette labeled "root disk" into drive fd0.</P
+><P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+><TT
+CLASS="prompt"
+>bash#</TT
+> dd if=~/phase7-image.gz of=/dev/fd0 bs=1k</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1601.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1737.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Design</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="phase7.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Implementation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,306 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>HOWTO: Multi Disk System Tuning: Disk Layout </TITLE>
+ <LINK HREF="Multi-Disk-HOWTO-12.html" REL=next>
+ <LINK HREF="Multi-Disk-HOWTO-10.html" REL=previous>
+ <LINK HREF="Multi-Disk-HOWTO.html#toc11" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Multi-Disk-HOWTO-12.html">Next</A>
+<A HREF="Multi-Disk-HOWTO-10.html">Previous</A>
+<A HREF="Multi-Disk-HOWTO.html#toc11">Contents</A>
+<HR>
+<H2><A NAME="disk-layout"></A> <A NAME="s11">11. Disk Layout </A></H2>
+
+<P>
+<!--
+disk!disk layout
+-->
+
+<!--
+disk!layout, disk
+-->
+
+With all this in mind we are now ready to embark on the layout. I
+have based this on my own method developed when I got hold of 3 old
+SCSI disks and boggled over the possibilities.
+<P>The tables in the appendices are designed to simplify the mapping process. They
+have been designed to help you go through the process of optimizations as well
+as making an useful log in case of system repair. A few examples are also given.
+<P>
+<P>
+<H2><A NAME="ss11.1">11.1 Selection for Partitioning</A>
+</H2>
+
+<P>
+<!--
+disk!layout, disk!partitioning
+-->
+
+Determine your needs and set up a list of all the parts of the file system
+you want to be on separate partitions and sort them in descending order of
+speed requirement and how much space you want to give each partition.
+<P>The table in 
+<A HREF="Multi-Disk-HOWTO-21.html#app-a">Appendix A</A> section
+is a useful tool to select what directories you
+should put on different partitions. It is sorted in a logical order
+with space for your own additions and notes about mounting points and
+additional systems. It is therefore NOT sorted in order of speed, instead
+the speed requirements are indicated by bullets ('o').
+<P>If you plan to RAID make a note of the disks you want to use and what
+partitions you want to RAID. Remember various RAID solutions offers
+different speeds and degrees of reliability.
+<P>(Just to make it simple I'll assume we have a set of identical SCSI disks
+and no RAID)
+<P>
+<P>
+<H2><A NAME="ss11.2">11.2 Mapping Partitions to Drives</A>
+</H2>
+
+<P>
+<!--
+disk!layout, disk!mapping partitions
+-->
+
+<!--
+disk!layout, disk!partitions, mapping
+-->
+
+Then we want to place the partitions onto physical disks. The point of the
+following algorithm is to maximise parallelizing and bus capacity. In this
+example the drives are A, B and C and the partitions are 987654321 where 9
+is the partition with the highest speed requirement. Starting at one drive
+we 'meander' the partition line over and over the drives in this way:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        A : 9 4 3
+        B : 8 5 2
+        C : 7 6 1
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>This makes the 'sum of speed requirements' the most equal across each
+drive.
+<P>Use the table in 
+<A HREF="Multi-Disk-HOWTO-22.html#app-b">Appendix B</A> section
+to select what drives to use for each partition in order to optimize for paralellicity.
+<P>Note the speed characteristics of your drives and note each directory under
+the appropriate column. Be prepared to shuffle directories, partitions
+and drives around a few times before you are satisfied.
+<P>
+<H2><A NAME="ss11.3">11.3 Sorting Partitions on Drives</A>
+</H2>
+
+<P>
+<!--
+disk!layout, disk!sorting partitions
+-->
+
+<!--
+disk!layout, disk!partitions, sorting
+-->
+
+After that it is recommended to select partition numbering for each drive.
+<P>Use the table in 
+<A HREF="Multi-Disk-HOWTO-23.html#app-c">Appendix C</A> section
+to select partition numbers in order to optimize for track characteristics.
+At the end of this you should have a table sorted in ascending partition
+number. Fill these numbers back into the tables in appendix A and B.
+<P>You will find these tables useful
+when running the partitioning program (<CODE>fdisk</CODE> or
+<CODE>cfdisk</CODE>) and when doing the installation.
+<P>
+<P>
+<H2><A NAME="ss11.4">11.4 Optimizing</A>
+</H2>
+
+<P>
+<!--
+disk!layout, disk!optimizing partitions
+-->
+
+<!--
+disk!layout, disk!partitions, optimizing
+-->
+
+After this there are usually a few partitions that have to be 'shuffled' over
+the drives either to make them fit or if there are special considerations
+regarding speed, reliability, special file systems etc. Nevertheless this
+gives what this author believes is a good starting point for the complete
+setup of the drives and the partitions. In the end it is actual use that will
+determine the real needs after we have made so many assumptions. After
+commencing operations one should assume a time comes when a repartitioning
+will be beneficial.
+<P>For instance if one of the 3 drives in the above mentioned example is
+very slow compared to the two others a better plan would be as
+follows:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+        A : 9 6 5
+        B : 8 7 4
+        C : 3 2 1
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H3>Optimizing by Characteristics</H3>
+
+<P>
+<!--
+disk!layout, disk!optimizing by characteristics
+-->
+
+<!--
+disk!layout, disk!characteristics, optimizing by
+-->
+
+Often drives can be similar in apparent overall speed but some
+advantage can be gained by matching drives to the file size
+distribution and frequency of access. Thus binaries are suited
+to drives with fast access that offer command queueing, and
+libraries are better suited to drives with larger transfer speeds
+where IDE offers good performance for the money.
+<P>
+<P>
+<H3><A NAME="opt-drive-parall"></A> Optimizing by Drive Parallelising </H3>
+
+<P>
+<!--
+disk!layout, disk!optimizing by parallelising
+-->
+
+<!--
+disk!layout, disk!parallelising, optimizing by
+-->
+
+Avoid drive contention by looking at tasks: for instance if you are
+accessing <CODE>/usr/local/bin</CODE> chances are you will soon also need files
+from <CODE>/usr/local/lib</CODE> so placing these at separate drives allows less
+seeking and possible parallel operation and drive caching. It is
+quite possible that choosing what may appear less than ideal drive
+characteristics will still be advantageous if you can gain parallel
+operations. Identify common tasks, what partitions they use and try
+to keep these on separate physical drives.
+<P>Just to illustrate my point I will give a few examples of
+task analysis here.
+<P>
+<DL>
+<P>
+<DT><B>Office software</B><DD><P>such as editing, word processing and
+spreadsheets are typical examples of low intensity software both in
+terms of CPU and disk intensity. However, should you have a single
+server for a huge number of users you should not forget that most such
+software have auto save facilities which cause extra traffic, usually
+on the home directories. Splitting users over several drives would
+reduce contention.
+<P>
+<DT><B>News</B><DD><P>readers also feature auto save features on home directories
+so ISPs should consider separating home directories
+<P>News spools are notorious for their deeply nested directories and
+their large number of very small files. Loss of a news spool
+partition is not a big problem for most people, too, so they are good
+candidates for a RAID 0 setup with many small disks to distribute
+the many seeks among multiple spindles. It is recommended in the
+manuals and FAQs for the INN news server to put news spool
+and <CODE>.overview</CODE> files on separate drives for larger installations.
+<P>
+<P>Some notes on
+<A HREF="http://www.tru64unix.compaq.com/internet/inn-wp.html">INN optimising under Tru64 UNIX</A>
+also applies to a wider audience, including Linux users.
+<P>
+<DT><B>Database</B><DD><P>applications can be demanding both in terms of drive
+usage and speed requirements. The details are naturally application
+specific, read the documentation carefully with disk requirements in
+mind. Also consider RAID both for performance and reliability.
+<P>
+<DT><B>E-mail</B><DD><P>reading and sending involves home directories as well as
+in- and outgoing spool files. If possible keep home directories and
+spool files on separate drives. If you are a mail server or a mail hub
+consider putting in- and outgoing spool directories on separate
+drives.
+<P>Losing mail is an extremely bad thing, if you are managing an ISP or major
+hub. Think about RAIDing your mail spool and consider frequent
+backups.
+<P>
+<DT><B>Software development</B><DD><P>can require a large number of directories
+for binaries, libraries, include files as well as source and project
+files. If possible split as much as possible across separate
+drives. On small systems you can place <CODE>/usr/src</CODE> and project files on
+the same drive as the home directories.
+<P>
+<DT><B>Web browsing</B><DD><P>is becoming more and more popular. Many browsers
+have a local cache which can expand to rather large volumes. As this
+is used when reloading pages or returning to the previous page, speed
+is quite important here. If however you are connected via a well configured
+proxy server you do not need more than typically a few megabytes per
+user for a session.
+See also the sections on
+<A HREF="Multi-Disk-HOWTO-10.html#server-home-dirs">Home Directories</A>
+and
+<A HREF="Multi-Disk-HOWTO-10.html#www">WWW</A>.
+<P>
+<P>
+</DL>
+<P>
+<P>
+<H2><A NAME="ss11.5">11.5 Compromises</A>
+</H2>
+
+<P>
+<!--
+disk!compromises
+-->
+
+One way to avoid the aforementioned 
+<A HREF="Multi-Disk-HOWTO-10.html#pitfalls">pitfalls</A>
+is to only set off fixed
+partitions to directories with a fairly well known size such as swap,
+<CODE>/tmp</CODE> and <CODE>/var/tmp</CODE> and group together the remainders
+into the remaining partitions using symbolic links.
+<P>Example: a slow disk (<CODE>slowdisk</CODE>),
+a fast disk (<CODE>fastdisk</CODE>) and an
+assortment of files. Having set up <CODE>swap</CODE> and <CODE>tmp</CODE> on <CODE>fastdisk</CODE>;
+and <CODE>/home</CODE> and root on slowdisk we have (the fictitious) directories
+<CODE>/a/slow</CODE>, <CODE>/a/fast</CODE>, <CODE>/b/slow</CODE> and <CODE>/b/fast</CODE>
+left to allocate on the partitions
+<CODE>/mnt.slowdisk</CODE> and <CODE>/mnt.fastdisk</CODE> which represents the
+remaining partitions of the two drives.
+<P>Putting <CODE>/a</CODE> or <CODE>/b</CODE> directly on either drive gives the same
+properties to the subdirectories. We could make all 4 directories
+separate partitions but would lose some flexibility in managing
+the size of each directory. A better solution is to make
+these 4 directories symbolic links to appropriate directories on
+the respective drives.
+<P>Thus we make 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+/a/fast point to /mnt.fastdisk/a/fast   or   /mnt.fastdisk/a.fast
+/a/slow point to /mnt.slowdisk/a/slow   or   /mnt.slowdisk/a.slow
+/b/fast point to /mnt.fastdisk/b/fast   or   /mnt.fastdisk/b.fast
+/b/slow point to /mnt.slowdisk/b/slow   or   /mnt.slowdisk/b.slow
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>and we get all fast directories on the fast drive without having to
+set up a partition for all 4 directories. The second (right hand)
+alternative gives us a flatter files system which in this case can
+make it simpler to keep an overview of the structure.
+<P>The disadvantage is that it is a complicated scheme to set up and plan
+in the first place and that all mount points and partitions have to be
+defined before the system installation.
+<P><EM>Important:</EM> note that the <CODE>/usr</CODE> partition must be mounted
+directly onto root and not via an indirect link as described above.
+The reason for this are the long backward links used extensively in
+X11 that go from deep within <CODE>/usr</CODE> all the way to root and then
+down into <CODE>/etc</CODE> directories.
+<P>
+<P>
+<HR>
+<A HREF="Multi-Disk-HOWTO-12.html">Next</A>
+<A HREF="Multi-Disk-HOWTO-10.html">Previous</A>
+<A HREF="Multi-Disk-HOWTO.html#toc11">Contents</A>
+</BODY>
+</HTML>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <title>Autoloading / Learn Vimscript the Hard Way</title>
+        <meta name="description" content="">
+        <meta name="author" content="Steve Losh">
+        <!--[if lt IE 9]>
+            <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+        <link href="../static/styles/skeleton/base.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/skeleton/skeleton.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/skeleton/layout.css" rel="stylesheet" type="text/css" />
+
+        <link href="../static/styles/tango.css" rel="stylesheet" type="text/css" />
+        <link href="../static/styles/style.less" rel="stylesheet/less" type="text/css" />
+
+        <script type="text/javascript" src="../static/scripts/less.js"></script>
+    </head>
+
+    <body class="">
+        <div class="container">
+            <header class="sixteen columns">
+                <h1><a href="../index.html">Learn Vimscript the Hard Way</a></h1>
+            </header>
+
+            
+    <section class="nav three columns">
+        
+<ul>
+<li><a href="53.html#autoloading">Autoloading</a><ul>
+<li><a href="53.html#how-autoload-works">How Autoload Works</a></li>
+<li><a href="53.html#experimenting">Experimenting</a></li>
+<li><a href="53.html#what-to-autoload">What to Autoload</a></li>
+<li><a href="53.html#adding-autoloading-to-the-potion-plugin">Adding Autoloading to the Potion Plugin</a></li>
+<li><a href="53.html#exercises">Exercises</a></li>
+</ul>
+</li>
+</ul>
+
+
+        <div class="prevnext">
+            
+                <a class="prev" href="52.html">&laquo; Prev</a>
+            
+            
+                <a class="next" href="54.html">Next &raquo;</a>
+            
+        </div>
+    </section>
+
+    <section class="content twelve columns offset-by-one">
+        <div> 
+<h1 id="autoloading">Autoloading</h1>
+<p>We've written a fair amount of functionality for our Potion plugin, and that's
+all we're going to do in this book.  Before we finish we'll talk about a few
+more important ways to polish it up and really make it shine.</p>
+<p>First on the list is making our plugin more efficient with autoloading.</p>
+<h2 id="how-autoload-works">How Autoload Works</h2>
+<p>Currently when a user loads our plugin (by opening a Potion file) <em>all</em> of its
+functionality is loaded.  Our plugin is still small so this probably isn't a big
+deal, but for larger plugins loading all of their code can take a noticeable
+amount of time.</p>
+<p>Vim's solution to this is something called "autoload".  Autoload lets you delay
+loading code until it's actually needed.  You'll take a slight performance hit
+overall, but if your users don't always use every single bit of code in your
+plugin autoloading can be a huge speedup.</p>
+<p>Here's how it works.  Look at the following command:</p>
+<pre class="codehilite"><code class="language-vim">:call somefile#Hello()</code></pre>
+
+
+<p>When you run this command, Vim will behave a bit differently than a normal
+function call.</p>
+<p>If this function has already been loaded, Vim will simply call it normally.</p>
+<p>Otherwise Vim will look for a file called <code>autoload/somefile.vim</code> in your
+<code>~/.vim</code> directory (and any Pathogen bundles).</p>
+<p>If this file exists, Vim will load/source the file.  It will then try to call
+the function normally.</p>
+<p>Inside this file, the function should be defined like this:</p>
+<pre class="codehilite"><code class="language-vim">function somefile#Hello()
+    " ...
+endfunction</code></pre>
+
+
+<p>You can use multiple <code>#</code> characters in the function name to represent
+subdirectories.  For example:</p>
+<pre class="codehilite"><code class="language-vim">:call myplugin#somefile#Hello()</code></pre>
+
+
+<p>This will look for the autoloaded file at <code>autoload/myplugin/somefile.vim</code>.  The
+function inside it needs to be defined with the full autoload path:</p>
+<pre class="codehilite"><code class="language-vim">function myplugin#somefile#Hello()
+    " ...
+endfunction</code></pre>
+
+
+<h2 id="experimenting">Experimenting</h2>
+<p>To get a feel for how this works, let's give it a try.  Create
+a <code>~/.vim/autoload/example.vim</code> file and add the following to it:</p>
+<pre class="codehilite"><code class="language-vim">echom "Loading..."
+
+function! example#Hello()
+    echom "Hello, world!"
+endfunction
+
+echom "Done loading."</code></pre>
+
+
+<p>Save the file and run <code>:call example#Hello()</code>.  Vim will output the following:</p>
+<pre class="codehilite"><code class="language-text">Loading...
+Done loading.
+Hello, world!</code></pre>
+
+
+<p>This little demonstration proves a few things:</p>
+<ol>
+<li>Vim really does load the <code>example.vim</code> file on the fly.  It didn't even exist
+   when we opened Vim, so it couldn't have been loaded on startup!</li>
+<li>When Vim finds the file it needs to autoload, it loads the entire file before
+   actually calling the function.</li>
+</ol>
+<p><strong>Without closing Vim</strong>, change the definition of the function to look like
+this:</p>
+<pre class="codehilite"><code class="language-vim">echom "Loading..."
+
+function! example#Hello()
+    echom "Hello AGAIN, world!"
+endfunction
+
+echom "Done loading."</code></pre>
+
+
+<p>Save the file and <strong>without closing Vim</strong> run <code>:call example#Hello()</code>.  Vim will
+simply output:</p>
+<pre class="codehilite"><code class="language-text">Hello, world!</code></pre>
+
+
+<p>Vim already has a definition for <code>example#Hello</code>, so it doesn't need to reload
+the file, which means:</p>
+<ol>
+<li>The code outside the function wasn't run again.</li>
+<li>It didn't pick up the changes to the function.</li>
+</ol>
+<p>Now run <code>:call example#BadFunction()</code>.  You'll see the loading messages again,
+as well as an error about a nonexistent function.  But now try running <code>:call
+example#Hello()</code> again.  This time you'll see the updated message!</p>
+<p>By now you should have a pretty clear grip on what happens when Vim encounters
+a call to a function with an autoload-style name:</p>
+<ol>
+<li>It checks to see if it has a function by that name defined already.  If so,
+   just call it.</li>
+<li>Otherwise, find the appropriate file (based on the name) and source it.</li>
+<li>Then attempt to call the function.  If it works, great. If it fails, just
+   print an error.</li>
+</ol>
+<p>If that's not completely solid in your mind yet, go back and work through this
+demonstration again and try to see where each rule takes effect.</p>
+<h2 id="what-to-autoload">What to Autoload</h2>
+<p>Autoloading isn't free.  There's some (small) overhead involved with setting it
+up, not to mention the ugly function names you need to sprinkle through your
+code.</p>
+<p>With that said, if you're creating a plugin that won't be used <em>every</em> time
+a user opens a Vim session it's probably a good idea to move as much
+functionality into autoloaded files as possible.  This will reduce the impact
+your plugin has on your users' startup times, which is important as people
+install more and more Vim plugins.</p>
+<p>So what kind of things can be safely autoloaded?  The answer is basically
+anything that's not directly called by your users.  Mappings and custom commands
+can't be autoloaded (because they wouldn't be available for the users to call),
+but many other things can be.</p>
+<p>Let's look at our Potion plugin and see what we can autoload.</p>
+<h2 id="adding-autoloading-to-the-potion-plugin">Adding Autoloading to the Potion Plugin</h2>
+<p>We'll start with the compile and run functionality.  Remember that our
+<code>ftplugin/potion/running.vim</code> file looked like this at the end of the previous
+chapter:</p>
+<pre class="codehilite"><code class="language-vim">if !exists("g:potion_command")
+    let g:potion_command = "potion"
+endif
+
+function! PotionCompileAndRunFile()
+    silent !clear
+    execute "!" . g:potion_command . " " . bufname("%")
+endfunction
+
+function! PotionShowBytecode()
+    " Get the bytecode.
+    let bytecode = system(g:potion_command . " -c -V " . bufname("%"))
+
+    " Open a new split and set it up.
+    vsplit __Potion_Bytecode__
+    normal! ggdG
+    setlocal filetype=potionbytecode
+    setlocal buftype=nofile
+
+    " Insert the bytecode.
+    call append(0, split(bytecode, '\v\n'))
+endfunction
+
+nnoremap &lt;buffer&gt; &lt;localleader&gt;r :call PotionCompileAndRunFile()&lt;cr&gt;
+nnoremap &lt;buffer&gt; &lt;localleader&gt;b :call PotionShowBytecode()&lt;cr&gt;</code></pre>
+
+
+<p>This file is already only called when a Potion file is loaded, so it doesn't add
+to the overhead of Vim's startup in general.  But there may be some users who
+simply don't need this functionality, so if we can autoload some of it we'll
+save them a few milliseconds every time they open a Potion file.</p>
+<p>Yes, in this case the savings won't be huge.  But I'm sure you can imagine
+a plugin with many thousands of lines of functions where the time required to
+load them would be more significant.</p>
+<p>Let's get started.  Create an <code>autoload/potion/running.vim</code> file in your plugin
+repo.  Then move the two functions into it and adjust their names, so they look
+like this:</p>
+<pre class="codehilite"><code class="language-vim">echom "Autoloading..."
+
+function! potion#running#PotionCompileAndRunFile()
+    silent !clear
+    execute "!" . g:potion_command . " " . bufname("%")
+endfunction
+
+function! potion#running#PotionShowBytecode()
+    " Get the bytecode.
+    let bytecode = system(g:potion_command . " -c -V " . bufname("%"))
+
+    " Open a new split and set it up.
+    vsplit __Potion_Bytecode__
+    normal! ggdG
+    setlocal filetype=potionbytecode
+    setlocal buftype=nofile
+
+    " Insert the bytecode.
+    call append(0, split(bytecode, '\v\n'))
+endfunction</code></pre>
+
+
+<p>Notice how the <code>potion#running</code> portion of the function names matches the
+directory and file name where they live.  Now change the
+<code>ftplugin/potion/running.vim</code> file to look like this:</p>
+<pre class="codehilite"><code class="language-vim">if !exists("g:potion_command")
+    let g:potion_command = "potion"
+endif
+
+nnoremap &lt;buffer&gt; &lt;localleader&gt;r
+            \ :call potion#running#PotionCompileAndRunFile()&lt;cr&gt;
+
+nnoremap &lt;buffer&gt; &lt;localleader&gt;b
+            \ :call potion#running#PotionShowBytecode()&lt;cr&gt;</code></pre>
+
+
+<p>Save the files, close Vim, and open up your <code>factorial.pn</code> file.  Try using the
+mappings to make sure they still work properly.</p>
+<p>Make sure that you see the diagnostic <code>Autoloading...</code> message only the first
+time you run one of the mappings (you may need to use <code>:messages</code> to see it).
+Once you confirm that autoloading is working properly you can remove that
+message.</p>
+<p>As you can see, we've left the <code>nnoremap</code> calls that map the keys.  We can't
+autoload these because the user would have no way to initiate the autoloading if
+we did!</p>
+<p>This is a common pattern you'll see in Vim plugins: most of their functionality
+will be held in autoloaded functions, with just <code>nnoremap</code> and <code>command</code>
+commands in the files that Vim loads every time.  Keep it in mind whenever
+you're writing a non-trivial Vim plugin.</p>
+<h2 id="exercises">Exercises</h2>
+<p>Read <code>:help autoload</code>.</p>
+<p>Experiment a bit and find out how autoloading variables behaves.</p>
+<p>Suppose you wanted to programatically force a reload of an autoload file Vim has
+already loaded, without bothering the user.  How might you do this?  You may
+want to read <code>:help :silent</code>.  Please don't ever do this in real life.</p></div>
+
+        <div class="prevnext">
+            
+                <a class="prev" href="52.html">&laquo; Previous</a>
+            
+            
+                <a class="next" href="54.html">Next &raquo;</a>
+            
+        </div>
+    </section>
+
+
+            <footer class="sixteen columns">
+                Made by <a href="http://stevelosh.com">Steve Losh</a>.
+
+                <a href="../license.html">License</a>.
+
+                Built with
+                <a href="http://bitbucket.org/sjl/bookmarkdown/">Bookmarkdown</a>.
+            </footer>
+        </div>
+
+        
+            <script type="text/javascript">
+                var _gaq = _gaq || [];
+                _gaq.push(['_setAccount', 'UA-15328874-8']);
+                _gaq.push(['_trackPageview']);
+
+                (function() {
+                 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+                 ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+                 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+                 })();
+            </script>
+        
+
+        
+            <script type="text/javascript">
+                var _gauges = _gauges || [];
+                (function() {
+                 var t   = document.createElement('script');
+                 t.type  = 'text/javascript';
+                 t.async = true;
+                 t.id    = 'gauges-tracker';
+                 t.setAttribute('data-site-id', '4e8f83b7f5a1f546e200000d');
+                 t.src = '//secure.gaug.es/track.js';
+                 var s = document.getElementsByTagName('script')[0];
+                 s.parentNode.insertBefore(t, s);
+                 })();
+             </script>
+        
+    </body>
+</html>

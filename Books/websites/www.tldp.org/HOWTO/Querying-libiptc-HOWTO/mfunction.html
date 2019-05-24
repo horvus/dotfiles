@@ -1,0 +1,981 @@
+<HTML
+><HEAD
+><TITLE
+>Functions to modify firewalling rules and statistics</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
+"><LINK
+REL="HOME"
+TITLE="Querying libiptc HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Functions to query libiptc"
+HREF="qfunction.html"><LINK
+REL="NEXT"
+TITLE="Bandwidth meter"
+HREF="bmeter.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Querying libiptc HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="qfunction.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="bmeter.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="MFUNCTION">12. Functions to modify firewalling rules and statistics</H1
+><P
+>For those of you who are a little brave, <EM
+>libiptc</EM
+>
+has a group of functions to directly modify the firewalling rules and 
+statistics <EM
+>(use of iptables is really the safest way)</EM
+>. </P
+><P
+>These functions are not covered by this HOWTO and I will limit myself 
+to presenting improved information taken from
+<TT
+CLASS="FILENAME"
+>libiptc.h</TT
+> and the 
+<A
+HREF="http://netfilter.samba.org/documentation/HOWTO/"
+TARGET="_top"
+>Linux netfilter Hacking HOWTO</A
+> by Rusty Russell.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN621">12.1. iptc_commit</H2
+><P
+><B
+>Name: </B
+>iptc_commit</P
+><P
+><B
+>Usage: </B
+>Makes the actual changes.</P
+><P
+><B
+>Prototype: </B
+>int iptc_commit(iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>The tables that you change are not written back until the 
+<EM
+>iptc_commit()</EM
+> function is called.  This means it 
+is possible for two library users operating on the same chain to race 
+each other; locking would be required to prevent this, and it is not 
+currently done. There is no race with counters, however; counters are 
+added back in to the kernel in such a way that counter increments 
+between the reading and writing of the table still show up in the new 
+table. <EM
+>To protect the status of the system you must commit 
+your changes</EM
+>.</P
+><P
+><B
+>Parameters: </B
+><EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous call 
+to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN645">12.2. iptc_insert_entry</H2
+><P
+><B
+>Name: </B
+>iptc_insert_entry</P
+><P
+><B
+>Usage: </B
+>Insert a new rule in a chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_insert_entry(const ipt_chainlabel chain, const struct ipt_entry *e, 
+unsigned int rulenum, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function insert a rule defined in structure type 
+<EM
+>ipt_entry</EM
+> in chain <EM
+>chain</EM
+> into
+position defined by integer value <EM
+>rulenum</EM
+>. Rule numbers 
+start at 1 for the first rule.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be modified; <EM
+>e</EM
+> is a pointer to a structure of type
+<EM
+>ipt_entry</EM
+> that contains information about the rule to
+be inserted. The programmer must fill the fields of this structure with
+values required to define his or her rule before passing the pointer as 
+parameter to the function. <EM
+>rulenum</EM
+> is an integer
+value defined the position in the chain of rules where the new rule will
+be inserted. Rule numbers start at 1 for the first rule. 
+<EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous call to 
+<EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN674">12.3. iptc_replace_entry</H2
+><P
+><B
+>Name: </B
+>iptc_replace_entry</P
+><P
+><B
+>Usage: </B
+>Replace an old rule in a chain with a new one.</P
+><P
+><B
+>Prototype: </B
+>int iptc_replace_entry(const ipt_chainlabel chain, const struct ipt_entry *e,
+unsigned int rulenum, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function replace the entry rule in chain <EM
+>chain</EM
+> 
+positioned at <EM
+>rulenum</EM
+> with the rule defined in structure 
+type <EM
+>ipt_entry</EM
+>. Rule numbers start at 1 for the first rule.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be modified; <EM
+>e</EM
+> is a pointer to a structure of type
+<EM
+>ipt_entry</EM
+> that contains information about the rule to
+be inserted. The programmer must fill the fields of this structure with
+values required to define his or her rule before passing the pointer as 
+parameter to the function. <EM
+>rulenum</EM
+> is an integer
+value defined the position in the chain of rules where the old rule will
+be replaced by the new one. Rule numbers start at 1 for the first rule. 
+<EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous call to 
+<EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN703">12.4. iptc_append_entry</H2
+><P
+><B
+>Name: </B
+>iptc_append_entry</P
+><P
+><B
+>Usage: </B
+>Append a new rule in a chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_append_entry(const ipt_chainlabel chain, const struct ipt_entry *e,
+iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function append a rule defined in structure type 
+<EM
+>ipt_entry</EM
+> in chain <EM
+>chain</EM
+>
+(equivalent to insert with rulenum = length of chain).</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be modified; <EM
+>e</EM
+> is a pointer to a structure of type
+<EM
+>ipt_entry</EM
+> that contains information about the rule to
+be appended. The programmer must fill the fields of this structure with
+values required to define his or her rule before passing the pointer as 
+parameter to the function. <EM
+>handle</EM
+> is a pointer to a 
+structure of type <EM
+>iptc_handle_t</EM
+> that was obtained by 
+a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN730">12.5. iptc_delete_num_entry</H2
+><P
+><B
+>Name: </B
+>iptc_delete_num_entry</P
+><P
+><B
+>Usage: </B
+>Delete a rule in a chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_delete_num_entry(const ipt_chainlabel chain, unsigned int rulenum,
+iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function delete the entry rule in chain <EM
+>chain</EM
+> 
+positioned at <EM
+>rulenum</EM
+>. Rule numbers start at 1 for the 
+first rule.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be modified; <EM
+>rulenum</EM
+> is an integer value defined the 
+position in the chain of rules where the rule will be deleted.
+<EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous call to 
+<EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN756">12.6. iptc_flush_entries</H2
+><P
+><B
+>Name: </B
+>iptc_flush_entries</P
+><P
+><B
+>Usage: </B
+>Empty a chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_flush_entries(const ipt_chainlabel chain, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function flushes the rule entries in the given chain (ie. empties chain).</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be flushed; <EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous call to 
+<EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN779">12.7. iptc_zero_entries</H2
+><P
+><B
+>Name: </B
+>iptc_zero_entries</P
+><P
+><B
+>Usage: </B
+>Zeroes the chain counters.</P
+><P
+><B
+>Prototype: </B
+>int iptc_zero_entries(const ipt_chainlabel chain, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function zeroes the counters in the given chain.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain 
+which counters will be zero; <EM
+>handle</EM
+> is a pointer 
+to a structure of type <EM
+>iptc_handle_t</EM
+> that was obtained 
+by a previous call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN802">12.8. iptc_create_chain</H2
+><P
+><B
+>Name: </B
+>iptc_create_chain</P
+><P
+><B
+>Usage: </B
+>Create a new chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_create_chain(const ipt_chainlabel chain, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function create a new chain in the table.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain 
+to be created; <EM
+>handle</EM
+> is a pointer to a structure 
+of type <EM
+>iptc_handle_t</EM
+> that was obtained by a previous 
+call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN825">12.9. iptc_delete_chain</H2
+><P
+><B
+>Name: </B
+>iptc_delete_chain</P
+><P
+><B
+>Usage: </B
+>Delete a chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_delete_chain(const ipt_chainlabel chain, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function delete the chain identified by the char pointer 
+<EM
+>chain</EM
+> in the table.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain 
+to be deleted; <EM
+>handle</EM
+> is a pointer to a structure 
+of type <EM
+>iptc_handle_t</EM
+> that was obtained by a previous 
+call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN849">12.10. iptc_rename_chain</H2
+><P
+><B
+>Name: </B
+>iptc_rename_chain</P
+><P
+><B
+>Usage: </B
+>Rename a chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_rename_chain(const ipt_chainlabel oldname, const ipt_chainlabel newname,
+iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function rename the chain identified by the char pointer
+<EM
+>oldname</EM
+> to a new name <EM
+>newname</EM
+>
+in the table.</P
+><P
+><B
+>Parameters: </B
+><EM
+>oldname</EM
+> is a char pointer to the name of the chain 
+to be renamed, <EM
+>newname</EM
+> is the new name; 
+<EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous 
+call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN875">12.11. iptc_set_policy</H2
+><P
+><B
+>Name: </B
+>iptc_set_policy</P
+><P
+><B
+>Usage: </B
+>Set the policy in a built-in chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_set_policy(const ipt_chainlabel chain, const ipt_chainlabel policy,
+struct ipt_counters *counters, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function set the policy in chain <EM
+>chain</EM
+> to the
+value represented by the char pointer <EM
+>policy</EM
+>. If you
+want to set at the same time the counters of the chain, fill those values
+in a structure of type <EM
+>ipt_counters</EM
+> and pass a pointer 
+to it as parameter <EM
+>counters</EM
+>. Be careful: the chain
+<EM
+>must be</EM
+> a built-in chain.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be modified; <EM
+>policy</EM
+> is a char pointer to the name of 
+the policy to be set. <EM
+>counters</EM
+> is a pointer to an 
+<EM
+>ipt_counters</EM
+> structure to be used to set the counters
+of the chain. <EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous call to 
+<EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN906">12.12. iptc_zero_counter</H2
+><P
+><B
+>Name: </B
+>iptc_zero_counter</P
+><P
+><B
+>Usage: </B
+>Zero counters of a rule in a chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_zero_counter(const ipt_chainlabel chain, unsigned int rulenum,
+iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function zero packet and byte counters of the entry rule in chain 
+<EM
+>chain</EM
+> positioned at <EM
+>rulenum</EM
+>. 
+Rule numbers start at 1 for the first rule.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be modified; <EM
+>rulenum</EM
+> is an integer value defined the 
+position in the chain of rules of the rule which counters will be zero.
+<EM
+>handle</EM
+> is a pointer to a structure of type 
+<EM
+>iptc_handle_t</EM
+> that was obtained by a previous call to 
+<EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN932">12.13. iptc_set_counter</H2
+><P
+><B
+>Name: </B
+>iptc_set_counter</P
+><P
+><B
+>Usage: </B
+>Set counters of a rule in a chain.</P
+><P
+><B
+>Prototype: </B
+>int iptc_set_counter(const ipt_chainlabel chain, unsigned int rulenum,
+struct ipt_counters *counters, iptc_handle_t *handle)</P
+><P
+><B
+>Description: </B
+>This function set packet and byte counters of the entry rule in chain 
+<EM
+>chain</EM
+> positioned at <EM
+>rulenum</EM
+>
+with values passed in a type structure <EM
+>ipt_counters</EM
+>.
+Rule numbers start at 1 for the first rule.</P
+><P
+><B
+>Parameters: </B
+><EM
+>chain</EM
+> is a char pointer to the name of the chain to
+be modified; <EM
+>rulenum</EM
+> is an integer value defined the 
+position in the chain of rules of the rule which counters will be set.
+<EM
+>counters</EM
+> is a pointer to an 
+<EM
+>ipt_counters</EM
+> structure to be used to set the counters
+of the rule; the programmer must fill the fields of this structure with
+values to be set. <EM
+>handle</EM
+> is a pointer to a structure 
+of type <EM
+>iptc_handle_t</EM
+> that was obtained by a previous 
+call to <EM
+>iptc_init</EM
+>.</P
+><P
+><B
+>Returns: </B
+>Returns integer value 1 (true) if successful; returns integer value 0
+(false) if fails. In this case <EM
+>errno</EM
+> is set to the 
+error number generated. Use <EM
+>iptc_strerror</EM
+> to get a
+meaningful information about the problem. If errno == 0, it means there 
+was a version error (ie. upgrade <EM
+>libiptc</EM
+>).</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="qfunction.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="bmeter.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Functions to query libiptc</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Bandwidth meter</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

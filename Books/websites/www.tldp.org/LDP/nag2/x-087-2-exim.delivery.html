@@ -1,0 +1,763 @@
+<HTML
+><HEAD
+><TITLE
+>Message Routing and Delivery</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.57"><LINK
+REL="HOME"
+TITLE="Linux Network Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Getting EximUp and Running"
+HREF="x-087-2-exim.html"><LINK
+REL="PREVIOUS"
+TITLE="Miscellaneous config Options"
+HREF="x-087-2-exim.options.html"><LINK
+REL="NEXT"
+TITLE="Protecting Against Mail Spam"
+HREF="x16298.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux Network Administrators Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x-087-2-exim.options.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 19. Getting EximUp and Running</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x16298.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="X-087-2-EXIM.DELIVERY"
+>19.6. Message Routing and Delivery</A
+></H1
+><P
+>Exim splits up mail delivery into three different tasks: routing,
+directing, and transporting. There are a number of code modules of
+each type, and each is separately configurable. Usually a number of
+different routers, directors, and transports are set up in the
+configuration file.</P
+><P
+>&#13;Routers resolve remote addresses, determining which host the message
+should be sent to and which transport should be used. In
+Internet-connected hosts there is often just one router, which does
+the resolution by looking up the domain in the DNS. Alternatively,
+there may be one router that handles addresses destined for hosts on a
+local LAN, and a second to send any other addresses to a single
+<I
+CLASS="EMPHASIS"
+>smart host</I
+>&#8201;; for example, an ISP's mail server.</P
+><P
+>&#13;Local addresses are given to the directors, of which there are
+normally several, to handle aliasing and forwarding as well as
+identifying local mailboxes. Mailing lists can be handled by aliasing
+or forwarding directors. If an address gets aliased or forwarded, any
+generated addresses are handled independently by the routers or
+directors, as necessary. By far the most common case will be delivery
+to a mailbox, but messages may also be piped into a command or
+appended to a file other than the default mailbox.</P
+><P
+>&#13;A transport is responsible for implementing a method of delivery; for
+example, sending the message over an SMTP connection or adding it to
+a specific mailbox. Routers and directors select which transport to
+use for each recipient address. If a transport fails, Exim either
+generates a bounce message or defers the address for a later retry.</P
+><P
+>With Exim, you have a lot of freedom in configuring these tasks. For each of 
+them, a number of drivers are available, from which you can choose those you 
+need. You describe them to Exim in different sections of its configuration 
+file. The transports are defined first, followed by the directors, and then 
+the routers. There are no built-in defaults, though Exim is distributed with 
+a default configuration file that covers simple cases. If you want to change 
+Exim's routing policy or modify a transport, it is easiest to start from the 
+default configuration and make changes rather than attempt to set up a 
+complete configuration from scratch.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-EXIM.ROUTING"
+>19.6.1. Routing Messages</A
+></H2
+><P
+>&#13;
+When given an address to deliver, Exim first checks whether the domain
+is one that is handled on the local host by matching it against a
+list in the <TT
+CLASS="LITERAL"
+>local_domains</TT
+> configuration
+variable. If this option is not set, the local host name is used as
+the only local domain. If the domain is local, the address is handed
+to the directors. Otherwise, it is handed to the routers to find out
+which host to forward a message to.<A
+NAME="X-087-2-FNEX05"
+HREF="#FTN.X-087-2-FNEX05"
+>[1]</A
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-EXIM.DIRECTORS"
+>19.6.2. Delivering Messages to Local Addresses</A
+></H2
+><P
+>&#13;
+Most commonly, a local address is just a user's login name, in which case
+the message is delivered to the user's mailbox,
+<TT
+CLASS="FILENAME"
+>/var/spool/mail</TT
+>/<TT
+CLASS="REPLACEABLE"
+><I
+>user-name</I
+></TT
+>.
+Other cases include aliases, mailing list names, and mail forwarding by the
+user. In these cases, the local address expands to a new list of addresses,
+which may be either local or remote.</P
+><P
+>Apart from these &#8220;normal&#8221; addresses, Exim can handle other
+types of local message destinations, like filenames and pipe commands.
+When delivering to a file, Exim appends the message, creating the file
+if necessary. File and pipe destinations are not addresses in their
+own right, so you can't send mail to, say, <SPAN
+CLASS="SYSTEMITEM"
+>/etc/passwd@vbrew.com</SPAN
+> and expect to
+overwrite the password file; deliveries to a specific file are valid
+only if they come from forwarding or alias files.  Note, however, that
+<SPAN
+CLASS="SYSTEMITEM"
+>/etc/passwd@vbrew.com</SPAN
+> is a
+syntactically valid email address, but if Exim received it, it would
+(typically) search for a user whose login name was <SPAN
+CLASS="SYSTEMITEM"
+>/etc/passwd</SPAN
+>, fail to find one, and
+bounce the message.</P
+><P
+>&#13;
+ 
+In an alias list or forwarding file, a <I
+CLASS="EMPHASIS"
+>filename</I
+> is
+anything that begins with a slash (/&#8201;) that does not parse as a fully qualified
+email address. For example, <TT
+CLASS="FILENAME"
+>/tmp/junk</TT
+> in a forwarding or
+alias file is interpreted as a file name, but
+<SPAN
+CLASS="SYSTEMITEM"
+>/tmp/junk@vbrew.com</SPAN
+>
+is an email address, though it is not likely to be a very useful one. However, 
+valid addresses of this type are seen when sending mail through X.400 gateways,
+because X.400 addresses start with a slash.</P
+><P
+>&#13;
+Similarly, a <I
+CLASS="EMPHASIS"
+>pipe command</I
+> may be any Unix command preceded
+by the pipe symbol (|), unless the string parses as a valid email address
+complete with domain. Unless you have changed the configuration, Exim does not 
+use a shell to run the command; instead, it splits it up into a command name, arguments itself, and runs it directly. The message is fed to the command
+on its standard input.</P
+><P
+>For example, to gate a mailing list into a local newsgroup, you might use a
+shell script named <B
+CLASS="COMMAND"
+>gateit</B
+>, and set up a local alias that
+delivers all messages from this mailing list to the script using
+<TT
+CLASS="LITERAL"
+>|gateit</TT
+>. If the command line contains a comma, it and the 
+preceding pipe symbol must be enclosed in double quotes. </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN16173"
+>19.6.2.1. Local users</A
+></H3
+><P
+>&#13;
+A local address most commonly denotes a user's mailbox. This is normally
+located in <TT
+CLASS="FILENAME"
+>/var/spool/mail</TT
+> and has the name of the
+user, who also owns the file. If it does not exist, it is created by
+Exim. </P
+><P
+>In some configurations, the group is set to the user's group and the
+mode is 0600. In these cases, delivery processes are run as the user,
+and the user may delete the mailbox entirely. In other
+configurations, the mailbox's group is <SPAN
+CLASS="SYSTEMITEM"
+>mail</SPAN
+>, and it has mode 660; delivery processes 
+are run under a system uid and group <SPAN
+CLASS="SYSTEMITEM"
+>mail</SPAN
+>, and users cannot delete their
+mailbox files, though they can empty them.</P
+><P
+>Note that although <TT
+CLASS="FILENAME"
+>/var/spool/mail</TT
+> is currently
+the standard place to put the mailbox files, some mail software may be
+compiled to use different paths, for example,
+<TT
+CLASS="FILENAME"
+>/usr/spool/mail</TT
+>. If delivery to users on your
+machine fails consistently, you should see if it helps to make this a
+symbolic link to <TT
+CLASS="FILENAME"
+>/var/spool/mail</TT
+>.</P
+><P
+>The addresses <SPAN
+CLASS="SYSTEMITEM"
+>MAILER-DAEMON</SPAN
+> and
+<SPAN
+CLASS="SYSTEMITEM"
+>postmaster</SPAN
+> should normally
+appear in your alias file, expanding into the email address of the
+system administrator.  <SPAN
+CLASS="SYSTEMITEM"
+>MAILER-DAEMON</SPAN
+> is used by Exim as the sender
+address in bounce messages. It is also recommended that <SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+> be set up as an alias for an
+administrator, especially when deliveries are being run under the
+permissions of the recipient users, in order to avoid running any
+delivery as <SPAN
+CLASS="SYSTEMITEM"
+>root</SPAN
+>.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN16195"
+>19.6.2.2. Forwarding</A
+></H3
+><P
+>&#13;
+
+Users can redirect their mail to alternative addresses by creating a
+<TT
+CLASS="FILENAME"
+>.forward</TT
+> file in their home directories. This contains 
+a list of recipients separated by commas and/or newlines.
+All lines of the file are read and interpreted. Any type of address may
+be used. A practical example of a <TT
+CLASS="FILENAME"
+>.forward</TT
+>
+file for vacations might be:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>janet, "|vacation"</PRE
+></TD
+></TR
+></TABLE
+>
+
+In other descriptions of <TT
+CLASS="FILENAME"
+>.forward</TT
+> files, you might 
+see the username at the start preceded by a backslash. This was
+necessary in some older MTAs to stop a search for a 
+<TT
+CLASS="FILENAME"
+>.forward</TT
+> for the new name, which could lead to 
+looping. The backslash is not necessary in Exim, which automatically 
+avoids loops of this kind.<A
+NAME="AEN16212"
+HREF="#FTN.AEN16212"
+>[2]</A
+>
+However, a backslash is permitted, and in fact it does make a difference 
+in configurations where several domains are being handled at once. 
+Without a backslash, an unqualified username is qualified with a
+default domain; with a backslash the incoming domain is preserved.</P
+><P
+>The first address in the forward file delivers the incoming message 
+to <I
+CLASS="EMPHASIS"
+>janet</I
+>'s mailbox, 
+while the <B
+CLASS="COMMAND"
+>vacation</B
+> command returns a short notification to 
+the sender.<A
+NAME="X-087-2-FNEX07"
+HREF="#FTN.X-087-2-FNEX07"
+>[3]</A
+></P
+><P
+>&#13;
+In addition to supporting &#8220;traditional&#8221; forwarding files,
+Exim can be configured to allow more complex files called
+<I
+CLASS="EMPHASIS"
+>filters</I
+>.  Instead of being just a list of
+forwarding addresses, a filter file can contain tests on the contents
+of the incoming message so that, for example, messages could be
+forwarded only if the subject contained the message &#8220;urgent.&#8221; The
+system administrator must decide whether to allow users this
+flexibility.</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN16228"
+>19.6.3. Alias Files</A
+></H2
+><P
+>&#13;
+
+
+
+
+Exim is able to handle alias files compatible with Berkeley's
+<B
+CLASS="COMMAND"
+>sendmail</B
+> alias files. Entries in the alias file can have 
+the following form:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="REPLACEABLE"
+><I
+>alias</I
+></TT
+>: <TT
+CLASS="REPLACEABLE"
+><I
+>recipients</I
+></TT
+></PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+><TT
+CLASS="REPLACEABLE"
+><I
+>recipients</I
+></TT
+> is a comma-separated list of
+addresses that will be substituted for the alias. The recipient list
+may be continued across newlines if the next line begins with whitespace.</P
+><P
+>A special feature allows Exim to handle mailing lists that are held
+separately from the alias file: if you specify
+<TT
+CLASS="LITERAL"
+>:include:</TT
+><TT
+CLASS="REPLACEABLE"
+><I
+>filename</I
+></TT
+> as a
+recipient, Exim reads the specified file and substitutes its contents
+as a list of recipients. An alternative to handling mailing lists is
+shown later in this chapter in <A
+HREF="x-087-2-exim.delivery.html#X-087-2-EXIM.DIRECTOR.MAILING-LISTS"
+>Section 19.6.4</A
+>.&#8221;</P
+><P
+>&#13;The main aliases file is <TT
+CLASS="FILENAME"
+>/etc/aliases</TT
+>. If you
+make this file world-writable or group-writeable, Exim will refuse to
+use it and will defer local deliveries. You can control the test it
+applies to the file's permissions by setting <TT
+CLASS="OPTION"
+>modemask</TT
+>
+in the <TT
+CLASS="FILENAME"
+>system_aliases</TT
+> director.</P
+><P
+>This is a sample <TT
+CLASS="FILENAME"
+>aliases</TT
+> file:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+># vbrew.com /etc/aliases file
+hostmaster: janet
+postmaster: janet
+usenet: phil
+# The development mailing list.
+development: joe, sue, mark, biff,
+        /var/mail/log/development
+owner-development: joe
+# Announcements of general interest are mailed to all
+# of the staff
+announce: :include: /etc/Exim/staff,
+        /var/mail/log/announce
+owner-announce: root
+# gate the ppp mailing list to a local newsgroup
+ppp-list: "|/usr/local/bin/gateit local.lists.ppp"</PRE
+></TD
+></TR
+></TABLE
+></P
+><P
+>When there are file names and pipe commands in an alias file, as here,
+Exim needs to be told which userid to run the deliveries under. The
+<TT
+CLASS="OPTION"
+>user</TT
+> option (and possibly <TT
+CLASS="OPTION"
+>group</TT
+>,
+too) must be set in Exim's configuration file, either on the director
+that is handling the aliases, or on the transports to which it directs
+these items.</P
+><P
+>If an error occurs while delivering to an address generated from the
+<TT
+CLASS="FILENAME"
+>aliases</TT
+> file, Exim will send a bounce message to
+the sender of the message, as usual, but this might not be
+appropriate. The <TT
+CLASS="OPTION"
+>errors_to</TT
+> option can be used to
+specify that bounce messages are to be sent elsewhere; for example, to
+the postmaster.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="X-087-2-EXIM.DIRECTOR.MAILING-LISTS"
+>19.6.4. Mailing Lists</A
+></H2
+><P
+>&#13; 
+
+Instead of the <TT
+CLASS="FILENAME"
+>aliases</TT
+> file, mailing lists may
+also be managed by means a <TT
+CLASS="FILENAME"
+>forwardfile</TT
+> director. The
+lists are all kept in a single directory such as
+<TT
+CLASS="FILENAME"
+>/etc/exim/lists/</TT
+>, and a mailing list named
+<SPAN
+CLASS="SYSTEMITEM"
+>nag-bugs</SPAN
+> is described by the file
+<TT
+CLASS="FILENAME"
+>lists/nag-bugs</TT
+>. This should contain the members'
+addresses separated by commas or newlines. Lines beginning with a hash sign
+(<TT
+CLASS="LITERAL"
+>#</TT
+>) are treated as comments. A simple director to use such
+data is as follows:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="SCREEN"
+>lists:
+  driver = forwardfile
+  file = /etc/exim/lists/${local_part}
+  no_check_local_user
+  errors_to = ${local_part}-request</PRE
+></TD
+></TR
+></TABLE
+>
+
+When this director runs, the values of the <TT
+CLASS="OPTION"
+>file</TT
+> and 
+<TT
+CLASS="OPTION"
+>errors_to</TT
+> options are <I
+CLASS="EMPHASIS"
+>expanded</I
+>. 
+Expansion causes certain portions of the strings beginning with dollar 
+characters to be replaced every time the string is used. The simplest 
+kind of expansion is the insertion of the value of one of Exim's 
+variables, and this is what is happening here. The substring 
+<TT
+CLASS="LITERAL"
+>${local_&#8201;part}</TT
+> substitutes the value of the 
+<TT
+CLASS="LITERAL"
+>$local_&#8201;part</TT
+>, which is the local part of the address 
+that is being processed.</P
+><P
+>For each mailing list, a user (or alias or mailing list) named
+<TT
+CLASS="REPLACEABLE"
+><I
+>listname-request</I
+></TT
+> should exist; any errors
+occurring when resolving an address or delivering to a list member are
+reported to this address.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNEX05"
+HREF="x-087-2-exim.delivery.html#X-087-2-FNEX05"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+> This is a simplification. It is possible
+for directors to pass addresses to transports that deliver to remote
+hosts, and similarly, it is possible for routers to pass addresses to
+local transports that write the messsage to a file or a pipe. It is
+also possible for routers to pass addresses to the directors in some
+circumstances.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN16212"
+HREF="x-087-2-exim.delivery.html#AEN16212"
+>[2]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>A director is skipped if the address it is about to process is one that 
+it has previously processed in the course of generating the present 
+address.</P
+></TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.X-087-2-FNEX07"
+HREF="x-087-2-exim.delivery.html#X-087-2-FNEX07"
+>[3]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Please, if you choose to use a vacation program, make sure it will not reply
+to messages sent from mailing lists! It is very annoying to discover that
+someone has gone on vacation and find a vacation message for every message
+they've received. Mailing list administrators: this is a good example of why it
+is bad practice to force the <TT
+CLASS="LITERAL"
+>Reply-To:</TT
+> field of mailing list
+messages to that of the list submission address.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x-087-2-exim.options.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x16298.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Miscellaneous config Options</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="x-087-2-exim.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Protecting Against Mail Spam</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>LILO mini-HOWTO: Installing hdc to Boot as hda and Using bios=</TITLE>
+ <LINK HREF="LILO-5.html" REL=next>
+ <LINK HREF="LILO-3.html" REL=previous>
+ <LINK HREF="LILO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="LILO-5.html">Next</A>
+<A HREF="LILO-3.html">Previous</A>
+<A HREF="LILO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4.</A> <A HREF="LILO.html#toc4">Installing <CODE>hdc</CODE> to Boot as <CODE>hda</CODE> and Using <CODE>bios=</CODE></A></H2>
+
+<P>Lilo allows to map the kernel image from one disk and instruct the
+BIOS to retrieve it from another disk. For example, it's common for me
+to install Linux on a disk I connect to <CODE>hdc</CODE> (master disk of
+secondary controller) and boot it as a standalong system on the primary
+IDE controller of another computer. I copied the installation floppy
+to a tiny partition, so I can run <EM>chroot</EM> in a virtual
+console to install <CODE>hdc</CODE> while I use the system to do something else.</P>
+
+<P>The <EM>lilo.conf</EM> file I use to install Lilo looks like:</P>
+<P>
+<PRE>
+# This file must be used from a system running off /dev/hdc
+boot = /dev/hdc   # overwrite MBR of hdc
+disk = /dev/hdc   # tell how hdc will look like:
+   bios = 0x80    #  the bios will see it as first drive
+delay = 0
+vga = 0
+
+image = /boot/vmlinux  # this is on /dev/hdc1
+  root = /dev/hda1     # but at boot it will be hda1
+  label = Linux
+  read-only
+</PRE>
+</P>
+
+<P>This configuration file must be read by a Lilo running <B>off
+/dev/hdc1</B>.  The Lilo maps that get written the boot sector
+(<CODE>/dev/hdc</CODE>) must refer to the files in <CODE>/boot</CODE>
+(currently installed as hdc); such files will be accessed under hda
+when this disk will be booted as a standalone system.</P>
+
+<P>I call this configuration file <CODE>/mnt/etc/lilo.conf.hdc</CODE>
+(<CODE>/mnt</CODE> is where hdc is mounted during the installation. I
+install Lilo by invoking ``<CODE>cd /mnt; chroot . sbin/lilo -C
+/etc/lilo.conf.hdc</CODE>''. Refer to the manual page for
+<EM>chroot</EM> if this looks magic.</P>
+
+<P>The ``<CODE>bios=</CODE>'' directive in <CODE>lilo.conf</CODE> is used to tell
+Lilo what the BIOS thinks of your devices. BIOS calls identify floppy
+disks and hard drives with a number: 0x00 and 0x01 select the floppy
+drives, 0x80 and the following numbers select hard disks (old BIOS-es
+can only access two disks). The meaning of ``<CODE>bios = 0x80</CODE> in
+the previous sample file is therefore ``use 0x80 in your BIOS calls
+for <CODE>/dev/hdc</CODE>''.</P>
+
+<P>This Lilo directive can be handy in other situations, for example when
+your BIOS is able to boot from SCSI disks instead of IDE ones. When
+both IDE and SCSI devices are there, Lilo can't tell whether 0x80 will
+refer to one or the other because the user is able to choose it in the
+BIOS configuration menus, and the BIOS can't be accessed while Linux
+is running.</P>
+
+<P>By default, Lilo assumes that IDE drives are mapped first by the BIOS,
+but this can be overridden by using instructions like these in
+<CODE>/etc/lilo.conf</CODE>:</P>
+<P>
+<PRE>
+disk = /dev/sda
+  bios = 0x80
+</PRE>
+</P>
+
+
+<HR>
+<A HREF="LILO-5.html">Next</A>
+<A HREF="LILO-3.html">Previous</A>
+<A HREF="LILO.html#toc4">Contents</A>
+</BODY>
+</HTML>

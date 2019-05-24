@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>KernelAnalysis-HOWTO: Linux Networking</TITLE>
+ <LINK HREF="KernelAnalysis-HOWTO-9.html" REL=next>
+ <LINK HREF="KernelAnalysis-HOWTO-7.html" REL=previous>
+ <LINK HREF="KernelAnalysis-HOWTO.html#toc8" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="KernelAnalysis-HOWTO-9.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-7.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc8">Contents</A>
+<HR>
+<H2><A NAME="s8">8. Linux Networking</A></H2>
+
+<H2><A NAME="ss8.1">8.1 How Linux networking is managed?</A>
+</H2>
+
+<P>There exists a device driver for each kind of NIC. Inside it,
+Linux will ALWAYS call a standard high level routing: "netif_rx [net/core/dev.c]",
+which will controls what 3 level protocol the frame belong to, and
+it will call the right 3 level function (so we'll use a pointer to
+the function to determine which is right).
+<P>
+<H2><A NAME="ss8.2">8.2 TCP example</A>
+</H2>
+
+<P>We'll see now an example of what happens when we send a TCP packet
+to Linux, starting from ''netif_rx [net/core/dev.c]'' call.
+<P>
+<H3>Interrupt management: "netif_rx"</H3>
+
+<P>
+<PRE>
+|netif_rx
+   |__skb_queue_tail
+      |qlen++
+      |* simple pointer insertion *    
+   |cpu_raise_softirq
+      |softirq_active(cpu) |= (1 &lt;&lt; NET_RX_SOFTIRQ) // set bit NET_RX_SOFTIRQ in the BH vector
+ 
+</PRE>
+<P>Functions:
+<P>
+<P>
+<UL>
+<LI>__skb_queue_tail [include/linux/skbuff.h]</LI>
+<LI>cpu_raise_softirq [kernel/softirq.c]
+</LI>
+</UL>
+<H3>Post Interrupt management: "net_rx_action"</H3>
+
+<P>Once IRQ interaction is ended, we need to follow the next part
+of the frame life and examine what NET_RX_SOFTIRQ does.
+<P>
+<P>We will next call ''net_rx_action [net/core/dev.c]''
+according to "net_dev_init [net/core/dev.c]".
+<P>
+<P>
+<PRE>
+|net_rx_action
+   |skb = __skb_dequeue (the exact opposite of __skb_queue_tail)
+   |for (ptype = first_protocol; ptype &lt; max_protocol; ptype++) // Determine 
+      |if (skb-&gt;protocol == ptype)                               // what is the network protocol
+         |ptype-&gt;func -&gt; ip_rcv // according to ''struct ip_packet_type [net/ipv4/ip_output.c]''
+ 
+    **** NOW WE KNOW THAT PACKET IS IP ****
+         |ip_rcv
+            |NF_HOOK (ip_rcv_finish)
+               |ip_route_input // search from routing table to determine function to call
+                  |skb-&gt;dst-&gt;input -&gt; ip_local_deliver // according to previous routing table check, destination is local machine
+                     |ip_defrag // reassembles IP fragments
+                        |NF_HOOK (ip_local_deliver_finish)
+                           |ipprot-&gt;handler -&gt; tcp_v4_rcv // according to ''tcp_protocol [include/net/protocol.c]''
+ 
+     **** NOW WE KNOW THAT PACKET IS TCP ****
+                           |tcp_v4_rcv   
+                              |sk = __tcp_v4_lookup 
+                              |tcp_v4_do_rcv
+                                 |switch(sk-&gt;state) 
+
+     *** Packet can be sent to the task which uses relative socket ***
+                                 |case TCP_ESTABLISHED:
+                                    |tcp_rcv_established
+                                       |__skb_queue_tail // enqueue packet to socket
+                                       |sk-&gt;data_ready -&gt; sock_def_readable 
+                                          |wake_up_interruptible
+                                
+
+     *** Packet has still to be handshaked by 3-way TCP handshake ***
+                                 |case TCP_LISTEN:
+                                    |tcp_v4_hnd_req
+                                       |tcp_v4_search_req
+                                       |tcp_check_req
+                                          |syn_recv_sock -&gt; tcp_v4_syn_recv_sock
+                                       |__tcp_v4_lookup_established
+                                 |tcp_rcv_state_process
+
+                    *** 3-Way TCP Handshake ***
+                                    |switch(sk-&gt;state)
+                                    |case TCP_LISTEN: // We received SYN
+                                       |conn_request -&gt; tcp_v4_conn_request
+                                          |tcp_v4_send_synack // Send SYN + ACK
+                                             |tcp_v4_synq_add // set SYN state
+                                    |case TCP_SYN_SENT: // we received SYN + ACK
+                                       |tcp_rcv_synsent_state_process
+                                          tcp_set_state(TCP_ESTABLISHED)
+                                             |tcp_send_ack
+                                                |tcp_transmit_skb
+                                                   |queue_xmit -&gt; ip_queue_xmit
+                                                      |ip_queue_xmit2
+                                                         |skb-&gt;dst-&gt;output
+                                    |case TCP_SYN_RECV: // We received ACK
+                                       |if (ACK)
+                                          |tcp_set_state(TCP_ESTABLISHED)
+                              
+</PRE>
+<P>Functions can be found under:
+<P>
+<P>
+<UL>
+<LI>net_rx_action [net/core/dev.c]</LI>
+<LI>__skb_dequeue [include/linux/skbuff.h]</LI>
+<LI>ip_rcv [net/ipv4/ip_input.c]</LI>
+<LI>NF_HOOK -&gt; nf_hook_slow [net/core/netfilter.c]</LI>
+<LI>ip_rcv_finish [net/ipv4/ip_input.c]</LI>
+<LI>ip_route_input [net/ipv4/route.c]</LI>
+<LI>ip_local_deliver [net/ipv4/ip_input.c]</LI>
+<LI>ip_defrag [net/ipv4/ip_fragment.c]</LI>
+<LI>ip_local_deliver_finish [net/ipv4/ip_input.c]</LI>
+<LI>tcp_v4_rcv [net/ipv4/tcp_ipv4.c]</LI>
+<LI>__tcp_v4_lookup</LI>
+<LI>tcp_v4_do_rcv</LI>
+<LI>tcp_rcv_established [net/ipv4/tcp_input.c]</LI>
+<LI>__skb_queue_tail [include/linux/skbuff.h]</LI>
+<LI>sock_def_readable [net/core/sock.c]</LI>
+<LI>wake_up_interruptible [include/linux/sched.h]</LI>
+<LI>tcp_v4_hnd_req [net/ipv4/tcp_ipv4.c]</LI>
+<LI>tcp_v4_search_req</LI>
+<LI>tcp_check_req</LI>
+<LI>tcp_v4_syn_recv_sock</LI>
+<LI>__tcp_v4_lookup_established</LI>
+<LI>tcp_rcv_state_process [net/ipv4/tcp_input.c]</LI>
+<LI>tcp_v4_conn_request [net/ipv4/tcp_ipv4.c]</LI>
+<LI>tcp_v4_send_synack</LI>
+<LI>tcp_v4_synq_add</LI>
+<LI>tcp_rcv_synsent_state_process [net/ipv4/tcp_input.c]</LI>
+<LI>tcp_set_state [include/net/tcp.h]</LI>
+<LI>tcp_send_ack [net/ipv4/tcp_output.c]
+</LI>
+</UL>
+<P>Description:
+<P>
+<P>
+<UL>
+<LI>First we determine protocol type (IP, then TCP)</LI>
+<LI>NF_HOOK (function) is a wrapper routine that first manages the
+network filter (for example firewall), then it calls ''function''.</LI>
+<LI>After we manage 3-way TCP Handshake which consists of:
+</LI>
+</UL>
+<P>
+<PRE>
+SERVER (LISTENING)                       CLIENT (CONNECTING)
+                           SYN 
+                   &lt;-------------------
+ 
+ 
+                        SYN + ACK
+                   -------------------&gt;
+
+ 
+                           ACK 
+                   &lt;-------------------
+
+                    3-Way TCP handshake
+
+</PRE>
+<P>
+<UL>
+<LI>In the end we only have to launch "tcp_rcv_established [net/ipv4/tcp_input.c]"
+which gives the packet to the user socket and wakes it up.
+</LI>
+</UL>
+<HR>
+<A HREF="KernelAnalysis-HOWTO-9.html">Next</A>
+<A HREF="KernelAnalysis-HOWTO-7.html">Previous</A>
+<A HREF="KernelAnalysis-HOWTO.html#toc8">Contents</A>
+</BODY>
+</HTML>

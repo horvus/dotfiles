@@ -1,0 +1,935 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Power Management Methods</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Battery Powered Linux Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="DPMS"
+HREF="displaytypes.html"><LINK
+REL="NEXT"
+TITLE="Types of Batteries"
+HREF="battery.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Battery Powered Linux Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="displaytypes.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="battery.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="METHODS"
+></A
+>3. Power Management Methods</H1
+><P
+>The basic goal of any power management technique is to reduce an 
+entity's consumption.  In the case of laptop power management, our focus is on 
+decreasing CPU and hard drive usage.  To make things a bit simpler, this is 
+broken down into <EM
+>obvious, semi-obvious,</EM
+> and 
+<EM
+>non-obvious</EM
+> techniques.  Granted, your mileage may 
+vary.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SWSUSP"
+></A
+>3.1. swsusp(8)</H2
+><P
+>Suspend to Disk (S2D) is still an elusive task under Linux.  The main 
+project at the moment is swsusp, available at 
+<A
+HREF="http://sourceforge.net/projects/swsusp"
+TARGET="_top"
+>http://sourceforge.net/projects/swsusp</A
+>.
+It's still fairly new and requires a bit of configuration to enable it.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="HDPARM"
+></A
+>3.2. hdparm(8)</H2
+><P
+><B
+CLASS="COMMAND"
+>hdparm</B
+> is a Linux shell utility that can be used to 
+spin down and improve the performance
+of various ATA/IDE drives.  If it's not included with your system, you can 
+fetch the source from
+<A
+HREF="http://freshmeat.net/redir/hdparm/4062/url_homepage/hardware"
+TARGET="_top"
+>http://freshmeat.net/redir/hdparm/4062/url_homepage/hardware</A
+>.
+For example, the following provides 32-bit IO support with sync (-c3), DMA 
+support (-d1), Advanced Power Management (-B128), write-caching
+(-W1), disk spin down after five minutes (-S60).     gains me tremendous 
+performance with added power savings.  Note that your mileage may vary, and 
+you'll want to adjust this for your specific system to prevent data loss 
+(especially the -B and -m flags!).</P
+><P
+>In the following example, we run some read/write benchmarks of our hard 
+drive before and after using <B
+CLASS="COMMAND"
+>hdparm</B
+>.
+Note that while our cache reads remain about the same, our actual physical 
+reads from the drive increase tremendously!
+If you like living on the edge, you can play with the -m, -c, -B, and -u 
+switches with caution (see the man page).</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash# hdparm -tT /dev/hda
+Timing buffer-cache reads:   588 MB in  2.01 seconds = 292.15 MB/sec
+Timing buffered disk reads:   14 MB in  3.46 seconds =   4.05 MB/sec
+
+bash# hdparm -k1 -K1 -c3 -d1 -W1 /dev/hda
+bash# hdparm -tT /dev/hda
+Timing buffer-cache reads:   596 MB in  2.01 seconds = 297.01 MB/sec
+Timing buffered disk reads:   72 MB in  3.05 seconds =  23.58 MB/sec</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SYSKLOGD"
+></A
+>3.3. sysklogd(8)</H2
+><P
+>Examine your <B
+CLASS="COMMAND"
+>/etc/syslog.conf</B
+> file for unnecessary 
+logging activity
+and to optimize its performance.  
+If you don't want to log any system activity, consider disabling syslogd and 
+klogd entirely or,
+at the very least, minimize the amount of logging your system performs.
+You can also prefix each entry with the minus sign (-) to omit syncing the 
+file after each log entry 
+
+<A
+NAME="AEN156"
+HREF="#FTN.AEN156"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>.  
+
+For example, this will log anything with a priority of 
+<EM
+>info</EM
+> or higher, but lower than
+<EM
+>warning</EM
+>, to <B
+CLASS="COMMAND"
+>/var/log/messages</B
+> or 
+<B
+CLASS="COMMAND"
+>/var/log/mail</B
+>
+without needing to sync to disk after each write.  Since we want to keep all 
+messages with a priority of 
+<EM
+>warning</EM
+>, this will be logged to a different file without 
+disabling
+disk syncing (to prevent data loss in the event of a system crash).</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>*.warning			/var/log/syslog
+*.info;*.!warning;mail.none	-/var/log/messages
+mail.info;mail.!warning		-/var/log/mail</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Another item to be aware of is the <B
+CLASS="COMMAND"
+>-- MARK --</B
+> 
+messages that <B
+CLASS="COMMAND"
+>syslogd(8)</B
+> writes.
+This will affect your hard drive inactivity settings.  You can simply disable 
+this by running <B
+CLASS="COMMAND"
+>syslogd(8)</B
+> with:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>if [ -x /usr/sbin/syslogd -a -x /usr/sbin/klogd ]; then
+	# '-m 0' disabled 'MARK' messages
+	/usr/sbin/syslogd -m 0
+	sleep 1
+	# '-c 3' displays errors on console
+	# '-x' turns off broken EIP translation
+	/usr/sbin/klogd -c 3 -x
+fi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="XF86"
+></A
+>3.4. XFree86</H2
+><P
+>There are essentially two different types of screen blanking that can be 
+performed under XFree86:  BlankTime and DPMS.
+The first is simply a fake "blanking" effect that doesn't actually save any 
+power.  The others are specific only to
+DPMS-compliant monitors, and must be specifically enabled to take effect.  
+They are located in your <B
+CLASS="COMMAND"
+>XF86Config</B
+>
+file, which normally resides in <B
+CLASS="COMMAND"
+>/etc/X11/XF86Config</B
+>.</P
+><P
+>If you have a DPMS-compliant monitor, you might want to try enabling 
+support for it under the
+<EM
+>Monitor</EM
+> section of your <B
+CLASS="COMMAND"
+>XF86Config</B
+> 
+file:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>Section "Monitor"
+	Option	"DPMS"
+EndSection</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>To manipulate the DPMS functions, you can create/modify the
+following items in the <EM
+>ServerLayout</EM
+> section.</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>Section "ServerLayout"
+	Option "BlankTime"	"10"	# Blank the screen in 10 minutes
+	Option "StandbyTime" 	"20"	# Turn off screen in 20 minutes
+	Option "SuspendTime"	"30"	# Full hibernation in 30 minutes
+	Option "OffTime"	"40"	# Turn off DPMS monitor
+EndSection</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>It's worth noting that <B
+CLASS="COMMAND"
+>BlankTime</B
+> is not actually a 
+power saving level at all.  The screen is sent 
+a "fake" blanking effect and defaults to activate after 10 minutes.  
+Alternately, it can indicate the number of
+minutes until the screensaver should activate. It has nothing to do with 
+DPMS.</P
+><P
+>After activating your changes and restarting X-Windows, you might want 
+to examine your
+logfile to see if your video card has any problems with your changes:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ egrep "^\(WW|EE\)" /var/log/XFree86.0.log</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>There may be additional options that you can enable for your specific 
+video card/chip driver; see the 
+<A
+HREF="http://www.xfree86.org/support.html"
+TARGET="_top"
+>XFree86 Documentation</A
+> 
+website for specifics.</P
+><P
+>Of course, all of this can also be activated "on-the-fly" by using 
+<B
+CLASS="COMMAND"
+>xset(1)</B
+>.  
+If you don't have access to your system's <B
+CLASS="COMMAND"
+>XF86Config</B
+> file, 
+a good place to put these commands would be in
+your <B
+CLASS="COMMAND"
+>~/.Xsession</B
+> or <B
+CLASS="COMMAND"
+>~/.xinitrc</B
+> 
+file.</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ xset -dpms			# Disable DPMS
+bash$ xset +dpms			# Enable DPMS
+bash$ xset s off			# Disable screen blanking
+bash$ xset s 150			# Blank the screen after 150 seconds
+bash$ xset dpms 300 600 900		# Set standby, suspend, &#38; off times (in seconds)
+bash$ xset dpms force standby		# Immediately go into standby mode
+bash$ xset dpms force suspend		# Immediately go into suspend mode
+bash$ xset dpms force off		# Immediately turn off the monitor
+bash$ xset -q				# Query current settings</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>If instead you're using the Linux console (not X-Windows), you'll want 
+to use <B
+CLASS="COMMAND"
+>setterm(1)</B
+>:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ setterm -blank 10			# Blank the screen in 10 minutes
+bash$ setterm -powersave on		# Put the monitor into VESA power saving mode
+bash$ setterm -powerdown 20		# Set the VESA powerdown to 20 minutes</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="KDE"
+></A
+>3.5. KDE 3.1</H2
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KDEDISPLAY"
+></A
+>3.5.1. Display Power Control</H3
+><P
+>Assuming you've configured XFree86 to support DPMS, simply run 
+<B
+CLASS="COMMAND"
+>kcontrol</B
+> and choose <B
+CLASS="COMMAND"
+>Power 
+Control</B
+>/<B
+CLASS="COMMAND"
+>Display Power Control</B
+>.  From here, you 
+can configure Standby, Suspend, and Power off settings for your monitor.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="KDEBATTERY"
+></A
+>3.5.2. Laptop Battery</H3
+><P
+>Assuming you've configured your kernel to support either APM or ACPI, 
+simply run <B
+CLASS="COMMAND"
+>kcontrol</B
+> and choose <B
+CLASS="COMMAND"
+>Power 
+Control</B
+>/<B
+CLASS="COMMAND"
+>Laptop Battery</B
+>.  From here, you can 
+configure the various settings for your system based on the level of battery 
+power remaining.</P
+><P
+>It's worth noting that some people running ACPI tend to see the 
+following message:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>Your computer seems to have a partial ACPI installation. ACPI was probably 
+enabled, but some of the sub-options were not - you need to enable at least 
+'AC Adaptor' and 'Control Method Battery' and then rebuild your kernel.</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>If you see this, either ACPI is not installed or, more likely, KDE does 
+not recognize your particular Linux ACPI Subsystem.  If patching the kernel 
+with any ACPI updates does not resolve this, you must either not use this KDE 
+function or, alternately, revert back to using APM.</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="ENERGYSTAR"
+></A
+>3.6. Energy Star</H2
+><P
+><A
+HREF="http://www.energystar.gov"
+TARGET="_top"
+>Energy Star</A
+> is a United 
+States government-backed program 
+to promote energy efficiency standards.  Of interest:</P
+><P
+></P
+><UL
+><LI
+><P
+>An ENERGY STAR qualified computer, in sleep mode,
+			uses 70% less electricity than computers without power 
+management features.</P
+></LI
+><LI
+><P
+>An ENERGY STAR qualified monitor, in sleep mode,
+			uses 90% less electricity than monitors without power 
+management features.</P
+></LI
+></UL
+><P
+>Typically, Energy Star savings is accomplished by other power management 
+settings and is not, in and of itself,
+a power management technique.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SWAP"
+></A
+>3.7. Swap File</H2
+><P
+>Consider disabling your swap file in <B
+CLASS="COMMAND"
+>/etc/fstab</B
+> to 
+reduce hard drive access. 
+If you've got lots of memory, this is definitely the way to go.  
+One way to tell if you need your swap file is to enable it, use your system 
+for a period of time,
+and examine <B
+CLASS="COMMAND"
+>/proc/meminfo</B
+> and <B
+CLASS="COMMAND"
+>/proc/swaps</B
+>
+to determine how much free memory you've got on average, and whether or not 
+your swap file is even being utilized.</P
+><P
+>For example, today I've compiled several intensive programs and have 
+been running my laptop for about eight hours straight.
+A simple examination of my system reveals:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>bash$ cat /proc/swaps
+Filename                                Type            Size    Used    
+Priority
+/dev/hda3                                partition      136544  0       -1
+
+bash$ cat /proc/meminfo
+MemTotal:       513880 kB
+MemFree:        254820 kB
+Buffers:         42812 kB
+Cached:         142880 kB
+SwapCached:          0 kB
+Active:         159644 kB
+Inactive:        76888 kB
+HighTotal:           0 kB
+HighFree:            0 kB
+LowTotal:       513880 kB
+LowFree:        254820 kB
+SwapTotal:      136544 kB
+SwapFree:       136544 kB
+Dirty:               0 kB
+Writeback:           0 kB
+Mapped:          86148 kB
+Slab:            10748 kB
+Committed_AS:   203944 kB
+PageTables:       1140 kB
+VmallocTotal:   516076 kB
+VmallocUsed:      1468 kB
+VmallocChunk:   514604 kB
+HugePages_Total:     0
+HugePages_Free:      0
+Hugepagesize:     4096 kB</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Given this, I'd opt to disable my swapfile if this is any indicator of 
+my future usage.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TMPFS"
+></A
+>3.8. tmpfs</H2
+><P
+>Compile your kernel with tmpfs (temporary file system) enabled and mount 
+your /tmp directory using it.
+The useful bit here is that nothing will be written to your hard drive on this 
+mount point as it will act like
+a RAM disk (however nothing will be saved either).  The advantage of tmpfs 
+over the more traditional ramfs is
+that it lives in the kernel internal cache and grows and shrinks to 
+accommodate the files placed there.
+See your kernel's Documentation/filesystems/tmpfs.txt for full information.  
+If you don't specify a maximum
+size, it will default to a ceiling limit of half your available memory.  
+An example /etc/fstab with 100MB temporary ram file mounted on /tmp would look 
+like:
+
+<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>tmpfs	/tmp	tmpfs	size=100m,mode=1777	0 0</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MISC"
+></A
+>3.9. Miscellaneous Tuning</H2
+><P
+>Modifying /proc/sys/vm/bdflush allows a user to specify under what 
+circumstances dirty buffers are flushed to disk, how many such 
+buffers exist, etc.  Details are in linux_src_tree/Documentation/sysctl/vm.txt 
+(thanks to Marc Liberatore for pointing this out).</P
+><P
+>Boot your system and list the currently loaded modules with lsmod.
+Anything listed here most likely needs to be loaded on a regular basis;
+compiling these in as part of your kernel rather than as loadable modules may
+help to  decrease the amount of time they must be loaded from disk, and to a
+very minor degree, decrease the amount of disk access required to start your 
+system.</P
+><P
+>Examine your crontab settings to see if anything is being run on a
+regular basis.  Comment out any unnecessary items.  Don't forget to examine
+every user's crontab, including the user 'nobody'.  If you don't need to 
+schedule
+any background activity, consider disabling crond alltogether.  The same
+advice goes for atd.</P
+><P
+>If you run httpd to test and/or develop web pages, try altering the
+values of MinSpareServers and StartServers to 1.  Don't define any
+CustomLogging or at least increase the value of LogLevel to warn.  If you're
+really sure of yourself, you can change the ErrorLog directive to point to 
+/dev/null.</P
+><P
+>Consider creating a power-saving script that will immediately take your 
+laptop
+into low-power mode:</P
+><P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>#!/bin/sh
+if [ -x /usr/sbin/hdparm ]; then
+	hdparm -y /dev/hda
+fi
+
+if [ -x /usr/X11R6/bin/xset ]; then
+	xset dpms force off
+fi</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>Additionally, it's worth considering anything in the following 
+areas:</P
+><P
+><P
+></P
+><UL
+><LI
+><P
+>Adjust your system's BIOS settings to decrease or turn off 
+your display's backlight.</P
+></LI
+><LI
+><P
+>Adjust your system's BIOS settings to reduce the CPU clock 
+speed while on battery.</P
+></LI
+><LI
+><P
+>Avoid using PCMCIA devices while on battery.  Better yet, 
+eject your PCMCIA cards when not in use.</P
+></LI
+><LI
+><P
+>Avoid using external devices with your computer while on 
+battery.
+This includes printers, external monitors, zip drives, and portable 
+cameras.</P
+></LI
+><LI
+><P
+>Avoid using built-in devices while on battery.  This includes 
+cdroms and floppy drives.</P
+></LI
+><LI
+><P
+>Use simple software. A full blown multimedia application will 
+create a lot more system load and disk activity than a small simple word 
+processor</P
+></LI
+><LI
+><P
+>Use a simple window manager. While Gnome and KDE are nice, the 
+extra time it takes to load and run is not worth it while on
+battery power.  One nifty idea is to use a different 
+<B
+CLASS="COMMAND"
+>xinitrc</B
+> script to launch a different, more simple window 
+manager based on
+whether or not your system is on battery power.</P
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MYTH"
+></A
+>3.10. Power Saving Myths</H2
+><P
+>It used to be beneficial to recompile the Linux PCMCIA drivers to allow 
+the slots to have APM power support.  However, most of the functionality of 
+these drivers are now built into the kernel itself.
+If you're interested in specifics, the PCMCIA project page is available at 
+<A
+HREF="http://sourceforge.net/projects/pcmcia-cs/"
+TARGET="_top"
+>http://sourceforge.net/projects/pcmcia-cs/</A
+>.</P
+><P
+>Some people believe that APM offers better power savings over ACPI, and 
+vice-versa.  While their power management
+techniques differ, in actual battery-usage tests, both reportedly perform 
+about the same.</P
+><P
+>Contrary to popular belief, Lithium Ion (see below) batteries
+<EM
+>do</EM
+> suffer from a memory effect.
+Luckily, the effect is not large over the lifespan of a typical battery (3-4 
+years).  Anyone who tells you different
+is selling something.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN156"
+HREF="methods.html#AEN156"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>syslogd.c</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="displaytypes.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="battery.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>DPMS</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Types of Batteries</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,192 @@
+<HTML
+><HEAD
+><TITLE
+>Memory probing, RTC and decrementors</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Custom Linux: A Porting Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Linux Still Isn't Booting"
+HREF="c233.html"><LINK
+REL="PREVIOUS"
+TITLE="Linux Still Isn't Booting"
+HREF="c233.html"><LINK
+REL="NEXT"
+TITLE="Big-little endian (we should have known)"
+HREF="x247.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Custom Linux: A Porting Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="c233.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. Linux Still Isn't Booting</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x247.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="AEN235"
+></A
+>4.1. Memory probing, RTC and decrementors</H1
+><P
+> Now that the console was working, we could see the real problems. The system wasn't booting yet. Since we were working with C code, we traced the code, and found that a function called <TT
+CLASS="function"
+>sdram_size()</TT
+> wasn't completing correctly.  The function probed a register for the size of the RAM, a register our board doesn't have.  We made the function return a given value of 128MB, it's an ugly hack, but our board doesn't have a way of knowing the amount of RAM.</P
+><P
+>Wwe had the same problems with a bunch of functions called todc_XXXX, mainly
+<TT
+CLASS="function"
+>todc_get_rtc_time()</TT
+>, <TT
+CLASS="function"
+>todc_set_rtc_time()</TT
+>, and <TT
+CLASS="function"
+>time_init()</TT
+> since we don't have a RTC (real-time clock) chip on our board, and those functions were using it. For the time being, we made the <TT
+CLASS="function"
+>todc_XXX</TT
+> function only set and get a constant date and time, since our board doesn't have a bios battery and so cannot keep time when powered off.</P
+><P
+>Once all this was done, we found <TT
+CLASS="function"
+>todc_calibrate_descr()</TT
+>, which again uses the RTC chip. We had to replace that function with our own:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;void calibrate_decr() {
+	int freq, divisor;
+	freq = bus_freq();
+	divisor = 4;
+	tb_ticks_per_jiffy = freq / HZ / divisor;
+	tb_to_us = mulhwu_scale_factor(freq / divisor, 1000000);
+}
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="c233.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x247.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Linux Still Isn't Booting</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c233.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Big-little endian (we should have known)</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

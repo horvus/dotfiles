@@ -1,0 +1,90 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Root RAID HOWTO cookbook: Appendix F. - rc.raidown </TITLE>
+ <LINK HREF="Root-RAID-HOWTO-14.html" REL=next>
+ <LINK HREF="Root-RAID-HOWTO-12.html" REL=previous>
+ <LINK HREF="Root-RAID-HOWTO.html#toc13" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Root-RAID-HOWTO-14.html">Next</A>
+<A HREF="Root-RAID-HOWTO-12.html">Previous</A>
+<A HREF="Root-RAID-HOWTO.html#toc13">Contents</A>
+<HR>
+<H2><A NAME="Appendix-F"></A> <A NAME="s13">13. Appendix F. - rc.raidown </A></H2>
+
+<P>Copy the following text into the script file <B>rc.raidown</B> and save it in
+<B>/etc/rc.d</B>.
+<PRE>
+#! /bin/sh
+#
+# rc.raidown    This file is executed by init when it goes into runlevel
+#               0 (halt) or runlevel 6 (reboot). It saves the status of
+#               a root mounted raid array for subsequent re-boot
+#
+# Version:      1.08    3-25-98 Michael A. Robinton &lt; michael@bizsystems.com >
+#
+############ Save raid boot and status info ##############
+if [ -f /etc/raidboot.conf ]
+then
+  {
+  read RaidBootDevs
+  read RaidStatusPath
+  read RaidConfigEtc
+  } &lt; /etc/raidboot.conf
+
+# you must have issued
+#       cat /proc/mdstat | grep md0 >
+#               {your boot vol mnt(s)}/{RaidStatusPath}/raidgood.ref
+# before linuxrc will execute properly with this info
+#
+#       capture raid status
+  RAIDSTATUS=`/bin/cat /proc/mdstat | /usr/bin/grep md0`
+  mkdir /tmp/raid$$
+  echo "Writing RAID read-only boot FLAG(s)."
+  for Device in ${RaidBootDevs}
+  do
+# get mount point for raid boot device or use tmp
+    RBmount=$( cat /proc/mounts | /usr/bin/grep ${Device} )
+    if [ -n ${RBmounts} ]; then
+      RBmount=$( echo ${RBmount} | cut -f 2 -d ' ' )
+    else
+      RBmount="/tmp/raid$$"
+      mount ${Device} ${RBmount}
+    fi
+  if [ -d ${RBmount}/${RaidStatusPath} ]; then
+# Create raid mounted RO flag = shutdown status of raid array
+    echo ${RAIDSTATUS} > ${RBmount}/${RaidStatusPath}/raidboot.ro
+# Don't propagate 'fstab' from ramdisk
+    if [ -f /linuxrc ]; then
+      FSTAB=
+    else
+      FSTAB=fstab
+    fi
+    pushd /etc
+# Save etc files for rescue system
+    /bin/tar --ignore-failed-read \
+        -cf ${RBmount}/${RaidStatusPath}/raidboot.etc \
+        raid*.conf mdtab* ${FSTAB} lilo.conf
+    popd
+# Create new raidboot.cfg
+    {
+    /bin/echo ${RaidBootDevs}
+    /bin/echo ${RaidStatusPath}
+    /bin/echo ${RaidConfigEtc}
+    } > ${RBmount}/${RaidStatusPath}/raidboot.cfg
+    /bin/umount ${RBmount}
+  fi
+  done
+  rmdir /tmp/raid$$
+  echo "Raid boot armed"
+fi
+################## end raid boot #########################
+</PRE>
+<HR>
+<A HREF="Root-RAID-HOWTO-14.html">Next</A>
+<A HREF="Root-RAID-HOWTO-12.html">Previous</A>
+<A HREF="Root-RAID-HOWTO.html#toc13">Contents</A>
+</BODY>
+</HTML>

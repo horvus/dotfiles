@@ -1,0 +1,363 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Boot Parameters</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux 2.4 SCSI subsystem HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Kernel Configuration"
+HREF="kconfig.html"><LINK
+REL="NEXT"
+TITLE="Modules and their Parameters"
+HREF="modparams.html"></HEAD
+><BODY
+CLASS="chapter"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux 2.4 SCSI subsystem HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="kconfig.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="modparams.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="chapter"
+><H1
+><A
+NAME="bparams"
+></A
+>Chapter 5. Boot Parameters</H1
+><P
+>&#13;On a PC the motherboard's BIOS together with the SCSI BIOS provided
+by most SCSI host adapters takes care of the problem of loading the
+boot loader's image from a SCSI disk into memory and executing it. This
+may require some settings to be changed in the motherboard's BIOS. When
+more than one SCSI adapter is involved, the SCSI BIOS settings may need
+to change to indicate which one contains the disk with the boot image.
+The boot image make also come from an ATA (IDE) disk, a bootable CD-ROM or
+a floppy.
+</P
+><P
+>&#13;Both <EM
+>lilo</EM
+> and <EM
+>grub</EM
+> are commonly 
+used boot loaders with Linux. Their configuration files are in 
+<TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+> and <TT
+CLASS="filename"
+>/etc/grub.conf</TT
+>
+<A
+NAME="AEN264"
+HREF="#FTN.AEN264"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>
+respectively. One difference is that after changing lilo's configuration the
+<B
+CLASS="command"
+>lilo</B
+> command must be executed for the changes to take 
+effect (and there is no equivalent requirement for grub). See their "man" 
+pages for usage information. An excellent paper on lilo and the Linux bootup
+sequence can be found
+<A
+HREF="ftp://icaftp.epfl.ch/pub/people/almesber/booting/bootinglinux-0.ps.gz"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>ftp://icaftp.epfl.ch/pub/people/almesber/booting/bootinglinux-0.ps.gz</TT
+></A
+>.
+For further information on grub see 
+<A
+HREF="http://www.gnu.org/software/grub"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>www.gnu.org/software/grub</TT
+></A
+>.
+</P
+><P
+>&#13;Some boot parameters related to the SCSI subsystem:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13; single         [enter single user mode]
+ &#60;n&#62;            [enter run level &#60;n&#62; {0..6}]
+ root=/dev/sda6 [*]
+ root=/dev/scsi/host0/bus0/target0/lun0/part6 [*]
+ root=/dev/sd/c0b0t0u0p6   [*]
+ devfs=mount    [overrides CONFIG_DEVFS_MOUNT=n]
+ devfs=nomount  [overrides CONFIG_DEVFS_MOUNT=y]
+ init=&#60;command&#62; [executes &#60;command&#62; rather than init]
+ quiet          [reduce output to console during boot]
+ debug          [increase output to console during boot]
+ nmi_watchdog=0 [turn off NMI watchdog on a SMP machine]
+ max_scsi_luns=1  [limits SCSI bus scans to lun==0]
+ scsi_allow_ghost_devices=&#60;n&#62;
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+* When devfs is in use the initial read-only mount
+of the root partition can be done via the old
+/dev/sd&#60;a&#62;&#60;n&#62; notation or the new devfs
+notation (and two of these are shown). 
+The joint "root=/dev/sda6 single" may be useful
+when disk or adapter changes have broken the
+kernel boot load.
+</P
+><P
+>&#13;The "root=" argument may also be a hex number. For example, if the root
+partition is on <TT
+CLASS="filename"
+>/dev/sda3</TT
+> then "root=803" is 
+appropriate. The last two digits are the minor device number discussed
+in an earlier section.
+</P
+><P
+>&#13;The default argument to the "init" parameter is <TT
+CLASS="filename"
+>/sbin/init
+</TT
+> (see man (8) init). If files such as <TT
+CLASS="filename"
+>/etc/fstab
+</TT
+> have incorrect entries, it may be useful to drop directly
+into a shell with "init=/bin/bash". However if shared libraries files
+or their paths are inappropriate this may also fail. That leaves
+"init=/sbin/sash" which is a statically linked shell with many useful
+commands (for repairing a system) built in (see man (8) sash).
+</P
+><P
+>&#13;When Linux fails to boot after reporting a message like:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="programlisting"
+>&#13;  VFS: Cannot open root device 08:02
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+then the kernel expected to find a root partition on device
+<TT
+CLASS="filename"
+>/dev/sda2</TT
+> and did not. The numbers in the
+error message are major and minor device numbers (in hex)
+[see <A
+HREF="dnames.html"
+>Section 3.2</A
+> for
+the mapping to device names]. In such situations the "root" boot option
+can be useful (also the <B
+CLASS="command"
+>rdev</B
+> command can be used to
+modify where the boot image looks for the root partition).
+</P
+><P
+>&#13;Lilo's configuration file <TT
+CLASS="filename"
+>/etc/lilo.conf</TT
+>
+can take the "root=" option in two ways. The normal way is a line
+like: 'root=/dev/sda2'.
+In this case <TT
+CLASS="filename"
+>/dev/sda2</TT
+> is converted into major
+and minor numbers based on the state of the system <EM
+>when
+</EM
+> the <B
+CLASS="command"
+>lilo</B
+> command is executed. This can be
+a nuisance, especially if hardware is going to be re-arranged.
+The other way is a line of the form: 'append="root=/dev/sda2"'
+In this case the <TT
+CLASS="filename"
+>/dev/sda2</TT
+> is passed through
+to the kernel the next time it is started. This is the same as
+giving the "root=/dev/sda2" string at the kernel boot time prompt.
+It is interpreted by the kernel at startup (once the HBAs and their
+attached devices have been recognized) and thus is more flexible.
+</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN264"
+HREF="bparams.html#AEN264"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;One slight wrinkle with grub is that <TT
+CLASS="filename"
+>/etc/grub.conf</TT
+> is
+a symbolic link to <TT
+CLASS="filename"
+>/boot/grub/grub.conf</TT
+>. This can be
+useful to know when <TT
+CLASS="filename"
+>/boot</TT
+> is a separate partition.
+</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="kconfig.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="modparams.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Kernel Configuration</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Modules and their Parameters</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

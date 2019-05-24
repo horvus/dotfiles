@@ -1,0 +1,650 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>Filesystems HOWTO: Extended filesystems (Ext, Ext2, Ext3)</TITLE>
+ <LINK HREF="Filesystems-HOWTO-7.html" REL=next>
+ <LINK HREF="Filesystems-HOWTO-5.html" REL=previous>
+ <LINK HREF="Filesystems-HOWTO.html#toc6" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Filesystems-HOWTO-7.html">Next</A>
+<A HREF="Filesystems-HOWTO-5.html">Previous</A>
+<A HREF="Filesystems-HOWTO.html#toc6">Contents</A>
+<HR>
+<H2><A NAME="ext3"></A> <A NAME="ext2"></A> <A NAME="ext"></A> <A NAME="s6">6.</A> <A HREF="Filesystems-HOWTO.html#toc6">Extended filesystems (Ext, Ext2, Ext3)</A></H2>
+
+<P>Extended filesystem (ext fs), second extended filesystem (ext2fs)
+and third extended filesystem (ext3fs) were designed and implemented on
+Linux by Rmy Card, Laboratoire MASI--Institut Blaise Pascal, 
+&lt;
+<A HREF="mailto:card@masi.ibp.fr">card@masi.ibp.fr</A>&gt;,
+Theodore Ts'o, Massachussets Institute of Technology, 
+&lt;
+<A HREF="mailto:tytso@mit.edu">tytso@mit.edu</A>&gt; and
+Stephen Tweedie, University of Edinburgh, 
+&lt;
+<A HREF="mailto:sct@redhat.com">sct@redhat.com</A>&gt;</P>
+
+<P>
+<UL>
+<LI> 
+<A HREF="http://web.mit.edu/tytso/www/linux/ext2.html">http://web.mit.edu/tytso/www/linux/ext2.html</A>
+- The ext2 homepage. This is the primary source of information
+about ext2.</LI>
+<LI> 
+<A HREF="http://uranus.it.swin.edu.au/~jn/explore2fs/es2fs.htm">http://uranus.it.swin.edu.au/~jn/explore2fs/es2fs.htm</A> -
+Document about ext2fs from John Newbigin.</LI>
+<LI> 
+<A HREF="http://www.ing.umu.se/~bosse/">http://www.ing.umu.se/~bosse/</A> - Ext2fs_Rec (ext2 recognizer
+for WinNT).</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss6.1">6.1</A> <A HREF="Filesystems-HOWTO.html#toc6.1">Extended filesystem (ExtFS)</A>
+</H2>
+
+<P>This is old filesystem used in early Linux systems. </P>
+
+
+<H2><A NAME="ss6.2">6.2</A> <A HREF="Filesystems-HOWTO.html#toc6.2">Second Extended Filesystem (Ext2 FS)</A>
+</H2>
+
+<P>The Second Extended File System is probably the most widely
+used filesystem in the Linux community. It provides standard
+Unix file semantics and advanced features. Moreover, thanks to
+the optimizations included in the kernel code, it is robust and
+offers excellent performance.</P>
+
+<P>Since Ext2fs has been designed with evolution in mind, it
+contains hooks that can be used to add new features. Some
+people are working on extensions to the current filesystem:
+access control lists conforming to the Posix semantics, undelete,
+and on-the-fly file compression.</P>
+
+<P>Ext2fs was first developed and integrated in the Linux
+kernel and is now actively being ported to other operating
+systems. An Ext2fs server running on top of the GNU Hurd has
+been implemented. People are also working on an Ext2fs port in
+the LITES server, running on top of the Mach microkernel
+and in the VSTa operating system. Last, but not least, Ext2fs is an
+important part of the Masix operating system, currently under
+development by one of the authors.</P>
+
+<H3>Motivations</H3>
+
+<P>The Second Extended File System has been designed and
+implemented to fix some problems present in the first Extended
+File System. Our goal was to provide a powerful filesystem,
+which implements Unix file semantics and offers advanced
+features.</P>
+
+<P>Of course, we wanted to Ext2fs to have excellent
+performance.  We also wanted to provide a very robust
+filesystem in order to reduce the risk of data loss in
+intensive use. Last, but not least, Ext2fs had to include
+provision for extensions to allow users to benefit from new
+features without reformatting their filesystem.</P>
+
+
+<H3>``Standard'' Ext2fs features</H3>
+
+<P>The Ext2fs supports standard Unix file types: regular files,
+directories, device special files and symbolic links.</P>
+
+<P>Ext2fs is able to manage filesystems created on really big
+partitions. While the original kernel code restricted the
+maximal filesystem size to 2 GB, recent work in the VFS layer
+have raised this limit to 4 TB. Thus, it is now possible to use
+big disks without the need of creating many partitions.</P>
+
+<P>Ext2fs provides long file names. It uses variable length
+directory entries. The maximal file name size is 255
+characters. This limit could be extended to 1012 if needed.</P>
+
+<P>Ext2fs reserves some blocks for the super user
+(<CODE>root</CODE>). Normally, 5% of the blocks are reserved. This
+allows the administrator to recover easily from situations
+where user processes fill up filesystems.</P>
+
+
+<H3>``Advanced'' Ext2fs features</H3>
+
+<P>In addition to the standard Unix features, Ext2fs supports
+some extensions which are not usually present in Unix
+filesystems.</P>
+
+<P>File attributes allow the users to modify the kernel
+behavior when acting on a set of files. One can set attributes
+on a file or on a directory. In the later case, new files
+created in the directory inherit these attributes.</P>
+
+<P>BSD or System V Release 4 semantics can be selected at mount
+time. A mount option allows the administrator to choose the
+file creation semantics. On a filesystem mounted with BSD
+semantics, files are created with the same group id as their
+parent directory. System V semantics are a bit more complex: if
+a directory has the setgid bit set, new files inherit the group
+id of the directory and subdirectories inherit the group id and
+the setgid bit; in the other case, files and subdirectories are
+created with the primary group id of the calling process.</P>
+
+<P>BSD-like synchronous updates can be used in Ext2fs. A mount
+option allows the administrator to request that metadata
+(inodes, bitmap blocks, indirect blocks and directory blocks)
+be written synchronously on the disk when they are modified.
+This can be useful to maintain a strict metadata consistency
+but this leads to poor performances. Actually, this feature is
+not normally used, since in addition to the performance loss
+associated with using synchronous updates of the metadata, it
+can cause corruption in the user data which will not be flagged
+by the filesystem checker.</P>
+
+<P>Ext2fs allows the administrator to choose the logical block
+size when creating the filesystem. Block sizes can typically be
+1024, 2048 and 4096 bytes. Using big block sizes can speed up
+I/O since fewer I/O requests, and thus fewer disk head seeks,
+need to be done to access a file. On the other hand, big blocks
+waste more disk space: on the average, the last block allocated
+to a file is only half full, so as blocks get bigger, more
+space is wasted in the last block of each file. In addition,
+most of the advantages of larger block sizes are obtained by
+Ext2 filesystem's preallocation techniques.</P>
+
+<P>Ext2fs implements fast symbolic links. A fast symbolic link
+does not use any data block on the filesystem. The target name
+is not stored in a data block but in the inode itself. This
+policy can save some disk space (no data block needs to be
+allocated) and speeds up link operations (there is no need to
+read a data block when accessing such a link). Of course, the
+space available in the inode is limited so not every link can
+be implemented as a fast symbolic link. The maximal size of the
+target name in a fast symbolic link is 60 characters. We plan
+to extend this scheme to small files in the near future.</P>
+
+<P>Ext2fs keeps track of the filesystem state. A special field
+in the superblock is used by the kernel code to indicate the
+status of the file system. When a filesystem is mounted in
+read/write mode, its state is set to ``Not Clean''. When it is
+unmounted or remounted in read-only mode, its state is reset to
+``Clean''. At boot time, the filesystem checker uses this
+information to decide if a filesystem must be checked. The
+kernel code also records errors in this field. When an
+inconsistency is detected by the kernel code, the filesystem is
+marked as ``Erroneous''. The filesystem checker tests this to
+force the check of the filesystem regardless of its apparently
+clean state.</P>
+
+<P>Always skipping filesystem checks may sometimes be
+dangerous, so Ext2fs provides two ways to force checks at
+regular intervals. A mount counter is maintained in the
+superblock. Each time the filesystem is mounted in read/write
+mode, this counter is incremented. When it reaches a maximal
+value (also recorded in the superblock), the filesystem checker
+forces the check even if the filesystem is ``Clean''. A last
+check time and a maximal check interval are also maintained in
+the superblock. These two fields allow the administrator to
+request periodical checks. When the maximal check interval has
+been reached, the checker ignores the filesystem state and
+forces a filesystem check.</P>
+
+<P>An attribute allows the users to request secure deletion on
+files. When such a file is deleted, random data is written in
+the disk blocks previously allocated to the file. This prevents
+malicious people from gaining access to the previous content of
+the file by using a disk editor.</P>
+
+<P>Last, new types of files inspired from the 4.4 BSD
+filesystem have recently been added to Ext2fs. Immutable files
+can only be read: nobody can write or delete them. This can be
+used to protect sensitive configuration files. Append-only
+files can be opened in write mode but data is always appended
+at the end of the file. Like immutable files, they cannot be
+deleted or renamed. This is especially useful for log files
+which can only grow.</P>
+
+
+<H3>Physical Structure</H3>
+
+
+<P>The physical structure of Ext2 filesystems has been strongly
+influenced by the layout of the BSD filesystem. A
+filesystem is made up of block groups. Block groups are
+analogous to BSD FFS's cylinder groups. However, block groups
+are not tied to the physical layout of the blocks on the disk,
+since modern drives tend to be optimized for sequential access
+and hide their physical geometry to the operating system.
+<PRE>
+,---------+---------+---------+---------+---------,
+| Boot    | Block   | Block   |   ...   | Block   |
+| sector  | group 1 | group 2 |         | group n |
+`---------+---------+---------+---------+---------'
+</PRE>
+</P>
+
+<P>Each block group contains a redundant copy of crucial filesystem
+control informations (superblock and the filesystem descriptors) and
+also contains a part of the filesystem (a block bitmap, an inode
+bitmap, a piece of the inode table, and data blocks). The structure of
+a block group is represented in this table:
+<PRE>
+,---------+---------+---------+---------+---------+---------,
+| Super   | FS      | Block   | Inode   | Inode   | Data    |
+| block   | desc.   | bitmap  | bitmap  | table   | blocks  |
+`---------+---------+---------+---------+---------+---------'
+</PRE>
+</P>
+
+<P>Using block groups is a big win in terms of reliability:
+since the control structures are replicated in each block
+group, it is easy to recover from a filesystem where the
+superblock has been corrupted. This structure also helps to get
+good performances: by reducing the distance between the inode
+table and the data blocks, it is possible to reduce the disk
+head seeks during I/O on files.</P>
+
+<P>In Ext2fs, directories are managed as linked lists of
+variable length entries. Each entry contains the inode number,
+the entry length, the file name and its length. By using
+variable length entries, it is possible to implement long file
+names without wasting disk space in directories. </P>
+
+
+
+<H3>Performance optimizations</H3>
+
+<P>In Linux, the Ext2fs kernel code contains many performance
+optimizations, which tend to improve I/O speed when reading and
+writing files.</P>
+
+<P>Ext2fs takes advantage of the buffer cache management by
+performing readaheads: when a block has to be read, the kernel
+code requests the I/O on several contiguous blocks. This way,
+it tries to ensure that the next block to read will already be
+loaded into the buffer cache. Readaheads are normally performed
+during sequential reads on files and Ext2fs extends them to
+directory reads, either explicit reads (<CODE>readdir(2)</CODE>
+calls) or implicit ones (<CODE>namei</CODE> kernel directory
+lookup).</P>
+
+<P>Ext2fs also contains many allocation optimizations. Block
+groups are used to cluster together related inodes and data:
+the kernel code always tries to allocate data blocks for a file
+in the same group as its inode. This is intended to reduce the
+disk head seeks made when the kernel reads an inode and its
+data blocks.</P>
+
+<P>When writing data to a file, Ext2fs preallocates up to 8
+adjacent blocks when allocating a new block. Preallocation hit
+rates are around 75% even on very full filesystems. This
+preallocation achieves good write performances under heavy
+load. It also allows contiguous blocks to be allocated to
+files, thus it speeds up the future sequential reads.</P>
+
+<P>These two allocation optimizations produce a very good locality of:
+<UL>
+<LI> related files through block groups</LI>
+<LI> related blocks through the 8 bits clustering of block allocations.</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss6.3">6.3</A> <A HREF="Filesystems-HOWTO.html#toc6.3">Third Extended Filesystem (Ext3 FS)</A>
+</H2>
+
+<P>Ext3 support the same features as Ext2, but includes also Journaling. You
+can download pre- version from
+<A HREF="ftp://ftp.uk.linux.org/pub/linux/sct/fs/jfs/">ftp://ftp.uk.linux.org/pub/linux/sct/fs/jfs/</A>.</P>
+
+<H2><A NAME="ext2_compress"></A> <A NAME="ss6.4">6.4</A> <A HREF="Filesystems-HOWTO.html#toc6.4">E2compr - Ext2fs transparent compression </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://opensource.captech.com/e2compr/">http://opensource.captech.com/e2compr/</A></LI>
+<LI> Download: 
+<A HREF="ftp://opensource.captech.com/e2compr/">ftp://opensource.captech.com/e2compr/</A></LI>
+<LI> Maintainer: Peter Moulder &lt;
+<A HREF="mailto:reiter@netspace.net.au">reiter@netspace.net.au</A>&gt;</LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1999/03/27/922549870.html">Console/Filesystems</A></LI>
+<LI> Access: As for ext2 (Read/Write, Long filenames)</LI>
+<LI> License: GPL except for compression algorithms (various licenses)</LI>
+</UL>
+
+Implements `chattr +c' for the ext2 filesystem.
+Software consists of a patch to the linux kernel, and patched
+versions of various software (principally e2fsprogs i.e. e2fsck and
+friends).
+<B>Although some people have been relying on it for years,
+THIS SOFTWARE IS STILL IN DEVELOPMENT, AND IS NOT ,END-USER`-READY.</B></P>
+
+<H2><A NAME="ext2_from_dos"></A> <A NAME="ss6.5">6.5</A> <A HREF="Filesystems-HOWTO.html#toc6.5">Accessing Ext2 from DOS (Ext2 tools)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Download:
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/system/filesystems/ext2/">ftp://sunsite.unc.edu/pub/Linux/system/filesystems/ext2/</A></LI>
+<LI> Access: Read-only, no drive letters (special utilites)</LI>
+<LI> Author: Claus Tondering &lt;
+<A HREF="mailto:ct@login.dknet.dk">ct@login.dknet.dk</A>&gt;</LI>
+<LI> Access: ?</LI>
+<LI> License: ?</LI>
+</UL>
+
+A collection of DOS programs that allow you to read a Linux ext2 file system
+from DOS.</P>
+
+<H2><A NAME="ext2_from_dos2"></A> <A NAME="ss6.6">6.6</A> <A HREF="Filesystems-HOWTO.html#toc6.6">Accessing Ext2 from DOS, Windows 9x/NT and other Unixes (LTools)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.it.fht-esslingen.de/~zimmerma/software/ltools.html">http://www.it.fht-esslingen.de/~zimmerma/software/ltools.html</A></LI>
+<LI> Author: Werner Zimmermann &lt;
+<A HREF="mailto:Werner.Zimmermann@fht-esslingen.de">Werner.Zimmermann@fht-esslingen.de</A>&gt; </LI>
+<LI> Homepage: 
+<A HREF="http://www.it.fht-esslingen.de/~zimmerma/software/ltools.htm">http://www.it.fht-esslingen.de/~zimmerma/software/ltools.htm</A></LI>
+<LI> Mirror: 
+<A HREF="http://metalab.unc.edu/pub/linux/utils/dos/">http://metalab.unc.edu/pub/linux/utils/dos/</A>
+(only major releases)</LI>
+<LI> Access: Read/Write/Modify, Long filenames</LI>
+<LI> License: GPL</LI>
+</UL>
+
+The LTOOLS are under DOS/Windows 3.x/Windows 9x/Windows NT or
+non-Linux-UNIX, what the MTOOLS are under Linux. You can access (read,
+write, modify) your Linux files when running one of the other operating
+systems. The kernel of the LTOOLS is a set of command line programs.
+Additionally a JAVA program as a stand alone graphical user interface is
+available. Alternatively, you can use your standard web browser as a
+graphical user interface. The LTOOLS do not only provide access to Linux
+files on your own machine, but also remote access to files on other
+machines.</P>
+
+
+<H2><A NAME="ext2_os2"></A> <A NAME="ss6.7">6.7</A> <A HREF="Filesystems-HOWTO.html#toc6.7">Accessing Ext2 from OS/2</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://perso.wanadoo.fr/matthieu.willm/ext2-os2/">http://perso.wanadoo.fr/matthieu.willm/ext2-os2/</A></LI>
+<LI> Author: Matthieu WILLM &lt;
+<A HREF="mailto:willm@ibm.net">willm@ibm.net</A>&gt; , 
+&lt;
+<A HREF="mailto:matthieu.willm@wanadoo.fr">matthieu.willm@wanadoo.fr</A>&gt;</LI>
+<LI> Download: 
+<A HREF="ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/ext2_240.zip">ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/ext2_240.zip</A></LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1999/05/30/928069144.html">Console/Filesystems</A></LI>
+<LI> Access: Read/Write, swapping and booting to/from ext2,
+removable media support, but NO extended attributes.</LI>
+</UL>
+
+EXT2-OS2 is a package that allows OS/2 to seamlessly access Linux ext2
+formatted partitions from OS/2 as if they were standard OS/2 drive letters.
+The ultimate aim of this package is to be able to use the ext2 file system
+as a replacement of FAT or HPFS. For the moment the only lacking feature
+to achieve this goal is the support for OS/2 extended attributes.</P>
+
+<H2><A NAME="ext2_from_win95"></A> <A NAME="ss6.8">6.8</A> <A HREF="Filesystems-HOWTO.html#toc6.8">Accessing Ext2 from Windows 95/98 (FSDEXT2)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://www.yipton.demon.co.uk/">http://www.yipton.demon.co.uk/</A></LI>
+<LI> Author: Peter van Sebille 
+<A HREF="mailto:pvs@globalxs.nl">pvs@globalxs.nl</A> ,
+<A HREF="mailto:pese@nlnwgfsc.origin.nl">pese@nlnwgfsc.origin.nl</A></LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/10/14/908381784.html">Console/Filesystems</A></LI>
+<LI> Access: Read-only, Long filenames supported</LI>
+</UL>
+</P>
+
+<H2><A NAME="ext2_from_win952"></A> <A NAME="ss6.9">6.9</A> <A HREF="Filesystems-HOWTO.html#toc6.9">Accessing Ext2 from Windows 95 (Explore2fs)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://uranus.it.swin.edu.au/~jn/linux/explore2fs.htm">http://uranus.it.swin.edu.au/~jn/linux/explore2fs.htm</A></LI>
+<LI> Access: Read/Write, Long filenames, symbolic links etc...</LI>
+<LI> Author: John Newbigin &lt;
+<A HREF="mailto:jn@it.swin.edu.au">jn@it.swin.edu.au</A>&gt;</LI>
+<LI> License: GPL</LI>
+</UL>
+
+A user space application which can read and write the second extended
+file system
+ext2.  Supports hard disks and removable media, including zip and floppy.
+Uses a windows explorer like interface to show files and details.  Supports Drag&amp; Drop, context menus etc.
+Written for Windows NT, but has some support for Windows 95.  Large disks can
+cause problems.</P>
+
+<H2><A NAME="ext2_from_winnt"></A> <A NAME="ss6.10">6.10</A> <A HREF="Filesystems-HOWTO.html#toc6.10">Accessing Ext2 from Windows NT (ext2fsnt)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.chat.ru/~ashedel/ext2fsnt/">http://www.chat.ru/~ashedel/ext2fsnt/</A></LI>
+<LI> Download: 
+<A HREF="http://www.chat.ru/~ashedel/ext2fsnt/ext2fsnt.rar">http://www.chat.ru/~ashedel/ext2fsnt/ext2fsnt.rar</A></LI>
+<LI> Author: Andrey Shedel &lt; 
+<A HREF="mailto:andreys@cr.cyco.com">andreys@cr.cyco.com</A> &gt;</LI>
+<LI> Freshmeat:
+<A HREF="http://freshmeat.net/appindex/2000/08/23/967035557.html">Console/Filesystems</A></LI>
+<LI> License: Free</LI>
+<LI> Access: Read-write, LFN, Security, PageFile, Hardlinks.</LI>
+</UL>
+</P>
+
+<H2><A NAME="ntfs_from_beos2"></A> <A NAME="ss6.11">6.11</A> <A HREF="Filesystems-HOWTO.html#toc6.11">Accessing Ext2 from BeOS</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.cs.tamu.edu/people/tkg0143/be/">http://www.cs.tamu.edu/people/tkg0143/be/</A></LI>
+<LI> Author: Travis Geiselbrecht
+&lt; 
+<A HREF="mailto:geist@tamu.edu">geist@tamu.edu</A> &gt;</LI>
+<LI> Download: 
+<A HREF="http://www.cs.tamu.edu/people/tkg0143/be/downloads/ext2fs-1.0.6-x86-r4.zip">http://www.cs.tamu.edu/people/tkg0143/be/downloads/ext2fs-1.0.6-x86-r4.zip</A> for R4 and
+<A HREF="http://www.cs.tamu.edu/people/tkg0143/be/downloads/ext2fs-1.0.3-x86-r3.zip">http://www.cs.tamu.edu/people/tkg0143/be/downloads/ext2fs-1.0.3-x86-r3.zip</A> for R3.</LI>
+<LI> Access: Read-only, long filenames supported.</LI>
+<LI> License: Free</LI>
+</UL>
+
+This is a driver to allow BeOS to mount the Linux Ext2 filesystem. The
+version that is currently released author consider pretty stable. People
+have been using it for a long time, with no bug reports. </P>
+
+<P>Authow now works for Be Inc, so you will not see his ext2 and NTFS filesystem
+support updated on the web much more. The drivers will be pulled into
+future BeOS releases.</P>
+
+<H2><A NAME="ext2_macos"></A> <A NAME="ss6.12">6.12</A> <A HREF="Filesystems-HOWTO.html#toc6.12">Accessing Ext2 from MacOS (MountX)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://calvaweb.calvacom.fr/bh40">http://calvaweb.calvacom.fr/bh40</A></LI>
+<LI> Author: ?</LI>
+<LI> Download: ?</LI>
+</UL>
+
+MacOS driver which allows you to mount ext2 filesystems (Linux and
+MkLinux) on the Macintosh.</P>
+
+
+<H2><A NAME="ext2_mint"></A> <A NAME="ss6.13">6.13</A> <A HREF="Filesystems-HOWTO.html#toc6.13">Accessing Ext2 from MiNT</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://?">http://?</A></LI>
+<LI> Author: &lt;
+<A HREF="mailto:yescrew@capybara.sk-pttsc.lj.edus.si">yescrew@capybara.sk-pttsc.lj.edus.si</A>&gt;</LI>
+<LI> Download: ?</LI>
+<LI> License: GPL</LI>
+</UL>
+
+This is a full working Ext2 filesystem driver for FreeMiNT.
+It can read and write the actual ext2 version as implemented in Linux
+for example. The partition size is not limited and the logical sector
+size can be 1024, 2048 or 4096 bytes. The only restriction is that the
+physical sector size is smaller or equal to the logical sector size.
+The blocksize can be configured if you initialize the partition with
+mke2fs.</P>
+
+
+<H2><A NAME="ext2_defrag"></A> <A NAME="ss6.14">6.14</A> <A HREF="Filesystems-HOWTO.html#toc6.14">Ext2fs defrag </A>
+</H2>
+
+<P>
+<UL>
+<LI> Download: 
+<A HREF="ftp://ftp.uk.linux.org/pub/linux/sct/defrag/">ftp://ftp.uk.linux.org/pub/linux/sct/defrag/</A></LI>
+<LI> Author: Stephen C. Tweedie &lt; 
+<A HREF="mailto:sct@redhat.com">sct@redhat.com</A> &gt;</LI>
+<LI> License: GPL</LI>
+</UL>
+
+Defragments your ext2 filesystem.  Needs updated for glib libraries.</P>
+
+<H2><A NAME="ext2_resize"></A> <A NAME="ss6.15">6.15</A> <A HREF="Filesystems-HOWTO.html#toc6.15">Ext2fs resize </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.dsv.nl/~buytenh/ext2resize/">http://www.dsv.nl/~buytenh/ext2resize/</A></LI>
+<LI> Download: 
+<A HREF="http://www.dsv.nl/~buytenh/ext2resize/ext2resize-990617.tar.bz2">http://www.dsv.nl/~buytenh/ext2resize/ext2resize-990617.tar.bz2</A></LI>
+<LI> Author: Lennert Buytenhek &lt;
+<A HREF="mailto:buytenh@dsv.nl">buytenh@dsv.nl</A>&gt;.</LI>
+<LI> License: GPL</LI>
+</UL>
+
+Resizes second extended filesystem.</P>
+
+<H2><A NAME="ext2end"></A> <A NAME="ss6.16">6.16</A> <A HREF="Filesystems-HOWTO.html#toc6.16">Ext2end </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://linux.msede.com/ext2/ext2end.html">http://linux.msede.com/ext2/ext2end.html</A></LI>
+<LI> Maintainer: Mike Field &lt;
+<A HREF="mailto:mafield@the.net.nz">mafield@the.net.nz</A>&gt;</LI>
+<LI> License: Copyright Mike Field. To be GPLed once stable.</LI>
+</UL>
+
+For use with 
+<A HREF="Filesystems-HOWTO-2.html#lvm">LVM</A> Consists of 2 utilites. ext2endable
+reorganises an empty ext2 file systems to allow them
+to be extended, and ext2end that extends an unmounted
+ext2 file system.
+If ext2endable has not been run when the file system
+was created ext2end will only be able to extend it to
+the next multiple of 256MB</P>
+
+<H2><A NAME="ext2_e2fsprogs"></A> <A NAME="ss6.17">6.17</A> <A HREF="Filesystems-HOWTO.html#toc6.17">Repairing/analyzing/creating Ext2 using E2fsprogs</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://e2fsprogs.sourceforge.net/">http://e2fsprogs.sourceforge.net/</A></LI>
+<LI> Download: 
+<A HREF="ftp://download.sourceforge.net/pub/sourceforge/e2fsprogs/">ftp://download.sourceforge.net/pub/sourceforge/e2fsprogs/</A></LI>
+<LI> Authors: 
+<A HREF="mailto:tytso@mit.edu">tytso@mit.edu</A> and
+<A HREF="mailto:card@masi.ibp.fr">card@masi.ibp.fr</A></LI>
+<LI> Windows NT port: 
+<A HREF="http://www.chat.ru/~ashedel/ext2fsnt/">http://www.chat.ru/~ashedel/ext2fsnt/</A></LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/07/10/900098883.html">Console/Filesystems</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+The ext2fsprogs package contains essential ext2 filesystem utilities which
+consists of e2fsck, mke2fs, debugfs, dumpe2fs, tune2fs, and most of the
+other core ext2 filesystem utilities.</P>
+
+<H2><A NAME="ext2ed"></A> <A NAME="ss6.18">6.18</A> <A HREF="Filesystems-HOWTO.html#toc6.18">Ext2 filesystem editor - Ext2ed</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author: 
+<A HREF="mailto:tgud@tochnapc2.technion.ac.il">tgud@tochnapc2.technion.ac.il</A>.</LI>
+<LI> Download: 
+<A HREF="http://sunsite.unc.edu/pub/Linux/system/Filesystems/ext2/ext2ed-0.1.tar.gz">http://sunsite.unc.edu/pub/Linux/system/Filesystems/ext2/ext2ed-0.1.tar.gz</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+EXT2ED is a disk editor for the extended2 filesystem.
+It will show you the ext2 filesystem structures in a nice
+and intuitive way, letting you easily "travel" between them
+and making the necessary modifications.</P>
+
+<H2><A NAME="lde"></A> <A NAME="ss6.19">6.19</A> <A HREF="Filesystems-HOWTO.html#toc6.19">Linux filesystem editor - lde</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author: Scott D. Heavner &lt;
+<A HREF="mailto:sdh@po.cwru.edu">sdh@po.cwru.edu</A>&gt;.</LI>
+<LI> Download: 
+<A HREF="http://sunsite.unc.edu/pub/Linux/system/Filesystems/lde-2.3.4.tar.gz">http://sunsite.unc.edu/pub/Linux/system/Filesystems/lde-2.3.4.tar.gz</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+This allows you to view some Linux fs's,  hex block
+and inode editing are now supported and you can use it to dump an erased file
+to another partition with a little bit of work.  Supports ext2, minix,
+and xiafs.  Includes <B>LaTeX Introduction to the Minix fs</B>. You must patch
+sources to compile on 2.2.x and 2.3.x kernels beacuse of missing Xia header
+files in kernel.</P>
+
+
+<H2><A NAME="ext2undel"></A> <A NAME="ss6.20">6.20</A> <A HREF="Filesystems-HOWTO.html#toc6.20">Ext2 undelete utilities</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://amadeus.uprm.edu/~undelete">http://amadeus.uprm.edu/~undelete</A></LI>
+<LI> Authors: Gunther Costas, Wilfredo Lugo, Jerry Ramirez
+&lt;
+<A HREF="mailto:undelete@amadeus.uprm.edu">undelete@amadeus.uprm.edu</A>&gt;</LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/10/14/908382417.html">Console/Filesystems</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+This is a patch for kernel 2.0.30 that adds undelete capabilities
+using the "undeletable" attribute provided by the ext2fs. This patch
+include man pages, the undelete daemon and utilities.  Check our web page
+for the latest and greatest version.</P>
+
+
+<HR>
+<A HREF="Filesystems-HOWTO-7.html">Next</A>
+<A HREF="Filesystems-HOWTO-5.html">Previous</A>
+<A HREF="Filesystems-HOWTO.html#toc6">Contents</A>
+</BODY>
+</HTML>

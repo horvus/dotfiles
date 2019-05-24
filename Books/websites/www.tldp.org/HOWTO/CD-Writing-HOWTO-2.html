@@ -1,0 +1,408 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>CD-Writing HOWTO: Setup the Linux-system for writing CD-ROMs</TITLE>
+ <LINK HREF="CD-Writing-HOWTO-3.html" REL=next>
+ <LINK HREF="CD-Writing-HOWTO-1.html" REL=previous>
+ <LINK HREF="CD-Writing-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="CD-Writing-HOWTO-3.html">Next</A>
+<A HREF="CD-Writing-HOWTO-1.html">Previous</A>
+<A HREF="CD-Writing-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. Setup the Linux-system for writing CD-ROMs</A></H2>
+
+<P>
+<P>This section applies to the following types of CD-writers: SCSI, IDE/ATAPI
+and the devices for the parallel port. USB CD-writers are not supported as
+of May 2000. Non-SCSI writers require compatibility
+drivers, which make them appear as if they were real SCSI devices. On the
+one side such a unifying strategy is easy ("everything is SCSI"), because
+on the application level you can share your knowledge with other users
+regardless of their kind of CD-writer. On the other side, you have to
+reconfigure applications like audio CD players or the mount utility to
+reflect the change of the driver name. For example, if you accessed your
+ATAPI CD-writer through the device file /dev/hdc before, you will have to
+access it through /dev/scd0 after activating the SCSI compatibility
+drivers.
+<P>Once you succeed setting up your hardware and the rest of your Linux-system,
+the command <CODE>cdrecord -scanbus</CODE> shows you a list of devices
+on your SCSI busses. 
+The goal of this section is to guide you in setting
+up your Linux-system, so that you finally end up seeing something like:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+shell&gt; cdrecord -scanbus
+Cdrecord release 1.7a1 Copyright (C) 1995-1998 J&ouml;rg Schilling
+scsibus0:
+      0,0,0) 'Quantum ' 'XP34300         ' 'F76D' Disk
+      0,1,0) 'SEAGATE ' 'ST11200N        ' '8334' Disk
+      0,2,0) *
+      0,3,0) 'TOSHIBA ' 'MK537FB/        ' '6258' Disk
+      0,4,0) 'WANGTEK ' '5150ES SCSI 36  ' 'ESB6' Removable Tape
+      0,5,0) 'EXABYTE ' 'EXB-8500-85QUE  ' '0428' Removable Tape
+      0,6,0) 'TOSHIBA ' 'XM-3401TASUNSLCD' '3593' Removable CD-ROM
+      0,7,0) *
+scsibus1:
+      1,0,0) 'Quantum ' 'XP31070W        ' 'L912' Disk
+      1,1,0) *
+      1,2,0) *
+      1,3,0) 'TEAC    ' 'CD-R55S         ' '1.0H' Removable CD-ROM
+      1,4,0) 'MATSHITA' 'CD-R   CW-7502  ' '4.02' Removable CD-ROM
+      1,5,0) *
+      1,6,0) 'YAMAHA  ' 'CDR400t         ' '1.0d' Removable CD-ROM
+      1,7,0) *
+</PRE>
+<I>Listing: Detecting devices on your SCSI bus</I>
+</CODE></BLOCKQUOTE>
+<P>The example was provided by J&ouml;rg Schilling and shows a total of four
+CD-writers. Please note that -scanbus also reports other devices,
+e.g. regular CD-ROMs and hard disk drives. The last column gives the SCSI
+description of the device, from which you cannot clearly distinguish
+ordinary CD-ROM drives from those with burning capability. But the product
+identification (middle column) often has hints about the feature in form of
+a R, -R or -RW.
+<P>
+<P>
+<H2><A NAME="ss2.1">2.1 Quickstart</A>
+</H2>
+
+<P>This section is an attempt to provide an fast and easy description of the
+configuration. Not all possible setups are covered, but please go on and
+try it out anyways. First of all, check the Linux kernel version printed by
+the command "uname -r".  It should be something like 2.0.X or 2.2.Y, where
+X is higher than 36 and Y is higher than 11. If you run older versions or
+the so called development kernels, you are on your own. Installing a new
+kernel is as much work as fixing an old one, so I have removed all hints
+you need for buggy kernels.
+<P>The listing below shows a set of commands you could start with. The
+commands create device file entries under /dev unless they already exists.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+test `whoami` = 'root' || echo "You must be root to execute the commands."
+cd /dev/
+umask -S u=rwx,g=rwx,o-rwx
+[ -f loop0 ] \
+    || ./MAKEDEV loop \
+    || for i in 0 1 2 3 4 5 6 7; do mknod loop$i b 7 $i; done
+[ -f sg0 -o -f sga ] \
+    || ./MAKEDEV sg \
+    || for i in 0 1 2 3 4 5 6 7; do mknod sg$i  c 21 $i; done
+</PRE>
+<I>Listing: creating of devicefiles</I>
+</CODE></BLOCKQUOTE>
+<P>Hardware access is usally implemented through device files under Linux.  So
+before any other thing you make sure those files do exists in the
+directory /dev. Still nobody could give me a compelling reason why this has
+not been automated through techniques like the device filesystem
+(devfs). The devfs is available for years know, brings a safer (!) and a far
+clearer naming of devices and makes the device entries appear automatically
+under /dev. Some prominent people argue devfs is not the perfect solution,
+but they do not come up with anything better, not even something comparable
+and last but least nothing available and tested now. Lets start to use
+devfs, so I can remove the above commands from this document. (
+<A HREF="http://www.atnf.CSIRO.AU/~rgooch/linux/kernel-patches.html">http://www.atnf.CSIRO.AU/~rgooch/linux/kernel-patches.html</A>)
+<P>
+<P>Next thing to ensure is, that the Linux kernel is equiped with the
+necessary drivers. The following commands check various files for the
+presence of drivers in the running Linux kernel. Usally the command
+"cdrecord -scanbus" should trigger an automatic loading of all drivers. In
+case a driver is not present in the kernel afterwards, it is reported and
+the modularized driver (module) is manually loaded through insmod.
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+test `whoami` = 'root' || echo "You must be root to execute the commands."
+cdrecord -scanbus > /dev/null
+if ! (pidof kerneld || test -f "/proc/sys/kernel/modprobe"); then
+    echo "Neither kerneld nor kmod are running to automatically load modules".
+fi
+report_no_autoload() {
+    echo "Ensure the module $1 is loaded automatically next time."
+}
+if test ! -f "/proc/scsi/scsi"; then
+    report_no_autoload scsi_mod  &amp;&amp;  insmod scsi_mod
+fi
+if ! grep "^........ sg_" /proc/ksyms > /dev/null; then
+    report_no_autoload sg  &amp;&amp;  insmod sg
+fi
+if ! grep "^........ sr_" /proc/ksyms > /dev/null; then
+    report_no_autoload sr_mod  &amp;&amp;  insmod sr_mod
+fi
+if ! grep "^........ loop_" /proc/ksyms > /dev/null; then
+    report_no_autoload loop  &amp;&amp;  insmod loop
+fi
+if ! grep iso9660 /proc/filesystems > /dev/null; then
+    report_no_autoload iso9660  &amp;&amp;  insmod iso9660
+fi
+echo "The following is only needed for IDE/ATAPI CD-writers."
+if ! grep ide-scsi /proc/ide/drivers > /dev/null; then
+    report_no_autoload ide-scsi  &amp;&amp;  insmod ide-scsi
+fi
+cdrecord -scanbus
+</PRE>
+<I>Listing: Testing for drivers</I>
+</CODE></BLOCKQUOTE>
+<P>
+<P>Please read the next chapter if insmod complains about missing module files.
+If you are
+in text mode (console), the loading of modules may cause some messages to
+be printed on your screen. If you are in graphics mode (X11, KDE, Gnome),
+you can recall these messages with the command dmesg.
+<P>There are several ways to load the modules next time you start
+up your Linux system: 
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+(1) Put the relevant insmod command into the startup sequence
+    (a shell script named rc.local or equivalent).
+(2a) Run kerneld or kmod and
+(2b) configure them in /etc/modules.conf (to be more precise,
+     you configure the utility modprobe, which is called by the daemons)
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>People with a SCSI-writer can skip the rest of this section, because
+cdrecord will most likely already detect their hardware. If not, then
+please send me an email with some information about your setup, so I can
+improve the section about SCSI-writers.
+<P>Now to the people with CD-writers for IDE/ATAPI.  As
+written in the previous chapter, you have to load the compatibility driver
+ide-scsi. But this driver can only access your CD-Writer if no other
+driver has already done so. In other words, you have to tell the
+regular IDE driver to leave your CD-writer unrecognized, so the ide-scsi
+driver can grab it.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+hda = IDE bus/connector 0 master device
+hdb = IDE bus/connector 0 slave  device
+hdc = IDE bus/connector 1 master device
+hdd = IDE bus/connector 1 slave  device
+</PRE>
+<I>Table: device file names of IDE/ATAPI devices</I>
+</CODE></BLOCKQUOTE>
+<P>The table above shows the relation of device file names and the placing of
+devices on the IDE busses. The device file name representing your CD-Writer
+has to be passed to the driver in the Linux kernel. Example: hdb=ide-scsi.
+Such a setting should be added to lilo.conf or chos.conf if the driver is
+statically compiled into your kernel, which seems to be the most common
+setup. If you need to pass more than one parameter to the kernel,
+then seperate them with spaces (like shown in the chos example). The next
+two listings show example configurations containing more lines than just
+the relevant append-line. Please note the append- and cmdline-entries
+are image-specific (ie. don't add them immediatly at the top).
+<P>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+image=/boot/zImage-2.2.14
+  label=Linux
+  read-only
+  append="hdb=ide-scsi"
+</PRE>
+<I>Listing: Example configuration for lilo (/etc/lilo.conf)</I>
+</CODE></BLOCKQUOTE>
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+linux "Linux 2.1.14" {
+        image=/boot/zImage-2.0.37
+        cmdline= root=/dev/hda5 readonly hdb=ide-scsi
+}
+</PRE>
+<I>Listing: Example configuration for chos (/etc/chos.conf)</I>
+</CODE></BLOCKQUOTE>
+<P>If the driver for IDE/ATAPI CD-ROMs is loaded as a module, then the above
+won't make any difference to you, but make sure you include the
+options-line from the next listing. The last three lines of that listing
+are generally suggested to further automate the loading of the required
+modules.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+options ide-cd ignore=hdb            # tell the ide-cd module to ignore hdb
+alias scd0 sr_mod                    # load sr_mod upon access of scd0
+#pre-install ide-scsi modprobe imm    # uncomment for some ZIP drives only
+pre-install sg     modprobe ide-scsi # load ide-scsi before sg
+pre-install sr_mod modprobe ide-scsi # load ide-scsi before sr_mod
+pre-install ide-scsi modprobe ide-cd # load ide-cd   before ide-scsi
+</PRE>
+<I>Listing: Example configuration for /etc/modules.conf</I>
+</CODE></BLOCKQUOTE>
+<P>If your CD-writer is the only CD-ROM attached to your machine, then
+remember you have to access the CD-ROM in the writer through the device file
+/dev/scd× where ×=0,..,8. You may want to change the symbolic name cdrom to
+point to the new device file name. The listing below shows the command to
+achieve this with the example scd0.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cd /dev &amp;&amp; rm cdrom &amp;&amp; ln -s scd0 cdrom
+</PRE>
+<I>Listing: Making cdrom a symbolic name for scd0</I>
+</CODE></BLOCKQUOTE>
+<P>If your CD-writer and CD-ROM-drive are two different devices, then don't
+change the cdrom symlink.
+<P>
+<P>
+<P>
+<P>
+<H3>Special notes about SCSI CD-writers</H3>
+
+<P>
+<P>Please make sure that your writer is recognized by the BIOS of your SCSI
+hostadaptor card. Every SCSI hostadaptor scans the SCSI bus after power on
+and reports all devices found connected to the bus. The report includes
+the SCSI ID of the devices and their product label. It makes no sense
+to proceed unless your CD writer is listed in that report.
+<P>If you plan to connect your SCSI device through the parallel port (not to
+confuse with the IDE drives for the parallel port), you need a special
+active cable and a special kernel driver. Read 
+<A HREF="http://www.torque.net/parport/parscsi.html">http://www.torque.net/parport/parscsi.html</A> to learn more about this
+option.
+<P>
+<H3>Special notes about CD-writers for the parallel port</H3>
+
+<P>
+<P>I have no clue about this, sorry. Please read 
+<A HREF="http://www.torque.net/parport/paride.html">http://www.torque.net/parport/paride.html</A> or your local file
+/usr/src/linux/Documentation/paride.txt.
+<P>
+<P>
+<H3>Compiling missing kernel modules (optional)</H3>
+
+<P>
+<P>You don't need to read this section if you hardware is already sucessfully
+recognized and configured by the previously described configuration steps.
+<P>The Linux kernel can be equipped with drivers for various features. You can
+compile the drivers into the kernel image statically or you can compile
+them as a module for on-demand loading. The last method is preferred for
+drivers not essential for bringing your Linux-system into life, because
+your kernel will be smaller and faster then. However, some drivers are
+essential for the system to come up and you shouldn't compile them as a
+module. Example: if your system lives on an IDE hard disk, you must have the
+driver for IDE hard disks in the kernel -- not as a module.
+<P>There are three different types of CD-writers: SCSI, IDE/ATAPI and external
+writers that work through the parallel port. The table shows how to
+configure the Linux kernel for those hardware types. The first column of
+the table is the section of the kernel configuration menu, where you can
+find the setting. The second column is the description of the feature
+(taken from the kernel configuration menu, too). The third column gives the
+name of the resulting module. The columns named SCSI, IDE and PP contain
+the necessary options for the associated hardware (PP = parallel port).
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+Sect.  Description                 Module   SCSI  IDE   PP
+------------------------------------------------------------
+BLOCK  Enhanced IDE/MFM/RLL...                     Y      
+BLOCK  IDE/ATAPI CDROM             ide-cd          M     
+BLOCK  SCSI emulation support      ide-scsi        M      
+BLOCK  Loopback device             loop       M    M     M
+
+PARIDE Parallel port IDE device    paride               Y/M
+PARIDE Parallel port ATAPI CD-ROMs                       M
+PARIDE Parallel port generic ATAPI                       M
+PARIDE (select a low-level driver)                       Y
+
+SCSI   SCSI support                scsi_mod  Y/M  Y/M    
+SCSI   SCSI CD-ROM support         sr_mod    Y/M  Y/M     
+SCSI     Enable vendor-specific               Y    Y      
+SCSI   SCSI generic support        sg        Y/M  Y/M     
+SCSI   (select a low-level driver)            Y
+
+FS     ISO 9660 CDROM filesystem   iso9660   Y/M  Y/M   Y/M
+FS     Microsoft Joliet cdrom...   joliet     Y    Y     Y
+</PRE>
+<I>Table: driver selection for different writer types</I>
+</CODE></BLOCKQUOTE>
+<P>Y stands for yes and means you should put the beast into the kernel.  M
+stands for module and means you should or must compile this feature as a
+module.  Y/M gives you the option to decide between either (order indicates
+choices with less potential problems). Empty settings don't need to be
+modified and not changing them increases the chance that the resulting
+kernel will work for you (if it did before...). Especially in environments
+where SCSI and ATAPI devices are mixed, you better build most things as
+modules.
+<P>Compiling loopback device is optional.  It allows you to test the image
+before writing it to the media. If you want to be able to read CD-ROMs, you
+need support for the ISO 9660 filesystem. This driver automatically
+includes RockRidge Extensions. The Microsoft Joliet CD-ROM extensions have
+to be explicitly added to the ISO 9660 filesystem. In any case, you need a
+low-level driver for your hardware. Low-level refers to the driver, which
+interacts directly with the hardware.  For SCSI and the parallel port,
+there are a lot of low-level drivers available.
+<P>Installing the resulting Linux-kernel is beyond the scope of this
+HOWTO. Please consult the documentation of your Linux-distribution.
+<P>Users of RedHat Linux be aware that you have to compile in the 
+features "Ramdisk support" and "Initial ramdisk". Furthermore, you
+have to generate a new ramdisk with the new modules by issuing a
+command like "mkintrd --preload ide-cd initrd-2.2.14.img  2.2.14".
+<P>
+<P>
+<H2><A NAME="ss2.2">2.2 Get the user software for burning CD-Rs</A>
+</H2>
+
+<P>A more detailed survey of tools related to produce CD-ROMs is available from
+<A HREF="http://www.fokus.gmd.de/research/cc/glone/employees/joerg.schilling/private/cdb.html">http://www.fokus.gmd.de/research/cc/glone/employees/joerg.schilling/private/cdb.html</A>.
+<P>
+<H3>Command line utilities</H3>
+
+<P>One of the following packages are required to generate images of CD-Rs
+(only required for data CD-ROMs):
+<P>
+<BLOCKQUOTE>
+<A HREF="ftp://tsx-11.mit.edu/pub/linux/packages/mkisofs/">ftp://tsx-11.mit.edu/pub/linux/packages/mkisofs/</A> (mkisofs)<P>
+<A HREF="ftp://ftp.ge.ucl.ac.uk/pub/mkhfs">ftp://ftp.ge.ucl.ac.uk/pub/mkhfs</A> (mkhybrid)
+</BLOCKQUOTE>
+<P>To write images to the CD-R, you need one of the following software packages:
+<P>
+<BLOCKQUOTE>
+<A HREF="ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/">ftp://ftp.fokus.gmd.de/pub/unix/cdrecord/</A> (cdrecord) <P>
+<A HREF="http://www.ping.de/sites/daneb/cdrdao.html">http://www.ping.de/sites/daneb/cdrdao.html</A> (cdrdao) 
+<P>
+<A HREF="http://www.munich-vision.de/vcd/">http://www.munich-vision.de/vcd/</A> (mkvcdfs)
+</BLOCKQUOTE>
+<P>Don't trust the man page of old versions of <CODE>mkisofs</CODE> which state
+you need version 1.5 of <CODE>cdwrite</CODE>. Just use cdrecord and you are
+fine.  Please note that newer versions of cdrecord ship with an enhanced
+version of mkisofs and some extra tools in the subdirectory misc/ (readcd,
+isosize) not found elsewhere.
+<P>
+<P>
+<H3>Graphical user interfaces (optional)</H3>
+
+<P>Front-ends are really front-ends under Linux. That means, you still have to
+install the command-line utilities, but you access them in a better looking
+manner.
+<P><I>X-CD-Roast</I> is a program package dedicated to easy CD creation under
+Linux. It combines command line tools like <CODE>cdrecord</CODE> and
+<CODE>mkisofs</CODE> into a nice graphical user interface.
+<P>
+<BLOCKQUOTE>
+<A HREF="http://www.fh-muenchen.de/home/ze/rz/services/projects/xcdroast/e_overview.html">http://www.fh-muenchen.de/home/ze/rz/services/projects/xcdroast/e_overview.html</A></BLOCKQUOTE>
+<P><I>BurnIT</I> is a JAVA front-end to cdrecord, mkisofs and
+cdda2wav-0.95 making it a complete package for burning CDs on
+the Unix platform. It is available from
+<P>
+<BLOCKQUOTE>
+<A HREF="http://sunsite.auc.dk/BurnIT/">http://sunsite.auc.dk/BurnIT/</A></BLOCKQUOTE>
+<P><I>CD-Tux</I> is a character based frontend for the programs mkisofs
+and cdrecord. "It creates an easy to use enviroment for doing almost anything to a CD in full color through the use of the (in)famous NCURSES Library. And it does all this whith an executable of under 75K."
+<P>
+<BLOCKQUOTE>
+<A HREF="http://www.datadictator.co.za/cdtux/">http://www.datadictator.co.za/cdtux/</A></BLOCKQUOTE>
+<P>
+<P>
+<HR>
+<A HREF="CD-Writing-HOWTO-3.html">Next</A>
+<A HREF="CD-Writing-HOWTO-1.html">Previous</A>
+<A HREF="CD-Writing-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>

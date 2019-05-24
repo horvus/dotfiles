@@ -1,0 +1,598 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>HOWTO: Multi Disk System Tuning: File System Structure</TITLE>
+ <LINK HREF="Multi-Disk-HOWTO-5.html" REL=next>
+ <LINK HREF="Multi-Disk-HOWTO-3.html" REL=previous>
+ <LINK HREF="Multi-Disk-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Multi-Disk-HOWTO-5.html">Next</A>
+<A HREF="Multi-Disk-HOWTO-3.html">Previous</A>
+<A HREF="Multi-Disk-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. File System Structure</A></H2>
+
+<P>
+<!--
+disk!filesystem structure
+-->
+
+Linux has been multi tasking from the very beginning where a number
+of programs interact and run continuously. It is therefore important
+to keep a file structure that everyone can agree on so that the system
+finds data where it expects to. Historically there has been so many
+different standards that it was confusing and compatibility was
+maintained using symbolic links which confused the issue even further
+and the structure ended looking like a maze.
+<P>
+<!--
+disk!FSSTND
+-->
+
+In the case of Linux a standard was fortunately agreed on early on
+called the <EM>File Systems Standard</EM> (FSSTND) which today is used
+by all main Linux distributions.
+<P>
+<!--
+disk!FHS
+-->
+
+Later it was decided to make a successor that should also support
+operating systems other than just Linux, called
+the <EM>Filesystem Hierarchy Standard</EM> (FHS) at version 2.2 currently.
+This standard is under continuous development and will
+soon be adopted by Linux distributions.
+<P>I recommend not trying to roll your own structure as a lot of
+thought has gone into the standards and many software packages
+comply with the standards. Instead you can read more about this
+at the
+<A HREF="http://www.pathname.com/fhs/">FHS home page</A>.
+<P>This HOWTO endeavours to comply with FSSTND
+and will follow FHS when distributions become available.
+<P>
+<P>
+<H2><A NAME="ss4.1">4.1 File System Features</A>
+</H2>
+
+<P>
+<!--
+disk!filesystem features
+-->
+
+The various parts of FSSTND have different requirements regarding
+speed, reliability and size, for instance losing root is a pain
+but can easily be recovered. Losing <CODE>/var/spool/mail</CODE> is a
+rather different issue. Here is a quick summary of some essential
+parts and their properties and requirements. Note that this is
+just a guide, there can be binaries in <CODE>etc</CODE> and
+<CODE>lib</CODE> directories, libraries in <CODE>bin</CODE> directories
+and so on.
+<P>
+<P>
+<H3>Swap</H3>
+
+<P>
+<!--
+disk!swap
+-->
+
+<DL>
+<DT><B>Speed</B><DD><P>Maximum! Though if you rely too much on swap you
+should consider buying some more RAM. Note, however, that on
+many old Pentium PC motherboards the cache will not work on RAM above 128 MB.
+<P>
+<DT><B>Size</B><DD><P>Similar as for RAM. Quick and dirty algorithm:
+just as for tea: 16 MB for the machine and 2 MB for each user. Smallest
+kernel run in 1 MB but is tight, use 4 MB for general work and light
+applications, 8 MB for X11 or GCC or 16 MB to be comfortable.
+(The author is known to brew a rather powerful cuppa tea...)
+<P>Some suggest that swap space should be 1-2 times the size of the
+RAM, pointing out that the locality of the programs determines how
+effective your added swap space is. Note that using the same
+algorithm as for 4BSD is slightly incorrect as Linux does not
+allocate space for pages in core.
+<P>A more thorough approach is to consider swap space plus RAM as
+your total working set, so if you know how much space you will
+need at most, you subtract the physical RAM you have and that
+is the swap space you will need.
+<P>There is also another reason to be generous when dimensioning
+your swap space: memory leaks. Ill behaving programs that do not free
+the memory they allocate for themselves are said to have a memory leak.
+This allocation remains even after the offending program has stopped
+so this is a source of memory consumption.
+Only after the program dies is the memory returned.
+Once all physical RAM and
+swap space are exhausted the only solution is to
+kill the offending processes if possible, or failing that,
+reboot and start over.
+Thankfully such programs are not too common but should you come across
+one you will find that extra swap space will buy you extra time between
+reboots.
+<P>Also remember to take into account the type of programs you use.
+Some programs that have large working sets, such as 
+image processing software
+have huge data structures loaded in RAM rather than
+working explicitly on disk files. Data and computing intensive
+programs like this will cause excessive swapping if you have less
+RAM than the requirements.
+<P>Other types of programs can lock their pages into RAM. This can be
+for security reasons, preventing copies of data reaching a swap device
+or for performance reasons such as in a real time module. Either way,
+locking pages reduces the remaining amount of swappable memory and
+can cause the system to swap earlier then otherwise expected.
+<P>In <CODE>man 8 mkswap</CODE> it is explained that each swap partition can
+be a maximum of just under 128 MB in size for 32-bit machines
+and just under 256 MB for 64-bit machines.
+<P>This however changed with kernel 2.2.0 after which the limit is 2 GB.
+The man page has been updated to reflect this change.
+<P>
+<P>
+<DT><B>Reliability</B><DD><P>Medium. When it fails you know it pretty quickly and
+failure will cost you some lost work. You save often, don't you?
+<P>
+<DT><B>Note 1</B><DD><P>Linux offers the possibility of interleaved swapping
+across multiple devices, a feature that can gain you much. Check out
+"<CODE>man 8 swapon</CODE>" for more details. However, software raiding
+<CODE>swap</CODE> across multiple devices adds more overheads than you gain.
+<P>Thus the <CODE>/etc/fstab</CODE> file might look like this:
+<BLOCKQUOTE><CODE>
+<PRE>
+/dev/sda1       swap            swap    pri=1           0       0
+/dev/sdc1       swap            swap    pri=1           0       0
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Remember that the <CODE>fstab</CODE> file is <EM>very</EM> sensitive to the formatting
+used, read the man page carefully and do <EM>not</EM> just cut and paste
+the lines above.
+<P>
+<DT><B>Note 2</B><DD><P>Some people use a RAM disk for swapping or some other
+file systems. However, unless you have some very unusual requirements
+or setups you are unlikely to gain much from this as this cuts into
+the memory available for caching and buffering.
+<P>
+<DT><B>Note 2b</B><DD><P>There is once exception: on a number of badly designed
+motherboards the on board cache memory is not able to cache all the
+RAM that can be addressed. Many older motherboards could accept 128 MB
+RAM but only cache the lower 64 MB. In such cases it would improve the
+performance if you used the upper (uncached) 64 MB RAM for RAMdisk
+based swap or other temporary storage.
+<P>
+</DL>
+<P>
+<P>
+<H3>Temporary Storage (<CODE>/tmp</CODE> and <CODE>/var/tmp</CODE>)</H3>
+
+<P>
+<!--
+disk!temporary storage
+-->
+
+<DL>
+<DT><B>Speed</B><DD><P>Very high. On a separate disk/partition this will
+reduce fragmentation generally, though <CODE>ext2fs</CODE> handles fragmentation
+rather well.
+<P>
+<DT><B>Size</B><DD><P>Hard to tell, small systems are easy to run with just
+a few MB but these are notorious hiding places for stashing files
+away from prying eyes and quota enforcement and can grow without
+control on larger machines. Suggested: small home machine: 8 MB,
+large home machine: 32 MB, small server: 128 MB, and large
+machines up to 500 MB (The machine used by the author at work has 1100
+users and a 300 MB <CODE>/tmp</CODE> directory). Keep an eye on these directories,
+not only for hidden files but also for old files. Also be prepared that
+these partitions might be the first reason you might have to resize
+your partitions.
+<P>
+<DT><B>Reliability</B><DD><P>Low. Often programs will warn or fail gracefully when
+these areas fail or are filled up. Random file errors will of course
+be more serious, no matter what file area this is.
+<P>
+<DT><B>Files</B><DD><P>Mostly short files but there can be a huge number of
+them. Normally programs delete their old <CODE>tmp</CODE> files but if somehow an
+interruption occurs they could survive. Many distributions have a policy
+regarding cleaning out <CODE>tmp</CODE> files at boot time, you might want to
+check out what your setup is.
+<P>
+<DT><B>Note1</B><DD><P>In FSSTND there is a note about putting <CODE>/tmp</CODE> on
+RAM disk. This, however, is not recommended for the same reasons
+as stated for swap. Also, as noted earlier, do not use flash RAM
+drives for these directories. One should also keep in mind that some
+systems are set to automatically clean <CODE>tmp</CODE> areas on rebooting.
+<P>
+<DT><B>Note2</B><DD><P>Older systems had a <CODE>/usr/tmp</CODE> but this is no longer
+recommended and for historical reasons a symbolic link now makes it
+point to one of the other <CODE>tmp</CODE> areas.
+<P>
+</DL>
+<P>
+<P>(* That was 50 lines, I am home and dry! *)
+<P>
+<H3>Spool Areas (<CODE>/var/spool/news</CODE> and <CODE>/var/spool/mail</CODE>)</H3>
+
+<P>
+<!--
+disk!spool areas
+-->
+
+<DL>
+<DT><B>Speed</B><DD><P>High, especially on large news servers. News transfer
+and expiring are disk intensive and will benefit from fast drives. 
+Print spools: low. Consider RAID0 for news.
+<P>
+<DT><B>Size</B><DD><P>For news/mail servers: whatever you can afford. For
+single user systems a few MB will be sufficient if you read
+continuously.  Joining a list server and taking a holiday is, on the
+other hand, not a good idea.  (Again the machine I use at work
+has 100 MB reserved for the entire <CODE>/var/spool</CODE>)
+<P>
+<DT><B>Reliability</B><DD><P>Mail: very high, news: medium, print spool: low. If
+your mail is very important (isn't it always?) consider RAID for
+reliability.
+<P>
+<DT><B>Files</B><DD><P>Usually a huge number of files that are around a few
+KB in size. Files in the print spool can on the other hand be
+few but quite sizable.
+<P>
+<DT><B>Note</B><DD><P>Some of the news documentation suggests putting all
+the <CODE>.overview</CODE> files on a drive separate from the news
+files, check out all news FAQs for more information.
+Typical size is about 3-10 percent of total news spool size.
+<P>
+</DL>
+<P>
+<H3><A NAME="home-dirs"></A> Home Directories (<CODE>/home</CODE>) </H3>
+
+<P>
+<!--
+disk!home directories
+-->
+
+<DL>
+<DT><B>Speed</B><DD><P>Medium. Although many programs use <CODE>/tmp</CODE> for temporary
+storage, others such as some news readers frequently update files in the
+home directory which can be noticeable on large multiuser systems. For
+small systems this is not a critical issue.
+<P>
+<DT><B>Size</B><DD><P>Tricky! On some systems people pay for storage so this
+is usually then a question of finance. Large systems such as 
+<A HREF="http://www.nyx.net/">Nyx.net</A>
+(which is a free Internet service with mail, news and WWW services)
+run successfully with a suggested limit of 100 KB per user and 300 KB as
+enforced maximum. Commercial ISPs offer typically about 5 MB in their
+standard subscription packages.
+<P>If however you are writing books or are doing design work the
+requirements balloon quickly.
+<P>
+<DT><B>Reliability</B><DD><P>Variable. Losing <CODE>/home</CODE> on a single user machine is
+annoying but when 2000 users call you to tell you their home
+directories are gone it is more than just annoying. For some their
+livelihood relies on what is here. You do regular backups of course?
+<P>
+<DT><B>Files</B><DD><P>Equally tricky. The minimum setup for a single user
+tends to be a dozen files, 0.5 - 5 KB in size. Project related files
+can be huge though.
+<P>
+<DT><B>Note1</B><DD><P>You might consider RAID for either speed or
+reliability. If you want extremely high speed and reliability you
+might be looking at other operating system and hardware platforms anyway.
+(Fault tolerance etc.)
+<P>
+<DT><B>Note2</B><DD><P>Web browsers often use a local cache to speed up browsing and
+this cache can take up a substantial amount of space and cause much disk
+activity. There are many ways of avoiding this kind of performance hits,
+for more information see the sections on
+<A HREF="Multi-Disk-HOWTO-10.html#server-home-dirs">Home Directories</A>
+and
+<A HREF="Multi-Disk-HOWTO-10.html#www">WWW</A>.
+<P>
+<DT><B>Note3</B><DD><P>Users often tend to use up all available space on the
+<CODE>/home</CODE> partition. The Linux Quota subsystem is capable of
+limiting the number of blocks and the number of inode a single user
+ID can allocate on a per-filesystem basis. See the 
+<A HREF="http://www.linuxdoc.org/HOWTO/mini/Quota.html">Linux Quota mini-HOWTO</A> by
+Albert M.C. Tam <CODE>bertie (at) scn.org</CODE>
+for details on setup.
+<P>
+</DL>
+<P>
+<P>
+<H3><A NAME="main-binaries"></A> Main Binaries ( <CODE>/usr/bin</CODE> and <CODE>/usr/local/bin</CODE>)</H3>
+
+<P>
+<!--
+disk!main binaries
+-->
+
+<DL>
+<DT><B>Speed</B><DD><P>Low. Often data is bigger than the programs which are
+demand loaded anyway so this is not speed critical. Witness the
+successes of live file systems on CD ROM.
+<P>
+<DT><B>Size</B><DD><P>The sky is the limit but 200 MB should give you most of
+what you want for a comprehensive system. A big system, for software
+development or a multi purpose server should perhaps reserve 500 MB
+both for installation and for growth.
+<P>
+<DT><B>Reliability</B><DD><P>Low. This is usually mounted under root where all
+the essentials are collected. Nevertheless losing all the binaries is
+a pain...
+<P>
+<DT><B>Files</B><DD><P>Variable but usually of the order of 10 - 100 KB.
+</DL>
+<P>
+<P>
+<H3>Libraries ( <CODE>/usr/lib</CODE> and <CODE>/usr/local/lib</CODE>)</H3>
+
+<P>
+<!--
+disk!libraries
+-->
+
+<DL>
+<DT><B>Speed</B><DD><P>Medium. These are large chunks of data loaded often,
+ranging from object files to fonts, all susceptible to bloating. Often
+these are also loaded in their entirety and speed is of some use here.
+<P>
+<DT><B>Size</B><DD><P>Variable. This is for instance where word processors
+store their immense font files. The few that have given me feedback on
+this report about 70 MB in their various <CODE>lib</CODE> directories.
+A rather complete Debian 1.2 installation can take as much as
+250 MB which can be taken as an realistic upper limit.
+The following ones are some of the largest disk space consumers:
+GCC, Emacs, TeX/LaTeX, X11 and perl.
+<P>
+<DT><B>Reliability</B><DD><P>Low. See point 
+<A HREF="#main-binaries">Main binaries</A>.
+<P>
+<DT><B>Files</B><DD><P>Usually large with many of the order of 1 MB in size.
+<P>
+<DT><B>Note</B><DD><P>For historical reasons some programs keep executables in
+the lib areas. One example is GCC which have some huge binaries in the
+<CODE>/usr/lib/gcc/lib</CODE> hierarchy.
+</DL>
+<P>
+<H3>Boot</H3>
+
+<P>
+<!--
+disk!boot
+-->
+
+<!--
+disk!1023
+-->
+
+<!--
+disk!nuni
+-->
+
+<DL>
+<DT><B>Speed</B><DD><P>Quite low: after all booting doesn't happen that often
+and loading the kernel is just a tiny fraction of the time it takes
+to get the system up and running.
+<P>
+<DT><B>Size</B><DD><P>Quite small, a complete image with some extras
+fit on a single floppy so 5 MB should be plenty.
+<P>
+<DT><B>Reliability</B><DD><P>High. See section below on Root.
+<P>
+<DT><B>Note 1</B><DD><P>The most important part about the Boot partition is that
+on many systems it <EM>must</EM> reside below cylinder 1023. This is a
+BIOS limitation that Linux cannot get around.
+<P>
+<DT><B>Note 1a</B><DD><P>The above is not necessarily true for recent IDE systems
+and not for any SCSI disks. For more information check the latest
+Large Disk HOWTO.
+<P>
+<DT><B>Note 2</B><DD><P>Recently a new boot loader has been written that overcomes
+the 1023 sector limit. For more information check out this
+<A HREF="http://www.linuxforum.com/plug/articles/nuni.html">article</A>
+on nuni.
+<P>
+<P>
+</DL>
+<P>
+<P>
+<H3>Root</H3>
+
+<P>
+<!--
+disk!root
+-->
+
+<DL>
+<DT><B>Speed</B><DD><P>Quite low: only the bare minimum is here, much of
+which is only run at startup time.
+<P>
+<DT><B>Size</B><DD><P>Relatively small. However it is a good idea to keep
+some essential rescue files and utilities on the root partition and
+some keep several kernel versions. Feedback suggests about 20 MB would
+be sufficient.
+<P>
+<DT><B>Reliability</B><DD><P>High. A failure here will possibly cause a fair bit
+of grief and you might end up spending some time rescuing your boot
+partition. With some practice you can of course do this in an hour or
+so, but I would think if you have some practice doing this you are
+also doing something wrong.
+<P>Naturally you do have a rescue disk? Of course this is updated since
+you did your initial installation? There are many ready made rescue
+disks as well as rescue disk creation tools you might find valuable.
+Presumably investing some time in this saves you from becoming a
+root rescue expert.
+<P>
+<DT><B>Note 1</B><DD><P>If you have plenty of drives you might consider putting
+a spare emergency boot partition on a separate physical drive. It will
+cost you a little bit of space but if your setup is huge the time saved,
+should something fail, will be well worth the extra space.
+<P>
+<DT><B>Note 2</B><DD><P>For simplicity and also in case of emergencies
+it is not advisable to put the root partition on a RAID level 0 system.
+Also if you use RAID for your boot partition you have to remember to
+have the <CODE>md</CODE> option turned on for your emergency kernel.
+<P>
+<DT><B>Note 3</B><DD><P>For simplicity it is quite common to keep Boot and Root
+on the same partition. If you do that, then
+in order to boot from LILO it is important that the
+essential boot files reside wholly within cylinder 1023. This includes
+the kernel as well as files found in <CODE>/boot</CODE>.
+</DL>
+<P>
+<P>
+<H3>DOS etc.</H3>
+
+<P>
+<!--
+disk!DOS-related issues
+-->
+
+At the danger of sounding heretical I have included this little section
+about something many reading this document have strong feelings about.
+Unfortunately many hardware items come with setup and maintenance tools
+based around those systems, so here goes.
+<P>
+<DL>
+<DT><B>Speed</B><DD><P>Very low. The systems in question are not famed for speed
+so there is little point in using prime quality drives. Multitasking or
+multi-threading are not available so the command queueing facility found
+in SCSI drives will not be taken advantage of. If you have an old IDE
+drive it should be good enough. The exception is to some degree Win95
+and more notably NT which have multi-threading support which should
+theoretically be able to take advantage of the more advanced features
+offered by SCSI devices.
+<P>
+<DT><B>Size</B><DD><P>The company behind these operating systems
+is not famed for writing tight
+code so you have to be prepared to spend a few tens of MB depending on
+what version you install of the OS or Windows. With an old version of
+DOS or Windows you might fit it all in on 50 MB.
+<P>
+<DT><B>Reliability</B><DD><P>Ha-ha. As the chain is no stronger than the weakest link
+you can use any old drive. Since the OS is more likely to scramble itself
+than the drive is likely to self destruct you will soon learn the
+importance of keeping backups here.
+<P>Put another way: "<I>Your mission, should you choose to accept it,
+is to keep this partition working. The warranty will self destruct
+in 10 seconds...</I>"
+<P>Recently I was asked to justify my claims here. First of all I am not
+calling DOS and Windows sorry excuses for operating systems. Secondly
+there are various legal issues to be taken into account. Saying there
+is a connection between the last two sentences are merely the ravings of the
+paranoid. Surely. Instead I shall offer the esteemed reader a few
+key words: DOS 4.0, DOS 6.x and various drive compression tools that
+shall remain nameless.
+<P>
+</DL>
+<P>
+<P>
+<H2><A NAME="ss4.2">4.2 Explanation of Terms</A>
+</H2>
+
+<P>
+<!--
+disk!terms explained
+-->
+
+Naturally the faster the better but often the happy installer of Linux
+has several disks of varying speed and reliability so even though this
+document describes performance as 'fast' and 'slow' it is just a rough
+guide since no finer granularity is feasible. Even so there are a few
+details that should be kept in mind:
+<P>
+<P>
+<H3><A NAME="speed"></A> Speed </H3>
+
+<P>
+<!--
+disk!terms explained!speed
+-->
+
+This is really a rather woolly mix of several terms: CPU load,
+transfer setup overhead, disk seek time and transfer rate. It is in
+the very nature of tuning that there is no fixed optimum, and in most
+cases price is the dictating factor. CPU load is only significant for
+IDE systems where the CPU does the transfer itself
+but is generally low for SCSI, see SCSI documentation
+for actual numbers. Disk seek time is also small, usually in the
+millisecond range. This however is not a problem if you use command
+queueing on SCSI where you then overlap commands keeping the bus busy
+all the time. News spools are a special case consisting of a huge
+number of normally small files so in this case seek time can become
+more significant.
+<P>There are two main parameters that are of interest here:
+<P>
+<DL>
+<DT><B>Seek</B><DD><P>is usually specified in the average time take for the
+read/write head to seek from one track to another. This parameter
+is important when dealing with a large number of small files such
+as found in spool files.
+There is also the extra seek delay before the desired sector rotates
+into position under the head. This delay is dependent on the angular
+velocity of the drive which is why this parameter quite often is
+quoted for a drive. Common values are 4500, 5400 and 7200 RPM (rotations
+per minute). Higher RPM reduces the seek time but at a substantial cost.
+Also drives working at 7200 RPM have been known to be noisy and to
+generate a lot of heat, a factor that should be kept in mind if you
+are building a large array or "disk farm". Very recently drives working
+at 10000 RPM has entered the market and here the cooling requirements
+are even stricter and minimum figures for air flow are given.
+<P>
+<DT><B>Transfer</B><DD><P>is usually specified in megabytes per second.
+This parameter is important when handling large files that
+have to be transferred. Library files, dictionaries and image files
+are examples of this. Drives featuring a high rotation speed also
+normally have fast transfers as transfer speed is proportional to
+angular velocity for the same sector density.
+</DL>
+<P>It is therefore important to read the specifications for the drives
+very carefully, and note that the maximum transfer speed quite often
+is quoted for transfers out of the on board cache (burst speed)
+and <EM>not</EM>
+directly from the platter (sustained speed).
+See also section on
+<A HREF="Multi-Disk-HOWTO-20.html#power-heating">Power and Heating</A>.
+<P>
+<P>
+<H3>Reliability</H3>
+
+<P>
+<!--
+disk!terms explained!reliability
+-->
+
+Naturally no-one would want low reliability disks but one might be
+better off regarding old disks as unreliable. Also for RAID purposes
+(See the relevant information) it is suggested to use a mixed set of disks
+so that simultaneous disk crashes become less likely.
+<P>So far I have had only one report of total file system failure but
+here unstable hardware seemed to be the cause of the problems.
+<P>Disks are cheap these days yet people still underestimate the
+value of the contents of the drives. If you need higher reliability
+make sure you replace old drives and keep spares. It is not unusual
+that drives can work more or less continuous for years and years but
+what often kills a drive in the end is power cycling.
+<P>
+<H3>Files</H3>
+
+<P>
+<!--
+disk!terms explained!files
+-->
+
+The average file size is important in order to decide the most
+suitable drive parameters. A large number of small files makes the
+average seek time important whereas for big files the transfer speed
+is more important.  The command queueing in SCSI devices is very
+handy for handling large numbers of small files, but for transfer EIDE
+is not too far behind SCSI and normally much cheaper than SCSI.
+<P>
+<P>
+<P>
+<HR>
+<A HREF="Multi-Disk-HOWTO-5.html">Next</A>
+<A HREF="Multi-Disk-HOWTO-3.html">Previous</A>
+<A HREF="Multi-Disk-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

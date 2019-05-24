@@ -1,0 +1,3734 @@
+<HTML>
+<HEAD>
+
+<TITLE>
+Filesystems HOWTO
+</TITLE>
+</HEAD>
+<BODY BGCOLOR=white>
+
+<HR>
+<H1>Filesystems HOWTO</H1>
+
+<H2>Martin Hinner &lt;
+<A HREF="mailto:martin@hinner.info">martin@hinner.info</A>&gt;, 
+<A HREF="http://martin.hinner.info">http://martin.hinner.info</A></H2>Version 0.8, Jan 2007
+<HR>
+<EM>This small HOWTO is about filesystems and accessing filesystems. It is not
+Linux- or Unix-related document as you probably expect. You can find there
+also a lot of interesting information about non-Unix (file)systems, but Unix
+is my primary interest :-). More information and the latest version of this
+document can be found at 
+<A HREF="http://martin.hinner.info/fs/">http://martin.hinner.info/fs/</A>.</EM>
+<HR>
+<P>
+<H2><A NAME="toc1">1.</A> <A HREF="#s1">Introduction</A></H2>
+
+<UL>
+<LI><A NAME="toc1.1">1.1</A> <A HREF="#ss1.1">Contacting the author</A>
+<LI><A NAME="toc1.2">1.2</A> <A HREF="#ss1.2">HOWTO Maintenance</A>
+<LI><A NAME="toc1.3">1.3</A> <A HREF="#ss1.3">Copyright</A>
+<LI><A NAME="toc1.4">1.4</A> <A HREF="#ss1.4">Filesystems mailing-list</A>
+<LI><A NAME="toc1.5">1.5</A> <A HREF="#ss1.5">Filesystems collection at metalab.unc.edu</A>
+<LI><A NAME="toc1.6">1.6</A> <A HREF="#ss1.6">Credits</A>
+<LI><A NAME="toc1.7">1.7</A> <A HREF="#ss1.7">Filesystems accessibility map</A>
+<LI><A NAME="toc1.8">1.8</A> <A HREF="#ss1.8">Introduction to contiguous allocation filesystems</A>
+<LI><A NAME="toc1.9">1.9</A> <A HREF="#ss1.9">Introduction to linked-list allocation filesystems</A>
+<LI><A NAME="toc1.10">1.10</A> <A HREF="#ss1.10">Introduction to FAT-based filesystems</A>
+<LI><A NAME="toc1.11">1.11</A> <A HREF="#ss1.11">Introduction to Inode filesystems</A>
+<LI><A NAME="toc1.12">1.12</A> <A HREF="#ss1.12">Introduction to extent filesystems</A>
+<LI><A NAME="toc1.13">1.13</A> <A HREF="#ss1.13">Introduction to filesystems using balanced trees</A>
+<LI><A NAME="toc1.14">1.14</A> <A HREF="#ss1.14">Introduction to logging/journaling filesystems</A>
+<LI><A NAME="toc1.15">1.15</A> <A HREF="#ss1.15">Other filesystem features</A>
+</UL>
+<P>
+<H2><A NAME="toc2">2.</A> <A HREF="#s2">Volumes</A></H2>
+
+<UL>
+<LI><A NAME="toc2.1">2.1</A> <A HREF="#ss2.1">PC Partitions</A>
+<LI><A NAME="toc2.2">2.2</A> <A HREF="#ss2.2">Other partitions</A>
+<LI><A NAME="toc2.3">2.3</A> <A HREF="#ss2.3">Unix disklabels</A>
+<LI><A NAME="toc2.4">2.4</A> <A HREF="#ss2.4">Windows NT volumes</A>
+<LI><A NAME="toc2.5">2.5</A> <A HREF="#ss2.5">MD - Multiple Devices driver for Linux</A>
+<LI><A NAME="toc2.6">2.6</A> <A HREF="#ss2.6">LVM - Logical Volume Manager (HP-UX LVM?)</A>
+<LI><A NAME="toc2.7">2.7</A> <A HREF="#ss2.7">VxVM - Veritas Volume Manager</A>
+<LI><A NAME="toc2.8">2.8</A> <A HREF="#ss2.8">IBM OS/2 LVM</A>
+<LI><A NAME="toc2.9">2.9</A> <A HREF="#ss2.9">StackVM</A>
+<LI><A NAME="toc2.10">2.10</A> <A HREF="#ss2.10">Novell NetWare volumes</A>
+</UL>
+<P>
+<H2><A NAME="toc3">3.</A> <A HREF="#s3">DOS FAT 12/16/32, VFAT</A></H2>
+
+<UL>
+<LI><A NAME="toc3.1">3.1</A> <A HREF="#ss3.1">VFAT: Long filenames</A>
+<LI><A NAME="toc3.2">3.2</A> <A HREF="#ss3.2">UMSDOS: Linux LFN/attributes on FAT filesystem</A>
+<LI><A NAME="toc3.3">3.3</A> <A HREF="#ss3.3">OS/2 Extended Attributes on FAT filesystems</A>
+<LI><A NAME="toc3.4">3.4</A> <A HREF="#ss3.4">Star LFN</A>
+<LI><A NAME="toc3.5">3.5</A> <A HREF="#ss3.5">Accessing VFAT from OS/2 (VFAT-OS2) </A>
+<LI><A NAME="toc3.6">3.6</A> <A HREF="#ss3.6">Accessing VFAT from DOS (LFNDOS driver) </A>
+<LI><A NAME="toc3.7">3.7</A> <A HREF="#ss3.7">Accessing VFAT from DOS (Free LFNDOS driver) </A>
+<LI><A NAME="toc3.8">3.8</A> <A HREF="#ss3.8">Accessing VFAT from DOS (Odi's LFN tools) </A>
+<LI><A NAME="toc3.9">3.9</A> <A HREF="#ss3.9">Accessing FAT32 from OS/2 (FAT32.IFS) </A>
+<LI><A NAME="toc3.10">3.10</A> <A HREF="#ss3.10">Accessing FAT32 from Windows NT 4.0 </A>
+<LI><A NAME="toc3.11">3.11</A> <A HREF="#ss3.11">Accessing FAT32 from Windows NT 4.0 </A>
+<LI><A NAME="toc3.12">3.12</A> <A HREF="#ss3.12">Accessing Stac/Dblspaced/Drvspaced drives from Linux (DMSDOS)</A>
+<LI><A NAME="toc3.13">3.13</A> <A HREF="#ss3.13">Accessing Dblspaced/Drvspaced drives from Linux (thsfs)</A>
+<LI><A NAME="toc3.14">3.14</A> <A HREF="#ss3.14">Fsresize - FAT16/32 resizer</A>
+<LI><A NAME="toc3.15">3.15</A> <A HREF="#ss3.15">FIPS - FAT16 resizer</A>
+</UL>
+<P>
+<H2><A NAME="toc4">4.</A> <A HREF="#s4">High Performance FileSystem (HPFS)</A></H2>
+
+<UL>
+<LI><A NAME="toc4.1">4.1</A> <A HREF="#ss4.1">Accessing HPFS from DOS (iHPFS)</A>
+<LI><A NAME="toc4.2">4.2</A> <A HREF="#ss4.2">Accessing HPFS from DOS (hpfsdos)</A>
+<LI><A NAME="toc4.3">4.3</A> <A HREF="#ss4.3">Accessing HPFS from DOS (hpfsa)</A>
+<LI><A NAME="toc4.4">4.4</A> <A HREF="#ss4.4">Accessing HPFS from DOS (amos)</A>
+<LI><A NAME="toc4.5">4.5</A> <A HREF="#ss4.5">Accessing HPFS from Linux</A>
+<LI><A NAME="toc4.6">4.6</A> <A HREF="#ss4.6">Accessing HPFS from FreeBSD</A>
+<LI><A NAME="toc4.7">4.7</A> <A HREF="#ss4.7">Accessing HPFS from Windows NT 3.5</A>
+<LI><A NAME="toc4.8">4.8</A> <A HREF="#ss4.8">Accessing HPFS from Windows NT 4</A>
+</UL>
+<P>
+<H2><A NAME="toc5">5.</A> <A HREF="#s5">New Technology FileSystem (NTFS)</A></H2>
+
+<UL>
+<LI><A NAME="toc5.1">5.1</A> <A HREF="#ss5.1">Accessing NTFS from DOS (NTFSDOS.EXE)</A>
+<LI><A NAME="toc5.2">5.2</A> <A HREF="#ss5.2">Accessing NTFS from DOS (ntpwd)</A>
+<LI><A NAME="toc5.3">5.3</A> <A HREF="#ss5.3">Accessing NTFS from OS/2</A>
+<LI><A NAME="toc5.4">5.4</A> <A HREF="#ss5.4">Accessing NTFS from Linux</A>
+<LI><A NAME="toc5.5">5.5</A> <A HREF="#ss5.5">Accessing NTFS from FreeBSD and NetBSD</A>
+<LI><A NAME="toc5.6">5.6</A> <A HREF="#ss5.6">Accessing NTFS from BeOS</A>
+<LI><A NAME="toc5.7">5.7</A> <A HREF="#ss5.7">Accessing NTFS from BeOS (another)</A>
+<LI><A NAME="toc5.8">5.8</A> <A HREF="#ss5.8">Repairing NTFS using NTFSDOS Tools</A>
+<LI><A NAME="toc5.9">5.9</A> <A HREF="#ss5.9">Repairing NTFS using NTRecover </A>
+</UL>
+<P>
+<H2><A NAME="toc6">6.</A> <A HREF="#s6">Extended filesystems (Ext, Ext2, Ext3)</A></H2>
+
+<UL>
+<LI><A NAME="toc6.1">6.1</A> <A HREF="#ss6.1">Extended filesystem (ExtFS)</A>
+<LI><A NAME="toc6.2">6.2</A> <A HREF="#ss6.2">Second Extended Filesystem (Ext2 FS)</A>
+<LI><A NAME="toc6.3">6.3</A> <A HREF="#ss6.3">Third Extended Filesystem (Ext3 FS)</A>
+<LI><A NAME="toc6.4">6.4</A> <A HREF="#ss6.4">E2compr - Ext2fs transparent compression </A>
+<LI><A NAME="toc6.5">6.5</A> <A HREF="#ss6.5">Accessing Ext2 from DOS (Ext2 tools)</A>
+<LI><A NAME="toc6.6">6.6</A> <A HREF="#ss6.6">Accessing Ext2 from DOS, Windows 9x/NT and other Unixes (LTools)</A>
+<LI><A NAME="toc6.7">6.7</A> <A HREF="#ss6.7">Accessing Ext2 from OS/2</A>
+<LI><A NAME="toc6.8">6.8</A> <A HREF="#ss6.8">Accessing Ext2 from Windows 95/98 (FSDEXT2)</A>
+<LI><A NAME="toc6.9">6.9</A> <A HREF="#ss6.9">Accessing Ext2 from Windows 95 (Explore2fs)</A>
+<LI><A NAME="toc6.10">6.10</A> <A HREF="#ss6.10">Accessing Ext2 from Windows NT (ext2fsnt)</A>
+<LI><A NAME="toc6.11">6.11</A> <A HREF="#ss6.11">Accessing Ext2 from BeOS</A>
+<LI><A NAME="toc6.12">6.12</A> <A HREF="#ss6.12">Accessing Ext2 from MacOS (MountX)</A>
+<LI><A NAME="toc6.13">6.13</A> <A HREF="#ss6.13">Accessing Ext2 from MiNT</A>
+<LI><A NAME="toc6.14">6.14</A> <A HREF="#ss6.14">Ext2fs defrag </A>
+<LI><A NAME="toc6.15">6.15</A> <A HREF="#ss6.15">Ext2fs resize </A>
+<LI><A NAME="toc6.16">6.16</A> <A HREF="#ss6.16">Ext2end </A>
+<LI><A NAME="toc6.17">6.17</A> <A HREF="#ss6.17">Repairing/analyzing/creating Ext2 using E2fsprogs</A>
+<LI><A NAME="toc6.18">6.18</A> <A HREF="#ss6.18">Ext2 filesystem editor - Ext2ed</A>
+<LI><A NAME="toc6.19">6.19</A> <A HREF="#ss6.19">Linux filesystem editor - lde</A>
+<LI><A NAME="toc6.20">6.20</A> <A HREF="#ss6.20">Ext2 undelete utilities</A>
+</UL>
+<P>
+<H2><A NAME="toc7">7.</A> <A HREF="#s7">Macintosh Hierarchical Filesystem - HFS</A></H2>
+
+<UL>
+<LI><A NAME="toc7.1">7.1</A> <A HREF="#ss7.1">Accessing HFS from Linux</A>
+<LI><A NAME="toc7.2">7.2</A> <A HREF="#ss7.2">Accessing HFS from OS/2 (HFS/2)</A>
+<LI><A NAME="toc7.3">7.3</A> <A HREF="#ss7.3">Accessing HFS from Windows 95/98/NT (HFV Explorer)</A>
+<LI><A NAME="toc7.4">7.4</A> <A HREF="#ss7.4">Accessing HFS from DOS (MAC-ETTE)</A>
+<LI><A NAME="toc7.5">7.5</A> <A HREF="#ss7.5">HFS utils </A>
+<LI><A NAME="toc7.6">7.6</A> <A HREF="#ss7.6">MacFS: A Portable Macintosh File System Library</A>
+</UL>
+<P>
+<H2><A NAME="toc8">8.</A> <A HREF="#s8">ISO 9660 - CD-ROM filesystem</A></H2>
+
+<UL>
+<LI><A NAME="toc8.1">8.1</A> <A HREF="#ss8.1">RockRidge extensions</A>
+<LI><A NAME="toc8.2">8.2</A> <A HREF="#ss8.2">Joliet extensions</A>
+<LI><A NAME="toc8.3">8.3</A> <A HREF="#ss8.3">Hybrid CD-ROMs</A>
+<LI><A NAME="toc8.4">8.4</A> <A HREF="#ss8.4">Novell NetWare indexes on ISO9660</A>
+<LI><A NAME="toc8.5">8.5</A> <A HREF="#ss8.5">Accessing Joliet from Linux</A>
+<LI><A NAME="toc8.6">8.6</A> <A HREF="#ss8.6">Accessing Joliet from BeOS</A>
+<LI><A NAME="toc8.7">8.7</A> <A HREF="#ss8.7">Accessing Joliet from OS/2</A>
+<LI><A NAME="toc8.8">8.8</A> <A HREF="#ss8.8">Accessing Audio CD as filesystem from Linux</A>
+<LI><A NAME="toc8.9">8.9</A> <A HREF="#ss8.9">Accessing Audio CD as filesystem from BeOS</A>
+<LI><A NAME="toc8.10">8.10</A> <A HREF="#ss8.10">Accessing all tracks from Linux (CDfs)</A>
+<LI><A NAME="toc8.11">8.11</A> <A HREF="#ss8.11">Creating Hybrid CD-ROMs (mkhybrid)</A>
+</UL>
+<P>
+<H2><A NAME="toc9">9.</A> <A HREF="#s9">Other filesystems</A></H2>
+
+<UL>
+<LI><A NAME="toc9.1">9.1</A> <A HREF="#ss9.1">ADFS - Acorn Disc File System </A>
+<LI><A NAME="toc9.2">9.2</A> <A HREF="#ss9.2">AFFS - Amiga fast filesystem</A>
+<LI><A NAME="toc9.3">9.3</A> <A HREF="#ss9.3">BeFS - BeOS filesystem</A>
+<LI><A NAME="toc9.4">9.4</A> <A HREF="#ss9.4">BFS - UnixWare Boot Filesystem</A>
+<LI><A NAME="toc9.5">9.5</A> <A HREF="#ss9.5">CrosStor filesystem</A>
+<LI><A NAME="toc9.6">9.6</A> <A HREF="#ss9.6">DTFS - Desktop filesystem</A>
+<LI><A NAME="toc9.7">9.7</A> <A HREF="#ss9.7">EFS - Enhanced filesystem (Linux)</A>
+<LI><A NAME="toc9.8">9.8</A> <A HREF="#ss9.8">EFS - Extent filesystem (IRIX)</A>
+<LI><A NAME="toc9.9">9.9</A> <A HREF="#ss9.9">FFS - BSD Fast filesystem</A>
+<LI><A NAME="toc9.10">9.10</A> <A HREF="#ss9.10">GPFS - General Parallel Filesystem</A>
+<LI><A NAME="toc9.11">9.11</A> <A HREF="#ss9.11">HFS - HP-UX Hi performance filesystem</A>
+<LI><A NAME="toc9.12">9.12</A> <A HREF="#ss9.12">HTFS - High throughput filesystem </A>
+<LI><A NAME="toc9.13">9.13</A> <A HREF="#ss9.13">JFS - Journaled filesystem (HP-UX, AIX, OS/2 5, Linux)</A>
+<LI><A NAME="toc9.14">9.14</A> <A HREF="#ss9.14">LFS - Linux log structured filesystem</A>
+<LI><A NAME="toc9.15">9.15</A> <A HREF="#ss9.15">MFS - Macintosh filesystem </A>
+<LI><A NAME="toc9.16">9.16</A> <A HREF="#ss9.16">Minix filesystem </A>
+<LI><A NAME="toc9.17">9.17</A> <A HREF="#ss9.17">NWFS - Novell NetWare filesystem</A>
+<LI><A NAME="toc9.18">9.18</A> <A HREF="#ss9.18">NSS - Novell Storage Services</A>
+<LI><A NAME="toc9.19">9.19</A> <A HREF="#ss9.19">ODS - On Disk Structure filesystem</A>
+<LI><A NAME="toc9.20">9.20</A> <A HREF="#ss9.20">QNX filesystem </A>
+<LI><A NAME="toc9.21">9.21</A> <A HREF="#ss9.21">Reiser filesystem</A>
+<LI><A NAME="toc9.22">9.22</A> <A HREF="#ss9.22">RFS (CD-ROM Filesystem)</A>
+<LI><A NAME="toc9.23">9.23</A> <A HREF="#ss9.23">RomFS - Rom filesystem</A>
+<LI><A NAME="toc9.24">9.24</A> <A HREF="#ss9.24">SFS - Secure filesystem</A>
+<LI><A NAME="toc9.25">9.25</A> <A HREF="#ss9.25">Spiralog filesystem (OpenVMS)</A>
+<LI><A NAME="toc9.26">9.26</A> <A HREF="#ss9.26">System V and derived filesystems </A>
+<LI><A NAME="toc9.27">9.27</A> <A HREF="#ss9.27">Text - (Philips' CD-ROM Filesystem)</A>
+<LI><A NAME="toc9.28">9.28</A> <A HREF="#ss9.28">UDF - Universal Disk Format (DVD-ROM filesystem)</A>
+<LI><A NAME="toc9.29">9.29</A> <A HREF="#ss9.29">UFS</A>
+<LI><A NAME="toc9.30">9.30</A> <A HREF="#ss9.30">V7 Filesystem</A>
+<LI><A NAME="toc9.31">9.31</A> <A HREF="#ss9.31">VxFS - Veritas filesystem (HP-UX, SCO UnixWare, Solaris)</A>
+<LI><A NAME="toc9.32">9.32</A> <A HREF="#ss9.32">XFS - Extended filesystem (IRIX)</A>
+<LI><A NAME="toc9.33">9.33</A> <A HREF="#ss9.33">Xia FS</A>
+</UL>
+<P>
+<H2><A NAME="toc10">10.</A> <A HREF="#s10">Raw partitions</A></H2>
+
+<UL>
+<LI><A NAME="toc10.1">10.1</A> <A HREF="#ss10.1">Backing up raw partitions using DBsnapshot</A>
+</UL>
+<P>
+<H2><A NAME="toc11">11.</A> <A HREF="#s11">Appendix</A></H2>
+
+<UL>
+<LI><A NAME="toc11.1">11.1</A> <A HREF="#ss11.1">Network filesystems</A>
+<LI><A NAME="toc11.2">11.2</A> <A HREF="#ss11.2">Encrypted filesystems</A>
+<LI><A NAME="toc11.3">11.3</A> <A HREF="#ss11.3">Filesystem benchmarking utilities</A>
+<LI><A NAME="toc11.4">11.4</A> <A HREF="#ss11.4">Writing your own filesystem driver</A>
+<LI><A NAME="toc11.5">11.5</A> <A HREF="#ss11.5">Related documents</A>
+</UL>
+<HR>
+<H2><A NAME="s1">1.</A> <A HREF="Filesystems-HOWTO.html#toc1">Introduction</A></H2>
+
+
+<P>The Filesystems HOWTO is about filesystems and accessing filesystems from
+various OS. Although this document has been put together to the best of my
+knowledge, it may and probably does contain mistakes. Please if you find some
+mistake or outdated information, let me know. I will try to keep this document
+up to date and as error free as possible. Any contributions are also welcome, so
+if you want to write anything about filesystems, please contact me via e-mail.</P>
+<P>Update: Please note that this HOWTO wasn't updated for more than 5 years and
+it DOES contain some out of date information. I will try to find some time to
+set-up WIKI site for filesystems related information so as anybody can
+contribute. For more information see next chapter.</P>
+
+<P>Before you read this HOWTO it's recommended to read 
+<A HREF="mailto:sgjoen@nyx.net">Stein Gjoen's</A>
+Disk-HOWTO (you can obtain it from 
+<A HREF="http://sunsite.unc.edu/LDP/HOWTO/">http://sunsite.unc.edu/LDP/HOWTO/</A>
+). </P>
+
+<P>This HOWTO can be obtained from 
+<A HREF="http://martin.hinner.info/fs/">http://martin.hinner.info/fs/</A> or
+<A HREF="http://metalab.unc.edu/filesystems/howto/">http://metalab.unc.edu/filesystems/howto/</A>.</P>
+
+<P>If you are Japanese user, you might be interested that
+<A HREF="mailto:fujiwara@linux.or.jp">FUJIWARA Teruyoshi</A>
+translated this HOWTO to Japanese.
+It is available at
+<A HREF="http://www.linux.or.jp/JF/JFdocs/Filesystems-HOWTO.html">http://www.linux.or.jp/JF/JFdocs/Filesystems-HOWTO.html</A>.
+SGML source file can be downloaded from
+<A HREF="ftp://ftp.linet.gr.jp/pub/JF/sgml/Filesystems-HOWTO.sgml.gz">ftp://ftp.linet.gr.jp/pub/JF/sgml/Filesystems-HOWTO.sgml.gz</A>.</P>
+
+
+
+<H2><A NAME="ss1.1">1.1</A> <A HREF="Filesystems-HOWTO.html#toc1.1">Contacting the author</A>
+</H2>
+
+<P>You can contact me at martin@hinner.info. I welcome any suggestions and corrections,
+but please before you ask a question, try searching the internet first.  You should
+also check my homepage (
+<A HREF="http://martin.hinner.info/">http://martin.hinner.info/</A>) for any updates or additional information.
+Please note that I am very busy with my other projects (like 
+<A HREF="http://www.auto-diagnostics.info">automotive diagnostics</A>, 
+<A HREF="http://www.arm-development.com">ARM-based microprocessors development tools</A>)
+and I have a full time job (I am working for 
+<A HREF="http://www.secons.com">SECONS Ltd.</A> and
+<A HREF="http://www.fintera.com/">Fintera Ltd.</A>), so my time to answer e-mails is very limited.</P>
+
+<H2><A NAME="ss1.2">1.2</A> <A HREF="Filesystems-HOWTO.html#toc1.2">HOWTO Maintenance</A>
+</H2>
+
+
+<P>If you want to contribute to this HOWTO or take over the maintenance, please
+look at author's website (
+<A HREF="http://martin.hinner.info/">http://martin.hinner.info/</A>) and
+contact him.</P>
+
+<P>I will also try to set-up a wiki-style website for filesystems related information so as anyone can contribute
+and this website will be later merged with this HOWTO. All of these activities depend on my free time.</P>
+
+
+
+<H2><A NAME="ss1.3">1.3</A> <A HREF="Filesystems-HOWTO.html#toc1.3">Copyright</A>
+</H2>
+
+
+<P><B>The Filesystems HOWTO, Copyright (c) 1999-2000 Martin Hinner
+&lt;
+<A HREF="mailto:martin@hinner.info">martin@hinner.info</A>&gt;.</B></P>
+<P>This HOWTO is free document; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or (at
+your option) any later version.</P>
+
+<P>This HOWTO is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.</P>
+
+<P>You should have received a copy of the GNU General Public License
+along with this document or GNU CC; if not, write to the:
+Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139,
+USA.</P>
+
+
+
+<H2><A NAME="ss1.4">1.4</A> <A HREF="Filesystems-HOWTO.html#toc1.4">Filesystems mailing-list</A>
+</H2>
+
+<P>You may want to join Filesystems mailing list. It's intended to be a good
+source of information for both end-users and developers. So if you have
+anything to do with filesystems, join ;-) To subscribe send email to
+&lt;
+<A HREF="mailto:majordomo@penguin.cz">majordomo@penguin.cz</A>&gt;
+and in the BODY (not the subject) of the email message put (without quotes):
+"<B>subscribe fs-l</B>".</P>
+
+
+<H3>Linux kernel filesystems mailing-list</H3>
+
+<P>To join Linux kernel filesystems mailing list
+<A HREF="mailto:linux-fsdev@vger.rutgers.edu">linux-fsdev@vger.rutgers.edu</A>,
+send e-mail to 
+<A HREF="mailto:listserv@vger.rutgers.edu">listserv@vger.rutgers.edu</A>. Put <CODE>"subscribe linux-fsdev"</CODE>
+in message body.</P>
+
+
+<H3>FreeBSD filesystems mailing-list</H3>
+
+<P>To join techical FreeBSD filesystems mailing list
+<A HREF="mailto:freebsd-fs@FreeBSD.org">freebsd-fs@FreeBSD.org</A>,
+send e-mail to 
+<A HREF="mailto:majordomo@FreeBSD.org">majordomo@FreeBSD.org</A>. Put
+<CODE>"subscribe freebsd-fs"</CODE> in message body.</P>
+
+
+
+<H2><A NAME="ss1.5">1.5</A> <A HREF="Filesystems-HOWTO.html#toc1.5">Filesystems collection at metalab.unc.edu</A>
+</H2>
+
+<P>Filesystems collection is FTP/WWW site providing useful information about
+filesystems and filesystem-related programs and drivers. It lives at
+<A HREF="http://metalab.unc.edu/filesystems/">http://metalab.unc.edu/filesystems/</A>, or FTP-only at
+<A HREF="ftp://metalab.unc.edu/pub/docs/filesystems/">ftp://metalab.unc.edu/pub/docs/filesystems/</A>.</P>
+
+
+<H2><A NAME="ss1.6">1.6</A> <A HREF="Filesystems-HOWTO.html#toc1.6">Credits</A>
+</H2>
+
+
+<P>The original "Filesystems access HOWTO" was written by Georgatos Photis
+(see his homepage at 
+<A HREF="http://students.ceid.upatras.gr/~gef/">http://students.ceid.upatras.gr/~gef/</A>).
+This HOWTO contains a lot of information from his webpage. Thanks, Gef.</P>
+
+<P>FUJIWARA Teruyoshi &lt;fujiwara@linux.or.jp&gt; translated this HOWTO
+to Japanese.</P>
+
+<P>Other people who have contributed or helped me (directly or indirectly)
+with this HOWTO are, in alphabetical order:
+<UL>
+<LI> Mariusz Borkowski &lt;borkowsm@ii.pw.edu.pl&gt; - ISO9660/RR info</LI>
+<LI> Remy Card &lt;card@masi.ibp.fr&gt; - Ext2 filesystem introduction</LI>
+<LI> Peter A. Dinda &lt;pdinda@cs.cmu.edu&gt; - HFS filesystem description</LI>
+<LI> Alfonso De Gregorio &lt;adg@speedcom.it&gt; - TCFS filesystem info</LI>
+<LI> Radek Machacka &lt;radekm@sco.com&gt; - Thanks for SCO UnixWare
+and SCO OpenServer</LI>
+<LI> Andrey Shedel &lt;andreys@cr.cyco.com&gt; - Misc. updates</LI>
+<LI> Peter Todd &lt;retep2@home.com&gt; - SFS filesystem info</LI>
+<LI> Theodore Ts'o &lt;tytso@mit.edu&gt; - Ext2 filesystem introduction</LI>
+<LI> Stephen Tweedie &lt;sct@dcs.ed.ac.uk&gt; - Ext2 filesystem introduction</LI>
+</UL>
+
+Many thanks to the above people. If I have forgotten anyone, please let me know.</P>
+
+
+<H2><A NAME="ss1.7">1.7</A> <A HREF="Filesystems-HOWTO.html#toc1.7">Filesystems accessibility map</A>
+</H2>
+
+<P>This is filesystem accessibility "map", alphabetically ordered by operating
+system. You may find this list a little bit chaotic. It's because Linux
+sgmltools don't know tables.</P>
+<P><B>YOU SEE THAT THIS `MAP' IS NOT STILL COMPLETE.
+I WILL TRY TO FINISH IT IN THE NEAR FUTURE.</B></P>
+
+<P><B>FreeBSD:</B>
+<A HREF="#ffs">BSD FFS</A> |
+<A HREF="#ext2">Ext2</A> |
+<A HREF="#hpfs_freebsd">HPFS</A> |
+<A HREF="#ntfs_freebsd">NTFS</A></P>
+
+<P><B>Linux:</B>
+<A HREF="#affs">AFFS</A>|
+<A HREF="#befs_linux">BeFS</A>|
+<A HREF="#bfs_linux">BFS</A>|
+<A HREF="#ext2">Ext2 FS</A>|
+<A HREF="#ffs">BSD FFS</A>|
+<A HREF="#hpfs_linux">HPFS</A>|
+<A HREF="#qnx4">Qnx4 FS</A>|
+<A HREF="#xia">Xia</A></P>
+
+<P><B>NetBSD:</B>
+<A HREF="#ffs">BSD FFS</A> |
+<A HREF="#fat">FAT12/16</A> |
+<A HREF="#iso9660">ISO9660</A></P>
+
+<P><B>NetWare 2.x:</B>
+<A HREF="#nwfs286">NWFS-286</A></P>
+
+<P><B>NetWare 3.x, 4.x:</B>
+<A HREF="#nwfs386">NWFS-386</A> |
+<A HREF="#iso9660">ISO9660</A></P>
+
+<P><B>NetWare 5.x:</B>
+<A HREF="#nwfs386">NWFS-386</A> |
+<A HREF="#nss">NSS</A> |
+<A HREF="#iso9660">ISO9660</A></P>
+
+<P><B>OpenBSD:</B>
+<A HREF="#ffs">BSD FFS</A> |
+<A HREF="#fat">FAT12/16</A></P>
+
+<P><B>OS/2:</B>
+<A HREF="#ext2_os2">Ext2 FS</A> |
+<A HREF="#fat">FAT12/16/32</A> |
+<A HREF="#hpfs">HPFS</A> |
+<A HREF="#hpfs">HPFS</A> |
+<A HREF="#iso9660">ISO 9660</A> |
+<A HREF="#jfs">JFS</A> |
+<A HREF="#vfat">VFAT</A></P>
+
+<P><B>QNX 4:</B>
+<A HREF="#fat">FAT12/16</A> |
+<A HREF="#iso9660">ISO 9660</A> |
+<A HREF="#qnx4">Qnx4 FS</A></P>
+
+<P><B>SCO OpenServer:</B>
+<A HREF="#afs">AFS</A>|
+<A HREF="#dtfs">DTFS</A>|
+<A HREF="#eafs">EAFS</A>|
+<A HREF="#htfs">HTFS</A>|
+<A HREF="#iso9660">ISO 9660</A> |
+<A HREF="#s51k">S51K</A></P>
+
+<P><B>SCO UnixWare:</B>
+<A HREF="#bfs">BFS</A>|
+<A HREF="#dtfs">DTFS</A>|
+<A HREF="#iso9660">ISO 9660</A> |
+<A HREF="#s5">System V</A>|
+<A HREF="#vxfs">VxFS</A></P>
+
+
+<H2><A NAME="contiguous"></A> <A NAME="ss1.8">1.8</A> <A HREF="Filesystems-HOWTO.html#toc1.8">Introduction to contiguous allocation filesystems</A>
+</H2>
+
+
+
+<P>Some contiguous filesystems:
+<A HREF="#bfs">BFS</A>,
+<A HREF="#iso9660">ISO9660 and extensions</A>.</P>
+
+<H2><A NAME="ss1.9">1.9</A> <A HREF="Filesystems-HOWTO.html#toc1.9">Introduction to linked-list allocation filesystems</A>
+</H2>
+
+
+
+<H2><A NAME="ss1.10">1.10</A> <A HREF="Filesystems-HOWTO.html#toc1.10">Introduction to FAT-based filesystems</A>
+</H2>
+
+<P>(todo)</P>
+<P>Some FAT filesystems:
+<A HREF="#fat">FAT12/16/32, VFAT</A> and
+<A HREF="#nwfs">NetWare filestem</A>.</P>
+
+<H2><A NAME="ss1.11">1.11</A> <A HREF="Filesystems-HOWTO.html#toc1.11">Introduction to Inode filesystems</A>
+</H2>
+
+<P>(todo)</P>
+
+<H2><A NAME="ss1.12">1.12</A> <A HREF="Filesystems-HOWTO.html#toc1.12">Introduction to extent filesystems</A>
+</H2>
+
+<P>(todo)</P>
+<P>Some 'extent' filesystems:
+<A HREF="#efs">EFS</A> and
+<A HREF="#vxfs">VxFS</A>.</P>
+
+<H2><A NAME="btree"></A> <A NAME="ss1.13">1.13</A> <A HREF="Filesystems-HOWTO.html#toc1.13">Introduction to filesystems using balanced trees</A>
+</H2>
+
+<P>(todo)</P>
+<P>Some filesystems which use B+ trees:
+<A HREF="#hfs">HFS</A>,
+<A HREF="#nss">NSS</A>,
+<A HREF="#reiserfs">Reiser FS</A> and
+<A HREF="#spiralog">Spiralog filesystem</A>.</P>
+
+<H2><A NAME="journal"></A> <A NAME="ss1.14">1.14</A> <A HREF="Filesystems-HOWTO.html#toc1.14">Introduction to logging/journaling filesystems</A>
+</H2>
+
+
+<P>File systems update their structural information (called
+metadata) by synchronous writes. Each metadata update may require many
+separate writes, and if the system crashes during the write sequence, metadata
+may be in inconsistent state.</P>
+<P>At the next boot the filesystem check utility (called fsck) must walk 
+through the metadata structures, examining and repairing them. 
+This operation takes a very very long time on large filesystems.
+And the disk may not contain sufficient information
+to correct the structure. This results in misplaced or removed files.</P>
+
+<P>A journaling file system uses a separate area called a log or journal.
+Before metadata changes are actually performed, they are logged to this separate
+area. The operation is then performed. If the system crashes during
+the operation, there is enough information in the log to "replay" the log
+record and complete the operation.</P>
+<P>This approach does not require a full
+scan of the file system, yielding very quick filesystem check time on
+large file systems,
+generally a few seconds for a multiple-gigabyte file system. In addition,
+because all information for the pending operation is saved, no removals
+or lost-and-found moves are required. Disadvantage of journaling filesystems
+is that they are slower than other filesystems.</P>
+
+<P>Some journaling filesystems:
+<A HREF="#befs">BeFS</A>,
+<A HREF="#htfs">HTFS</A>,
+<A HREF="#jfs">JFS</A>,
+<A HREF="#nss">NSS</A>,
+<A HREF="#spiralog">Spiralog filesystem</A>,
+<A HREF="#vxfs">VxFS</A> and
+<A HREF="#xfs">XFS</A>.</P>
+
+<H2><A NAME="other_features"></A> <A NAME="ss1.15">1.15</A> <A HREF="Filesystems-HOWTO.html#toc1.15">Other filesystem features</A>
+</H2>
+
+
+
+<H3><A NAME="quota"></A> Quota</H3>
+
+
+
+<H3><A NAME="snapshot"></A> Snapshot</H3>
+
+
+
+<H3><A NAME="acl"></A> ACLs</H3>
+
+
+
+
+<HR>
+<H2><A NAME="s2">2.</A> <A HREF="Filesystems-HOWTO.html#toc2">Volumes</A></H2>
+
+
+
+
+<H2><A NAME="ss2.1">2.1</A> <A HREF="Filesystems-HOWTO.html#toc2.1">PC Partitions</A>
+</H2>
+
+
+<P>
+<UL>
+<LI> 
+<A HREF="http://www.win.tue.nl/~aeb/partitions/">http://www.win.tue.nl/~aeb/partitions/</A>
+Partition types document by Andries Brouwer &lt;
+<A HREF="mailto:aeb@cwi.nl">aeb@cwi.nl</A>&gt;</LI>
+</UL>
+</P>
+
+<H3>GNU parted</H3>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.gnu.org/software/parted">http://www.gnu.org/software/parted</A></LI>
+<LI> Download: 
+<A HREF="ftp://ftp.gnu.org/gnu/parted/">ftp://ftp.gnu.org/gnu/parted/</A></LI>
+<LI> Authors: Andrew Clausen &lt;
+<A HREF="mailto:clausen@gnu.org">clausen@gnu.org</A>&gt;, 
+Lennert Buytenhek &lt;
+<A HREF="mailto:buytenh@dsv.nl">buytenh@dsv.nl</A>&gt; and
+Matt Wilson &lt;
+<A HREF="mailto:msw@redhat.com">msw@redhat.com</A>&gt;. </LI>
+<LI> Bug reports: &lt;
+<A HREF="mailto:bug-parted@gnu.org">bug-parted@gnu.org</A>&gt;, </LI>
+<LI> Access: varies for each filesystem, see below.</LI>
+<LI> License: GPL</LI>
+</UL>
+
+GNU Parted is a program for creating, destroying, resizing, checking and
+copying partitions, and the filesystems on them.</P>
+<P>This is useful for creating space for new operating systems, reorganising
+disk usage, copying data between hard disks, and "disk imaging" - replicating
+installations over many computers.</P>
+
+<P>Parted has support for these operations:
+<PRE>
+Filesystem      detect  create  resize  copy    check
+ext2            *       *       *1      *2      *3
+fat             *       *       *4      *4      *
+linux-swap      *       *       *       *       *
+</PRE>
+</P>
+<P><B>NOTES:</B></P>
+<P>(1) The start of the partition must stay fixed for ext2.</P>
+
+<P>(2) The partition you copy to must be bigger (or exactly the same size)
+as the partition you copy from.</P>
+
+<P>(3) Limited checking is done when the filesystem is opened.  This is the
+only checking at the moment.  All commands (including resize) will gracefully
+fail, leaving the filesystem in tact, if there are any errors in the file
+system (and the vast majority of errors in general).</P>
+
+<P>(4) The size of the new partition, after resizing or copying, is restricted
+by the cluster size for fat (mainly affects FAT16).  This is worse than you
+think, because you don't get to choose your cluster size (it's a bug in
+Windows, but you want compatibility, right?).</P>
+
+<P>So, in practise, you can always shrink your partition (because Parted
+can shrink the cluster size), but you may not be able to grow the partition
+to the size you want.  If you don't have any problems with using FAT32, you
+will always be able to grow the partition to the size you want.</P>
+<P>Summary: you can always shrink your partition.  If you can't use
+FAT32 for some reason, you may not be able to grow your partition.</P>
+
+<H3>Repairing corrupted partition table</H3>
+
+
+
+<H3>Fixdisktable</H3>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://bmrc.berkeley.edu/people/chaffee/fat32.html">http://bmrc.berkeley.edu/people/chaffee/fat32.html</A></LI>
+<LI> Download: ?</LI>
+<LI> Author: ?</LI>
+<LI> Access: ?</LI>
+<LI> License: ?</LI>
+</UL>
+
+This is a utility that handles ext2, FAT, NTFS, ufs, BSD disklabels
+(but not yet old Linux swap partitions); it actually will rewrite
+the partition table, if you give it permission. </P>
+
+
+<H3>gpart</H3>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://home.pages.de/~michab/gpart/">http://home.pages.de/~michab/gpart/</A></LI>
+<LI> Download: ?</LI>
+<LI> Author: ?</LI>
+<LI> Access: ?</LI>
+<LI> License: ?</LI>
+</UL>
+
+GPART is a utility
+that handles ext2, FAT, Linux swap, HPFS, NTFS, FreeBSD and
+Solaris/x86 disklabels, minix, reiser fs; it prints a proposed
+contents for the primary partition table, and is well-documented.</P>
+
+<H3>rescuept</H3>
+
+<P>
+<UL>
+<LI> Homepage: util-linux ?</LI>
+<LI> Download: ?</LI>
+<LI> Author: ?</LI>
+<LI> Access: ?</LI>
+<LI> License: ?</LI>
+</UL>
+
+Recognizes ext2 superblocks,
+FAT partitions, swap partitions, and extended partition tables;
+it may also recognize BSD disklabels and Unixware 7 partitions.
+It prints out information that can be used with fdisk or sfdisk
+to reconstruct the partition table.
+It is in the non-installed part of the util-linux distribution.</P>
+
+<H3>findsuper</H3>
+
+<P>
+<UL>
+<LI> Homepage: e2progs ?</LI>
+<LI> Download: ?</LI>
+<LI> Author: ?</LI>
+<LI> Access: ?</LI>
+<LI> License: ?</LI>
+</UL>
+
+Small utility that finds blocks with the ext2
+superblock signature, and prints out location and some info.
+It is in the non-installed part of the e2progs distribution.</P>
+
+
+
+<H2><A NAME="ss2.2">2.2</A> <A HREF="Filesystems-HOWTO.html#toc2.2">Other partitions</A>
+</H2>
+
+<P>Because I use <B>only</B> Intel x86 machines, any contributions (or non-x86
+machine donation ;-) ) are <B>very</B> welcome. If you can provide any useful
+information, don't hesitate to mail 
+<A HREF="mailto:mhi@penguin.cz">me</A>.</P>
+
+
+<H3>ADFS partitions</H3>
+
+
+
+<H3>Amiga partitions</H3>
+
+
+
+<H3>ATARI partitions</H3>
+
+
+
+<H3>Macintosh partitions</H3>
+
+
+
+<H3>OSF partitions</H3>
+
+
+
+<H3>Sun partitions</H3>
+
+
+
+<H3>Ultrix partitions</H3>
+
+
+
+
+<H2><A NAME="ss2.3">2.3</A> <A HREF="Filesystems-HOWTO.html#toc2.3">Unix disklabels</A>
+</H2>
+
+<P>(todo)</P>
+
+<H3>BSD disklabel</H3>
+
+<P>(todo)</P>
+
+<H3>UnixWare disklabel</H3>
+
+<P>UnixWare VTOC (Volume Table Of Contents) divides disk partition to 16 logical
+partitions. Linux kernel supports UnixWare VTOC, you must check
+"UnixWare slices support (EXPERIMENTAL)" and recompile your kernel.
+Another way of reading UnixWare disklabel is using GPL port of prtvtoc(1)
+command, which is in 
+<A HREF="#vxtools">vxtools</A> package.</P>
+
+<H3>SCO OpenServer disklabel</H3>
+
+<P>(todo)</P>
+
+<H3>Sun Solaris disklabel</H3>
+
+<P>(todo)</P>
+
+
+<H2><A NAME="ss2.4">2.4</A> <A HREF="Filesystems-HOWTO.html#toc2.4">Windows NT volumes</A>
+</H2>
+
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.penguin.cz/~mhi/fs/vol/">http://www.penguin.cz/~mhi/fs/vol/</A></LI>
+<LI> Author: Martin Hinner &lt;
+<A HREF="mailto:mhi@penguin.cz">mhi@penguin.cz</A>&gt;</LI>
+<LI> Access: Read-only, supports OS/2 Volumes, Windows NT Stripe sets and
+volumes.</LI>
+<LI> Download: 
+<A HREF="ftp://ftp.penguin.cz/pub/users/mhi/vol/">ftp://ftp.penguin.cz/pub/users/mhi/vol/</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+This linux-kernel driver allows you to access and mount linear and stripe set
+volumes.</P>
+
+<H3><A NAME="ntfs_ftedit"></A> Repairing "fault tolerant" NTFS disks using FTEdit</H3>
+
+<P>
+<UL>
+<LI> Homepage:  ? MS ARTICLE ID: Q131658</LI>
+<LI> Download: 
+<A HREF="ftp://ftp.rhrz.uni-bonn.de/pub/pc/winnt/intel/ftedit.zip">ftp://ftp.rhrz.uni-bonn.de/pub/pc/winnt/intel/ftedit.zip</A></LI>
+<LI> Author: Microsoft Corp.</LI>
+<LI> License: ?</LI>
+</UL>
+
+If you have a Windows NT Workstation or Server configured for fault
+tolerant (FT) partitions (such as stripes with parity and volume sets), and
+those partitions are inaccessible and appear in Disk Administrator as type
+Unknown, you can possibly make them accessible again by using the utility
+FTEDIT.</P>
+
+
+
+
+<H2><A NAME="ss2.5">2.5</A> <A HREF="Filesystems-HOWTO.html#toc2.5">MD - Multiple Devices driver for Linux</A>
+</H2>
+
+
+<P>
+<UL>
+<LI> Homepage:?</LI>
+<LI> Author: Marc Zyngier &lt;
+<A HREF="mailto:maz@wild-wind.fr.eu.org">maz@wild-wind.fr.eu.org</A>&gt;</LI>
+<LI> Access: Read-write, supports linear mode, RAID-1, RAID-4 and RAID-5.</LI>
+<LI> Download: Linux kernel, tools are available at
+<A HREF="ftp://sweet-smoke.ufr-info-p7.ibp.fr/public/Linux/">ftp://sweet-smoke.ufr-info-p7.ibp.fr/public/Linux/</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+This driver lets you combine several hard disk partitions into one
+logical block device. This can be used to simply append one
+partition to another one or to combine several redundant
+hard disks to a RAID1/4/5 device so as to provide protection against
+hard disk failures. This is called "Software RAID" since the
+combining of the partitions is done by the kernel.</P>
+
+
+
+<H2><A NAME="lvm"></A> <A NAME="ss2.6">2.6</A> <A HREF="Filesystems-HOWTO.html#toc2.6">LVM - Logical Volume Manager (HP-UX LVM?)</A>
+</H2>
+
+<P>Linux implementation is available here:</P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://linux.msede.com/lvm/">http://linux.msede.com/lvm/</A></LI>
+<LI> Author: Heinz Mauelshagen &lt;
+<A HREF="mailto:mauelsha@ez-darmstadt.telekom.de">mauelsha@ez-darmstadt.telekom.de</A>&gt;</LI>
+<LI> Access: ?</LI>
+<LI> Download: 
+<A HREF="ftp://linux.msede.com/lvm/v0.6/">ftp://linux.msede.com/lvm/v0.6/</A></LI>
+<LI> License: GPL</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss2.7">2.7</A> <A HREF="Filesystems-HOWTO.html#toc2.7">VxVM - Veritas Volume Manager</A>
+</H2>
+
+<P>
+<A NAME="vxvm"></A> 
+For more information about Veritas Volume Manager see
+<A HREF="http://www.veritas.com/">http://www.veritas.com/</A>.</P>
+<P>See also: 
+<A HREF="#vxfs">VxFS (Veritas Journaling Filesystem)</A>.</P>
+
+
+<H2><A NAME="ss2.8">2.8</A> <A HREF="Filesystems-HOWTO.html#toc2.8">IBM OS/2 LVM</A>
+</H2>
+
+<P>Logical Volume Manager is available in OS/2 WarpServer 5. It allows you to
+create linear volumes on several disks/partitions. Some people say that it's
+compatible with IBM AIX Logical Volume Manager. </P>
+
+<P>See also: 
+<A HREF="#hpfs">HPFS</A>, 
+<A HREF="#jfs">JFS</A></P>
+
+
+<H2><A NAME="ss2.9">2.9</A> <A HREF="Filesystems-HOWTO.html#toc2.9">StackVM</A>
+</H2>
+
+
+<P>StackVM is CrosStor's volume manager. Using StackVM the
+administrator can combine multiple physical disk slices into a single
+logical device know as a vdisk. Vdisk is short for virtual disk. The
+physical disks can be combined to form a concatenation, RAID 0 (stripe),
+RAID 1 (mirror), RAID 4 or RAID 5. In addition a single disk partition can
+be subdivided into multiple simple vdisks. For more information see CrosStor
+homepage at 
+<A HREF="http://www.crosstor.com/">http://www.crosstor.com/</A>.</P>
+
+
+<H2><A NAME="nwvol"></A> <A NAME="ss2.10">2.10</A> <A HREF="Filesystems-HOWTO.html#toc2.10">Novell NetWare volumes</A>
+</H2>
+
+<P>NetWare volumes are used for NWFS-386 filesystem.</P>
+
+
+<HR>
+<H2><A NAME="fat32"></A> <A NAME="fat16"></A> <A NAME="fat12"></A> <A NAME="vfat"></A> <A NAME="fat"></A> <A NAME="s3">3.</A> <A HREF="Filesystems-HOWTO.html#toc3">DOS FAT 12/16/32, VFAT</A></H2>
+
+
+
+<H2><A NAME="ss3.1">3.1</A> <A HREF="Filesystems-HOWTO.html#toc3.1">VFAT: Long filenames</A>
+</H2>
+
+<P>Windows 95/98 and Windows NT/2000 store long filenames on FAT in special
+directory entries with set attributes <B>ReadOnly</B>, <B>Hidden</B>,
+<B>System</B> and <B>Volume</B>, so if you access FAT volume from DOS
+you don't see these "files". These special entries have this mad structure:</P>
+<P>
+<PRE>
+byte              sequence number for slot
+string(10)        first 5 characters in name 
+byte              attribute byte 
+byte              always 0
+byte              checksum for 8.3 alias
+string(12)        6 more characters in name
+word              starting cluster number, 0 in long slots
+string(4)         last 2 characters in name
+</PRE>
+</P>
+<P>Problem occur when you delete or modify file with long name from system without
+VFAT support, because only DOS 8+3 entry will be deleted or modified. Scandisk
+from Windows 95/98 can repair this problem.</P>
+
+
+<H2><A NAME="ss3.2">3.2</A> <A HREF="Filesystems-HOWTO.html#toc3.2">UMSDOS: Linux LFN/attributes on FAT filesystem</A>
+</H2>
+
+<P>Linux has it's own FAT extensions which gives you long filenames, permissions
+and owners, links and special devices on FAT partition, called UMSDOS.
+Each directory contains file named
+<B>"--linux-.---"</B>. There are stored long names and other necessary
+fields. For more information see file <B>/usr/src/linux/Documentation/filesystems/umsdos.txt</B>. Author of Linux umsdos driver is Jacques Gelinas
+&lt;
+<A HREF="mailto:jacques@solucorp.qc.ca">jacques@solucorp.qc.ca</A>&gt;
+and it is currently maintained by Matija Nalis
+&lt;
+<A HREF="mailto:mnalis@jagor.srce.hr">mnalis@jagor.srce.hr</A>&gt;.</P>
+
+
+<H2><A NAME="ss3.3">3.3</A> <A HREF="Filesystems-HOWTO.html#toc3.3">OS/2 Extended Attributes on FAT filesystems</A>
+</H2>
+
+<P>OS/2 Warp version 3,4 and 5 stores long filenames and extended attributes on FAT
+volume in files "\ea data. sf" and "\wp root. sf" (both files are in root
+directory of filesystem). AFAIK there is no known implementation of OS/2 EAs
+for any other OS. If you can supply any information about EA structure, don't
+hesitate to mail them to 
+<A HREF="mailto:mhi@penguin.cz">me</A>.</P>
+
+
+<H2><A NAME="ss3.4">3.4</A> <A HREF="Filesystems-HOWTO.html#toc3.4">Star LFN</A>
+</H2>
+
+<P>Star LFN is an emulator that allows programs, running under DOS 4.0 or
+above, to use the long filename functions present in Windows'95 DOS
+boxes. Currently, it can only read and write long filenames from and
+into a system+hidden file, which means you can't either read or write
+real Windows'95 long filenames. For more information see
+<A HREF="http://sta.c64.org/starlfn.html">http://sta.c64.org/starlfn.html</A>.</P>
+
+
+<H2><A NAME="vfat_os2"></A> <A NAME="ss3.5">3.5</A> <A HREF="Filesystems-HOWTO.html#toc3.5">Accessing VFAT from OS/2 (VFAT-OS2) </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.dsteiner.com/products/software/os2/ifs.htm">http://www.dsteiner.com/products/software/os2/ifs.htm</A></LI>
+<LI> Author: Daniel Steiner &lt;
+<A HREF="mailto:info@dsteiner.com">info@dsteiner.com</A>&gt;</LI>
+<LI> Access: Read-Write, no EAs supported.</LI>
+<LI> Mirror: 
+<A HREF="ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/">ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+VFAT-OS2 is a package that will allow OS/2 to seamlessly access Windows
+95 VFAT formatted partitions from OS/2 as if they were standard OS/2 drive
+letters. The ultimate aim of this package is to be able to use the VFAT
+file system as a replacement of FAT. It can now also access NTFS partitions in
+read-only mode.</P>
+
+<H2><A NAME="vfat_dos"></A> <A NAME="ss3.6">3.6</A> <A HREF="Filesystems-HOWTO.html#toc3.6">Accessing VFAT from DOS (LFNDOS driver) </A>
+</H2>
+
+<P>Some people say that Microsoft has released a driver called LFNDOS that
+provides the Microsoft Long Filename API under DOS. If you know where can this
+driver be downloaded, send me e-mail please.</P>
+
+<H2><A NAME="vfat_dos3"></A> <A NAME="ss3.7">3.7</A> <A HREF="Filesystems-HOWTO.html#toc3.7">Accessing VFAT from DOS (Free LFNDOS driver) </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://members.xoom.com/dosuser/">http://members.xoom.com/dosuser/</A></LI>
+<LI> Author: Chris Jones &lt;
+<A HREF="mailto:dosuser@bigfoot.com">dosuser@bigfoot.com</A>&gt;</LI>
+<LI> Access: Read-Write</LI>
+<LI> Mirror: 
+<A HREF="http://www.simtel.net/pub/simtelnet/msdos/fileutil/lfnds106.zip">http://www.simtel.net/pub/simtelnet/msdos/fileutil/lfnds106.zip</A></LI>
+<LI> License: Free, source code available</LI>
+</UL>
+
+LFNDOS provides the Windows95 Long Filename (LFN) API to DOS programs.
+It uses the same format for storing the
+names on disk as Windows95 does, so you can view and use long filenames under
+both systems interchangeably. It runs as a memory-resident program, and while resident requires about 60k of conventional memory.</P>
+
+<P>Under Windows95, a DOS program can use long filenames by calling a set
+of interrupt functions, which Windows provides. For example, COMMAND.COM
+will allow long filenames when run as a DOS Prompt from Windows, but not
+if you restart in MS-DOS mode. Other programs such as EDIT.COM and all DJGPP
+programs use long filenames if available.</P>
+
+<H2><A NAME="vfat_dos3"></A> <A NAME="ss3.8">3.8</A> <A HREF="Filesystems-HOWTO.html#toc3.8">Accessing VFAT from DOS (Odi's LFN tools) </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://odi.webjump.com/">http://odi.webjump.com/</A></LI>
+<LI> Author: Ortwin Glueck &lt;
+<A HREF="mailto:glueck@freesurf.ch">glueck@freesurf.ch</A>&gt;</LI>
+<LI> Access: Read-Write, only DOS utilities</LI>
+<LI> Mirror: 
+<A HREF="http://www.simtel.net/pub/simtelnet/msdos/fileutil/lfn141.zip">http://www.simtel.net/pub/simtelnet/msdos/fileutil/lfn141.zip</A></LI>
+<LI> License: ?</LI>
+</UL>
+
+These tools provide easy file management under DOS with long filenames
+created by Windows 95/98 on FAT32, FAT16 and FAT12 file systems. 
+Typing LDIR brings up the directory with its
+long filenames. Copying a file with LCOPY preserves long filenames.
+You can even create directories (LMD) with long names or rename files
+(LREN) with long names.</P>
+
+
+<H2><A NAME="fat32_from_os2"></A> <A NAME="ss3.9">3.9</A> <A HREF="Filesystems-HOWTO.html#toc3.9">Accessing FAT32 from OS/2 (FAT32.IFS) </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.os2ss.com/information/kelder/index.html">http://www.os2ss.com/information/kelder/index.html</A></LI>
+<LI> Author: Henks Kelder &lt; 
+<A HREF="mailto:hkelder@capgemini.nl">hkelder@capgemini.nl</A> &gt;</LI>
+<LI> Access: Read-Write, long filenames, no EAs support.</LI>
+<LI> Download: 
+<A HREF="http://www.os2ss.com/information/kelder/os2fat32.zip">http://www.os2ss.com/information/kelder/os2fat32.zip</A></LI>
+<LI> License: Free</LI>
+</UL>
+
+FAT32.IFS for OS/2 will allow you to access FAT32 partitions from OS/2. You
+cannot create FAT32 partitions, you'll still need Win95 OSR2 to do that.
+Also, OS/2s CHKDSK cannot fix all possible errors that can occur, you'll
+have to use Windows 95 Scandisk to fix certain errors.</P>
+
+<H2><A NAME="fat32_from_nt4"></A> <A NAME="ss3.10">3.10</A> <A HREF="Filesystems-HOWTO.html#toc3.10">Accessing FAT32 from Windows NT 4.0 </A>
+</H2>
+
+<P>
+<UL>
+<LI> Download: 
+<A HREF="http://www.chat.ru/~ashedel/fat32/fastfat32.rar">http://www.chat.ru/~ashedel/fat32/fastfat32.rar</A></LI>
+<LI> Author: Anonymous</LI>
+<LI> License: Free or GPL ?</LI>
+</UL>
+
+FAT32 filesystem driver for NT 4.0 and NT 3.51.</P>
+
+
+<H2><A NAME="fat32_from_nt4_2"></A> <A NAME="ss3.11">3.11</A> <A HREF="Filesystems-HOWTO.html#toc3.11">Accessing FAT32 from Windows NT 4.0 </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.sysinternals.com/fat32.htm">http://www.sysinternals.com/fat32.htm</A></LI>
+<LI> Author: Mark Russinovich &lt;
+<A HREF="mailto:mark@sysinternals.com">mark@sysinternals.com</A>&gt; and
+Bryce Cogswell &lt;
+<A HREF="mailto:cogswell@winternals.com">cogswell@winternals.com</A>&gt;.</LI>
+<LI> Access: Read-only in free version, RW in commercial.</LI>
+<LI> Download: ?</LI>
+<LI> License: Free(read-only) or Commercial(read-write)</LI>
+</UL>
+
+This is a FAT32 file
+system driver for Windows NT(R) 4.0. Once installed, any FAT32 drives present
+on your system will be fully accessible as native Windows NT volumes. Free
+version provides read-only capabilities. A read/write version is for sale.</P>
+
+<H2><A NAME="dmsdos_from_linux"></A> <A NAME="ss3.12">3.12</A> <A HREF="Filesystems-HOWTO.html#toc3.12">Accessing Stac/Dblspaced/Drvspaced drives from Linux (DMSDOS)</A>
+      </H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://fb9nt.uni-duisburg.de/mitarbeiter/gockel/software/dmsdos/">http://fb9nt.uni-duisburg.de/mitarbeiter/gockel/software/dmsdos/</A></LI>
+<LI> Author: Frank Gockel
+&lt;
+<A HREF="mailto:gockel@sent13.uni-duisburg.de">gockel@sent13.uni-duisburg.de</A>&gt; and
+Pavel Pisa &lt;
+<A HREF="mailto:pisa@cmp.felk.cvut.cz">pisa@cmp.felk.cvut.cz</A>&gt;</LI>
+<LI> Access: Stacker, Dblspace and Drvspace in Read-Write mode,
+long filenames.</LI>
+<LI> Download: 
+<A HREF="ftp://fb9nt.uni-duisburg.de/pub/linux/dmsdos/">ftp://fb9nt.uni-duisburg.de/pub/linux/dmsdos/</A></LI>
+<LI> Freshmeat: Console/Filesystems</LI>
+<LI> License: GPL</LI>
+</UL>
+
+DMSDOS reads and writes compressed DOS filesystems (CVF-FAT). The following
+configurations are supported:
+<UL>
+<LI> DoubleSpace / DriveSpace (MS-DOS 6.x)</LI>
+<LI> DoubleSpace / DriveSpace (Windows 95)</LI>
+<LI> DriveSpace 3 (Windows 95 with Plus! pack)</LI>
+<LI> Stacker 3</LI>
+<LI> Stacker 4</LI>
+</UL>
+
+It works with FAT32, NLS, codepages (tested with fat32
+patches version 0.2.8 under Linux 2.0.33 and with fat32 in
+standard 2.1.xx kernels and 2.0.34+35). Dmsdos can run together with vfat or
+umsdos for long filenames. It has been redesigned to be ready for SMP
+and should now compile completely under libc6.</P>
+
+<H2><A NAME="dblspace_from_linux"></A> <A NAME="ss3.13">3.13</A> <A HREF="Filesystems-HOWTO.html#toc3.13">Accessing Dblspaced/Drvspaced drives from Linux (thsfs)</A>
+      </H2>
+
+<P>
+<UL>
+<LI> Download: 
+<A HREF="ftp://ftp.ai-lab.fh-furtwangen.de/pub/os/linux/local/thsfs.tgz">ftp://ftp.ai-lab.fh-furtwangen.de/pub/os/linux/local/thsfs.tgz</A></LI>
+<LI> Author: Thomas Scheuermann &lt;
+<A HREF="mailto:ths@ai-lab.fh-furtwangen.de">ths@ai-lab.fh-furtwangen.de</A>&gt;</LI>
+<LI> Access: Dblspace and Drvspace in Read-only mode.</LI>
+<LI> License: See copyright on files. Basically free</LI>
+</UL>
+</P>
+
+<H2><A NAME="fsresize"></A> <A NAME="ss3.14">3.14</A> <A HREF="Filesystems-HOWTO.html#toc3.14">Fsresize - FAT16/32 resizer</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.alphalink.com.au/~clausen/fsresize/">http://www.alphalink.com.au/~clausen/fsresize/</A></LI>
+<LI> Author: Andrew Clausen &lt;
+<A HREF="mailto:clausen@alphalink.com.au">clausen@alphalink.com.au</A>&gt;</LI>
+<LI> Download: 
+<A HREF="http://www.alphalink.com.au/~clausen/fsresize-0.8.tar.gz">http://www.alphalink.com.au/~clausen/fsresize-0.8.tar.gz</A></LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1999/01/09/915912424.html">Console/Filesystems</A></LI>
+<LI> Access: Read/Write, full FAT16/FAT32 support</LI>
+<LI> License: GPL</LI>
+</UL>
+
+Resizes FAT16/FAT32 filesystems.  It doesn't require any other
+programs (like a defrager).  It has --backup and --restore
+options, so if there's a power failure, (or a bug), you can
+always go back.  The backup files are usually &lt; 1 meg.</P>
+
+<P>The author  probably won't be releasing any more versions of fsresize,
+because he is working on parted - a Partition Magic clone. It will be
+able to resize, copy, create and check filesystems/partitions.</P>
+
+
+<H2><A NAME="fips"></A> <A NAME="ss3.15">3.15</A> <A HREF="Filesystems-HOWTO.html#toc3.15">FIPS - FAT16 resizer</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author: Arno Schaefer &lt;
+<A HREF="mailto:schaefer@rbg.informatik.th-darmstadt.de">schaefer@rbg.informatik.th-darmstadt.de</A>&gt;</LI>
+<LI> Download: 
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/system/Install/fips01alpha.tar.z">ftp://sunsite.unc.edu/pub/Linux/system/Install/fips01alpha.tar.z</A></LI>
+<LI> License: GPL</LI>
+</UL>
+</P>
+
+<HR>
+<H2><A NAME="hpfs"></A> <A NAME="s4">4.</A> <A HREF="Filesystems-HOWTO.html#toc4">High Performance FileSystem (HPFS)</A></H2>
+
+
+<P>Good HPFS links:
+<UL>
+<LI> 
+<A HREF="ftp://ftp.leo.org/pub/comp/os/os2/leo/doc/hpfsinf.zip">ftp://ftp.leo.org/pub/comp/os/os2/leo/doc/hpfsinf.zip</A></LI>
+<LI> 
+<A HREF="ftp://hobbes.nmsu.edu/pub/os2/info/tips/hpfs.zip">ftp://hobbes.nmsu.edu/pub/os2/info/tips/hpfs.zip</A></LI>
+<LI> 
+<A HREF="http://www.globalxs.nl/home/c/cyborg/index.html">http://www.globalxs.nl/home/c/cyborg/index.html</A>
+- a good page about HPFS accessibility</LI>
+<LI> 
+<A HREF="http://www-4.ibm.com/software/os/warp/warp-server/warp-server-adv/c2j.html">http://www-4.ibm.com/software/os/warp/warp-server/warp-server-adv/c2j.html</A>
+- IBM OS/2 Warp Server : Features &amp; Benefits : File &amp; Print</LI>
+</UL>
+ </P>
+
+<H2><A NAME="ihpfs"></A> <A NAME="ss4.1">4.1</A> <A HREF="Filesystems-HOWTO.html#toc4.1">Accessing HPFS from DOS (iHPFS)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://www.student.nada.kth.se/~f96-bet/ihpfs/">http://www.student.nada.kth.se/~f96-bet/ihpfs/</A></LI>
+<LI> Author: Marcus Better 
+<A HREF="mailto:Marcus.Better@abc.se">Marcus.Better@abc.se</A></LI>
+<LI> Download:
+<A HREF="http://www.student.nada.kth.se/~f96-bet/ihpfs/ihpfs128.zip">http://www.student.nada.kth.se/~f96-bet/ihpfs/ihpfs128.zip</A></LI>
+<LI> Access: Read-only</LI>
+<LI> License: GPL</LI>
+</UL>
+</P>
+<P>iHPFS makes possible for OS/2 users to use their HPFS partitions
+when they boot plain DOS.  The HPFS partition is assigned a drive
+letter, and can be accessed like any DOS drive.iHPFS is restricted
+to read-only access.</P>
+
+<P>This program is no longer being developed, because author doesn't
+use OS/2. If you are willing to maintain the program, let him know. </P>
+
+<H2><A NAME="hpfs_from_dos5"></A> <A NAME="ss4.2">4.2</A> <A HREF="Filesystems-HOWTO.html#toc4.2">Accessing HPFS from DOS (hpfsdos)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author: Robert Muchsel &lt;
+<A HREF="mailto:rmuchsel@iiic.ethz.ch">rmuchsel@iiic.ethz.ch</A>&gt; (this e-mail doesn't work)</LI>
+<LI> Access: Read-only</LI>
+<LI> License: Shareware ($23)</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="hpfs_from_dos2"></A> <A NAME="ss4.3">4.3</A> <A HREF="Filesystems-HOWTO.html#toc4.3">Accessing HPFS from DOS (hpfsa)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.student.informatik.th-darmstadt.de/~akinzler/">http://www.student.informatik.th-darmstadt.de/~akinzler/</A></LI>
+<LI> Author: Andreas Kinzler &lt;
+<A HREF="mailto:akinzler@rbg.informatik.th-darmstadt.de">akinzler@rbg.informatik.th-darmstadt.de</A>&gt;
+(this email doesn't work)</LI>
+<LI> Download:
+<A HREF="ftp://ftp.cdrom.com/.1/os2/mdos/hpfsa102.zip">ftp://ftp.cdrom.com/.1/os2/mdos/hpfsa102.zip</A></LI>
+<LI> Access: Read/Write</LI>
+<LI> License: Shareware ($40)</LI>
+</UL>
+</P>
+
+<H2><A NAME="hpfs_from_dos3"></A> <A NAME="ss4.4">4.4</A> <A HREF="Filesystems-HOWTO.html#toc4.4">Accessing HPFS from DOS (amos)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author:  Allan Mertner &lt;
+<A HREF="mailto:mertner@login.dknet.dk">mertner@login.dknet.dk</A>&gt;
+(this email doesn't work)</LI>
+<LI> Download: 
+<A HREF="ftp://hobbes.nmsu.edu/pub/dos/amos320.zip">ftp://hobbes.nmsu.edu/pub/dos/amos320.zip</A></LI>
+<LI> License: Shareware ($50)</LI>
+</UL>
+</P>
+
+<H2><A NAME="hpfs_linux"></A> <A NAME="ss4.5">4.5</A> <A HREF="Filesystems-HOWTO.html#toc4.5">Accessing HPFS from Linux</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://artax.karlin.mff.cuni.cz/~mikulas/vyplody/hpfs/index-e.cgi">http://artax.karlin.mff.cuni.cz/~mikulas/vyplody/hpfs/index-e.cgi</A></LI>
+<LI> Download:
+<A HREF="http://artax.karlin.mff.cuni.cz/~mikulas/vyplody/hpfs/hpfs-0.99b.tar.gz">http://artax.karlin.mff.cuni.cz/~mikulas/vyplody/hpfs/hpfs-0.99b.tar.gz</A> for 2.0 kernels; and
+<A HREF="http://artax.karlin.mff.cuni.cz/~mikulas/vyplody/hpfs/hpfs-1.98b.tar.gz">http://artax.karlin.mff.cuni.cz/~mikulas/vyplody/hpfs/hpfs-1.98b.tar.gz</A> for 2.2 kernels</LI>
+<LI> Author: Mikulas Patocka
+&lt; 
+<A HREF="mailto:mikulas@artax.karlin.mff.cuni.cz">mikulas@artax.karlin.mff.cuni.cz</A> &gt;</LI>
+<LI> Access: Read-Write, extended attributes, long names.</LI>
+<LI> License: GPL</LI>
+</UL>
+
+This driver is part of Linux kernel (2.1.x+). It can read and write to HPFS
+partions. Access rights and owner can be stored
+in extended attributes. Few bugs in original read-only HPFS are corrected.
+It supports HPFS386 on Warp Server Advanced. </P>
+
+<P>If you have kernel with HPFS support, say "Y"es to 'OS/2 HPFS filesystem
+support' in Filesystems submenu. Then recompile kernel using 'make dep bzImage',
+reboot and try to mount your HPFS partition (e.g. mount /dev/hda2 /mnt -t hpfs).</P>
+
+<H2><A NAME="hpfs_freebsd"></A> <A NAME="ss4.6">4.6</A> <A HREF="Filesystems-HOWTO.html#toc4.6">Accessing HPFS from FreeBSD</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://iclub.nsu.ru/~semen/">http://iclub.nsu.ru/~semen/</A></LI>
+<LI> Download: 
+<A HREF="http://iclub.nsu.ru/~semen/hpfs/hpfs-0.3b.tar.gz">http://iclub.nsu.ru/~semen/hpfs/hpfs-0.3b.tar.gz</A></LI>
+<LI> Author: Semen A. Ustimenko
+&lt; 
+<A HREF="mailto:semenu@FreeBSD.org">semenu@FreeBSD.org</A> &gt;</LI>
+<LI> Access: Read/Only</LI>
+<LI> License: BSD</LI>
+</UL>
+
+Driver allows to mount HPFS volume into Unix namespace.
+ReadOnly access is only supported for now.</P>
+
+<H2><A NAME="hpfs_from_nt"></A> <A NAME="ss4.7">4.7</A> <A HREF="Filesystems-HOWTO.html#toc4.7">Accessing HPFS from Windows NT 3.5</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://www.htc.net/~nbehnken/">http://www.htc.net/~nbehnken/</A></LI>
+<LI> Download:
+<A HREF="http://www.htc.net/~nbehnken/hpfs_nt.zip">http://www.htc.net/~nbehnken/hpfs_nt.zip</A></LI>
+<LI> Author: Chris Behnken
+&lt; 
+<A HREF="mailto:nbehnken@htc.net">nbehnken@htc.net</A> &gt;</LI>
+<LI> License: Freeware</LI>
+</UL>
+
+This program will edit the Windows NT registry and enable HPFS support. 
+Pinball.sys is the HPFS filesystem driver for Windows NT. 
+It can be found on NT 3.5x's CD-ROM.  Microsoft no longer supports HPFS. 
+Installing this program will void your warranty and possibly the license 
+agreement. </P>
+
+<H2><A NAME="hpfs_from_nt4"></A> <A NAME="ss4.8">4.8</A> <A HREF="Filesystems-HOWTO.html#toc4.8">Accessing HPFS from Windows NT 4</A>
+</H2>
+
+<P>
+<UL>
+<LI> Download:
+<A HREF="ftp://hobbes.nmsu.edu/pub/windows/hpfsnt.zip">ftp://hobbes.nmsu.edu/pub/windows/hpfsnt.zip</A></LI>
+<LI> Author: ?</LI>
+<LI> License: ?</LI>
+</UL>
+
+HPFS driver for Windows NT 4.0</P>
+
+
+
+<HR>
+<H2><A NAME="s5">5.</A> <A HREF="Filesystems-HOWTO.html#toc5">New Technology FileSystem (NTFS)</A></H2>
+
+
+<P>References:
+<UL>
+<LI> 
+<A HREF="http://www.microsoft.com/msj/1198/ntfs/ntfstop.htm">http://www.microsoft.com/msj/1198/ntfs/ntfstop.htm</A>
+NTFS 5 information</LI>
+<LI> Rajeev Nagar,
+<A HREF="http://www.ora.com/catalog/wininternals/noframes.html">Windows NT File System Internals</A> (O'Reilly).</LI>
+<LI> Helen Custer, Inside the Windows NT File System, ISBN: 1-55615-660-X.</LI>
+<LI> NTFS documentation by Regis Duchesne
+&lt;
+<A HREF="mailto:regis@via.ecp.fr">regis@via.ecp.fr</A>&gt;,
+<A HREF="http://www.via.ecp.fr/~regis/ntfs.tar.bz2">http://www.via.ecp.fr/~regis/ntfs.tar.bz2</A> or
+<A HREF="http://celine.via.ecp.fr/~regis/ntfs/new">http://celine.via.ecp.fr/~regis/ntfs/new</A></LI>
+<LI> Microsoft TechNet, February 97, Windows NT Training: Support, NTFS</LI>
+<LI> 
+<A HREF="http://www.stat.math.ethz.ch/~maechler/NTFS-docu">http://www.stat.math.ethz.ch/~maechler/NTFS-docu</A></LI>
+</UL>
+</P>
+
+<H2><A NAME="ntfs_from_dos"></A> <A NAME="ss5.1">5.1</A> <A HREF="Filesystems-HOWTO.html#toc5.1">Accessing NTFS from DOS (NTFSDOS.EXE)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.sysinternals.com/ntfs20.htm">http://www.sysinternals.com/ntfs20.htm</A></LI>
+<LI> Authors: Mark Russinovich &lt;
+<A HREF="mailto:mark@sysinternals.com">mark@sysinternals.com</A>&gt; and 
+Bryce Cogswell &lt;
+<A HREF="mailto:cogswell@winternals.com">cogswell@winternals.com</A>&gt;.</LI>
+<LI> Access: Read-only, Long filenames under DOS 7 and Win9x.</LI>
+</UL>
+
+NTFSDOS.EXE is a network file system redirector for DOS/Windows
+that is able to recognize and mount NTFS drives for transparent
+access.  It makes NTFS drives appear indistinguishable from standard
+FAT drives, providing the ability to navigate, view and execute programs
+on them from DOS or from Windows, including from the Windows 3.1 File
+Manager and Windows 95 Explorer.</P>
+
+<H2><A NAME="ntfs_from_dos2"></A> <A NAME="ss5.2">5.2</A> <A HREF="Filesystems-HOWTO.html#toc5.2">Accessing NTFS from DOS (ntpwd)</A>
+</H2>
+
+<P>
+<UL>
+<LI>Homepage: 
+<A HREF="http://www.esiea.fr/public_html/Christophe.GRENIER/">http://www.esiea.fr/public_html/Christophe.GRENIER/</A></LI>
+<LI>Author: Grenier Christophe &lt;
+<A HREF="mailto:grenier@nef.esiea.fr">grenier@nef.esiea.fr</A>  &gt;</LI>
+<LI> Access: Read-only (rw experimental), long filenames supported,
+no driver letter (dos tools)</LI>
+<LI> License: GPL</LI>
+</UL>
+</P>
+<P>NTPwd contains command line tools to access NTFS partition,
+it'a a Dos port of the driver used by Linux. It contains too a little
+utility to change NT password.</P>
+
+
+<H2><A NAME="ntfs_from_os2"></A> <A NAME="ss5.3">5.3</A> <A HREF="Filesystems-HOWTO.html#toc5.3">Accessing NTFS from OS/2</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.dsteiner.com/products/software/os2/ifs.htm">http://www.dsteiner.com/products/software/os2/ifs.htm</A></LI>
+<LI> Mirror: 
+<A HREF="ftp://ftp-os2.nmsu.edu/pub/os2/system/drivers/filesys/ntfs_003.zip">ftp://ftp-os2.nmsu.edu/pub/os2/system/drivers/filesys/ntfs_003.zip</A>,
+<A HREF="ftp://ftp.leo.org/pub/comp/os/os2/leo/drivers/ifs">ftp://ftp.leo.org/pub/comp/os/os2/leo/drivers/ifs</A></LI>
+<LI> Author: Daniel Steiner &lt; 
+<A HREF="mailto:info@dsteiner.com">info@dsteiner.com</A> &gt;</LI>
+<LI> Access: Read-only, Long filenames supported</LI>
+</UL>
+
+ntfs_003.zip archive contains only command line tools to acccess a NTFS partition in OS/2. A true IFS for accessing NTFS is included in 
+<A HREF="#vfat_os2">VFAT-OS2</A> v0.05.</P>
+
+<H2><A NAME="ntfs_from_linux"></A> <A NAME="ss5.4">5.4</A> <A HREF="Filesystems-HOWTO.html#toc5.4">Accessing NTFS from Linux</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.informatik.hu-berlin.de/~loewis/ntfs/">http://www.informatik.hu-berlin.de/~loewis/ntfs/</A></LI>
+<LI> Author: Martin von Lwis 
+<A HREF="mailto:loewis@informatik.hu-berlin.de">loewis@informatik.hu-berlin.de</A></LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/07/04/899562556.html">Console/Filesystems</A></LI>
+<LI> Homepage: 
+<A HREF="http://www.informatik.hu-berlin.de/~loewis/ntfs/ntfs-current.tgz">http://www.informatik.hu-berlin.de/~loewis/ntfs/ntfs-current.tgz</A></LI>
+<LI> Mirror: Included in official Linux kernel</LI>
+<LI> Access: RO, experimental RW, compression, no encryption</LI>
+<LI> License: GPL</LI>
+</UL>
+
+Works both as a kernel driver, as well as a set of command line utilities.</P>
+
+<H2><A NAME="ntfs_freebsd"></A> <A NAME="ss5.5">5.5</A> <A HREF="Filesystems-HOWTO.html#toc5.5">Accessing NTFS from FreeBSD and NetBSD</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://iclub.nsu.ru/~semen/ntfs/">http://iclub.nsu.ru/~semen/ntfs/</A></LI>
+<LI> Author: Semen A. Ustimenko
+&lt;
+<A HREF="mailto:semenu@FreeBSD.org">semenu@FreeBSD.org</A>&gt;</LI>
+<LI> Download: As part of FreeBSD
+(
+<A HREF="ftp://ftp.FreeBSD.org/pub/FreeBSD/">ftp://ftp.FreeBSD.org/pub/FreeBSD/</A>),
+and NetBSD (
+<A HREF="ftp://ftp.NetBSD.org/pub/NetBSD/">ftp://ftp.NetBSD.org/pub/NetBSD/</A>)</LI>
+<LI> Mirror: Lookup for FreeBSD's and NetBSD's mirrors</LI>
+<LI> Access: Read + limited writing, doesn't support codepages</LI>
+<LI> License: BSD</LI>
+</UL>
+
+Driver allows to mount NTFS volumes under
+FreeBSD and NetBSD. We also support limited writing
+ability: you can write into not comressed files without
+holes, but you can't change the size of file yet. Write
+support was made to swap on NTFS volume.</P>
+
+<H2><A NAME="ntfs_from_beos2"></A> <A NAME="ss5.6">5.6</A> <A HREF="Filesystems-HOWTO.html#toc5.6">Accessing NTFS from BeOS</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.cs.tamu.edu/people/tkg0143/be/">http://www.cs.tamu.edu/people/tkg0143/be/</A></LI>
+<LI> Author: Travis Geiselbrecht
+&lt; 
+<A HREF="mailto:geist@tamu.edu">geist@tamu.edu</A> &gt;</LI>
+<LI> Download: 
+<A HREF="http://www.cs.tamu.edu/people/tkg0143/be/downloads/ntfs-0.05-x86-r4.zip">http://www.cs.tamu.edu/people/tkg0143/be/downloads/ntfs-0.05-x86-r4.zip</A></LI>
+<LI> Access: ?</LI>
+<LI> License: Free</LI>
+</UL>
+
+This is a ALPHA version of a NTFS driver for BeOS. It is not the most
+polished thing in the world, but every release that author puts out is more
+stable than the last. He just implemented compressed file reads, so
+be careful with those.
+He also finally worked with NTFS 5 volumes, and managed to root out a few
+bugs. </P>
+
+<P>Author now works for Be Inc, so you will not see his NTFS and ext2 filesystem
+support updated on the web much more. The drivers will be pulled into
+future BeOS releases.</P>
+
+<H2><A NAME="ntfs_from_beos"></A> <A NAME="ss5.7">5.7</A> <A HREF="Filesystems-HOWTO.html#toc5.7">Accessing NTFS from BeOS (another)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.sw.com.sg/solutions/ntfs-ro.shtml">http://www.sw.com.sg/solutions/ntfs-ro.shtml</A></LI>
+<LI> Author: Standard &amp; Western Software,
+<A HREF="http://www.sw-soft.com">http://www.sw-soft.com</A></LI>
+<LI> Download: 
+<A HREF="http://download.sw.com.sg/pub/Be/ntfs-rod-0302.tar.gz">http://download.sw.com.sg/pub/Be/ntfs-rod-0302.tar.gz</A></LI>
+<LI> Access: Read-only.</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ntfs_dostools"></A> <A NAME="ss5.8">5.8</A> <A HREF="Filesystems-HOWTO.html#toc5.8">Repairing NTFS using NTFSDOS Tools</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:  
+<A HREF="http://www.sysinternals.com/">http://www.sysinternals.com/</A></LI>
+<LI> Author: Winternals Software &lt;
+<A HREF="mailto:info@winternals.com">info@winternals.com</A>&gt;</LI>
+<LI> Access: Read-Write: Copy and replace files.</LI>
+<LI> License: Commercial</LI>
+</UL>
+
+An add-on to NTFSDOS that allows one to rename existing files,
+or to overwrite a file with new data.  Very limited functionality.</P>
+
+
+<H2><A NAME="ntfs_ntrecover"></A> <A NAME="ss5.9">5.9</A> <A HREF="Filesystems-HOWTO.html#toc5.9">Repairing NTFS using NTRecover </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.sysinternals.com/">http://www.sysinternals.com/</A></LI>
+<LI> Author: Winternals Software &lt;
+<A HREF="mailto:info@winternals.com">info@winternals.com</A>&gt;</LI>
+<LI> Access: Freeware version is read-only, commercial version is read/write.</LI>
+<LI> License: Freeware read-only version, commercial read/write version</LI>
+</UL>
+
+Uses a boot floppy and a serial connection to a second NT
+system to provide full access to a NTFS drives on dead NT systems.  Ideal
+for salvaging data or replacing drivers.</P>
+
+<HR>
+<H2><A NAME="ext3"></A> <A NAME="ext2"></A> <A NAME="ext"></A> <A NAME="s6">6.</A> <A HREF="Filesystems-HOWTO.html#toc6">Extended filesystems (Ext, Ext2, Ext3)</A></H2>
+
+<P>Extended filesystem (ext fs), second extended filesystem (ext2fs)
+and third extended filesystem (ext3fs) were designed and implemented on
+Linux by Rmy Card, Laboratoire MASI--Institut Blaise Pascal, 
+&lt;
+<A HREF="mailto:card@masi.ibp.fr">card@masi.ibp.fr</A>&gt;,
+Theodore Ts'o, Massachussets Institute of Technology, 
+&lt;
+<A HREF="mailto:tytso@mit.edu">tytso@mit.edu</A>&gt; and
+Stephen Tweedie, University of Edinburgh, 
+&lt;
+<A HREF="mailto:sct@redhat.com">sct@redhat.com</A>&gt;</P>
+
+<P>
+<UL>
+<LI> 
+<A HREF="http://web.mit.edu/tytso/www/linux/ext2.html">http://web.mit.edu/tytso/www/linux/ext2.html</A>
+- The ext2 homepage. This is the primary source of information
+about ext2.</LI>
+<LI> 
+<A HREF="http://uranus.it.swin.edu.au/~jn/explore2fs/es2fs.htm">http://uranus.it.swin.edu.au/~jn/explore2fs/es2fs.htm</A> -
+Document about ext2fs from John Newbigin.</LI>
+<LI> 
+<A HREF="http://www.ing.umu.se/~bosse/">http://www.ing.umu.se/~bosse/</A> - Ext2fs_Rec (ext2 recognizer
+for WinNT).</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss6.1">6.1</A> <A HREF="Filesystems-HOWTO.html#toc6.1">Extended filesystem (ExtFS)</A>
+</H2>
+
+<P>This is old filesystem used in early Linux systems. </P>
+
+
+<H2><A NAME="ss6.2">6.2</A> <A HREF="Filesystems-HOWTO.html#toc6.2">Second Extended Filesystem (Ext2 FS)</A>
+</H2>
+
+<P>The Second Extended File System is probably the most widely
+used filesystem in the Linux community. It provides standard
+Unix file semantics and advanced features. Moreover, thanks to
+the optimizations included in the kernel code, it is robust and
+offers excellent performance.</P>
+
+<P>Since Ext2fs has been designed with evolution in mind, it
+contains hooks that can be used to add new features. Some
+people are working on extensions to the current filesystem:
+access control lists conforming to the Posix semantics, undelete,
+and on-the-fly file compression.</P>
+
+<P>Ext2fs was first developed and integrated in the Linux
+kernel and is now actively being ported to other operating
+systems. An Ext2fs server running on top of the GNU Hurd has
+been implemented. People are also working on an Ext2fs port in
+the LITES server, running on top of the Mach microkernel
+and in the VSTa operating system. Last, but not least, Ext2fs is an
+important part of the Masix operating system, currently under
+development by one of the authors.</P>
+
+<H3>Motivations</H3>
+
+<P>The Second Extended File System has been designed and
+implemented to fix some problems present in the first Extended
+File System. Our goal was to provide a powerful filesystem,
+which implements Unix file semantics and offers advanced
+features.</P>
+
+<P>Of course, we wanted to Ext2fs to have excellent
+performance.  We also wanted to provide a very robust
+filesystem in order to reduce the risk of data loss in
+intensive use. Last, but not least, Ext2fs had to include
+provision for extensions to allow users to benefit from new
+features without reformatting their filesystem.</P>
+
+
+<H3>``Standard'' Ext2fs features</H3>
+
+<P>The Ext2fs supports standard Unix file types: regular files,
+directories, device special files and symbolic links.</P>
+
+<P>Ext2fs is able to manage filesystems created on really big
+partitions. While the original kernel code restricted the
+maximal filesystem size to 2 GB, recent work in the VFS layer
+have raised this limit to 4 TB. Thus, it is now possible to use
+big disks without the need of creating many partitions.</P>
+
+<P>Ext2fs provides long file names. It uses variable length
+directory entries. The maximal file name size is 255
+characters. This limit could be extended to 1012 if needed.</P>
+
+<P>Ext2fs reserves some blocks for the super user
+(<CODE>root</CODE>). Normally, 5% of the blocks are reserved. This
+allows the administrator to recover easily from situations
+where user processes fill up filesystems.</P>
+
+
+<H3>``Advanced'' Ext2fs features</H3>
+
+<P>In addition to the standard Unix features, Ext2fs supports
+some extensions which are not usually present in Unix
+filesystems.</P>
+
+<P>File attributes allow the users to modify the kernel
+behavior when acting on a set of files. One can set attributes
+on a file or on a directory. In the later case, new files
+created in the directory inherit these attributes.</P>
+
+<P>BSD or System V Release 4 semantics can be selected at mount
+time. A mount option allows the administrator to choose the
+file creation semantics. On a filesystem mounted with BSD
+semantics, files are created with the same group id as their
+parent directory. System V semantics are a bit more complex: if
+a directory has the setgid bit set, new files inherit the group
+id of the directory and subdirectories inherit the group id and
+the setgid bit; in the other case, files and subdirectories are
+created with the primary group id of the calling process.</P>
+
+<P>BSD-like synchronous updates can be used in Ext2fs. A mount
+option allows the administrator to request that metadata
+(inodes, bitmap blocks, indirect blocks and directory blocks)
+be written synchronously on the disk when they are modified.
+This can be useful to maintain a strict metadata consistency
+but this leads to poor performances. Actually, this feature is
+not normally used, since in addition to the performance loss
+associated with using synchronous updates of the metadata, it
+can cause corruption in the user data which will not be flagged
+by the filesystem checker.</P>
+
+<P>Ext2fs allows the administrator to choose the logical block
+size when creating the filesystem. Block sizes can typically be
+1024, 2048 and 4096 bytes. Using big block sizes can speed up
+I/O since fewer I/O requests, and thus fewer disk head seeks,
+need to be done to access a file. On the other hand, big blocks
+waste more disk space: on the average, the last block allocated
+to a file is only half full, so as blocks get bigger, more
+space is wasted in the last block of each file. In addition,
+most of the advantages of larger block sizes are obtained by
+Ext2 filesystem's preallocation techniques.</P>
+
+<P>Ext2fs implements fast symbolic links. A fast symbolic link
+does not use any data block on the filesystem. The target name
+is not stored in a data block but in the inode itself. This
+policy can save some disk space (no data block needs to be
+allocated) and speeds up link operations (there is no need to
+read a data block when accessing such a link). Of course, the
+space available in the inode is limited so not every link can
+be implemented as a fast symbolic link. The maximal size of the
+target name in a fast symbolic link is 60 characters. We plan
+to extend this scheme to small files in the near future.</P>
+
+<P>Ext2fs keeps track of the filesystem state. A special field
+in the superblock is used by the kernel code to indicate the
+status of the file system. When a filesystem is mounted in
+read/write mode, its state is set to ``Not Clean''. When it is
+unmounted or remounted in read-only mode, its state is reset to
+``Clean''. At boot time, the filesystem checker uses this
+information to decide if a filesystem must be checked. The
+kernel code also records errors in this field. When an
+inconsistency is detected by the kernel code, the filesystem is
+marked as ``Erroneous''. The filesystem checker tests this to
+force the check of the filesystem regardless of its apparently
+clean state.</P>
+
+<P>Always skipping filesystem checks may sometimes be
+dangerous, so Ext2fs provides two ways to force checks at
+regular intervals. A mount counter is maintained in the
+superblock. Each time the filesystem is mounted in read/write
+mode, this counter is incremented. When it reaches a maximal
+value (also recorded in the superblock), the filesystem checker
+forces the check even if the filesystem is ``Clean''. A last
+check time and a maximal check interval are also maintained in
+the superblock. These two fields allow the administrator to
+request periodical checks. When the maximal check interval has
+been reached, the checker ignores the filesystem state and
+forces a filesystem check.</P>
+
+<P>An attribute allows the users to request secure deletion on
+files. When such a file is deleted, random data is written in
+the disk blocks previously allocated to the file. This prevents
+malicious people from gaining access to the previous content of
+the file by using a disk editor.</P>
+
+<P>Last, new types of files inspired from the 4.4 BSD
+filesystem have recently been added to Ext2fs. Immutable files
+can only be read: nobody can write or delete them. This can be
+used to protect sensitive configuration files. Append-only
+files can be opened in write mode but data is always appended
+at the end of the file. Like immutable files, they cannot be
+deleted or renamed. This is especially useful for log files
+which can only grow.</P>
+
+
+<H3>Physical Structure</H3>
+
+
+<P>The physical structure of Ext2 filesystems has been strongly
+influenced by the layout of the BSD filesystem. A
+filesystem is made up of block groups. Block groups are
+analogous to BSD FFS's cylinder groups. However, block groups
+are not tied to the physical layout of the blocks on the disk,
+since modern drives tend to be optimized for sequential access
+and hide their physical geometry to the operating system.
+<PRE>
+,---------+---------+---------+---------+---------,
+| Boot    | Block   | Block   |   ...   | Block   |
+| sector  | group 1 | group 2 |         | group n |
+`---------+---------+---------+---------+---------'
+</PRE>
+</P>
+
+<P>Each block group contains a redundant copy of crucial filesystem
+control informations (superblock and the filesystem descriptors) and
+also contains a part of the filesystem (a block bitmap, an inode
+bitmap, a piece of the inode table, and data blocks). The structure of
+a block group is represented in this table:
+<PRE>
+,---------+---------+---------+---------+---------+---------,
+| Super   | FS      | Block   | Inode   | Inode   | Data    |
+| block   | desc.   | bitmap  | bitmap  | table   | blocks  |
+`---------+---------+---------+---------+---------+---------'
+</PRE>
+</P>
+
+<P>Using block groups is a big win in terms of reliability:
+since the control structures are replicated in each block
+group, it is easy to recover from a filesystem where the
+superblock has been corrupted. This structure also helps to get
+good performances: by reducing the distance between the inode
+table and the data blocks, it is possible to reduce the disk
+head seeks during I/O on files.</P>
+
+<P>In Ext2fs, directories are managed as linked lists of
+variable length entries. Each entry contains the inode number,
+the entry length, the file name and its length. By using
+variable length entries, it is possible to implement long file
+names without wasting disk space in directories. </P>
+
+
+
+<H3>Performance optimizations</H3>
+
+<P>In Linux, the Ext2fs kernel code contains many performance
+optimizations, which tend to improve I/O speed when reading and
+writing files.</P>
+
+<P>Ext2fs takes advantage of the buffer cache management by
+performing readaheads: when a block has to be read, the kernel
+code requests the I/O on several contiguous blocks. This way,
+it tries to ensure that the next block to read will already be
+loaded into the buffer cache. Readaheads are normally performed
+during sequential reads on files and Ext2fs extends them to
+directory reads, either explicit reads (<CODE>readdir(2)</CODE>
+calls) or implicit ones (<CODE>namei</CODE> kernel directory
+lookup).</P>
+
+<P>Ext2fs also contains many allocation optimizations. Block
+groups are used to cluster together related inodes and data:
+the kernel code always tries to allocate data blocks for a file
+in the same group as its inode. This is intended to reduce the
+disk head seeks made when the kernel reads an inode and its
+data blocks.</P>
+
+<P>When writing data to a file, Ext2fs preallocates up to 8
+adjacent blocks when allocating a new block. Preallocation hit
+rates are around 75% even on very full filesystems. This
+preallocation achieves good write performances under heavy
+load. It also allows contiguous blocks to be allocated to
+files, thus it speeds up the future sequential reads.</P>
+
+<P>These two allocation optimizations produce a very good locality of:
+<UL>
+<LI> related files through block groups</LI>
+<LI> related blocks through the 8 bits clustering of block allocations.</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss6.3">6.3</A> <A HREF="Filesystems-HOWTO.html#toc6.3">Third Extended Filesystem (Ext3 FS)</A>
+</H2>
+
+<P>Ext3 support the same features as Ext2, but includes also Journaling. You
+can download pre- version from
+<A HREF="ftp://ftp.uk.linux.org/pub/linux/sct/fs/jfs/">ftp://ftp.uk.linux.org/pub/linux/sct/fs/jfs/</A>.</P>
+
+<H2><A NAME="ext2_compress"></A> <A NAME="ss6.4">6.4</A> <A HREF="Filesystems-HOWTO.html#toc6.4">E2compr - Ext2fs transparent compression </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://opensource.captech.com/e2compr/">http://opensource.captech.com/e2compr/</A></LI>
+<LI> Download: 
+<A HREF="ftp://opensource.captech.com/e2compr/">ftp://opensource.captech.com/e2compr/</A></LI>
+<LI> Maintainer: Peter Moulder &lt;
+<A HREF="mailto:reiter@netspace.net.au">reiter@netspace.net.au</A>&gt;</LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1999/03/27/922549870.html">Console/Filesystems</A></LI>
+<LI> Access: As for ext2 (Read/Write, Long filenames)</LI>
+<LI> License: GPL except for compression algorithms (various licenses)</LI>
+</UL>
+
+Implements `chattr +c' for the ext2 filesystem.
+Software consists of a patch to the linux kernel, and patched
+versions of various software (principally e2fsprogs i.e. e2fsck and
+friends).
+<B>Although some people have been relying on it for years,
+THIS SOFTWARE IS STILL IN DEVELOPMENT, AND IS NOT ,END-USER`-READY.</B></P>
+
+<H2><A NAME="ext2_from_dos"></A> <A NAME="ss6.5">6.5</A> <A HREF="Filesystems-HOWTO.html#toc6.5">Accessing Ext2 from DOS (Ext2 tools)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Download:
+<A HREF="ftp://sunsite.unc.edu/pub/Linux/system/filesystems/ext2/">ftp://sunsite.unc.edu/pub/Linux/system/filesystems/ext2/</A></LI>
+<LI> Access: Read-only, no drive letters (special utilites)</LI>
+<LI> Author: Claus Tondering &lt;
+<A HREF="mailto:ct@login.dknet.dk">ct@login.dknet.dk</A>&gt;</LI>
+<LI> Access: ?</LI>
+<LI> License: ?</LI>
+</UL>
+
+A collection of DOS programs that allow you to read a Linux ext2 file system
+from DOS.</P>
+
+<H2><A NAME="ext2_from_dos2"></A> <A NAME="ss6.6">6.6</A> <A HREF="Filesystems-HOWTO.html#toc6.6">Accessing Ext2 from DOS, Windows 9x/NT and other Unixes (LTools)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.it.fht-esslingen.de/~zimmerma/software/ltools.html">http://www.it.fht-esslingen.de/~zimmerma/software/ltools.html</A></LI>
+<LI> Author: Werner Zimmermann &lt;
+<A HREF="mailto:Werner.Zimmermann@fht-esslingen.de">Werner.Zimmermann@fht-esslingen.de</A>&gt; </LI>
+<LI> Homepage: 
+<A HREF="http://www.it.fht-esslingen.de/~zimmerma/software/ltools.htm">http://www.it.fht-esslingen.de/~zimmerma/software/ltools.htm</A></LI>
+<LI> Mirror: 
+<A HREF="http://metalab.unc.edu/pub/linux/utils/dos/">http://metalab.unc.edu/pub/linux/utils/dos/</A>
+(only major releases)</LI>
+<LI> Access: Read/Write/Modify, Long filenames</LI>
+<LI> License: GPL</LI>
+</UL>
+
+The LTOOLS are under DOS/Windows 3.x/Windows 9x/Windows NT or
+non-Linux-UNIX, what the MTOOLS are under Linux. You can access (read,
+write, modify) your Linux files when running one of the other operating
+systems. The kernel of the LTOOLS is a set of command line programs.
+Additionally a JAVA program as a stand alone graphical user interface is
+available. Alternatively, you can use your standard web browser as a
+graphical user interface. The LTOOLS do not only provide access to Linux
+files on your own machine, but also remote access to files on other
+machines.</P>
+
+
+<H2><A NAME="ext2_os2"></A> <A NAME="ss6.7">6.7</A> <A HREF="Filesystems-HOWTO.html#toc6.7">Accessing Ext2 from OS/2</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://perso.wanadoo.fr/matthieu.willm/ext2-os2/">http://perso.wanadoo.fr/matthieu.willm/ext2-os2/</A></LI>
+<LI> Author: Matthieu WILLM &lt;
+<A HREF="mailto:willm@ibm.net">willm@ibm.net</A>&gt; , 
+&lt;
+<A HREF="mailto:matthieu.willm@wanadoo.fr">matthieu.willm@wanadoo.fr</A>&gt;</LI>
+<LI> Download: 
+<A HREF="ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/ext2_240.zip">ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/ext2_240.zip</A></LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1999/05/30/928069144.html">Console/Filesystems</A></LI>
+<LI> Access: Read/Write, swapping and booting to/from ext2,
+removable media support, but NO extended attributes.</LI>
+</UL>
+
+EXT2-OS2 is a package that allows OS/2 to seamlessly access Linux ext2
+formatted partitions from OS/2 as if they were standard OS/2 drive letters.
+The ultimate aim of this package is to be able to use the ext2 file system
+as a replacement of FAT or HPFS. For the moment the only lacking feature
+to achieve this goal is the support for OS/2 extended attributes.</P>
+
+<H2><A NAME="ext2_from_win95"></A> <A NAME="ss6.8">6.8</A> <A HREF="Filesystems-HOWTO.html#toc6.8">Accessing Ext2 from Windows 95/98 (FSDEXT2)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://www.yipton.demon.co.uk/">http://www.yipton.demon.co.uk/</A></LI>
+<LI> Author: Peter van Sebille 
+<A HREF="mailto:pvs@globalxs.nl">pvs@globalxs.nl</A> ,
+<A HREF="mailto:pese@nlnwgfsc.origin.nl">pese@nlnwgfsc.origin.nl</A></LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/10/14/908381784.html">Console/Filesystems</A></LI>
+<LI> Access: Read-only, Long filenames supported</LI>
+</UL>
+</P>
+
+<H2><A NAME="ext2_from_win952"></A> <A NAME="ss6.9">6.9</A> <A HREF="Filesystems-HOWTO.html#toc6.9">Accessing Ext2 from Windows 95 (Explore2fs)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage:
+<A HREF="http://uranus.it.swin.edu.au/~jn/linux/explore2fs.htm">http://uranus.it.swin.edu.au/~jn/linux/explore2fs.htm</A></LI>
+<LI> Access: Read/Write, Long filenames, symbolic links etc...</LI>
+<LI> Author: John Newbigin &lt;
+<A HREF="mailto:jn@it.swin.edu.au">jn@it.swin.edu.au</A>&gt;</LI>
+<LI> License: GPL</LI>
+</UL>
+
+A user space application which can read and write the second extended
+file system
+ext2.  Supports hard disks and removable media, including zip and floppy.
+Uses a windows explorer like interface to show files and details.  Supports Drag&amp; Drop, context menus etc.
+Written for Windows NT, but has some support for Windows 95.  Large disks can
+cause problems.</P>
+
+<H2><A NAME="ext2_from_winnt"></A> <A NAME="ss6.10">6.10</A> <A HREF="Filesystems-HOWTO.html#toc6.10">Accessing Ext2 from Windows NT (ext2fsnt)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.chat.ru/~ashedel/ext2fsnt/">http://www.chat.ru/~ashedel/ext2fsnt/</A></LI>
+<LI> Download: 
+<A HREF="http://www.chat.ru/~ashedel/ext2fsnt/ext2fsnt.rar">http://www.chat.ru/~ashedel/ext2fsnt/ext2fsnt.rar</A></LI>
+<LI> Author: Andrey Shedel &lt; 
+<A HREF="mailto:andreys@cr.cyco.com">andreys@cr.cyco.com</A> &gt;</LI>
+<LI> Freshmeat:
+<A HREF="http://freshmeat.net/appindex/2000/08/23/967035557.html">Console/Filesystems</A></LI>
+<LI> License: Free</LI>
+<LI> Access: Read-write, LFN, Security, PageFile, Hardlinks.</LI>
+</UL>
+</P>
+
+<H2><A NAME="ntfs_from_beos2"></A> <A NAME="ss6.11">6.11</A> <A HREF="Filesystems-HOWTO.html#toc6.11">Accessing Ext2 from BeOS</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.cs.tamu.edu/people/tkg0143/be/">http://www.cs.tamu.edu/people/tkg0143/be/</A></LI>
+<LI> Author: Travis Geiselbrecht
+&lt; 
+<A HREF="mailto:geist@tamu.edu">geist@tamu.edu</A> &gt;</LI>
+<LI> Download: 
+<A HREF="http://www.cs.tamu.edu/people/tkg0143/be/downloads/ext2fs-1.0.6-x86-r4.zip">http://www.cs.tamu.edu/people/tkg0143/be/downloads/ext2fs-1.0.6-x86-r4.zip</A> for R4 and
+<A HREF="http://www.cs.tamu.edu/people/tkg0143/be/downloads/ext2fs-1.0.3-x86-r3.zip">http://www.cs.tamu.edu/people/tkg0143/be/downloads/ext2fs-1.0.3-x86-r3.zip</A> for R3.</LI>
+<LI> Access: Read-only, long filenames supported.</LI>
+<LI> License: Free</LI>
+</UL>
+
+This is a driver to allow BeOS to mount the Linux Ext2 filesystem. The
+version that is currently released author consider pretty stable. People
+have been using it for a long time, with no bug reports. </P>
+
+<P>Authow now works for Be Inc, so you will not see his ext2 and NTFS filesystem
+support updated on the web much more. The drivers will be pulled into
+future BeOS releases.</P>
+
+<H2><A NAME="ext2_macos"></A> <A NAME="ss6.12">6.12</A> <A HREF="Filesystems-HOWTO.html#toc6.12">Accessing Ext2 from MacOS (MountX)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://calvaweb.calvacom.fr/bh40">http://calvaweb.calvacom.fr/bh40</A></LI>
+<LI> Author: ?</LI>
+<LI> Download: ?</LI>
+</UL>
+
+MacOS driver which allows you to mount ext2 filesystems (Linux and
+MkLinux) on the Macintosh.</P>
+
+
+<H2><A NAME="ext2_mint"></A> <A NAME="ss6.13">6.13</A> <A HREF="Filesystems-HOWTO.html#toc6.13">Accessing Ext2 from MiNT</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://?">http://?</A></LI>
+<LI> Author: &lt;
+<A HREF="mailto:yescrew@capybara.sk-pttsc.lj.edus.si">yescrew@capybara.sk-pttsc.lj.edus.si</A>&gt;</LI>
+<LI> Download: ?</LI>
+<LI> License: GPL</LI>
+</UL>
+
+This is a full working Ext2 filesystem driver for FreeMiNT.
+It can read and write the actual ext2 version as implemented in Linux
+for example. The partition size is not limited and the logical sector
+size can be 1024, 2048 or 4096 bytes. The only restriction is that the
+physical sector size is smaller or equal to the logical sector size.
+The blocksize can be configured if you initialize the partition with
+mke2fs.</P>
+
+
+<H2><A NAME="ext2_defrag"></A> <A NAME="ss6.14">6.14</A> <A HREF="Filesystems-HOWTO.html#toc6.14">Ext2fs defrag </A>
+</H2>
+
+<P>
+<UL>
+<LI> Download: 
+<A HREF="ftp://ftp.uk.linux.org/pub/linux/sct/defrag/">ftp://ftp.uk.linux.org/pub/linux/sct/defrag/</A></LI>
+<LI> Author: Stephen C. Tweedie &lt; 
+<A HREF="mailto:sct@redhat.com">sct@redhat.com</A> &gt;</LI>
+<LI> License: GPL</LI>
+</UL>
+
+Defragments your ext2 filesystem.  Needs updated for glib libraries.</P>
+
+<H2><A NAME="ext2_resize"></A> <A NAME="ss6.15">6.15</A> <A HREF="Filesystems-HOWTO.html#toc6.15">Ext2fs resize </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.dsv.nl/~buytenh/ext2resize/">http://www.dsv.nl/~buytenh/ext2resize/</A></LI>
+<LI> Download: 
+<A HREF="http://www.dsv.nl/~buytenh/ext2resize/ext2resize-990617.tar.bz2">http://www.dsv.nl/~buytenh/ext2resize/ext2resize-990617.tar.bz2</A></LI>
+<LI> Author: Lennert Buytenhek &lt;
+<A HREF="mailto:buytenh@dsv.nl">buytenh@dsv.nl</A>&gt;.</LI>
+<LI> License: GPL</LI>
+</UL>
+
+Resizes second extended filesystem.</P>
+
+<H2><A NAME="ext2end"></A> <A NAME="ss6.16">6.16</A> <A HREF="Filesystems-HOWTO.html#toc6.16">Ext2end </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://linux.msede.com/ext2/ext2end.html">http://linux.msede.com/ext2/ext2end.html</A></LI>
+<LI> Maintainer: Mike Field &lt;
+<A HREF="mailto:mafield@the.net.nz">mafield@the.net.nz</A>&gt;</LI>
+<LI> License: Copyright Mike Field. To be GPLed once stable.</LI>
+</UL>
+
+For use with 
+<A HREF="#lvm">LVM</A> Consists of 2 utilites. ext2endable
+reorganises an empty ext2 file systems to allow them
+to be extended, and ext2end that extends an unmounted
+ext2 file system.
+If ext2endable has not been run when the file system
+was created ext2end will only be able to extend it to
+the next multiple of 256MB</P>
+
+<H2><A NAME="ext2_e2fsprogs"></A> <A NAME="ss6.17">6.17</A> <A HREF="Filesystems-HOWTO.html#toc6.17">Repairing/analyzing/creating Ext2 using E2fsprogs</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://e2fsprogs.sourceforge.net/">http://e2fsprogs.sourceforge.net/</A></LI>
+<LI> Download: 
+<A HREF="ftp://download.sourceforge.net/pub/sourceforge/e2fsprogs/">ftp://download.sourceforge.net/pub/sourceforge/e2fsprogs/</A></LI>
+<LI> Authors: 
+<A HREF="mailto:tytso@mit.edu">tytso@mit.edu</A> and
+<A HREF="mailto:card@masi.ibp.fr">card@masi.ibp.fr</A></LI>
+<LI> Windows NT port: 
+<A HREF="http://www.chat.ru/~ashedel/ext2fsnt/">http://www.chat.ru/~ashedel/ext2fsnt/</A></LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/07/10/900098883.html">Console/Filesystems</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+The ext2fsprogs package contains essential ext2 filesystem utilities which
+consists of e2fsck, mke2fs, debugfs, dumpe2fs, tune2fs, and most of the
+other core ext2 filesystem utilities.</P>
+
+<H2><A NAME="ext2ed"></A> <A NAME="ss6.18">6.18</A> <A HREF="Filesystems-HOWTO.html#toc6.18">Ext2 filesystem editor - Ext2ed</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author: 
+<A HREF="mailto:tgud@tochnapc2.technion.ac.il">tgud@tochnapc2.technion.ac.il</A>.</LI>
+<LI> Download: 
+<A HREF="http://sunsite.unc.edu/pub/Linux/system/Filesystems/ext2/ext2ed-0.1.tar.gz">http://sunsite.unc.edu/pub/Linux/system/Filesystems/ext2/ext2ed-0.1.tar.gz</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+EXT2ED is a disk editor for the extended2 filesystem.
+It will show you the ext2 filesystem structures in a nice
+and intuitive way, letting you easily "travel" between them
+and making the necessary modifications.</P>
+
+<H2><A NAME="lde"></A> <A NAME="ss6.19">6.19</A> <A HREF="Filesystems-HOWTO.html#toc6.19">Linux filesystem editor - lde</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author: Scott D. Heavner &lt;
+<A HREF="mailto:sdh@po.cwru.edu">sdh@po.cwru.edu</A>&gt;.</LI>
+<LI> Download: 
+<A HREF="http://sunsite.unc.edu/pub/Linux/system/Filesystems/lde-2.3.4.tar.gz">http://sunsite.unc.edu/pub/Linux/system/Filesystems/lde-2.3.4.tar.gz</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+This allows you to view some Linux fs's,  hex block
+and inode editing are now supported and you can use it to dump an erased file
+to another partition with a little bit of work.  Supports ext2, minix,
+and xiafs.  Includes <B>LaTeX Introduction to the Minix fs</B>. You must patch
+sources to compile on 2.2.x and 2.3.x kernels beacuse of missing Xia header
+files in kernel.</P>
+
+
+<H2><A NAME="ext2undel"></A> <A NAME="ss6.20">6.20</A> <A HREF="Filesystems-HOWTO.html#toc6.20">Ext2 undelete utilities</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://amadeus.uprm.edu/~undelete">http://amadeus.uprm.edu/~undelete</A></LI>
+<LI> Authors: Gunther Costas, Wilfredo Lugo, Jerry Ramirez
+&lt;
+<A HREF="mailto:undelete@amadeus.uprm.edu">undelete@amadeus.uprm.edu</A>&gt;</LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/10/14/908382417.html">Console/Filesystems</A></LI>
+<LI> License: GPL</LI>
+</UL>
+
+This is a patch for kernel 2.0.30 that adds undelete capabilities
+using the "undeletable" attribute provided by the ext2fs. This patch
+include man pages, the undelete daemon and utilities.  Check our web page
+for the latest and greatest version.</P>
+
+
+<HR>
+<H2><A NAME="hfs"></A> <A NAME="s7">7.</A> <A HREF="Filesystems-HOWTO.html#toc7">Macintosh Hierarchical Filesystem - HFS</A> </H2>
+
+<P>All Macintosh storage devices except floppy disks are partitioned into
+one or more volumes. Volumes can contain four kinds of items: files,
+directories, directory threads and file threads. Each item is described
+by a catalog record which is analogous to a Unix inode. Catalog records
+are organized in the on-disk catalog B-Tree. Directory contents are
+derived from searching the catalog B-Tree. Only a file can occupy space
+outside of its catalog record.</P>
+
+<P>A Macintosh "file" contains two components,
+or forks. The resource fork is an indexed file containing code
+segments, menu items, dialog boxes, etc. The data fork has the "stream of
+bytes" semantics of a Unix file contents. Each fork is comprised of one
+or more extents or contiguous runs of blocks. An extent descriptor encodes
+an extent's starting block and length into a 32bit quantity. The first
+extent record (three extent descriptors) of each fork is a part of the
+file's catalog record. Any further extent records are kept in the
+extents overflow B-Tree.</P>
+
+<P>In addition to file and B-Tree extents a volume also contains two boot
+blocks, a volume information block, and a free space bitmap. There is
+a remarkable amount of redundancy in the on diskdata structures which
+improves crash recovery. While not strictly a part of the filesystem,
+it should be noted that several catalog record fields are reserved
+for the exclusive use of Finder, a program which handles user access
+to the filesystem and automatically maintains associations between
+applications and data files. Thus, HFS must also maintain this Finder
+info. </P>
+
+<P>Every file and directory on an HFS volume has an identification number,
+similar to an inode number in the Unix filesystem. However, a file or
+directory is named by its parent's identification number and the file
+or directory's file name, which is a 32 character string that can
+contain nulls. This combination is the search key to the volume's
+catalog B-Tree. The catalog B-Tree differs from a traditional B-Tree
+structure in that all the nodes at each level of the B-Tree are linked
+together to form a doubly linked list and all of the records are in
+the leaf nodes. These variations permit accessing many items in the
+same directory by traversing the leaves using the linked list. Strictly
+speaking, the HFS B-Trees are a variant of B+-Trees although Apple's
+technical documentation calls them B*-Trees. </P>
+
+<P>Each directory, including the root directory, contains its directory
+thread, which has the empty filename. The directory thread record
+contains the name of the directory and the id of the parent of the directory.
+Similarly, filethreads contain the name of a file and the id of the
+directory they are in. While every directory must contain a directory
+thread, file threads are very uncommon. In fact, both are examples of
+HFS redundancy - for undamaged trees, threads are not strictly necessary.
+Both file and directory records contain 32 bytes of information used by
+Finder. The first three extent descriptors for the catalog B-Tree are kept
+in the volume information block. If the catalog B-Tree file grows beyond
+three extents, the remaining extent descriptors are kept in the extents
+overfow.</P>
+
+<P>HFS and HFS+ (also called Sequoia) filesystems are well documented. The
+best source of tech. information about HFS can be found in the <B>Inside
+Macintosh</B> series of books. Look at
+<A HREF="http://developer.apple.com/techpubs/mac/Files/Files-99.html">http://developer.apple.com/techpubs/mac/Files/Files-99.html</A>.
+The HFS+ filesystem is described in <B>Technote 1150</B>,
+available online at 
+<A HREF="http://developer.apple.com/technotes/tn/tn1150.html">http://developer.apple.com/technotes/tn/tn1150.html</A>.
+A lot of information is available also in other technotes. This links
+are collected by Paul H. Hargrove:</P>
+<P>
+<UL>
+<LI>
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_22.html">http://developer.apple.com/dev/technotes/fl/fl_22.html</A>
+- HFS Ruminations.</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_32.html">http://developer.apple.com/dev/technotes/fl/fl_32.html</A>
+- Hey, Buddy, Can You Spare A Block?</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_505.html">http://developer.apple.com/dev/technotes/fl/fl_505.html</A>
+- Alias Manager Q&amp;As</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_515.html">http://developer.apple.com/dev/technotes/fl/fl_515.html</A>
+- File Manager File Handling Q&amp;As</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/fl/fl_530.html">http://developer.apple.com/dev/technotes/fl/fl_530.html</A>
+- File Manager Volume Handling Q&amp;As</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/qa/ops/ops08.html">http://developer.apple.com/dev/qa/ops/ops08.html</A>
+- Bizarre Extension Loading Order: BackQuote Sorts Between "A" and "B"</LI>
+<LI> 
+<A HREF="http://developer.apple.com/dev/technotes/tb/tb_535.html">http://developer.apple.com/dev/technotes/tb/tb_535.html</A>
+- Finder Q&amp;As</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="hfs_from_linux"></A> <A NAME="ss7.1">7.1</A> <A HREF="Filesystems-HOWTO.html#toc7.1">Accessing HFS from Linux</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www-sccm.stanford.edu/~hargrove/HFS/">http://www-sccm.stanford.edu/~hargrove/HFS/</A></LI>
+<LI> Author: Paul. Hargrove &lt;
+<A HREF="mailto:hargrove@sccm.Stanford.edu">hargrove@sccm.stanford.edu</A>&gt;</LI>
+<LI> Freshmeat: 
+<A HREF="http://news.freshmeat.net/appindex/1998/08/07/902523578.html">Console/Filesystems</A></LI>
+<LI> License: GPL</LI>
+</UL>
+</P>
+
+<H2><A NAME="hfs_from_os2"></A> <A NAME="ss7.2">7.2</A> <A HREF="Filesystems-HOWTO.html#toc7.2">Accessing HFS from OS/2 (HFS/2)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.student.nada.kth.se/~f96-bet/HFS/">http://www.student.nada.kth.se/~f96-bet/HFS/</A></LI>
+<LI> Author: Marcus Better &lt;
+<A HREF="mailto:Marcus.Better@abc.se">Marcus.Better@abc.se</A>&gt;</LI>
+</UL>
+</P>
+<P>HFS/2 lets OS/2 users seamlessly read and write files
+on diskettes formatted with the Hierarchical File System, the
+file system used by Macintosh computers. With HFS/2, Macintosh
+diskettes can be used just as if they were regular diskettes.</P>
+
+<P>This program is no longer being developed, because author doesn't
+use OS/2. If you are willing to maintain the program, let him know.</P>
+
+<H2><A NAME="hfs_from_win"></A> <A NAME="ss7.3">7.3</A> <A HREF="Filesystems-HOWTO.html#toc7.3">Accessing HFS from Windows 95/98/NT (HFV Explorer)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://gamma.nic.fi/~lpesonen/HFVExplorer/">http://gamma.nic.fi/~lpesonen/HFVExplorer/</A></LI>
+<LI> Author: Lauri Pesonen &lt;
+<A HREF="mailto:lpesonen@nic.fi">lpesonen@nic.fi</A>&gt;</LI>
+<LI> Access: R/W access to floppies, Zip disks and virtual volume
+files. Read access to HFS and hybrid CD's.</LI>
+<LI> License: GPL</LI>
+</UL>
+
+An HFS volume browser for Windows NT and Windows 9x based
+on hfsutils. Launch pad support for all major Macintosh
+emulators running on Windows.</P>
+
+<H2><A NAME="hfs_from_dos"></A> <A NAME="ss7.4">7.4</A> <A HREF="Filesystems-HOWTO.html#toc7.4">Accessing HFS from DOS (MAC-ETTE)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Author: Paul E. Thomson </LI>
+<LI> Download: 
+<A HREF="http://home2.inet.tele.dk/shefan/macette3.zip">http://home2.inet.tele.dk/shefan/macette3.zip</A></LI>
+<LI> Access: Read-Only</LI>
+<LI> License: Shareware ($34)</LI>
+</UL>
+
+Mac-ette is a PC utility which can read, write, format and duplicate Macintosh
+HFS format 1.4 Meg diskettes on a PC equipped with a 3.5 inch high density
+diskette drive.</P>
+
+<H2><A NAME="hfs_utils"></A> <A NAME="ss7.5">7.5</A> <A HREF="Filesystems-HOWTO.html#toc7.5">HFS utils </A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.mars.org/home/rob/proj/hfs/">http://www.mars.org/home/rob/proj/hfs/</A></LI>
+<LI> Author: Robert Leslie &lt;
+<A HREF="mailto:rob@mars.org">rob@mars.org</A>&gt;</LI>
+<LI> OS/2 port: 
+<A HREF="http://www.f.kth.se/~f96-bet/hfsutils/">http://www.f.kth.se/~f96-bet/hfsutils/</A></LI>
+</UL>
+</P>
+<P>The hfsutils package contains a set of command-line utilities
+such as hformat, hmount, hdir,
+hcopy, etc. They allow read-write access of files and directories
+on HFS volumes.</P>
+
+<H2><A NAME="macfs_lib"></A> <A NAME="ss7.6">7.6</A> <A HREF="Filesystems-HOWTO.html#toc7.6">MacFS: A Portable Macintosh File System Library</A>
+</H2>
+
+<P>
+<UL>
+<LI> Tech report: 
+<A HREF="http://reports-archive.adm.cs.cmu.edu/anon/1998/abstracts/98-145.html">http://reports-archive.adm.cs.cmu.edu/anon/1998/abstracts/98-145.html</A></LI>
+<LI> Author: Peter A. Dinda &lt;
+<A HREF="mailto:pdinda+macfs@cs.cmu.edu">pdinda+macfs@cs.cmu.edu</A>&gt;,
+George C. Necula, and Morgan Price</LI>
+<LI> Download: 
+<A HREF="ftp://ftp.cs.cmu.edu/user/pdinda/MacFS_0.1.tar.gz">ftp://ftp.cs.cmu.edu/user/pdinda/MacFS_0.1.tar.gz</A></LI>
+<LI> Access: Read/Write, full open/read/write/seek/close support</LI>
+<LI> License: Free for noncommercial and nonmilitary use, see
+<A HREF="ftp://ftp.cs.cmu.edu/user/pdinda/MacFS_0.1.LICENSE">ftp://ftp.cs.cmu.edu/user/pdinda/MacFS_0.1.LICENSE</A></LI>
+</UL>
+
+This is a Macintosh file system library which is portable to a
+variety of operating systems and platforms. It presents a programming
+interface sufficient for creating a user level API as well as file system
+drivers for operating systems that support them. Authors implemented
+and tested such a user level API and utility programs based on it
+as well as an experimental Unix Virtual File System.
+They also describe the Macintosh Hierarchical File System and their
+implementation and note that
+the design is not well suited to reentrancy and that its complex
+data structures can lead to slow
+implementations in multiprogrammed environments. Performance
+measurements show that
+our implementation is faster than the native Macintosh
+implementation at creating, deleting,
+reading and writing files with small request sizes, but slower than the Berkeley Fast File
+System (FFS.) However, the native Macintosh implementation can
+perform large read and write operations faster that either our
+implementation or FFS.</P>
+
+<HR>
+<H2><A NAME="iso9660"></A> <A NAME="s8">8.</A> <A HREF="Filesystems-HOWTO.html#toc8">ISO 9660 - CD-ROM filesystem</A></H2>
+
+<P>Useful ISO-9660 links:
+<UL>
+<LI> 
+<A HREF="ftp://ftp.ecma.ch/ecma-st/e119-pdf.pdf">ftp://ftp.ecma.ch/ecma-st/e119-pdf.pdf</A> -
+ISO-9660 (aka ECMA-119, aka High Sierra) specification</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss8.1">8.1</A> <A HREF="Filesystems-HOWTO.html#toc8.1">RockRidge extensions</A>
+</H2>
+
+<P>Extensions allowing long filenames and Unix-style symbolic links.</P>
+
+<P>Useful RockRidge links:
+<UL>
+<LI> 
+<A HREF="ftp://ftp.ymi.com/pub/rockridge/susp112.ps">ftp://ftp.ymi.com/pub/rockridge/susp112.ps</A> -
+System Usage Sharing Protocol (SUSP, IEEE P1281)</LI>
+<LI> 
+<A HREF="ftp://ftp.ymi.com/pub/rockridge/rrip112.ps">ftp://ftp.ymi.com/pub/rockridge/rrip112.ps</A> -
+Rock Ridge Interchange Protocol (RRIP, IEEE P1282)</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss8.2">8.2</A> <A HREF="Filesystems-HOWTO.html#toc8.2">Joliet extensions</A>
+</H2>
+
+<P>Joliet is a Microsoft extension to the
+ISO 9660 filesystem that allows Unicode characters to be used in
+filenames.  This is a benefit when handling internationalization.
+Like the Rock Ridge extensions, Joliet also allows long filenames.</P>
+
+<H2><A NAME="ss8.3">8.3</A> <A HREF="Filesystems-HOWTO.html#toc8.3">Hybrid CD-ROMs</A>
+</H2>
+
+<P>Hybrid CDs contains three filesystems on one disc - ISO9660/RR, Joliet and
+HFS. Such CD-ROMs are accessible under DOS, Unix, Macintosh and Windows 9x/NT.
+All three filesystems use the same data, only metadata are the disc three
+times.</P>
+
+
+<H2><A NAME="ss8.4">8.4</A> <A HREF="Filesystems-HOWTO.html#toc8.4">Novell NetWare indexes on ISO9660</A>
+</H2>
+
+<P>(todo)</P>
+
+
+<H2><A NAME="ss8.5">8.5</A> <A HREF="Filesystems-HOWTO.html#toc8.5">Accessing Joliet from Linux</A>
+</H2>
+
+<P>
+<A NAME="joliet_linux"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://bmrc.berkeley.edu/people/chaffee/joliet.html">http://bmrc.berkeley.edu/people/chaffee/joliet.html</A></LI>
+<LI> License: GPL</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss8.6">8.6</A> <A HREF="Filesystems-HOWTO.html#toc8.6">Accessing Joliet from BeOS</A>
+</H2>
+
+<P>
+<A NAME="joliet_beos"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.iae.nl/users/gertjan/be/">http://www.iae.nl/users/gertjan/be/</A></LI>
+<LI> Author: Gertjan van Ratingen &lt;
+<A HREF="mailto:gertjan@iae.nl">gertjan@iae.nl</A>&gt;</LI>
+<LI> License: ?</LI>
+</UL>
+
+It is updated ISO9660 driver to be able to use a Joliet ISO9660 extensions.</P>
+
+<H2><A NAME="ss8.7">8.7</A> <A HREF="Filesystems-HOWTO.html#toc8.7">Accessing Joliet from OS/2</A>
+</H2>
+
+<P>
+<A NAME="joliet_os2"></A> </P>
+<P>
+<UL>
+<LI> Download: 
+<A HREF="ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/jcdfs.zip">ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/jcdfs.zip</A></LI>
+<LI> Author: IBM</LI>
+<LI> License: ?</LI>
+</UL>
+
+Jcdfs.zip archive contains CDFS.IFS driver for OS/2 with Joliet level 3
+support.</P>
+
+<H2><A NAME="ss8.8">8.8</A> <A HREF="Filesystems-HOWTO.html#toc8.8">Accessing Audio CD as filesystem from Linux</A>
+</H2>
+
+<P>
+<A NAME="audiocd_linux"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.ii.pw.edu.pl/~borkowsm/cdfs.htm">http://www.ii.pw.edu.pl/~borkowsm/cdfs.htm</A></LI>
+<LI> Download: ?</LI>
+<LI> Author: Mariusz Borkowski &lt;
+<A HREF="mailto:borkowsm@ii.pw.edu.pl">borkowsm@ii.pw.edu.pl</A>&gt;</LI>
+<LI> License: ?</LI>
+</UL>
+
+This kernel module allows you to access an audio CD as a regular filesystem.</P>
+
+<H2><A NAME="ss8.9">8.9</A> <A HREF="Filesystems-HOWTO.html#toc8.9">Accessing Audio CD as filesystem from BeOS</A>
+</H2>
+
+<P>
+<A NAME="audiocd_beos"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.xs4all.nl/~marcone/be.html">http://www.xs4all.nl/~marcone/be.html</A></LI>
+<LI> Download: 
+<A HREF="http://www.xs4all.nl/~marcone/be/files/cdda5.zip">http://www.xs4all.nl/~marcone/be/files/cdda5.zip</A>
+(PPC/Intel archive)</LI>
+<LI> Author: Marco ?</LI>
+<LI> License: ?</LI>
+</UL>
+
+This filesystem add-on will allow you (if your CD drive supports it) to treat a
+regular audio CD
+as if it were a bunch of WAV files. You can copy the files, encode them to mp3,
+play them slower,
+faster, even backwards.</P>
+
+
+<H2><A NAME="ss8.10">8.10</A> <A HREF="Filesystems-HOWTO.html#toc8.10">Accessing all tracks from Linux (CDfs)</A>
+</H2>
+
+<P>
+<A NAME="cdfs_linux"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.elis.rug.ac.be/~ronsse/cdfs/">http://www.elis.rug.ac.be/~ronsse/cdfs/</A></LI>
+<LI> Download: 
+<A HREF="http://www.elis.rug.ac.be/~ronsse/cdfs/cdfs.tgz">http://www.elis.rug.ac.be/~ronsse/cdfs/cdfs.tgz</A></LI>
+<LI> Author: Michiel Ronsse &lt;
+<A HREF="mailto:ronsse@elis.rug.ac.be">ronsse@elis.rug.ac.be</A>&gt;</LI>
+<LI> License: GPL</LI>
+</UL>
+
+CDfs is a file system for Linux systems that `exports' all tracks
+and boot images on a CD as normal files. These files can then be
+mounted (e.g. for ISO and boot images), copied, played (audio
+tracks), etc. The primary goal for developing this file system was
+to `unlock' information in old ISO sessions. The file system also
+allows you to access data on faulty multi session disks, e.g.
+disks with multiple single sessions instead of a multi session.</P>
+
+
+
+
+<H2><A NAME="ss8.11">8.11</A> <A HREF="Filesystems-HOWTO.html#toc8.11">Creating Hybrid CD-ROMs (mkhybrid)</A>
+</H2>
+
+<P>
+<A NAME="mkhybrid"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.ps.ucl.ac.uk/~jcpearso/mkhfs.html">http://www.ps.ucl.ac.uk/~jcpearso/mkhfs.html</A></LI>
+<LI> Download: 
+<A HREF="ftp://ftp.ge.ucl.ac.uk/pub/mkhfs/">ftp://ftp.ge.ucl.ac.uk/pub/mkhfs/</A></LI>
+<LI> Author: &lt;
+<A HREF="mailto:j.pearson@ge.ucl.ac.uk">j.pearson@ge.ucl.ac.uk</A>&gt;</LI>
+<LI> License: ?</LI>
+</UL>
+
+Make an ISO9660/HFS/JOLIET shared hybrid CD volume</P>
+
+
+<HR>
+<H2><A NAME="s9">9.</A> <A HREF="Filesystems-HOWTO.html#toc9">Other filesystems</A></H2>
+
+
+
+<H2><A NAME="ss9.1">9.1</A> <A HREF="Filesystems-HOWTO.html#toc9.1">ADFS - Acorn Disc File System </A>
+</H2>
+
+<P>The Acorn Disc Filing System is the standard filesystem of the
+RiscOS operating system which runs on Acorn's ARM-based Risc PC
+systems and the Acorn Archimedes range of machines.  </P>
+
+<P>Linux kernel 2.1.x+ supports this filesystem. Author of Linux filesystem 
+implementation is Russell King &lt;
+<A HREF="mailto:rmk@arm.uk.linux.org">rmk@arm.uk.linux.org</A>&gt;.</P>
+
+<H2><A NAME="affs"></A> <A NAME="ss9.2">9.2</A> <A HREF="Filesystems-HOWTO.html#toc9.2">AFFS - Amiga fast filesystem</A>
+</H2>
+
+<P>The Fast File System (FFS) is the common filesystem used on hard
+disks by Amiga(tm) systems since AmigaOS Version 1.3 (34.20).</P>
+
+<P>Linux kernel 2.1.x+ supports this filesystem. Author of Linux filesystem 
+implementation is Ray Burr &lt;
+<A HREF="mailto:ryb@nightmare.com">ryb@nightmare.com</A>&gt;.</P>
+
+
+<H2><A NAME="befs"></A> <A NAME="ss9.3">9.3</A> <A HREF="Filesystems-HOWTO.html#toc9.3">BeFS - BeOS filesystem</A>
+</H2>
+
+<P>BeFS is 
+<A HREF="#journal">journaling</A> filesystem used in BeOS.
+For more information about BeFS see 
+<A HREF="http://www.mkp.com/books_catalog/1-55860-497-9.asp">Practical File System Design with the Be File System</A>
+book or BeFS linux driver source code.</P>
+
+<P>Linux BeFS implementation:
+<A NAME="befs_linux"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://hp.vector.co.jp/authors/VA008030/bfs/">http://hp.vector.co.jp/authors/VA008030/bfs/</A></LI>
+<LI> Download: 
+<A HREF="http://hp.vector.co.jp/authors/VA008030/bfs/bfs-19990528.tar.gz">http://hp.vector.co.jp/authors/VA008030/bfs/bfs-19990528.tar.gz</A></LI>
+<LI> Author: Makoto Kato &lt;
+<A HREF="mailto:m_kato@ga2.so-net.ne.jp">m_kato@ga2.so-net.ne.jp</A>&gt;</LI>
+<LI> Access: Read-only</LI>
+<LI> License: GPL</LI>
+</UL>
+
+This driver supports x86 and PowerPC Linux platform.
+Also, it only supports readable in hard disk and floppy disk.</P>
+
+<H2><A NAME="bfs"></A> <A NAME="ss9.4">9.4</A> <A HREF="Filesystems-HOWTO.html#toc9.4">BFS - UnixWare Boot Filesystem</A>
+</H2>
+
+<P>UnixWare BFS filesystem type is a special-purpose filesystem. It was designed
+for loading and booting UnixWare kernel. BFS was designed as a
+<A HREF="#contiguous">contiguous filesystem</A>. BFS supports only one
+(root) directory and you can create only regular files; no subdirs or
+special files such as devices or sockets can be created.</P>
+
+
+<P>For more information about BFS see
+<A HREF="http://uw7doc.sco.com/FS_admin/_The_bfs_File_System_Type.html">http://uw7doc.sco.com/FS_admin/_The_bfs_File_System_Type.html</A>.
+<UL>
+<LI> 
+<A HREF="http://uw7doc.sco.com/FS_admin/_The_bfs_Superblock.html">http://uw7doc.sco.com/FS_admin/_The_bfs_Superblock.html</A>
+- superblock</LI>
+<LI> 
+<A HREF="http://uw7doc.sco.com/FS_admin/_bfs_Inodes.html">http://uw7doc.sco.com/FS_admin/_bfs_Inodes.html</A>
+- inodes</LI>
+<LI> 
+<A HREF="http://uw7doc.sco.com/FS_admin/_bfs_Storage_Blocks.html">http://uw7doc.sco.com/FS_admin/_bfs_Storage_Blocks.html</A>
+- storage blocks</LI>
+</UL>
+</P>
+<P>You can access BFS filesystem from Linux:
+<A NAME="bfs_linux"></A> 
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.ocston.org/~tigran/patches/bfs/">http://www.ocston.org/~tigran/patches/bfs/</A></LI>
+<LI> Download: In the Linux kernel, patches available at homepage.</LI>
+<LI> Author: Tigran A. Aivazian &lt;
+<A HREF="mailto:tigran@ocston.org">tigran@ocston.org</A>&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read/write (write part is limited, no compactification yet)</LI>
+</UL>
+
+The support for BFS is included in the Linux
+kernel since version 2.3.25. If you are using an earlier
+kernel, check if BFS homepage contains a patch which adds
+support for this filesystem. The homepage also contains
+bugfixes/enhancement which are not yet merged into the
+official kernel.</P>
+
+<P>There is also mine old implementation, which is now obsolete. My
+plan is to port this code to FreeBSD:</P>
+<P>
+<A NAME="bfs_linux_old"></A> 
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.penguin.cz/~mhi/fs/bfs/">http://www.penguin.cz/~mhi/fs/bfs/</A></LI>
+<LI> Download: 
+<A HREF="ftp://ftp.penguin.cz/pub/users/mhi/bfs/">ftp://ftp.penguin.cz/pub/users/mhi/bfs/</A></LI>
+<LI> Author: Martin Hinner &lt;
+<A HREF="mailto:mhi@penguin.cz">mhi@penguin.cz</A>&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read-only</LI>
+</UL>
+
+This is read-only UnixWare Boot filesystem support for Linux. You can use
+it to mount read-only your UnixWare /stand partition or floppy disks. I don't
+plan a read-write version, but if you want it mail me. You might be also
+interested in 
+<A HREF="#vxfs">VxFS</A> Linux support.</P>
+
+<H2><A NAME="ss9.5">9.5</A> <A HREF="Filesystems-HOWTO.html#toc9.5">CrosStor filesystem</A>
+</H2>
+
+<P>This is new name for <B>High throughput filesystem (HTFS)</B>. For more
+information see CrosStor homepage at 
+<A HREF="http://www.crosstor.com">http://www.crosstor.com</A>.</P>
+
+<H2><A NAME="dtfs"></A> <A NAME="ss9.6">9.6</A> <A HREF="Filesystems-HOWTO.html#toc9.6">DTFS - Desktop filesystem</A>
+</H2>
+
+<P>Goals in designing the Desktop File System were influenced by impression of
+what environment was like for small computer systems. DTFS compress the data
+stored in regular files to reduce disk space requirements (directories remain
+uncompressed). Compression is performed a page at a time and occur 'on-the-fly'.
+DTFS supports LZW and no-compression but you can add your own algorithms. Some
+space is saved by not pre-allocating inodes. Any disk block is fair game
+to be allocated as an inode. Each inode is stored as a B+tree. For more
+information see DTFS USENIX paper 
+(you can download it from 
+<A HREF="ftp://ftp.crosstor.com/pub/DTFS/papers/">ftp://ftp.crosstor.com/pub/DTFS/papers/</A>).</P>
+
+<P>Read/Write <B>commercial</B> driver available from CrosStor for UnixWare
+and SUN Solaris:</P>
+<P>
+<A NAME="dtfs_unixware"></A> </P>
+<P>
+<UL>
+<LI> Download: 
+<A HREF="ftp://ftp.crosstor.com/pub/DTFS/">ftp://ftp.crosstor.com/pub/DTFS/</A></LI>
+<LI> License: Commercial?</LI>
+<LI> Access: Read/Write</LI>
+</UL>
+</P>
+
+<H2><A NAME="enhfs"></A> <A NAME="ss9.7">9.7</A> <A HREF="Filesystems-HOWTO.html#toc9.7">EFS - Enhanced filesystem (Linux)</A>
+</H2>
+
+<P>The Enhanced Filing system project aims to create a new
+filing system for Linux and eventually other OSs which will allow the administrator
+to define mountable "file systems" on a set of block devices (either hard
+drives or partitions). The aim is to allow file systems to be added or
+removed from the partition set while the system is running and partitions
+may be added to a set (or removed if the remaining partitions have enough
+space to contain all the data) while the system is running.The two main aims are to allow a number of mountable
+file systems to share the same pool of storage space (IE have the user
+home dirs on the same drive as the news spool but have separate accounting
+for them), and to allow the easy addition of more hard drives to allow
+more space.</P>
+
+<P>Some other features that authors want to implement are
+<A HREF="#journal">logging/journaling</A>, support
+for as many OSs as possible (although all work will be initially done on
+Linux), and quotas in the FS so we don't need to waste ages running a silly
+quotacheck program at boot - the logging should avoid quotacheck the same
+way it avoids fsck! They want to be able to boot a system with 10gig of news
+spread over 4 hard drives with full quotas AFTER a power failure with less
+than 20 seconds for mounting file systems!</P>
+
+<P>Homepage of Enhanced FS is at 
+<A HREF="http://www.coker.com.au/~russell/enh/">http://www.coker.com.au/~russell/enh/</A>.
+Contact Russell Coker
+&lt;
+<A HREF="mailto:russell@coker.com.au">russell@coker.com.au</A>&gt; for more information.</P>
+
+
+<H2><A NAME="efs"></A> <A NAME="ss9.8">9.8</A> <A HREF="Filesystems-HOWTO.html#toc9.8">EFS - Extent filesystem (IRIX)</A>
+</H2>
+
+<P>The Extent File System (efs) is Silicon Graphics' early block-device
+filesystem, widely used on pre-6.0 versions of IRIX. Since 6.0, xfs
+has been bundled with IRIX and users are being encouraged to migrate
+to xfs filesystems. IRIX support for efs will be read-only in versions
+of IRIX beyond 6.5, however efs is still very much in use on SGI
+software distribution CDs.</P>
+
+<P>There are two kernel modules for linux to access EFS filesystem.</P>
+<P>
+<A NAME="efs_linux"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://aeschi.ch.eu.org/efs/">http://aeschi.ch.eu.org/efs/</A></LI>
+<LI> Download: 
+<A HREF="http://aeschi.ch.eu.org/efs/efs-1.0b.tar.gz">http://aeschi.ch.eu.org/efs/efs-1.0b.tar.gz</A></LI>
+<LI> Author: Al Smith &lt;
+<A HREF="mailto:Al.Smith@aeschi.ch.eu.org">Al.Smith@aeschi.ch.eu.org</A>&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read-only</LI>
+</UL>
+
+The efs kernel module is an implementation of
+the extent file system for linux 2.2 kernels. An efs implementation
+(efsmod-0.6.tar.gz) was originally written for 1.x kernels by
+Christian Vogelgsang.
+In this implementation the code has undergone a complete rewrite
+and is also endian-clean. To use the efs module, you will need
+to have at least a 2.2 kernel. To mount IRIX CDs, your CD-ROM
+will need to be able to cope with 512-byte blocks.
+This version of efs contains support for hard-disk partitions, and also
+contains a kernel patch to allow you to install the efs code into your
+linux kernel tree. Handling of large files has also been vastly improved.</P>
+
+<P>Original efsmod is also available:</P>
+<P>
+<A NAME="efsmod_linux"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://wwwcip.informatik.uni-erlangen.de/user/cnvogelg/proj.html">http://wwwcip.informatik.uni-erlangen.de/user/cnvogelg/proj.html</A></LI>
+<LI> Download: 
+<A HREF="http://wwwcip.informatik.uni-erlangen.de/user/cnvogelg/bin/efsmod-0.6.tgz">http://wwwcip.informatik.uni-erlangen.de/user/cnvogelg/bin/efsmod-0.6.tgz</A></LI>
+<LI> Author: Christian Vogelgsang</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read-only</LI>
+</UL>
+
+Efs-mod 0.6 is original EFS read/only module for Linux. Version 0.6 finished but
+Project frozen due to lack of time and information for implementing the write
+part.</P>
+
+
+<H3>Accessing EFS from Windows NT/95</H3>
+
+<P>
+<A NAME="efs_win95"></A> </P>
+<P>
+<UL>
+<LI> Download: 
+<A HREF="ftp://ivo.cps.unizar.es/pub/SPDsoft/winefssh.exe.zip">ftp://ivo.cps.unizar.es/pub/SPDsoft/winefssh.exe.zip</A></LI>
+<LI> Author: J.A. Gutierrez &lt;
+<A HREF="mailto:spd@ivo.cps.unizar.es">spd@ivo.cps.unizar.es</A>&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read/Only IRIX EFS</LI>
+</UL>
+
+Simple program for accessing EFS from Windows 95 (compiled using MS VC++).</P>
+
+
+<H3>EFS and FFS library, libfs</H3>
+
+<P>
+<A NAME="libfs"></A> </P>
+<P>
+<UL>
+<LI> Download: 
+<A HREF="ftp://ivo.cps.unizar.es/pub/SPDsoft/libfs.tar.gz">ftp://ivo.cps.unizar.es/pub/SPDsoft/libfs.tar.gz</A></LI>
+<LI> Author: J.A. Gutierrez &lt;
+<A HREF="mailto:spd@ivo.cps.unizar.es">spd@ivo.cps.unizar.es</A>&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read/Only IRIX EFS and Sun UFS</LI>
+</UL>
+
+A C library to read EFS and FFS from WinNT x86, SunOS
+and IRIX. Easy to use (Posix like interface) and to links aginst existent
+code FTP server has also winefssh.exe and winufssh.exe,
+simple WinNT binaries to interactively read UFS and EFS file systems.
+Not a very polished/documented package, but somebody may find it useful.</P>
+
+<P>Useful links:
+<UL>
+<LI> IRIX EFS filesystem brief description:
+<A HREF="http://squish.ucs.indiana.edu:80/ebt-bin/nph-dweb/dynaweb/SGI_Admin/IA_DiskFiles/@ebt-link;td=8?target=%25N%14_7484_START_RESTART_N%25">http://squish.ucs.indiana.edu:80/ebt-bin/nph-dweb/dynaweb/SGI_Admin/IA_DiskFiles/@ebt-link;td=8?target=%25N%14_7484_START_RESTART_N%25</A>
+
+</LI>
+</UL>
+</P>
+
+<H2><A NAME="ffs"></A> <A NAME="ss9.9">9.9</A> <A HREF="Filesystems-HOWTO.html#toc9.9">FFS - BSD Fast filesystem</A>
+</H2>
+
+<P>This is native filesystem for most BSD unixes (FreeBSD, NetBSD, OpenBSD,
+Sun Solaris, ...).</P>
+
+<P>See also: 
+<A HREF="#sfs">SFS, secure filesystem</A>,
+<A HREF="#ufs">UFS</A>.</P>
+
+
+<H3>Accessing FFS from MacOS</H3>
+
+
+<P>You can expand .tar.gz files to FFS filesystem with BSD Installer utility,
+with comes with OpenBSD. It lives at 
+<A HREF="ftp://ftp.openbsd.org/pub/OpenBSD/2.7/mac68k/utils/">ftp://ftp.openbsd.org/pub/OpenBSD/2.7/mac68k/utils/</A>.</P>
+
+
+<H2><A NAME="ss9.10">9.10</A> <A HREF="Filesystems-HOWTO.html#toc9.10">GPFS - General Parallel Filesystem</A>
+</H2>
+
+<P>This is a UNIX(tm) operating system style file
+system designed for the RS/6000 SP(tm) server. It allows
+applications on multiple nodes to share file data. GPFS
+supports very large file systems and stripes data across
+multiple disks for higher performance. GPFS is based on a
+shared disk model which provides lower overhead access to
+disks not directly attached to the application nodes and
+uses a distributed locking protocol to provide full data
+coherence for access from any node. It offers many of the
+standard AIX(tm) file system interfaces allowing most
+applications to execute without modification or
+recompiling. These capabilities are available while
+allowing high speed access to the same data from all
+nodes of the SP system, and providing full data coherence
+for operations occurring on the various nodes. GPFS
+attempts to continue operation across various node and
+component failures assuming that sufficient resources
+exist to continue.</P>
+<P>
+<UL>
+<LI>
+<A HREF="http://www.austin.ibm.com/resource/technology/paper1.html">http://www.austin.ibm.com/resource/technology/paper1.html</A></LI>
+</UL>
+</P>
+
+<H2><A NAME="ss9.11">9.11</A> <A HREF="Filesystems-HOWTO.html#toc9.11">HFS - HP-UX Hi performance filesystem</A>
+</H2>
+
+<P>This is the second hfs that appears in this howto. It is used in older HP-UX
+versions.</P>
+
+<H2><A NAME="htfs"></A> <A NAME="ss9.12">9.12</A> <A HREF="Filesystems-HOWTO.html#toc9.12">HTFS - High throughput filesystem </A>
+</H2>
+
+
+<P>Useful links:
+<UL>
+<LI> SCO OpenServer 5 filesystems whitepaper:
+<A HREF="http://www.sco.com/products/Whitepapers/family/filesy4.htm">http://www.sco.com/products/Whitepapers/family/filesy4.htm</A></LI>
+</UL>
+</P>
+<P>Read/Write <B>commercial</B> driver available from CrosStor:</P>
+<P>
+<A NAME="htfs_solaris"></A> </P>
+<P>
+<UL>
+<LI> Download: 
+<A HREF="ftp://ftp.crosstor.com/pub/HTFS/">ftp://ftp.crosstor.com/pub/HTFS/</A></LI>
+<LI> License: Commercial?</LI>
+<LI> Access: Read/Write</LI>
+</UL>
+</P>
+
+<H2><A NAME="jfs"></A> <A NAME="ss9.13">9.13</A> <A HREF="Filesystems-HOWTO.html#toc9.13">JFS - Journaled filesystem (HP-UX, AIX, OS/2 5, Linux)</A>
+</H2>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://oss.software.ibm.com/developerworks/opensource/jfs/">http://oss.software.ibm.com/developerworks/opensource/jfs/</A></LI>
+<LI> Download: 
+<A HREF="http://www10.software.ibm.com/developer/opensource/jfs/project/pub/">http://www10.software.ibm.com/developer/opensource/jfs/project/pub/</A></LI>
+<LI> Author: Steve Best &lt;
+<A HREF="mailto:sbest@us.ibm.com">sbest@us.ibm.com</A>&gt; and
+Dave Kleikamp &lt;
+<A HREF="mailto:shaggy@us.ibm.com">shaggy@us.ibm.com</A>&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: ?</LI>
+</UL>
+
+JFS is IBM's journaled file system technology, currently used in
+IBM enterprise servers, and is designed for high-throughput server
+environments.</P>
+
+
+<H2><A NAME="ss9.14">9.14</A> <A HREF="Filesystems-HOWTO.html#toc9.14">LFS - Linux log structured filesystem</A>
+</H2>
+
+
+<P>Linux Log structured filesystem implementation called d(t)fs:
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.complang.tuwien.ac.at/czezatke/lfs.html">http://www.complang.tuwien.ac.at/czezatke/lfs.html</A></LI>
+<LI> Author: Christian Czezatke &lt;
+<A HREF="mailto:e9025461@student.tuwien.ac.at">e9025461@student.tuwien.ac.at</A>&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: rw/long filenames, etc</LI>
+</UL>
+
+d(t)fs is a log-structured filesystem project for Linux.
+Currently, the filesystem is mostly up and running,
+but no cleaner has been written so far. </P>
+
+<P>There will also be a dtfs mailing list that will be announced on the
+homepage. For more information you can have a look at:
+<A HREF="http://www.xss.co.at/mailman/listinfo.cgi/dtfs">http://www.xss.co.at/mailman/listinfo.cgi/dtfs</A></P>
+
+<P>
+<UL>
+<LI> 
+<A HREF="http://collective.cpoint.net/lfs/">http://collective.cpoint.net/lfs/</A> - The kfs Homepage
+Cornelius "Kees" Cook has started a Linux Log--Structured Filesystem
+project before dtfs came to live.</LI>
+<LI> 
+<A HREF="http://lucien.blight.com/~c-cook/prof/lfs/">http://lucien.blight.com/~c-cook/prof/lfs/</A> - Another (death)
+LFS implementation ;-)</LI>
+<LI> 
+<A HREF="http://www.eecs.harvard.edu/~margo/usenix.195/">http://www.eecs.harvard.edu/~margo/usenix.195/</A>
+- Margo Seltzer's &lt;
+<A HREF="mailto:margo@das.harvard.edu">margo@das.harvard.edu</A>&gt; LFS page</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss9.15">9.15</A> <A HREF="Filesystems-HOWTO.html#toc9.15">MFS - Macintosh filesystem </A>
+</H2>
+
+<P>MFS is original Macintosh filesystem. It has been replaced by HFS / HFS+.
+If you can provide further information, mail
+<A HREF="mailto:mhi@penguin.cz">me</A> please.</P>
+
+
+<H2><A NAME="ss9.16">9.16</A> <A HREF="Filesystems-HOWTO.html#toc9.16">Minix filesystem </A>
+</H2>
+
+<P>This is Minix native filesystem. It was also used in first versions of Linux.</P>
+
+
+<H2><A NAME="nwfs"></A> <A NAME="ss9.17">9.17</A> <A HREF="Filesystems-HOWTO.html#toc9.17">NWFS - Novell NetWare filesystem</A>
+</H2>
+
+<P>NWFS is native in Novell NetWare OS. It is modified FAT-based filesystem.
+Two variants of this filesystem exists. 16bit NWFS 286 is used in NetWare 2.x.
+NetWare 3.x, 4.x and 5 use 32bit NWFS 386.</P>
+
+<H3><A NAME="nwfs286"></A> NetWare filesystem / 286</H3>
+
+<P>(todo)</P>
+
+<H3><A NAME="nwfs386"></A> NetWare filesystem / 386</H3>
+
+<P>(todo)</P>
+
+<H3>Accessing NWFS-386 from Linux</H3>
+
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.timpanogas.com/html/fenris_for_linux.html">http://www.timpanogas.com/html/fenris_for_linux.html</A></LI>
+<LI> Download: 
+<A HREF="ftp://207.109.151.240/nwfs/">ftp://207.109.151.240/nwfs/</A></LI>
+<LI> Author: Timpanogas Research Group, Inc. (jmerkey@timpanogas.com)</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read-Only</LI>
+</UL>
+
+This driver allows you to mount NWFS-386 filesystem on Linux.</P>
+
+<H2><A NAME="nss"></A> <A NAME="ss9.18">9.18</A> <A HREF="Filesystems-HOWTO.html#toc9.18">NSS - Novell Storage Services</A>
+</H2>
+
+<P>This is a new 64bit 
+<A HREF="#journal">journaling</A> filesystem using a 
+<A HREF="#btree">balanced tree</A> algorithms. It is used in Novell
+NetWare 5.</P>
+<P>
+<UL>
+<LI> 
+<A HREF="http://www.novell.com/whitepapers/nw5/nss.html">http://www.novell.com/whitepapers/nw5/nss.html</A> - NSS Whitepaper</LI>
+</UL>
+</P>
+
+
+<H2><A NAME="ss9.19">9.19</A> <A HREF="Filesystems-HOWTO.html#toc9.19">ODS - On Disk Structure filesystem</A>
+</H2>
+
+<P>This is OpenVMS and VMS native filesystem.</P>
+
+
+<H2><A NAME="qnx4"></A> <A NAME="qnxfs"></A> <A NAME="ss9.20">9.20</A> <A HREF="Filesystems-HOWTO.html#toc9.20">QNX filesystem </A>
+</H2>
+
+<P>This filesystem is used in QNX. Two major filesystem version exists, version
+2 is used by QNX 2 and version 4 by QNX 4. QNX 4 doesn't support version 2 and
+vice versa.</P>
+
+<P>QNX4 filesystem is now accessible from Linux 2.1.x+. Say "Y"es to 'QNX
+filesystem support';</P>
+<P>
+<UL>
+<LI> Download: In the kernel ;)</LI>
+<LI> Author: Frank Denis  &lt;
+<A HREF="mailto:j@4u.net">j@4u.net</A>&gt; (maintainer),
+Richard Frowijn</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read (except for multi-extents files), Write (experimental)</LI>
+</UL>
+
+Driver for the QNX 4 filesystem.</P>
+
+
+<H2><A NAME="reiserfs"></A> <A NAME="ss9.21">9.21</A> <A HREF="Filesystems-HOWTO.html#toc9.21">Reiser filesystem</A>
+</H2>
+
+<P>Reiserfs is a file system using a variant on classical balanced tree
+algorithms. The results when compared to the ext2fs conventional block
+allocation based file system running under the same operating system
+and employing the same buffering code suggest that these algorithms
+are more effective for large files and small files not near node size
+in time performance, become less effective in time performance and
+more significantly effective in space performance as one approaches
+files close to the node size, and become markedly more effective in
+both space and time as file size decreases substantially below node
+size (4k), reaching order of magnitude advantages for file sizes of
+100bytes. The improvement in small file space and time performance
+suggests that we may now revisit a common OS design assumption that
+one should aggregate small objects using layers above the file system
+layer.</P>
+
+<P>Useful links:
+<UL>
+<LI> Reiser fs homepage
+<A HREF="http://devlinux.org/namesys/">http://devlinux.org/namesys/</A></LI>
+</UL>
+</P>
+
+<H2><A NAME="ss9.22">9.22</A> <A HREF="Filesystems-HOWTO.html#toc9.22">RFS (CD-ROM Filesystem)</A>
+</H2>
+
+<P>Sony's incremental packet-writing filesystem.</P>
+
+<H2><A NAME="ss9.23">9.23</A> <A HREF="Filesystems-HOWTO.html#toc9.23">RomFS - Rom filesystem</A>
+</H2>
+
+<P>Author of Linux RomFS implemplementation is 
+Janos Farkas &lt;
+<A HREF="mailto:chexum@shadow.banki.hu">chexum@shadow.banki.hu</A>&gt; For more information see
+<B>/usr/src/linux/Documentation/filesystems/romfs.txt</B>
+file.</P>
+
+<H2><A NAME="sfs"></A> <A NAME="ss9.24">9.24</A> <A HREF="Filesystems-HOWTO.html#toc9.24">SFS - Secure filesystem</A>
+</H2>
+
+<P>The sfs filesystem type is a variation of the FFS filesystem type. The
+boot block,superblock, storage blocks, and free blocks for the sfs
+filesystem type are, at the administrative level, identical to those for
+FFS.  The inodes differ from FFS inodes, however. Each odd-numbered
+inode is reserved for security information. The information contains
+Access Control List information. I'm not sure if SFS has any other
+abilities though.</P>
+
+<P>SFS links:
+<UL>
+<LI> 
+<A HREF="http://uw7doc.sco.com/FS_admin/_The_sfs_File_System_Type.html">http://uw7doc.sco.com/FS_admin/_The_sfs_File_System_Type.html</A> - UnixWare 7 documentation: SFS Filesystem</LI>
+</UL>
+</P>
+
+<H2><A NAME="spiralog"></A> <A NAME="ss9.25">9.25</A> <A HREF="Filesystems-HOWTO.html#toc9.25">Spiralog filesystem (OpenVMS)</A>
+</H2>
+
+
+<P>Spiralog is a 64bit high-performance filesystem for the OpenVMS.
+The Spiralog
+combines 
+<A HREF="#journal">log-structured</A> technology
+with more traditional 
+<A HREF="#btree">B-tree</A>
+technology to provide a general abstraction. The B-tree
+mapping mechanism uses write-ahead logging to give stability and
+recoverability guarantees. </P>
+
+<P>Spiralog-related links at Digital:</P>
+<P>
+<UL>
+<LI> 
+<A HREF="http://www.digital.com/info/SP6048/">http://www.digital.com/info/SP6048/</A>
+- Spiralog File System for OpenVMS Alpha </LI>
+<LI> 
+<A HREF="http://www.digital.com/DTJM01/DTJM01AH.HTM">http://www.digital.com/DTJM01/DTJM01AH.HTM</A>
+- Overview of the Spiralog File System</LI>
+<LI> 
+<A HREF="http://www.digital.com/DTJM02/DTJM02HM.HTM">http://www.digital.com/DTJM02/DTJM02HM.HTM</A>
+- Design of the Server for the Spiralog File System</LI>
+</UL>
+</P>
+
+<H2><A NAME="ss9.26">9.26</A> <A HREF="Filesystems-HOWTO.html#toc9.26">System V and derived filesystems </A>
+</H2>
+
+<P>Homepage of System V Linux project is at
+<A HREF="http://www.knm.org.pl/prezes/sysv.html">http://www.knm.org.pl/prezes/sysv.html</A>. Maintainer of
+this project is &lt;kgb@manjak.knm.pl.org&gt;.</P>
+
+<H3><A NAME="afs"></A> AFS - Acer Fast Filesystem</H3>
+
+<P>The Acer Fast Filesystem is used on SCO Open Server. It is
+similar to the System V Release 4 filesystem, but it is using
+bitmaps instead of chained free-list of blocks.</P>
+
+<H3><A NAME="eafs"></A> EAFS - Extended Acer Fast Filesystem</H3>
+
+<P>The AFS filesystem can be 'extended' to handle file names
+up to 255 characters, but directories entries still have
+14-char names. This filesystem type is used on SCO Open
+Server.</P>
+
+<H3><A NAME="coherent"></A> Coherent filesystem</H3>
+
+
+
+<H3><A NAME="s5"></A> S5 </H3>
+
+<P>This filesystem is used in UnixWare. It's probably SystemV compatible, but
+I haven't verified it yet. For more information see
+<A HREF="http://uw7doc.sco.com/FS_admin/_The_s5_File_System_Type.html">http://uw7doc.sco.com/FS_admin/_The_s5_File_System_Type.html</A>.</P>
+
+<H3><A NAME="s51k"></A> S51K - SystemV 1K</H3>
+
+
+
+<H3>Version 7 filesystem</H3>
+
+<P>This filesystem type is used on Version 7 Unix for PDP-11 machines.</P>
+
+<H3><A NAME="xenix"></A> Xenix filesystem</H3>
+
+
+
+<H2><A NAME="ss9.27">9.27</A> <A HREF="Filesystems-HOWTO.html#toc9.27">Text - (Philips' CD-ROM Filesystem)</A>
+</H2>
+
+<P>Philips' standard for encoding disc and track data on audio CDs.</P>
+
+<H2><A NAME="ss9.28">9.28</A> <A HREF="Filesystems-HOWTO.html#toc9.28">UDF - Universal Disk Format (DVD-ROM filesystem)</A>
+</H2>
+
+
+<P>There is a Linux UDF filesystem driver:
+<A NAME="udf_linux"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://trylinux.com/projects/udf/">http://trylinux.com/projects/udf/</A></LI>
+<LI> Download: 
+<A HREF="http://trylinux.com/projects/udf/udf-0.8.0.1.tar.gz">http://trylinux.com/projects/udf/udf-0.8.0.1.tar.gz</A></LI>
+<LI> Author: Dave Boynton &lt;
+<A HREF="maito:dave@trylinux.com">dave@trylinux.com</A>&gt;</LI>
+<LI> Mailing-list: &lt;linux_udf@hootie.lvld.hp.com&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read-only</LI>
+</UL>
+</P>
+
+<H2><A NAME="ufs"></A> <A NAME="ss9.29">9.29</A> <A HREF="Filesystems-HOWTO.html#toc9.29">UFS</A>
+</H2>
+
+
+<P>Note: People often call 
+<A HREF="#ffs">BSD Fast Filesystem</A> incorrectly
+UFS. FFS and UFS are *diferrent* filesystems. All modern Unixes use FFS
+filesystem, not UFS! UFS was used in early BSD versions. You can download
+source code at 
+<A HREF="http://minnie.cs.adfa.edu.au/TUHS/">http://minnie.cs.adfa.edu.au/TUHS/</A>.</P>
+
+<P>Useful links:
+<UL>
+<LI> 
+<A HREF="http://www.sun.ca/white-papers/ufs-cluster.html">http://www.sun.ca/white-papers/ufs-cluster.html</A>
+- Implementation of write-clustering for Sun's UFS</LI>
+</UL>
+</P>
+<P>See also: 
+<A HREF="#ffs">BSD FFS</A></P>
+
+
+<H2><A NAME="v7"></A> <A NAME="ss9.30">9.30</A> <A HREF="Filesystems-HOWTO.html#toc9.30">V7 Filesystem</A>
+</H2>
+
+<P>The V7 Filesystem was used in Seventh Edition of UNIX Time Sharing system
+(about 1980). For more information see 7th Ed. source code, which is
+available from the Unix Archive: 
+<A HREF="http://minnie.cs.adfa.edu.au/TUHS/">http://minnie.cs.adfa.edu.au/TUHS/</A>.</P>
+
+
+<H2><A NAME="vxfs"></A> <A NAME="ss9.31">9.31</A> <A HREF="Filesystems-HOWTO.html#toc9.31">VxFS - Veritas filesystem (HP-UX, SCO UnixWare, Solaris)</A>
+</H2>
+
+<P>This is commercial filesystem developer by Veritas Inc. You can see it in
+HP-UX, SCO UnixWare, Solaris and probably other systems. It has very
+interesting features:
+Extent based allocation, Journaling, access control lists (ACLs), 
+up to 2 terabyte large file support, online backup (snapshot filesystem),
+BSD style quotas and many more.</P>
+<P>Three VxFS versions are available with VxFS:</P>
+
+<P><B> Version 1:</B> This is original VxFS, not commonly in use.</P>
+<P><B> Version 2:</B> Support for filesets and dynamic inode allocation.</P>
+<P><B> Version 4:</B> Latest version, supports large files and quotas.</P>
+
+<P>Note that HP-UX, Solaris and UnixWare versions use slightly different
+structures, so you may not be able to read VxFS when you connect it
+to different system. </P>
+
+<P>VxFS related links:
+<UL>
+<LI> 
+<A HREF="http://www.veritas.com/">http://www.veritas.com/</A> - Veritas Inc
+&lt;
+<A HREF="mailto:vx-sales@veritas.com">vx-sales@veritas.com</A>&gt;.</LI>
+<LI> 
+<A HREF="http://uw7doc.sco.com/ODM_FSadmin/CONTENTS.html">http://uw7doc.sco.com/ODM_FSadmin/CONTENTS.html</A>
+- VxFS ODM FS Admin - UnixWare 7 (documentation, really good).</LI>
+<LI> 
+<A HREF="http://uw7doc.sco.com/FS_manager/fsD.vxfsopt.html">http://uw7doc.sco.com/FS_manager/fsD.vxfsopt.html</A>
+- VxFS FS Manager - UnixWare 7 (documentation).</LI>
+<LI> 
+<A HREF="http://manuals.mchp.siemens.de:80/dynaweb/english/ru544e/drlugueb/o25636e1/@Generic__BookView/1641;cd=3">http://manuals.mchp.siemens.de:80/dynaweb/english/ru544e/drlugueb/o25636e1/@Generic__BookView/1641;cd=3</A>
+- VxFS - Reliant Unix.</LI>
+</UL>
+</P>
+
+<P>See also: 
+<A HREF="#vxvm">VxVM (Veritas volume manager)</A> and
+<A HREF="#journal">journaling filesystems</A>.</P>
+
+<H3>VxTools</H3>
+
+<P>
+<A NAME="vxtools"></A> 
+Unix command-line utilities for accessing VxFS versions 2 and 4 are
+available under the GNU GPL:
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.penguin.cz/~mhi/fs/vxfs/">http://www.penguin.cz/~mhi/fs/vxfs/</A></LI>
+<LI> Download: 
+<A HREF="ftp://ftp.penguin.cz/pub/users/mhi/vxfs/">ftp://ftp.penguin.cz/pub/users/mhi/vxfs/</A></LI>
+<LI> Author: Martin Hinner &lt;
+<A HREF="mailto:mhi@penguin.cz">mhi@penguin.cz</A>&gt;</LI>
+<LI> Mailing-list: &lt;fs-l@penguin.cz&gt;</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read-only, command-line utilites</LI>
+</UL>
+
+Vxtools is a set of command-line utilites which allow you to access your
+VxFS filesystem from Linux (and possibly other Unixes). Current version
+can read VxFS versions 2 and 4.</P>
+
+<P>I (mhi) plan also VxFS Linux kernel driver.</P>
+
+<P>AFAIK, Rodney Ramdas &lt;
+<A HREF="mailto:rodney@quicknet.nl">rodney@quicknet.nl</A>&gt; works on VxFS driver for FreeBSD. I don't
+know current status of his project, so if you want more info contact him
+directly.</P>
+
+
+<H2><A NAME="xfs"></A> <A NAME="ss9.32">9.32</A> <A HREF="Filesystems-HOWTO.html#toc9.32">XFS - Extended filesystem (IRIX)</A>
+</H2>
+
+
+
+<P>XFS(tm) is the next-generation file system for
+Silicon Graphics[TM] systems, from desktop workstations to supercomputers.
+XFS provides full 64-bit file capabilities that scale easily to handle
+extremely large files and file systems that grow to 1 terabyte. The XFS file
+system integrates volume management, guaranteed rate I/O, and 
+<A HREF="#journal">journaling</A>
+technology for fast, reliable recovery. File systems can be backed up while
+still in use, significantly reducing administrative overhead.</P>
+
+<P>XFS is designed for a very high performance; sustained throughput in excess
+of 300MB per second has been demonstrated on CHALLENGE systems.
+The XFS file system scales in performance to match the CHALLENGE MP
+architecture. Traditional files, directories, and file systems have reduced
+performance as they grow in size. With the XFS file system, there is no
+performance penalty. For example, XFS directories have been tested with up to
+32 million files in a single directory. </P>
+
+<P>XFS is a journalled file system.  It logs changes to the inodes,
+directories and bitmaps to the disk before the original entries are updated.
+Should the system crash before the updates are done they can be recreated
+using the log and updated as intended. </P>
+
+<P>XFS uses a space manager to allocate disk space for the file system and
+control the inodes.  It uses a namespace manager to control allocation of
+directory files.  These managers use B-tree indexing to store file location
+information, significantly decreasing the access time needed to retrieve file
+information. </P>
+
+<P>Inodes are created as needed and are not restricted to a particular area on a
+disk partition.  XFS tries to position the inodes close to the files and
+directories they reference.  Very small files, such as symbolic links and
+some directories, are stored as part of the inode, to increase performance
+and save space.  Large directories use B-tree indexing within the directory
+file to speed up directory searches, additions and deletions.</P>
+
+<P>Useful XFS links:
+<UL>
+<LI> 
+<A HREF="http://www.sgi.com/Technology/xfs-whitepaper.html">http://www.sgi.com/Technology/xfs-whitepaper.html</A>
+XFS whitepaper</LI>
+</UL>
+</P>
+
+<P>XFS Linux port covered by the GNU General Public License is available from
+SGI Inc.:
+<A NAME="xfs_linux"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://oss.sgi.com/projects/xfs/">http://oss.sgi.com/projects/xfs/</A></LI>
+<LI> Download: 
+<A HREF="ftp://oss.sgi.com/www/projects/xfs/download/">ftp://oss.sgi.com/www/projects/xfs/download/</A></LI>
+<LI> Author: SGI Inc., 
+<A HREF="http://www.sgi.com/">http://www.sgi.com/</A></LI>
+<LI> License: GPL</LI>
+<LI> Access: Read-write</LI>
+</UL>
+</P>
+
+<H2><A NAME="xia"></A> <A NAME="ss9.33">9.33</A> <A HREF="Filesystems-HOWTO.html#toc9.33">Xia FS</A>
+</H2>
+
+<P>This filesystem was developed to replace old Minix filesystem in Linux. Author
+of this fs is Franx Xia &lt;
+<A HREF="mailto:qx@math.columbia.edu">qx@math.columbia.edu</A>&gt;</P>
+
+<HR>
+<H2><A NAME="s10">10.</A> <A HREF="Filesystems-HOWTO.html#toc10">Raw partitions</A></H2>
+
+
+
+<H2><A NAME="ss10.1">10.1</A> <A HREF="Filesystems-HOWTO.html#toc10.1">Backing up raw partitions using DBsnapshot</A>
+</H2>
+
+<P>(todo: www.crosstor.com)</P>
+
+<HR>
+<H2><A NAME="s11">11.</A> <A HREF="Filesystems-HOWTO.html#toc11">Appendix</A></H2>
+
+
+
+<H2><A NAME="ss11.1">11.1</A> <A HREF="Filesystems-HOWTO.html#toc11.1">Network filesystems</A>
+</H2>
+
+<P>This HOWTO is not about Network filesystems, but I should mention them.</P>
+
+<P>There is a brief list of some which I know:</P>
+
+<H3>AFS - Andrew Filesystem</H3>
+
+
+<P>
+<UL>
+<LI> The AFS FAQ is at 
+<A HREF="http://www.angelfire.com/hi/plutonic/afs-faq.html">http://www.angelfire.com/hi/plutonic/afs-faq.html</A>.</LI>
+<LI> Commercial clients and servers for almost all platforms (except win98)
+are available from IBM. See
+<A HREF="http://www.transarc.com/Product/EFS/AFS/index.html">http://www.transarc.com/Product/EFS/AFS/index.html</A></LI>
+<LI> A free client for Unix is available from the Arla Team at
+<A HREF="http://www.stacken.kth.se/projekt/arla/">http://www.stacken.kth.se/projekt/arla/</A>.</LI>
+<LI> A free Server is also in preparation, but not in production yet.</LI>
+</UL>
+</P>
+
+<H3>CODA </H3>
+
+<P>
+<A NAME="coda"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.coda.cs.cmu.edu/">http://www.coda.cs.cmu.edu/</A></LI>
+<LI> Download: 
+<A HREF="ftp://ftp.coda.cs.cmu.edu/pub/coda/linux/">ftp://ftp.coda.cs.cmu.edu/pub/coda/linux/</A></LI>
+<LI> Author: CMU Coda Group &lt;
+<A HREF="mailto:braam@coda.cs.cmu.edu">braam@coda.cs.cmu.edu</A>&gt;.</LI>
+<LI> License: GPL</LI>
+<LI> Access: R/W</LI>
+</UL>
+
+Coda is a distributed filesystem with novel features such as
+disconnected operation and server replication.</P>
+
+
+<H3>NFS - Network filesystem (Unix)</H3>
+
+
+
+<H3>NCP - NetWare Core Protocol (Novell NetWare)</H3>
+
+
+
+<H3>SMB - Session Message Block (Windows 3.x/9x/NT)</H3>
+
+<P>This protocol is used in Windows world.</P>
+
+<H3>Intermezzo</H3>
+
+<P>
+<A NAME="intermezzo"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://inter-mezzo.org/">http://inter-mezzo.org/</A></LI>
+<LI> Download: 
+<A HREF="http://inter-mezzo.org/downloads.html">http://inter-mezzo.org/downloads.html</A></LI>
+<LI> Author: Stelias and Redhat &lt;
+<A HREF="mailto:info@stelias.com">info@stelias.com</A>&gt;.</LI>
+<LI> License: GPL</LI>
+<LI> Access: R/W</LI>
+</UL>
+
+Intermezzo is a distributed file system for Linux. It was inspired
+from coda but uses the disk file system as a persistent cache.
+Intermezzo supports disconnected operation but does not yet
+implement an identification system.</P>
+
+
+<H2><A NAME="ss11.2">11.2</A> <A HREF="Filesystems-HOWTO.html#toc11.2">Encrypted filesystems</A>
+</H2>
+
+
+
+<H3>CFS</H3>
+
+<P>
+<A NAME="cfs"></A> </P>
+<P>
+<UL>
+<LI> Homepage: ?</LI>
+<LI> Download: ?</LI>
+<LI> Author: Matt Blaze &lt;
+<A HREF="mailto:mab@research.att.com">mab@research.att.com</A>&gt;.</LI>
+<LI> License: ?</LI>
+<LI> Access: Read/Write, using DES/3DES.</LI>
+</UL>
+
+CFS pushes encryption services into the Unix(tm) file system.  It
+supports secure storage at the system level through a standard Unix
+file system interface to encrypted files.  Users associate a
+cryptographic key with the directories they wish to protect.  Files in
+these directories (as well as their pathname components) are
+transparently encrypted and decrypted with the specified key without
+further user intervention; cleartext is never stored on a disk or sent
+to a remote file server.  CFS employs a novel combination of DES
+stream and codebook cipher modes to provide high security with good
+performance on a modern workstation.  CFS can use any available file
+system for its underlying storage without modification, including
+remote file servers such as NFS.  System management functions, such as
+file backup, work in a normal manner and without knowledge of the key.</P>
+
+
+<H3>TCFS</H3>
+
+<P>
+<A NAME="tcfs"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://tcfs.dia.unisa.it/">http://tcfs.dia.unisa.it/</A></LI>
+<LI> Download: 
+<A HREF="ftp://tcfs.dia.unisa.it/pub/tcfs/">ftp://tcfs.dia.unisa.it/pub/tcfs/</A></LI>
+<LI> Authors: Luigi Catuogno &lt;
+<A HREF="mailto:luicat@tcfs.dia.unisa.it">luicat@tcfs.dia.unisa.it</A>&gt;, Aniello Del Sorbo
+&lt;
+<A HREF="mailto:anidel@tcfs.dia.unisa.it">anidel@tcfs.dia.unisa.it</A>&gt;, Luigi Della Monica
+&lt;
+<A HREF="mailto:dellui@tcfs.dia.unisa.it">dellui@tcfs.dia.unisa.it</A>&gt;, G.Cattaneo
+&lt;
+<A HREF="mailto:cattaneo@dia.unisa.it">cattaneo@dia.unisa.it</A>&gt;,
+G.Persiano (
+<A HREF="http://www.dia.unisa.it/~giuper/">http://www.dia.unisa.it/~giuper/</A>),
+Ermelindo (Erry) Mauriello &lt;
+<A HREF="mailto:errmau@tcfs.dia.unisa.it">errmau@tcfs.dia.unisa.it</A>&gt;, Angelo Celentano
+&lt;
+<A HREF="mailto:angcel@tcfs.dia.unisa.it">angcel@tcfs.dia.unisa.it</A>&gt;, Andrea Cozzolino
+&lt;
+<A HREF="mailto:andcoz@tcfs.dia.unisa.it">andcoz@tcfs.dia.unisa.it</A>&gt;.</LI>
+<LI> License: GPL</LI>
+<LI> Access: Read/Write transparently using CBC-DES/3DES/RC5/IDEA/Others..</LI>
+</UL>
+
+The main difference between TCFS and CFS is the trasparency to
+user obtained by using TCFS. As a matter of fact, CFS works in
+user space while TCFS works in the kernel space thus resulting
+in improved performances and security.
+The dynamic encryption module feature of TCFS allows a user
+to specify the encryption engine of his/her choiche to be used
+by TCFS.
+Currently available only for Linux, TCFS will be relased soon
+also for NetBSD, and will support in a near future also other
+FS then NFS.</P>
+
+
+<H3>SFS</H3>
+
+<P>( TODO: 
+<A HREF="http://www.cs.auckland.ac.nz/~pgut001/sfs/index.html">http://www.cs.auckland.ac.nz/~pgut001/sfs/index.html</A> )</P>
+
+<H3>VS3FS: Steganographic File System for Linux</H3>
+
+<P>
+<A NAME="vs3fs"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.linux-security.org/sfs/">http://www.linux-security.org/sfs/</A></LI>
+<LI> License: ?</LI>
+<LI> Access: ?</LI>
+</UL>
+
+fspatch is a kernel patch which introduces module support for the
+steganographic file system (formerly known as vs3fs, an experimental
+type of filesytem that not only encrypts all information on the disk,
+but also tries to hide that information in such a way that it cannot be
+proven to even exist on the disk. This enables you to keep sensitive
+information on a disk, while not be prone to being forced to reveal that
+information. Even under extreme circumstances, fake documents could be
+stored on other parts of the disk, for which a pasword may be revealed.
+It should not be possible to find out whether any other information is
+stored on the disk.</P>
+
+
+<H2><A NAME="ss11.3">11.3</A> <A HREF="Filesystems-HOWTO.html#toc11.3">Filesystem benchmarking utilities</A>
+</H2>
+
+
+<H3>IOzone</H3>
+
+<P>
+<A NAME="iozone"></A> </P>
+<P>
+<UL>
+<LI> Homepage: 
+<A HREF="http://www.iozone.org/">http://www.iozone.org/</A></LI>
+<LI> Download: 
+<A HREF="http://www.iozone.org/src/stable/">http://www.iozone.org/src/stable/</A></LI>
+<LI> License: freely distributable</LI>
+</UL>
+
+IOzone is a filesystem benchmark tool. The benchmark generates and
+measures a variety of file operations. Iozone has been ported to
+many machines and runs under many operating systems.</P>
+
+
+<H2><A NAME="ss11.4">11.4</A> <A HREF="Filesystems-HOWTO.html#toc11.4">Writing your own filesystem driver</A>
+</H2>
+
+
+
+<H3>DOS</H3>
+
+<P>I haven't seen yet any good page about writing DOS filesystem drivers
+(Network redirectors) on the net. The best source is Ralf Brown's interrupt
+list and 
+<A HREF="#ihpfs">iHPFS</A> source code.</P>
+
+<H3>OS/2</H3>
+
+<P>
+<UL>
+<LI>
+<A HREF="ftp://ftp.leo.org/pub/comp/os/os2/leo/devtools/doc/ifsinf.zip">ftp://ftp.leo.org/pub/comp/os/os2/leo/devtools/doc/ifsinf.zip</A></LI>
+<LI>
+<A HREF="ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/32drv170.zip">ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/32drv170.zip</A>
+- 32 bits OS/2 device driver and IFS support. Provides 32 bits kernel  
+services (DevHelp) and utility functions to 32 bits OS/2 ring 0 code
+(device drivers and installable file system drivers).
+</LI>
+</UL>
+</P>
+
+<H3>Windows NT</H3>
+
+<P>Microsoft IFS kit page
+(
+<A HREF="http://www.microsoft.com/ddk/IFSkit/">http://www.microsoft.com/ddk/IFSkit/</A>) will be useful as
+the best way to get into NT filesystems development (even for $1K it costs).</P>
+
+<P>For more information about writing FS drivers for Windows NT see
+<A HREF="http://www.ing.umu.se/~bosse/">http://www.ing.umu.se/~bosse/</A> by
+&lt;
+<A HREF="mailto:bosse@acc.umu.se">bosse@acc.umu.se</A>&gt;.</P>
+
+
+<H2><A NAME="ss11.5">11.5</A> <A HREF="Filesystems-HOWTO.html#toc11.5">Related documents</A>
+</H2>
+
+
+<P>
+<UL>
+<LI> 
+<A HREF="http://www.honeycomb.net/os/holistic/connect/filesys.htm">http://www.honeycomb.net/os/holistic/connect/filesys.htm</A>
+- good page about filesystems</LI>
+<LI> 
+<A HREF="http://home.att.net/~artnaseef/">http://home.att.net/~artnaseef/</A> - Linux overlay
+filesystem by &lt;
+<A HREF="mailto:artnaseef@worldnet.att.net">artnaseef@worldnet.att.net</A>&gt;.</LI>
+<LI> 
+<A HREF="http://www.braysystems.com/linux/trustees.html">http://www.braysystems.com/linux/trustees.html</A>
+- Linux trustees</LI>
+<LI> 
+<A HREF="http://tcfs.dia.unisa.it">http://tcfs.dia.unisa.it</A> - Transparent Cryptography
+Filesystem</LI>
+<LI> 
+<A HREF="http://www.sas.com/standards/large.file">http://www.sas.com/standards/large.file</A> - Large file summit
+- attacks the problem of 2gig+ of file in a 32bit computer</LI>
+<LI> 
+<A HREF="http://www.coda.cs.cmu.edu/">http://www.coda.cs.cmu.edu/</A> - The CODA project
+(a distributed file system based on AFS)</LI>
+<LI> 
+<A HREF="ftp://ftp.scis.org/pub/lfs/">ftp://ftp.scis.org/pub/lfs/</A> - LFS related papers</LI>
+<LI> 
+<A HREF="http://www.redhat.com:8080/HyperNews/get/khg.html">http://www.redhat.com:8080/HyperNews/get/khg.html</A> - Linux
+Kernel Hacker's guide</LI>
+<LI> 
+<A HREF="http://www.win.tue.nl/~aeb/linux/largedisk.html">http://www.win.tue.nl/~aeb/linux/largedisk.html</A>
+- Large disk HOWTO</LI>
+<LI> 
+<A HREF="http://www.atnf.csiro.au/~rgooch/linux/kernel-patches.html">http://www.atnf.csiro.au/~rgooch/linux/kernel-patches.html</A>
+- The Linux devfs</LI>
+<LI> 
+<A HREF="http://gfs.lcse.umn.edu/">http://gfs.lcse.umn.edu/</A> - The Global File System (GFS)</LI>
+<LI> 
+<A HREF="ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/tvfs211.zip">ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/tvfs211.zip</A> - The Toronto Virtual Filesystem/2.</LI>
+<LI> 
+<A HREF="ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/ramfs64.zip">ftp://hobbes.nmsu.edu/pub/os2/system/drivers/filesys/ramfs64.zip</A> Dynamic RAM drive IFS driver for OS/2</LI>
+<LI> 
+<A HREF="http://doc.sco.com/">http://doc.sco.com/</A>
+- UnixWare and SCO Unix documentation online</LI>
+<LI> 
+<A HREF="http://uw7doc.sco.com/">http://uw7doc.sco.com/</A>
+- UnixWare 7 documentation online</LI>
+<LI> 
+<A HREF="http://publib.boulder.ibm.com/cgi-bin/bookmgr/BOOKS/SG244428/CCONTENTS">http://publib.boulder.ibm.com/cgi-bin/bookmgr/BOOKS/SG244428/CCONTENTS</A>
+- Inside OS/2 LAN Server 4.0</LI>
+<LI> 
+<A HREF="ftp://tsx-11.mit.edu/pub/linux/ALPHA/userfs/">ftp://tsx-11.mit.edu/pub/linux/ALPHA/userfs/</A>
+- Linux UserFS, it allows you to write a Linux process which implements
+a filesystem.</LI>
+<LI> 
+<A HREF="http://www.nyx.net/~sgjoen/disk.html">http://www.nyx.net/~sgjoen/disk.html</A> - Stein Gjoen's
+Multi Disk System Tuning HOWTO.</LI>
+<LI> 
+<A HREF="http://linuxtoday.com/stories/5556.html">http://linuxtoday.com/stories/5556.html</A> - Linux Today:
+Kragen's Amazing List of Filesystems.</LI>
+<LI> 
+<A HREF="http://www.koehntopp.de/kris/artikel/dateisysteme/">http://www.koehntopp.de/kris/artikel/dateisysteme/</A> -
+Kristian Kohntopp's Unix Filesystems (in German).</LI>
+</UL>
+</P>
+
+<HR>
+</BODY>
+</HTML>

@@ -1,0 +1,324 @@
+<HTML
+><HEAD
+><TITLE
+>Creating and Updating NIS maps&#13;</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="The Linux NIS(YP)/NYS/NIS+ HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Verifying the NIS/NYS Installation
+
+
+"
+HREF="verification.html"><LINK
+REL="NEXT"
+TITLE="Surviving a Reboot"
+HREF="reboot.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>The Linux NIS(YP)/NYS/NIS+ HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="verification.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="reboot.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="MAPS"
+></A
+>11. Creating and Updating NIS maps&#13;</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN527"
+></A
+>11.1. Creating new NIS maps&#13;</H2
+><P
+>The initial NIS maps will be created by running</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    % /usr/lib/yp/ypinit -m</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This is done when setting up the NIS master server for the first
+time. For more information about this, read <A
+HREF="ypserv.html"
+>Section 9</A
+>.
+If you wish to add new maps to your server or remove old one, you
+need to edit the <TT
+CLASS="LITERAL"
+>/var/yp/Makefile</TT
+> and
+change the <TT
+CLASS="LITERAL"
+>all:</TT
+> rule. Add or remove
+the name of the rule, which generates the map.</P
+><P
+>If you delete a map, you also have to remove the corresponding
+files.</P
+><P
+>After this change, you only need to run</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    % make -C /var/yp</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>and the maps should be created.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN541"
+></A
+>11.2. Updating NIS maps&#13;</H2
+><P
+>If you modify the sources for the NIS maps (for example if you create
+a new user by adding the account to the passwd file), you need to
+regenerate the NIS maps. This is done by a simple</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>    % make -C /var/yp</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This command will check which sources have changed, creates the
+maps new and tell ypserv that the maps have changed.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN548"
+></A
+>11.3. Length of Map entries&#13;</H2
+><P
+>The length of one entry is limited by the NIS protocol to 1024 characters.
+You can't just increase this value and recompile the system. Every system
+that uses NIS v2 expects key and data values to be no more than 1024 bytes
+in size; if you suddenly make YPMAXRECORD larger on your client and server,
+you will break interoperability with all other systems on your network that
+use NIS. To make it work right, you'd have to go to every vendor that supports
+NIS and get them to all make the change at the same time. Chances are you
+won't be able to do this.</P
+><P
+>With glibc 2.1 and newer this limit was removed from the glibc NIS
+implementation. So it is possible under Linux to use longer entries,
+but only if you have no other NIS clients or servers in your network.</P
+><P
+>To allow the creation of NIS maps with a longer entry, you need to add
+the <TT
+CLASS="LITERAL"
+>--no-limit-check</TT
+> option to the
+<TT
+CLASS="LITERAL"
+>makedbm</TT
+> call in
+<TT
+CLASS="LITERAL"
+>/var/yp/Makefile</TT
+>.</P
+><P
+>The result should look like:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>DBLOAD = $(YPBINDIR)/makedbm -c -m `$(YPBINDIR)/yphelper --hostname` --no-limit-check</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>WARNING: This breaks the NIS protocol and even if Linux supports it,
+not all Applictions running under Linux works with this change!</P
+><P
+>There is another way of solving this problem for
+<TT
+CLASS="FILENAME"
+>/etc/group</TT
+> entries. This idea is
+from Ken Cameron:</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>1. Break the entry into more than one line and name each group
+   slightly differnet.
+
+2. keep the GID the same for all.
+
+3. have the first entry with the right group name and the GID.
+   I don't put any user names in this one.
+
+What happens is that going by user name you pick up the GID when the code
+reads it. Then going the other way it stops after the first match of GID
+and takes that name. It's ugly but works!</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="verification.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="reboot.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Verifying the NIS/NYS Installation
+
+&#13;</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Surviving a Reboot</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,561 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Allocating disk space</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux System Administrators Guide"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Using Disks and Other Storage Media"
+HREF="disk-usage.html"><LINK
+REL="PREVIOUS"
+TITLE="Disks without filesystems"
+HREF="disk-no-fs.html"><LINK
+REL="NEXT"
+TITLE="Memory Management"
+HREF="memory-management.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux System Administrators Guide: </TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="disk-no-fs.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Using Disks and Other Storage Media</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="memory-management.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="ALLOC-DISK"
+></A
+>5.12. Allocating disk space</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PART-SCHEMES"
+></A
+>5.12.1. Partitioning schemes</H2
+><P
+>When it comes to partitioning your machine, 
+	there is no universally correct way to do it. There are
+	many factors that must be taken into account depending on 
+	the purpose of the machine.</P
+><P
+>For a simple workstation with limited disk space, such 
+	as a laptop, you may have as few a 3 partitions.  A partition for
+	<TT
+CLASS="FILENAME"
+>/</TT
+>, <TT
+CLASS="FILENAME"
+>/boot</TT
+>, and swap.
+	However, for most users this is not a recommended solution.</P
+><P
+>&#13;	</P
+><P
+>The traditional way is to have a (relatively) small
+	root filesystem, and separate partitions for filesystems such as 
+	<TT
+CLASS="FILENAME"
+>/usr</TT
+> and <TT
+CLASS="FILENAME"
+>/home&#62;</TT
+>.
+	Creating a separate root filesystem if the root filesystem is small and 
+	not heavily used, it is less likely to become corrupt when the system
+	crashes, and therefore make it easier to recover a crashed system.  The
+	reason is to prevent having the root filesystem get filled and cause a 
+	system crash.</P
+><P
+>When creating your partitioning scheme, there are some things you 
+	need to remember.  You cannot create separate partitions for the following 
+	directories: <TT
+CLASS="FILENAME"
+>/bin</TT
+>, <TT
+CLASS="FILENAME"
+>/etc</TT
+>, 
+	<TT
+CLASS="FILENAME"
+>/dev</TT
+>, <TT
+CLASS="FILENAME"
+>/initrd</TT
+>, 
+	<TT
+CLASS="FILENAME"
+>/lib</TT
+>, and <TT
+CLASS="FILENAME"
+>/sbin</TT
+>.  The
+	contents of these directories are required at bootup and must
+	always be part of the <TT
+CLASS="FILENAME"
+>/</TT
+> partition.</P
+><P
+>It is also recommended that you create separate partitions for 
+	<TT
+CLASS="FILENAME"
+>/var</TT
+> and <TT
+CLASS="FILENAME"
+>/tmp</TT
+>.  This is
+	because both directories typically have data that is constantly 
+	changing.  Not creating separate partitions for these filesystems
+	puts you at risk of having log file fill up our <TT
+CLASS="FILENAME"
+>/</TT
+>
+	partition.</P
+><P
+>An example of a server partition is:
+	<TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+><TT
+CLASS="COMPUTEROUTPUT"
+>Filesystem            Size  Used Avail Use% Mounted on
+/dev/hda2             9.7G  1.3G  8.0G  14% /
+/dev/hda1             128M   44M   82M  34% /boot
+/dev/hda3             4.9G  4.0G  670M  86% /usr
+/dev/hda5             4.9G  2.1G  2.5G  46% /var
+/dev/hda7              31G   24G  5.6G  81% /home
+/dev/hda8             4.9G  2.0G  670M  43% /opt
+	</TT
+></PRE
+></FONT
+></TD
+></TR
+></TABLE
+></P
+><P
+>The problem with having many partitions is that it splits
+	the total amount of free disk space into many small pieces.  One way
+	to avoid this problem is to use to create Logical Volumes.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="LVM"
+></A
+>5.12.2. Logical Volume Manager (LVM)</H2
+><P
+>Using LVM allows administrators the flexibility to create 
+	logical disks that can be expanded dynamically as more disk space 
+	is required.</P
+><P
+>This is done first by creating partitions with as an 
+	0x8e Linux LVM partition type.  Then the <I
+CLASS="GLOSSTERM"
+>Physical Partitions
+	</I
+> are added to a <I
+CLASS="GLOSSTERM"
+>Volume Group</I
+> and 
+	broken up into chunks, or <I
+CLASS="GLOSSTERM"
+>Physical Extents</I
+>
+	<I
+CLASS="GLOSSTERM"
+>Volume Group</I
+>. These extends can then be grouped
+	into <I
+CLASS="GLOSSTERM"
+>Logical Volumes</I
+>.  These Logical Volumes 
+	then can be formatted just like a physical partition.  The big 
+	difference is that they can be expanded by adding more extents to 
+	them.</P
+><P
+>Right now, a full discussion of LVM is beyond the scope of this 
+	guide.  However, and excellent resource for learning more about LVM
+	can be found at <A
+HREF="http://www.tldp.org/HOWTO/LVM-HOWTO.html"
+TARGET="_top"
+>	http://www.tldp.org/HOWTO/LVM-HOWTO.html</A
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SPACE-REQ"
+></A
+>5.12.3. Space requirements</H2
+><P
+>The Linux distribution you install will give some indication
+	of how much disk space you need for various configurations. Programs
+	installed separately may also do the same.  This will help you plan
+	your disk space usage, but you should prepare for the future and
+	reserve some extra space for things you will
+	notice later that you need.</P
+><P
+>The amount you need for user files depends on what your
+	users wish to do.  Most people seem to need as much space for their
+	files as possible, but the amount they will live happily with varies
+	a lot.  Some people do only light text processing and will survive
+	nicely with a few megabytes, others do heavy
+	image processing and will need gigabytes.</P
+><P
+>By the way, when comparing file sizes given in
+	kilobytes or megabytes and disk space given in megabytes, it can be
+	important to know that the two units can be different. Some disk
+	manufacturers like to pretend that a kilobyte is 1000 bytes and a
+	megabyte is 1000 kilobytes, while all the rest of the computing
+	world uses 1024 for both factors.  Therefore, a 345 MB hard disk
+	is really a 330 MB hard disk.</P
+><P
+>Swap space allocation is discussed in <A
+HREF="swap-allocation.html"
+>Section 6.5</A
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="ALLOC-SPACE-EX"
+></A
+>5.12.4. Examples of hard disk allocation</H2
+><P
+>I used to have a 10 GB hard disk.  Now I am using a 30 GB
+	hard disk.  I'll explain how and why I partitioned those
+	disks.</P
+><P
+>First, I created a <TT
+CLASS="FILENAME"
+>/boot</TT
+> partition 
+	at 128 MG.  This is larger than I will need, and big enough to
+	give me space if I need it.  I created a separate 
+	<TT
+CLASS="FILENAME"
+>/boot</TT
+> partition to ensure that this 
+	filesystem will never get filled up, and therefore will be 
+	bootable.  Then I created a 5 GB <TT
+CLASS="FILENAME"
+>/var</TT
+> 
+	partition.  Since the <TT
+CLASS="FILENAME"
+>/var</TT
+> filesystem is 
+	where log files and email is stored I wanted to isolate it
+	from my root partition.  (I have had log files grow overnight 
+	and fill my root filesystem in the past.) Next, I created a 15 GB 
+	<TT
+CLASS="FILENAME"
+>/home</TT
+> partition.  This is handy in the event 
+	of a system crash.  If I ever have to re-install Linux from scratch, 
+	I can tell the installation program to not format this partition, and
+	instead remount it without the data being lost. Finally 
+	since I had 512 MG of RAM I created a 1024 MG (or 1 GB) swap 
+	partition.  This left me with roughly a 9 GB root filesystem.  I using 
+	my old 10 GB hard drive, I created an 8 GB <TT
+CLASS="FILENAME"
+>/usr</TT
+> 
+	partition and left 2 GB unused.  This is incase I need more space  
+	in the future.</P
+><P
+>In the end, my partition tables looked like this:
+
+		<DIV
+CLASS="TABLE"
+><A
+NAME="AEN3270"
+></A
+><P
+><B
+>Table 5-3. My Partitions</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>9 GB</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>root filesystem</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>1 GB</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>swap partition</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>5 GB</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>/var</TT
+> 
+		filesystem</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>15 GB</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>/home</TT
+> 
+		filesystem</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> 8 GB</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="FILENAME"
+>/usr</TT
+>
+		filesystem</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> 2 GB</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>scratch partition</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+>
+	</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="ADDING-DISK"
+></A
+>5.12.5. Adding more disk space for Linux</H2
+><P
+>Adding more disk space for Linux is easy, at least after the
+	hardware has been properly installed  (the hardware installation
+	is outside the scope of this book).  You format it if necessary,
+	then create the partitions and filesystem as described above,
+	and add the proper lines to <TT
+CLASS="FILENAME"
+>/etc/fstab</TT
+>
+	
+	so that it is mounted automatically.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SPACE-SAVING-TIPS"
+></A
+>5.12.6. Tips for saving disk space</H2
+><P
+>The best tip for saving disk space is to avoid installing
+	unnecessary programs.  Most Linux distributions have an
+	option to install only part of the packages they contain,
+	and by analyzing your needs you might notice that you don't
+	need most of them.  This will help save a lot of disk space,
+	since many programs are quite large.  Even if you do need a
+	particular package or program, you might not need all of it.
+	For example, some on-line documentation might be unnecessary,
+	as might some of the Elisp files for GNU Emacs, some of the
+	fonts for X11, or some of the libraries for programming.</P
+><P
+>If you cannot uninstall packages, you might look into
+	compression.  Compression programs such as <B
+CLASS="COMMAND"
+>gzip</B
+>
+	
+	or <B
+CLASS="COMMAND"
+>zip</B
+>
+	 will compress (and uncompress)
+	individual files or groups of files.  The <B
+CLASS="COMMAND"
+>gzexe</B
+>
+	
+	system will compress and uncompress programs invisibly to the
+	user (unused programs are compressed, then uncompressed as they
+	are used).  The experimental DouBle system will compress all
+	files in a filesystem, invisibly to the programs that use them.
+	(If you are familiar with products such as Stacker for MS-DOS 
+	or DriveSpace for Windows, the principle is the same.)</P
+><P
+>Another way to save space is to take special care when 
+	formatting you partitions.  Most modern filesystems will allow
+	you to specify the block size.  The block size is chunk size that 
+	the filesystem will use to read and write data.  Larger block sizes
+	will help disk I/O performance when using large files, such as databases.
+	This happens because the disk can read or write data for a longer 
+	period of time before having to search for the next block.  The  
+		&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="disk-no-fs.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="memory-management.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Disks without filesystems</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="disk-usage.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Memory Management</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

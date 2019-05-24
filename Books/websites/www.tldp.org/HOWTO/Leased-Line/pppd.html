@@ -1,0 +1,616 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>PPPD</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Leased line Mini HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Modem"
+HREF="modem.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Leased line Mini HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="modem.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="pppd"
+></A
+>3. PPPD</H1
+><P
+>&#13;You need a pppd (Point to Point Protocol Daemon) and a reasonable knowledge
+of how it works. Consult the relevant RFC's or the
+<A
+HREF="http://www.tldp.org/HOWTO/PPP-HOWTO/index.html"
+TARGET="_top"
+>Linux PPP HOWTO</A
+> if necessary.
+Since you are not going to use a login procedure, you don't use (m)getty
+and you do not need a (fake) user associated with the pppd controlling your
+link. You are not going to dial so you don't need any chat scripts
+either.
+In fact, the modem circuit and configuration you have just build, are
+rather like a fully wired null modem cable. This means you have to
+configure your pppd the same way as you would with a null modem cable.
+</P
+><P
+>&#13;
+For a reliable link, your setup should meet the following criteria;
+
+<P
+></P
+><UL
+><LI
+><P
+>&#13;Shortly after booting your system, pppd should raise the DTR signal in
+your RS232 port, wait for DCD to go up, and negotiate the link.
+</P
+></LI
+><LI
+><P
+>&#13;If the remote system is down, pppd should wait until it is up again.
+</P
+></LI
+><LI
+><P
+>&#13;If the link is up and then goes down, pppd should reset the modem
+(it does this by dropping and then raising DTR), and then try to
+reconnect.
+</P
+></LI
+><LI
+><P
+>&#13;If the quality of the link deteriorates too much, pppd should reset
+the modem and then reestablish the link.
+</P
+></LI
+><LI
+><P
+>&#13;If the process controlling the link, that is the pppd, dies, a watchdog
+should restart the pppd.
+</P
+></LI
+></UL
+>
+
+</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="pppd-conf"
+></A
+>3.1. Configuration</H2
+><P
+>&#13;Suppose the modem is connected to COM2, the local IP address is `Loc_Ip'
+and the remote IP address is `Rem_Ip'. We want to use 576 as our MTU.
+The <TT
+CLASS="filename"
+>/etc/ppp/options.ttyS1</TT
+> would now be:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;crtscts
+mru 576
+mtu 576
+passive
+Loc_Ip:Rem_Ip
+-chap
+modem
+#noauth
+-pap
+persist
+#maxfail 0
+#holdoff 10
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+Stuff like `asyncmap 0', `lock', `modem' and `-detach' are probably already in
+<TT
+CLASS="filename"
+>/etc/ppp/options</TT
+>. If not, add them to your
+<TT
+CLASS="filename"
+>/etc/ppp/options.ttyS1</TT
+>.
+So, if the local system is 192.168.1.1 and the remote system is 10.1.1.1,
+then <TT
+CLASS="filename"
+>/etc/ppp/options.ttyS1</TT
+> on the local system would be:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;crtscts
+mru 576
+mtu 576
+passive
+192.168.1.1:10.1.1.1
+-chap
+modem
+#noauth
+-pap
+persist
+#maxfail 0
+#holdoff 10
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+The options.ttyS1 on the remote system would be:
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;crtscts
+mru 576
+mtu 576
+passive
+10.1.1.1:192.168.1.1
+-chap
+modem
+#noauth
+-pap
+persist
+#maxfail 0
+#holdoff 10
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+The passive option limits the number of (re)connection attempts.
+The persist option will keep pppd alive in case of a disconnect or when it
+can't connect in the first place.
+If you telnet a lot while doing filetransfers (FTP or webbrowsing) at the
+same time, you might want to use a smaller MTU and MRU such as 296. This
+will make the remote system more responsive.
+If you don't care much about telnetting during FTP, you could set the MTU
+and MRU to 1500. Keep in mind though, that UDP cannot be fragmented.
+<A
+HREF="http://www.fourmilab.ch/netfone/"
+TARGET="_top"
+>Speakfreely</A
+> for instance
+uses 512 byte UDP packets. So the minimum MTU for speakfreely is 552 bytes.
+The noauth option may be necessary with some newer distributions.
+`maxfail 0' may be necessary with newer PPPDs.
+After the connection is lost, PPPD will wait for a while before reconnecting.
+This time can be set with the holdoff option. The default holdoff used to be 30
+seconds, but is now zero. A holdoff of 10 is often recommended.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="scripts"
+></A
+>3.2. Scripts</H2
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="start"
+></A
+>3.2.1. Starting the pppd and keeping it alive</H3
+><P
+>&#13;You could start the pppd form a boot (rc) script. However, if you do this,
+and the pppd dies, you are without a link.
+A more stable solution, is to start the pppd from <TT
+CLASS="filename"
+>/etc/inittab</TT
+>;
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;s1:23:respawn:/usr/sbin/pppd /dev/ttyS1 115200
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+This way, the pppd will be restarted if it dies.
+Make sure you have a `-detach' option (nodetach on newer systems) though,
+otherwise inittab will start numerous instances of pppd, while complaining
+about `respawning too fast'.
+</P
+><P
+>&#13;Note: Some older systems will not accept the speed `115200'. In this case
+you will have to set the speed to 38400 and set the `spd_vhi' flag with
+setserial.
+Some systems expect you to use a `cua' instead of `ttyS' device.
+
+</P
+></DIV
+><DIV
+CLASS="sect3"
+><H3
+CLASS="sect3"
+><A
+NAME="routes"
+></A
+>3.2.2. Setting the routes</H3
+><P
+>&#13;The default route can be set with the defaultroute option or with the
+<TT
+CLASS="filename"
+>/etc/ppp/ip-up</TT
+> script;
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;#!/bin/bash
+case $2 in
+     /dev/ttyS1)
+          /sbin/route add -net 0.0.0.0 gw Rem_Ip netmask 0.0.0.0
+          ;;
+esac
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+
+Ip-up can also be used to sync your clock using netdate.
+</P
+><P
+>&#13;Of course the route set in ip-up is not necessarily the default route.
+Your ip-up sets the route to the remote network while the ip-up script on
+the remote system sets the route to your network. If your network is
+192.168.1.0 and your ppp interface 192.168.1.1, the ip-up script on the
+remote machine looks like this;
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;#!/bin/bash
+case $2 in
+   /dev/ttyS1)
+      /sbin/route add -net 192.168.1.0 gw 192.168.1.1 netmask 255.255.255.0
+      ;;
+esac
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+The `case $2' and `/dev/ttyS1)' bits are there in case you use more than
+one ppp link. Ip-up will run each time a link comes up, but only the part
+between `/dev/ttySx)' and `;;' will be executed, setting the right route
+for the right ttyS.
+You can find more about routing in the
+<A
+HREF="http://www.tldp.org/HOWTO/HOWTO-INDEX/networking.html"
+TARGET="_top"
+>Linux
+Networking HOWTOs</A
+> section on routing.
+</P
+><P
+>&#13;Some systems use dynamic ttys, in which case you can't route on a tty basis.
+In this case it might be handy to translate the ip address to a ppp interface
+and then do the routing (and firewalling) on a ppp interface basis.
+For this purpose I edited <TT
+CLASS="filename"
+>/etc/ppp/ip-up</TT
+>;
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;# These variables are for the use of the scripts run by run-parts
+PPP_IFACE="$1"
+PPP_TTY="$2"
+PPP_SPEED="$3"
+PPP_LOCAL="$4"
+PPP_REMOTE="$5"
+PPP_IPPARAM="$6"
+export PPP_IFACE PPP_TTY PPP_SPEED PPP_LOCAL PPP_REMOTE PPP_IPPARAM
+
+# translate ip to ppp
+echo $PPP_IFACE &#62; "/var/run/ppp/if-$PPP_LOCAL"
+sleep 1
+# Rerun firewall.
+/usr/local/sbin/rc.block
+
+# Take care of the (default) route(s)
+case $PPP_LOCAL in
+	"My_Ip_Address")
+		/sbin/route add -net 0.0.0.0 gw $PPP_REMOTE netmask 0.0.0.0
+		;;
+
+esac
+
+# Fix things missed at boot
+if ! ( netstat -an | grep 'My_Ip_Address:53' &#62; /dev/null 2&#62;&#38;1 )
+then
+	# Just booted
+	# Sync clock
+	/usr/local/sbin/ntpdate.sh &#38;
+	# Set the null routes
+	/usr/local/sbin/null-route.sh &#38;
+	# Bind 9 needs this;
+	sleep 1
+	/etc/init.d/bind9 restart
+fi
+
+# An audiable notification
+/bin/echo -ne "\007" &#62;&#62; /dev/tty1
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+Replace 'My_Ip_Address' with your Ip address.
+<TT
+CLASS="filename"
+>/usr/local/sbin/ntpdate.sh</TT
+> synchronises the clock. It stops
+the NTPD, syncs using ntpdate and then starts the NTPD again.
+<TT
+CLASS="filename"
+>/usr/local/sbin/null-route.sh</TT
+> is a script which sets null
+routes;
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;#!/bin/bash
+route add -net 10.0.0.0    netmask 255.0.0.0   reject
+route add -net 172.16.0.0  netmask 255.240.0.0 reject
+route add -net 192.168.0.0 netmask 255.255.0.0 reject
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+If you have RFC 1918 addresses in use, the above null routes won't interfere
+provided you use a smaller netmask. A network 192.168.1.0/24 won't be bothered
+by the null route 192.168.0.0/16;
+
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+255.255.255.255 0.0.0.0         255.255.255.255 UH    0      0        0 eth1
+195.190.249.4   0.0.0.0         255.255.255.255 UH    0      0        0 ppp0
+10.0.0.0        0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth1
+192.168.0.0     -               255.255.0.0     !     0      -        0 -
+172.16.0.0      -               255.240.0.0     !     0      -        0 -
+10.0.0.0        -               255.0.0.0       !     0      -        0 -
+0.0.0.0         195.190.249.4   0.0.0.0         UG    0      0        0 ppp0
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+
+</P
+></DIV
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="pppd-test"
+></A
+>3.3. Test</H2
+><P
+>&#13;Test the whole thing just like the modem test.
+If it works, get on your bike and bring the remote modem to the remote side
+of your link.
+If it doesn't work, one of the things you should check is the COM port
+speed;
+Apparently, a common mistake is to configure the modems with Minicom using
+one speed and then configure the pppd to use an other. This will
+<EM
+>NOT</EM
+> work!
+You have to use the same speed all of the time!
+
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="modem.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Modem</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

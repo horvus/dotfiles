@@ -1,0 +1,473 @@
+<HTML
+><HEAD
+><TITLE
+>The dump backup program</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.60"><LINK
+REL="HOME"
+TITLE="Securing and Optimizing Linux"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Why's and When's of Backup and Restore"
+HREF="whywhen.html"><LINK
+REL="PREVIOUS"
+TITLE="Restore files with tar"
+HREF="chap29sec307.html"><LINK
+REL="NEXT"
+TITLE="Making backups with dump"
+HREF="chap29sec309.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Securing and Optimizing Linux: RedHat Edition -A Hands on Guide</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="chap29sec307.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 33. Why's and When's of Backup and Restore</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="chap29sec309.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="AEN23747"
+>33.5. The dump backup program</A
+></H1
+><P
+>&#13;Dump is completely different from <B
+CLASS="command"
+>tar</B
+>, it is a program for backing up and restoring file system. It backups up the entire file system - not the files. Dump does not care what file system is on the hard drive, or 
+even if there are files in the file system. It examines files on an ext2 file system, determines which ones need to be backed up, and copies those files to a specified disk, tape, file or other storage medium. It dumps one file 
+system at a time quickly and efficiently. Unfortunately, it does not do individual directories, and so it eats up a great deal more storage space than <B
+CLASS="command"
+>tar</B
+>. It is also written specifically for backups. 
+</P
+><P
+>&#13;The restore command performs the inverse function of dump, It can restore a full backup of a file system. Subsequent incremental backups can then be layered on top of the full backup. Single files and directory sub trees may 
+also be restored from full or partial backups. You can use dump if you need a procedure for both backing up file systems and restoring file systems after backups.
+</P
+><P
+>&#13;Dump has several levels of backup procedures. The levels range from 0 to 9, where level number 0 means a full backup and guarantees the entire file system is copied. A level number above 0, incremental backup, tells dump to copy 
+all files new or modified since the last dump of the same or lower level. To be more precise, at each incremental backup level you back up everything that has changed since the previous backup at the same or a previous level. 
+</P
+><P
+>&#13;What are the advantages and the reasons to create and use several levels to make a backup? I try to explain it with the following schemas:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="literallayout"
+>&#13;
+0	3	2	5	4	7	6	9	8	9
+|	|	|	|	|	|	|	|	|	|
+0 means a full backup.	|	|	|
+	|	|	|	|	|	|	|	|	|
+       3 means copy all files new or modified since level 0, and 3.
+	|	|	|	|	|	|	|	|
+          2 means copy all files new or modified since level 0, and 2.
+	        |	|	|	|	|	|	|
+                5 means copy all files new or modified since level 0, 3, and 5.
+	                |	|	|	|	|	|
+                   4 means copy all files new or modified since level 0, 3, and 4.
+	                |	|	|	|	|
+                      7 means copy all files new or modified since level 0, 3, 4, and 7.
+	                |	|	|	|
+                        6 means copy all files new or modified since level 0, 3, 4, and 6.
+	                |	|	|
+                           9 means copy all files new or modified since level 0, 3, 4, 6, and 9.
+	                        |	|
+                              8 means copy all files new or modified since level 0, 3, 4, 6, and 8.
+	                        |
+                                9 means copy all files new or modified since level 0, 3, 4, 6, 8, and 9.
+
+</PRE
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;The advantages and reasons for doing this are that with multiple levels, the backup history can be extended more cheaply. A longer backup history is useful, since deleted or corrupted files are often not noticed for a 
+long time. Even a version of a file that is not very up to date is better than no file at all. Also, backup levels are used to keep both the backup and restore times to a minimum -<EM
+>low</EM
+>.
+</P
+><P
+>&#13;The dump manual page suggests a good scheme to take the full advantage of backup levels: 3, 2, 5, 4, 7, 6, 9, 8, 9, etc as described by the table below. The most you have to backup is two day's worth of work. The number 
+of tapes for a restore depends on how long you keep between full backups.
+<DIV
+CLASS="table"
+><A
+NAME="AEN23759"
+></A
+><P
+><B
+>Table 33-1. Dump scheme</B
+></P
+><TABLE
+BORDER="1"
+WIDTH="100%"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>Tape</TH
+><TH
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>Level</TH
+><TH
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>Backup <EM
+>days</EM
+></TH
+><TH
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>Restore tapes</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>0</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+><SPAN
+CLASS="abbrev"
+>N.A.</SPAN
+></TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>2</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>3</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 2</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>3</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>2</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>2</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 3</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>4</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>5</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 2, 4</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>5</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>4</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>2</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 2, 5</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>6</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>7</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 2, 5, 6</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>7</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>6</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>2</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 2, 5, 7</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>8</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>9</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 2, 5, 7, 8</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>9</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>8</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>2</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 2, 5, 7, 9</TD
+></TR
+><TR
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>10</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>9</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1</TD
+><TD
+WIDTH="1"
+ALIGN="CENTER"
+VALIGN="MIDDLE"
+>1, 2, 5, 7, 9, 10</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+>
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="chap29sec307.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="chap29sec309.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Restore files with <B
+CLASS="command"
+>tar</B
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="whywhen.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Making backups with dump</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

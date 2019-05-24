@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux 2.4.x Initialization for IA-32 HOWTO: Linux architecture-specific initialization</TITLE>
+ <LINK HREF="Linux-Init-HOWTO-5.html" REL=next>
+ <LINK HREF="Linux-Init-HOWTO-3.html" REL=previous>
+ <LINK HREF="Linux-Init-HOWTO.html#toc4" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Linux-Init-HOWTO-5.html">Next</A>
+<A HREF="Linux-Init-HOWTO-3.html">Previous</A>
+<A HREF="Linux-Init-HOWTO.html#toc4">Contents</A>
+<HR>
+<H2><A NAME="s4">4. Linux architecture-specific initialization</A></H2>
+
+<P>
+<P>(from "linux/arch/i386/kernel/head.S")
+<P>The boot code in "linux/arch/i386/boot/setup.S" transfers execution
+to the beginning code in "linux/arch/i386/kernel/head.S"
+(labeled "startup_32:").
+<P>To get to this point, a small uncompressed kernel function
+decompresses the remaining compressed kernel image
+and then it jumps to the new kernel code.
+<P>This is a description of what the "head.S" code does.
+<P>
+<H2><A NAME="ss4.1">4.1 startup_32:</A>
+</H2>
+
+<P>
+<P>swapper_pg_dir is the top-level page directory, address 0x00101000.
+<P>On entry, %esi points to the real-mode code as a 32-bit pointer.
+<P>
+<H2><A NAME="ss4.2">4.2 Set segment registers to known values</A>
+</H2>
+
+<P>
+<P>Set the %ds, %es, %fs, and %gs registers to __KERNEL_DS.
+<P>
+<H2><A NAME="ss4.3">4.3 SMP BSP (Bootstrap Processor) check</A>
+</H2>
+
+<P>
+<P>#ifdef CONFIG_SMP
+<P>If %bx is zero, this is a boot on the Bootstrap Processor (BSP),
+so skip this.  Otherwise, for an AP (Application Processor):
+<P>If the desired %cr4 setting is non-zero, turn on the paging options
+(PSE, PAE, ...) and skip "Initialize page tables" (jump to "Enable paging").
+<P>#endif /* CONFIG_SMP */
+<P>
+<H2><A NAME="ss4.4">4.4 Initialize page tables</A>
+</H2>
+
+<P>
+<P>Begin at pg0 (page 0) and init all pages to 007 (PRESENT + RW + USER).
+<P>
+<H2><A NAME="ss4.5">4.5 Enable paging</A>
+</H2>
+
+<P>
+<P>Set %cr3 (page table pointer) to swapper_pg_dir.
+<P>Set the paging ("PG") bit of %cr0 to <BR>
+<B>********** enable paging **********</B>.
+<P>Jump $ to flush the prefetch queue.
+<P>Jump *[$] to make sure that %eip is relocated.
+<P>Setup the stack pointer (lss stack_start, %esp).
+<P>#ifdef CONFIG_SMP
+<P>If this is not the BSP (Bootstrap Processor), clear all flags bits
+and jump to checkCPUtype.
+<P>#endif /* CONFIG_SMP */
+<P>
+<H2><A NAME="ss4.6">4.6 Clear BSS</A>
+</H2>
+
+<P>
+<P>The BSP clears all of BSS (area between __bss_start and _end)
+for the kernel.
+<P>
+<H2><A NAME="ss4.7">4.7 32-bit setup</A>
+</H2>
+
+<P>
+<P>Setup the IDT for 32-bit mode (call setup_idt).
+setup_idt sets up an IDT with 256 entries pointing to the default
+interrupt handler "ignore_int" as interrupt gates.  It doesn't actually
+load the IDT; that can be done only after paging has been enabled
+and the kernel moved to PAGE_OFFSET.  Interrupts
+are enabled elsewhere, when we can be relatively
+sure everything is OK.
+<P>Clear the eflags register (before switching to protected mode).
+<P>
+<H2><A NAME="ss4.8">4.8 Copy boot parameters and command line out of the way</A>
+</H2>
+
+<P>
+<P>First 2 KB of _empty_zero_page is for boot parameters,
+second 2 KB is for the command line.
+<P>
+<H2><A NAME="ss4.9">4.9 checkCPUtype</A>
+</H2>
+
+<P>
+<P>Initialize X86_CPUID to -1.
+<P>Use Flags register, push/pop results, and CPUID instruction(s) to
+determine CPU type and vendor:
+Sets X86, X86_CPUID, X86_MODEL, X86_MASK, and X86_CAPABILITY.
+Sets bits in %cr0 accordingly.
+<P>Also checks for presence of an 80287 or 80387 coprocessor.
+Sets X86_HARD_MATH if a math coprocessor or floating point unit is found.
+<P>
+<H2><A NAME="ss4.10">4.10 Count this processor</A>
+</H2>
+
+<P>
+<P>For CONFIG_SMP builds, increment the "ready" counter to keep a tally
+of the number of CPUs that have been initialized.
+<P>
+<H2><A NAME="ss4.11">4.11 Load descriptor table pointer registers</A>
+</H2>
+
+<P>
+<P>Load GDT with gdt_descr and IDT with idt_descr.
+The GDT contains 2 entries for the kernel (4 GB each for code and
+data, beginning at 0) and 2 userspace entries (4 GB each for code and
+data, beginning at 0).  There are 2 null descriptors between the
+userspace descriptors and the APM descriptors.
+<P>The GDT also contains 4 entries for APM segments.
+The APM segments have byte granularity and their bases and limits
+are set at runtime.
+<P>The rest of the gdt_table (after the APM segments) is space for
+TSSes and LDTs.
+<P>Jump to __KERNEL_CS:%eip to cause the GDT to be used.  Now in <BR>
+<B>********** protected mode **********</B>.
+<P>Reload all of the segment registers:
+Set the %ds, %es, %fs, and %gs registers to __KERNEL_DS.
+<P>#ifdef CONFIG_SMP
+<P>Reload the stack pointer segment only (%ss) with __KERNEL_DS.
+<P>#else /* not CONFIG_SMP */
+<P>Reload the stack pointer (%ss:%esp) with stack_start.
+<P>#endif /* CONFIG_SMP */
+<P>Clear the LDT pointer to 0.
+<P>Clear the processor's Direction Flag (DF) to 0 for gcc.
+<P>
+<H2><A NAME="ss4.12">4.12 Start other processors</A>
+</H2>
+
+<P>
+<P>For CONFIG_SMP builds,
+if this is not the first (Bootstrap) CPU, call initialize_secondary(),
+which does not return.  The secondary (AP) processor(s) are
+initialized and then enter idle state until processes are
+scheduled on them.
+<P>If this is the first or only CPU, call start_kernel(). (see below)
+<P>/* the calls above should never return, but in case they do: */
+<P>L6:  jmp L6
+<P>
+<HR>
+<A HREF="Linux-Init-HOWTO-5.html">Next</A>
+<A HREF="Linux-Init-HOWTO-3.html">Previous</A>
+<A HREF="Linux-Init-HOWTO.html#toc4">Contents</A>
+</BODY>
+</HTML>

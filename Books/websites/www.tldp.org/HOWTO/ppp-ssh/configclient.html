@@ -1,0 +1,318 @@
+<HTML
+><HEAD
+><TITLE
+>Configure the Client</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.63
+"><LINK
+REL="HOME"
+TITLE="VPN PPP-SSH Mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Configure the Server"
+HREF="configserver.html"><LINK
+REL="NEXT"
+TITLE="Bring up the Link"
+HREF="bringup.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>VPN PPP-SSH Mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="configserver.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="bringup.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="CONFIGCLIENT"
+>5. Configure the Client</A
+></H1
+><P
+>If ppp and ssh are set up on the client, and the server is ready
+to connect, then all we need to do on the client is create the
+script to bring up the link.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN291"
+>5.1. Install the Script</A
+></H2
+><P
+>The VPN connection is initiated using the vpn-pppssh script
+below.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Save this file on the client (it doesn't matter where --
+/usr/local/bin/vpn-pppssh is a good place) and make it
+executable by running "chmod a+x vpn-pppssh".</P
+></LI
+><LI
+><P
+>Fill in the settings at the top of the file with the values
+you decided on in <A
+HREF="installation.html#PLANNING"
+>Section 3.3</A
+>.</P
+><P
+>Remember that this is running under bash so you'll
+need to avoid whitespace around the equals sign, use quotes where
+necessary, and escape metacharacters such as $.  See the
+<A
+HREF="http://www.linuxdoc.org/HOWTO/Bash-Prog-Intro-HOWTO.html"
+TARGET="_top"
+>BASH Programming Introduction</A
+> or <A
+HREF="http://www.linuxdoc.org/LDP/abs/html/index.html"
+TARGET="_top"
+>Advanced Bash Scripting Guide</A
+> for more.</P
+><TABLE
+BORDER="1"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="SCREEN"
+>SERVER_HOSTNAME=eldivino.domain.com
+SERVER_USERNAME=vpn
+SERVER_IFIPADDR=192.168.3.2
+CLIENT_IFIPADDR=192.168.3.1</PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>Run "vpn-pppssh config" to print out a list of the
+configuration variables.  This way, you can confirm that
+your settings are being interpreted correctly.</P
+></LI
+></OL
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN305"
+>5.2. The vpn-pppssh Script</A
+></H2
+><P
+>Here is vpn-pppssh.  All the action is on one line.
+(the one beginning with "PPPD" in the start clause).
+All the rest of this file is just support code.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>#!/bin/sh
+# /usr/local/bin/vpn-pppssh
+#
+# This script initiates a ppp-ssh vpn connection.
+# see the VPN PPP-SSH HOWTO on http://www.linuxdoc.org for more information.
+#
+# revision history:
+# 1.6 11-Nov-1996 miquels@cistron.nl
+# 1.7 20-Dec-1999 bart@jukie.net
+# 2.0 16-May-2001 bronson@trestle.com
+
+
+#
+# You will need to change these variables...
+#
+
+
+# The host name or IP address of the SSH server that we are
+# sending the connection request to:
+SERVER_HOSTNAME=eldivino.domain.com
+
+# The username on the VPN server that will run the tunnel.
+# For security reasons, this should NOT be root.  (Any user
+# that can use PPP can intitiate the connection on the client)
+SERVER_USERNAME=vpn
+
+# The VPN network interface on the server should use this address:
+SERVER_IFIPADDR=192.168.3.2
+
+# ...and on the client, this address:
+CLIENT_IFIPADDR=192.168.3.1
+
+
+# This tells ssh to use unprivileged high ports, even though it's
+# running as root.  This way, you don't have to punch custom holes
+# through your firewall.
+LOCAL_SSH_OPTS="-P"
+
+
+#
+# The rest of this file should not need to be changed.
+#
+
+
+
+PATH=/usr/local/sbin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/bin/X11/:
+
+#
+# required commands...
+#
+
+PPPD=/usr/sbin/pppd
+SSH=/usr/bin/ssh
+
+if ! test -f $PPPD  ; then echo "can't find $PPPD";  exit 3; fi
+if ! test -f $SSH   ; then echo "can't find $SSH";   exit 4; fi
+
+
+case "$1" in
+  start)
+    # echo -n "Starting vpn to $SERVER_HOSTNAME: "
+    ${PPPD} updetach noauth passive pty "${SSH} ${LOCAL_SSH_OPTS} ${SERVER_HOSTNAME} -l${SERVER_USERNAME} -o Batchmode=yes sudo ${PPPD} nodetach notty noauth" ipparam vpn ${CLIENT_IFIPADDR}:${SERVER_IFIPADDR}
+    # echo "connected."
+    ;;
+
+  stop)
+        # echo -n "Stopping vpn to $SERVER_HOSTNAME: "
+        PID=`ps ax | grep "${SSH} ${LOCAL_SSH_OPTS} ${SERVER_HOSTNAME} -l${SERVER_USERNAME} -o" | grep -v ' passive ' | grep -v 'grep ' | awk '{print $1}'`
+        if [ "${PID}" != "" ]; then
+          kill $PID
+          echo "disconnected."
+        else
+          echo "Failed to find PID for the connection"
+        fi
+    ;;
+
+  config)
+    echo "SERVER_HOSTNAME=$SERVER_HOSTNAME"
+    echo "SERVER_USERNAME=$SERVER_USERNAME"
+    echo "SERVER_IFIPADDR=$SERVER_IFIPADDR"
+    echo "CLIENT_IFIPADDR=$CLIENT_IFIPADDR"
+  ;;
+
+  *)
+    echo "Usage: vpn {start|stop|config}"
+    exit 1
+    ;;
+esac
+
+exit 0
+&#13;</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="configserver.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="bringup.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Configure the Server</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Bring up the Link</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

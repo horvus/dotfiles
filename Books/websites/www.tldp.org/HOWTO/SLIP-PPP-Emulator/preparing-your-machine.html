@@ -1,0 +1,647 @@
+<HTML
+><HEAD
+><TITLE
+>Preparing your Linux Machine</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.60"><LINK
+REL="HOME"
+TITLE="SLIP/PPP Emulator mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Prerequisites"
+HREF="prerequisites.html"><LINK
+REL="NEXT"
+TITLE="Now What?"
+HREF="now-what.html"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>SLIP/PPP Emulator mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="prerequisites.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="now-what.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="PREPARING-YOUR-MACHINE"
+>4. Preparing your Linux Machine</A
+></H1
+><P
+>	In a nutshell, here's what's required. I'll explain the first three
+in detail.
+   </P
+><P
+></P
+><UL
+><LI
+><P
+>           Compile your kernel to include SLIP and TCP/IP
+        </P
+></LI
+><LI
+><P
+>           Edit some files in <TT
+CLASS="FILENAME"
+>/etc</TT
+>
+        </P
+></LI
+><LI
+><P
+>           Install and configure dip
+        </P
+></LI
+><LI
+><P
+>           Install pppd (optional, for PPP only)
+        </P
+></LI
+></UL
+><P
+>    You will also need to get an emulator binary appropriate for your
+    remote host and install it.  SLiRP is available at 
+    <A
+HREF="ftp://sunsite.unc.edu/pub/Linux/index.html"
+TARGET="_top"
+>Sunsite</A
+> 
+    and other
+    fine Linux FTP sites. All of the relevant info for TIA is available at 
+    <A
+HREF="http://marketplace.com/tiahome/tia.html"
+TARGET="_top"
+>TIAs home site</A
+>. 
+
+   </P
+><P
+>    That's it!  Let's get started.
+   </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="COMPILING-YOUR-KERNEL"
+>4.1. Compiling your Kernel</A
+></H2
+><P
+>    If you have never done this, you should. And you should read the 
+    FAQ first, but don't worry, it's easy. If you want, you can e-mail me and 
+    I'll help.
+   </P
+><P
+>    I'll assume that you have here, for the sake of brevity. When you
+    'make config', look for "Network Devices". Say 'y', of course, then say
+    'y' to SLIP, CSLIP, (or PPP) and TCP/IP and 'n' to everything else, unless
+    you have ethercards or need some other protocol for something else. 
+    <EM
+>If
+    you don't do this, it won't work! </EM
+>Finish compiling and 
+    installing 
+    the new kernel, then,
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="EDIT-SOME-FILES"
+>4.2. Edit some files in <TT
+CLASS="FILENAME"
+>/etc</TT
+></A
+></H2
+><P
+>    These files will set up your routes to your remote host. 
+    <TT
+CLASS="FILENAME"
+>/etc</TT
+> is
+    the directory for system configurations. Replace everything in double
+    quotes with the appropriate values, naturally (but don't include the
+    quotes - they are there for reference). There are three files you need to
+    edit, they are:
+   </P
+><P
+>      <P
+></P
+><UL
+><LI
+><P
+>         <TT
+CLASS="FILENAME"
+>/etc/hosts</TT
+>
+      <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>#The next line is required to be EXACTLY as below.
+127.0.0.1       localhost
+
+#Note at the end of the next two entries the hostname is repeated. 
+#This abbreviation is an alias, and is required for the first entry.
+#If you're on a LAN, you'll need to substitute your IP address for 
+#the first one below.
+192.0.2.1       "yourhostname.domain.name  yourhostname"
+"XXX.XXX.XX.XX"	"remotehostname.domain.name  remotehostname"  
+      </PRE
+></TD
+></TR
+></TABLE
+>
+      </P
+></LI
+><LI
+><P
+>         <TT
+CLASS="FILENAME"
+>/etc/host.conf</TT
+>
+      <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>order hosts, bind
+multi on
+      </PRE
+></TD
+></TR
+></TABLE
+>
+      </P
+></LI
+><LI
+><P
+>         <TT
+CLASS="FILENAME"
+>/etc/resolv.conf</TT
+>
+      <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>domain "yourdomain.name" 	
+#The next line usually uses the same remote IP address that's in /etc/hosts
+nameserver "XXX.XXX.XX.XX"
+      </PRE
+></TD
+></TR
+></TABLE
+>
+      </P
+></LI
+><LI
+><P
+>         To use an NNTPserver, put this line in your 
+         <TT
+CLASS="FILENAME"
+>/etc/profile</TT
+>
+      <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>export NNTPSERVER="remote.hosts.nntpservername"
+      </PRE
+></TD
+></TR
+></TABLE
+>
+      </P
+></LI
+></UL
+>
+   </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DIP"
+>4.3. DIP</A
+></H2
+><P
+>    DIP (Dialup Internet Protocol) is what you will use to dial up the
+    remote host, start the emulator, and convert the line to SLIP/PPP. It
+    comes in the "N" set of Slackware, along with a bunch of clients and
+    utilities, some of which you may want to install also =). It is also
+    available at
+    <A
+HREF="ftp://sunsite.unc.edu/pub/Linux/index.html"
+TARGET="_top"
+>Sunsite</A
+> 
+    in an individual tar file
+   </P
+><P
+>    Once you have it installed, you will need to have a dip script, 
+    Here's a sample, just plug in the appropriate stuff where the double 
+    quotes are (but don't include the quotes, they are there for reference).
+   </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>main:
+  get $local "yourhostname.domain.name"
+  get $remote "remotehostname.domain.name"
+
+#Your port here
+  port cua"?" 
+
+#Use 115200 for 28.8 modems 
+  speed 57400
+  reset
+
+#don't use spaces in your AT command string! 
+  init AT "string of commands" 
+  wait OK 5
+
+# This will redial. If it doesn't work, play with the wait time (listen 
+# to your modem). If it still doesn't work, mail me.
+# <EM
+>See also; the note at the bottom of the script re: error codes.</EM
+>
+
+dial:
+  dial "phonenumber"
+  print Dialing...
+  if $errlvl != 0 goto error
+
+#You may need to change this wait time to suit your modem
+  wait BUSY 20
+  if $errlvl == 0 goto dial	
+
+login:
+  print Connected and Logging in...
+
+#This wait and send gets me past my hosts Annex. <EM
+>Change for your site!</EM
+>
+  wait ==&#62; 60
+  send 4\n
+  wait ogin: 60
+  if $errlvl != 0 goto login_error1
+  send "LOGIN"\n
+  wait assword: 60
+  if $errlvl != 0 goto login_error2
+  send "PASSWORD"\n
+
+loggedin:
+  wait "SYSTEM PROMPT" 60
+  if $errlvl != 0 goto shell_error
+  print Logged in!
+  send "emulator startup command"\n
+  wait "emulator startup response" 60
+  if $errlvl != 0 goto emu_error
+
+#The recommended mtu setting is 1500, but this is faster interactively. 
+#Ftp may be slower, so adjust to taste.
+  get $mtu 296
+  default
+
+done:
+  print CONNECTED to $remote with address $rmtip
+  mode CSLIP
+  goto exit
+
+error:
+  print Dialing Error
+
+login_error1:
+  print No Login
+
+login_error2:
+  print No Password prompt
+
+shell_error:
+  print No shell prompt
+
+emu_error:
+  There was a problem starting the emulator
+
+exit:
+
+#This will error out when the -v flag is used, but work when run normally 
+#(ends dip at a local prompt).
+  \r		
+
+   </PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="DIP-NOTES"
+>4.3.1. DIP Notes</A
+></H3
+><P
+>    Newer versions of dip don't return modem status codes (BUSY, NO 
+    CONNECT, etc.), they use numbers instead. Here's a table:
+   <P
+></P
+><UL
+><LI
+><P
+>         0 = OK
+      </P
+></LI
+><LI
+><P
+>         1 = CONNECT
+      </P
+></LI
+><LI
+><P
+>         2 = ERROR
+      </P
+></LI
+><LI
+><P
+>         3 = BUSY
+      </P
+></LI
+><LI
+><P
+>         4 = NO CARRIER
+      </P
+></LI
+></UL
+>
+   </P
+><P
+>    This would make your dial section look like this:
+    <TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>dial:
+  dial "phonenumber"
+  print Dialing...
+  if $errlvl != 0 goto error
+  wait 1 20	
+  if $errlvl != 1 goto dial
+   </PRE
+></TD
+></TR
+></TABLE
+>
+   </P
+><P
+>    Thanks to Lee Olds <TT
+CLASS="EMAIL"
+>&#60;<A
+HREF="mailto:lee@eskimo.com"
+>lee@eskimo.com</A
+>&#62;</TT
+> for that bit.
+   </P
+><P
+>    \n = newline, \r = carriage return. You may require one or 
+    the other (or both) in the appropriate places. If the ones provided don't 
+    work, experiment.
+   </P
+><P
+>    A word about the form of the wait and sends. If it isn't clear by 
+    the example, here's what's happening:
+
+    <P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>wait ogin: 60</DT
+><DD
+><P
+>         The script will wait for the remote to send 'ogin:' for 60 
+         seconds. When it gets it, the script advances. If it doesn't get 
+         it, it will advance after the timeout of 60 seconds.
+       </P
+></DD
+><DT
+>if $errlvl != 0 goto login_error</DT
+><DD
+><P
+>       (This whole line is optional.)
+        If the script is advancing because it got what it was waiting for, 
+        this gets skipped. if the script is advancing because it timed out, 
+	it will go to where you tell it to ('login_error1' in this case.
+       </P
+></DD
+><DT
+>send "LOGIN"\n</DT
+><DD
+><P
+>        DIP will send 'LOGIN' and a newline
+       </P
+></DD
+></DL
+></DIV
+>
+   </P
+><P
+>    You can put in sleep statements if you need to, like this:
+    "sleep 10" This will make the script pause for 10 seconds.
+   </P
+><P
+>    After editing this file, rename it, say, remote.dip and put it in 
+    <TT
+CLASS="FILENAME"
+>/root</TT
+>.  Then, as root, run 
+    'dip remote'. Use the -v flag the first 
+    time to debug it ('dip -v remote'), this will show you all the steps 
+    dip takes.
+   </P
+><P
+>    Dip will only run as root, but there is a way to make it run from 
+    a user account. For now, if you need this info, ask. I may include it in 
+    this file later if enough people want it.
+   </P
+><P
+>    If dip errors out right away, try removing the comments from the 
+    script.
+   </P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PPP"
+>4.4. PPP</A
+></H2
+><P
+>    The above gets you rolling with CSLIP, which is really fine 
+    most of the time. It truly is easy to get working, since the protocol is 
+    supported at the kernel level - just make sure it's in there and it 
+    works.
+   </P
+><P
+>    However, some of you will want PPP, for what reasons, only you can
+    say. I'm not going to tell you how to set it up here, there's a whole
+    other HOWTO written just for that. What I will do is tell you what the 
+    gotchas are when using PPP with an emulator.
+   </P
+><P
+>    First, the latest version of DIP says you can use it to start PPP,
+    and you can, BUT it only starts the PPP daemon - no flags, nothing. So if
+    you want to use DIP to start PPP, be sure to put all of your startup info
+    in the <TT
+CLASS="FILENAME"
+>/etc/ppp/options</TT
+> file, or it won't work.
+   </P
+><P
+>    Speaking of the options file, one of the things that MUST be in 
+    there no matter how you start pppd is this: '192.0.2.1:XXX.XXX.XX.XX'. 
+    What this is is 'localIPaddress:remoteIPaddress'. You need it there 
+    because normally pppd can fill in the blank itself, but fails when 
+    connecting to an emulator.
+   </P
+><P
+>    Be sure to get the latest and greatest pppd package. It seems 
+    there were a few versions recently that had a bit of trouble.
+   </P
+><P
+>    Lastly, unless you have a good reason to use PPP, or just want to 
+    learn how it works, you really don't need it. I have tried them both, and 
+    didn't notice any performance difference with the standard set of 
+    clients. Of course, Your Mileage May Vary. :)
+   </P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="prerequisites.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="now-what.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Prerequisites</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Now What?</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

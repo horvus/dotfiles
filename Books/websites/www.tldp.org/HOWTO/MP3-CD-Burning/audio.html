@@ -1,0 +1,632 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Audio CDs</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Linux MP3 CD Burning mini-HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="intro.html"><LINK
+REL="NEXT"
+TITLE="Burning Your CD"
+HREF="burning.html"></HEAD
+><BODY
+CLASS="SECTION"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Linux MP3 CD Burning mini-HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="burning.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECTION"
+><H1
+CLASS="SECTION"
+><A
+NAME="AUDIO"
+></A
+>2. Audio CDs</H1
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="PREPARE"
+></A
+>2.1. Preparing the Tracks</H2
+><P
+><DIV
+CLASS="NOTE"
+><P
+></P
+><TABLE
+CLASS="NOTE"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Note</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>All commands assume bash shell</P
+></TD
+></TR
+></TABLE
+></DIV
+></P
+><DIV
+CLASS="SECTION"
+><H3
+CLASS="SECTION"
+><A
+NAME="CLEANUP"
+></A
+>2.1.1. Filename Cleanup</H3
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>Collect all MP3 files in one directory. </P
+></LI
+><LI
+><P
+>If any filenames contain spaces, first convert them to underscores: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     for i in *.mp3; do mv "$i" `echo $i | tr ' ' '_'`; done </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>This first step is important because, even if unix itself allows spaces in filenames,
+     most programs get confused by them.</P
+></LI
+><LI
+><P
+>If your MP3 files came from DOS/Windows, they may have
+     uppercase extensions. You can convert whole names to lowercase or just
+     extensions. For everything lowercase do:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	for i in *.[Mm][Pp]3; do mv "$i" `echo $i | tr '[A-Z]' '[a-z]'`; done </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>to convert just extensions:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="90%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     for i in *.MP3; do mv "$i" "`basename "$i" .MP3`.mp3"; done
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></LI
+></OL
+></DIV
+><DIV
+CLASS="SECTION"
+><H3
+CLASS="SECTION"
+><A
+NAME="CONVERTING"
+></A
+>2.1.2. Conversion</H3
+><P
+>The CD Audio specification requires wave files that are 16 bit, stereo, 44.1 kHz. MP3 files often have different parameters, but we need to convert them to WAV first, anyway.</P
+><P
+>We have several choices for the conversion process.</P
+><DIV
+CLASS="SECTION"
+><H4
+CLASS="SECTION"
+><A
+NAME="MPG321"
+></A
+>2.1.2.1. mpg123 and mpg321</H4
+><P
+>Originally, there was only <B
+CLASS="COMMAND"
+>mpg123</B
+>. However, it uses a proprietary licensing, and now there's an open source replacement - <B
+CLASS="COMMAND"
+>mpg321</B
+>. Both commands use the same syntax: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     for i in *.mp3; do mpg321 -w `basename $i .mp3`.wav $i; done </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>When decoding 22khz MP3 files the output of <B
+CLASS="COMMAND"
+>mpg123</B
+> may be distorted. I don't know how well <B
+CLASS="COMMAND"
+>mpg321</B
+> deals with this problem. If you're converting with <B
+CLASS="COMMAND"
+>mpg123</B
+>, use:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     for i in *.mp3; do mpg123 --rate 44100 --stereo --buffer 3072 --resync -w `basename $i .mp3`.wav $i; done
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><I
+CLASS="CITETITLE"
+>Mpg123</I
+> can be obtained from <A
+HREF="http://www.mpg123.de/"
+TARGET="_top"
+>http://www.mpg123.de/</A
+>.</P
+><P
+><I
+CLASS="CITETITLE"
+>Mpg321</I
+> is available from <A
+HREF="http://mpg321.sourceforge.net/"
+TARGET="_top"
+>http://mpg321.sourceforge.net/</A
+>.</P
+><P
+><EM
+>NOTE</EM
+> I noticed that with some MP3 files mpg123 output was distorted.
+     At first I thought that MP3's were bad, but then I checked with another
+     player and they sounded OK. So <B
+CLASS="COMMAND"
+>mpg123</B
+> is not my converter of choice.</P
+></DIV
+><DIV
+CLASS="SECTION"
+><H4
+CLASS="SECTION"
+><A
+NAME="MADPLAY"
+></A
+>2.1.2.2. MAD</H4
+><P
+>Another MP3 player/decoder, and the one I prefer, is <B
+CLASS="COMMAND"
+>madplay</B
+>. It's available from <A
+HREF="http://www.mars.org/home/rob/proj/mpeg/"
+TARGET="_top"
+>http://www.mars.org/home/rob/proj/mpeg/</A
+>.
+     With <I
+CLASS="CITETITLE"
+>madplayer</I
+>, the command line is: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     for i in *.mp3; do madplay -o `basename $i .mp3`.wav $i; done </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>     Unfortunately, <B
+CLASS="COMMAND"
+>madplay</B
+> also had problems with some of MP3 files I had. I don't think there's a problem with the decoder, but rather with it handling broken MP3 files.</P
+></DIV
+><DIV
+CLASS="SECTION"
+><H4
+CLASS="SECTION"
+><A
+NAME="LAME"
+></A
+>2.1.2.3. Lame</H4
+><P
+>The <B
+CLASS="COMMAND"
+>lame</B
+> encoder, which has a decoding mode, seems
+     to handle difficult cases very well (<B
+CLASS="COMMAND"
+>lame</B
+> can be found at <A
+HREF="http://www.mp3dev.org/mp3/"
+TARGET="_top"
+>http://www.mp3dev.org/mp3/</A
+>) :
+     </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     for i in *.mp3; do lame --decode $i `basename $i .mp3`.wav; done
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECTION"
+><H4
+CLASS="SECTION"
+><A
+NAME="OGG"
+></A
+>2.1.2.4. OGG files</H4
+><P
+>Well, this HOWTO is about MP3 files, but OGG standard is an alternative which many people prefer over MP3 because of the licensing. To deal wit OGG files, you need to use:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	for i in *.ogg ; do ogg123 -d wav -f `basename $i .ogg`.wav $i; done
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECTION"
+><H4
+CLASS="SECTION"
+><A
+NAME="MPLAYER"
+></A
+>2.1.2.5. Converting other formats</H4
+><P
+>Nico Genimakis sent me an email about using <FONT
+COLOR="RED"
+>mplayer</FONT
+> to covert audio in many different formats to WAV with automatic resampling to 44100Hz. Mplayer is known to be able to read almost anything, and it can convert your .ogg, .mp3, .flac, .wma  etc.</P
+><P
+>usage (in this example converting WMA files):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>	for i in *.wma ; do mplayer -vo null -vc dummy -af resample=44100 -ao pcm -waveheader $i; done
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="SECTION"
+><H3
+CLASS="SECTION"
+><A
+NAME="NOTES"
+></A
+>2.1.3. Conversion Notes</H3
+><P
+>     <EM
+>NOTE:</EM
+> The <B
+CLASS="COMMAND"
+>`basename $i .mp3`.wav</B
+> command 
+     replaces MP3 extensions with WAV. There are 101 ways to do that, here's
+     the alternative: <B
+CLASS="COMMAND"
+>`echo "$1" | sed 's/\.mp3$/.wav/'`</B
+>
+     </P
+><P
+>After the conversion, run "<B
+CLASS="COMMAND"
+>file *.wav</B
+>" and check the 
+     output for any files that differ from 16 bit, stereo 44100 Hz.</P
+><P
+>If there are files with different characteristics, convert them to the
+     above specs. For example, to convert file track01.wav to obtain sample
+     rate 44.1 kHz, you could use: </P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     sox track01.wav -r 44100 track01-new.wav resample
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+>or, if the above introduces static when converting mono files:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     sox track01.wav -r 44100 -c 2 track01-new.wav
+     </PRE
+></FONT
+></TD
+></TR
+></TABLE
+><P
+><I
+CLASS="CITETITLE"
+>Sox</I
+> is so popular, that it's probably installed 
+     by default with any Linux distribution, and can be obtained from
+     <A
+HREF="http://www.spies.com/Sox/"
+TARGET="_top"
+>http://www.spies.com/Sox/</A
+>.
+     However, the command-line options are somewhat cryptic for the casual
+     user (me). Look at 
+     <A
+HREF="http://www.spies.com/Sox/sox.tips.html"
+TARGET="_top"
+>http://www.spies.com/Sox/sox.tips.html</A
+>
+     for some tips on usage.
+     </P
+></DIV
+></DIV
+><DIV
+CLASS="SECTION"
+><H2
+CLASS="SECTION"
+><A
+NAME="NORMALISATION"
+></A
+>2.2. Normalisation</H2
+><P
+>Normalisation is a process during which all the sound files are brought to the same relative loudness level. I use a program by Chris Vaill (<TT
+CLASS="EMAIL"
+>&#60;<A
+HREF="mailto:cvaill@cs.columbia.edu"
+>cvaill@cs.columbia.edu</A
+>&#62;</TT
+>), called
+     <B
+CLASS="COMMAND"
+>normalize</B
+> - it can be obtained from
+     <A
+HREF="http://www.cs.columbia.edu/~cvaill/normalize/"
+TARGET="_top"
+>http://www.cs.columbia.edu/~cvaill/normalize/</A
+>
+     </P
+><P
+>     I use the following syntax (-m is for mix mode, where all files should be as loud as possible):</P
+><TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="PROGRAMLISTING"
+>     normalize -m *.wav</PRE
+></FONT
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="intro.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="burning.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Burning Your CD</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

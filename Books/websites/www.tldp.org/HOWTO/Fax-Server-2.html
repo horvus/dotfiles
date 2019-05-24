@@ -1,0 +1,232 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE>Linux simple fax printer server mini-HOWTO (faxsrv-mini-HOWTO): Questions &amp; Answers</TITLE>
+ <LINK HREF="Fax-Server-3.html" REL=next>
+ <LINK HREF="Fax-Server-1.html" REL=previous>
+ <LINK HREF="Fax-Server.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Fax-Server-3.html">Next</A>
+<A HREF="Fax-Server-1.html">Previous</A>
+<A HREF="Fax-Server.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2. Questions &amp; Answers</A></H2>
+
+<H2><A NAME="ss2.1">2.1 What is a fax printer server ?</A>
+</H2>
+
+<P> A fax printer server is a setup of few programs:
+efax, and the print server, in such a way that sending a fax from
+the computer is as simple as sending printout to a printer.
+<P>
+<H2><A NAME="ss2.2">2.2 How to set it up ?</A>
+</H2>
+
+<P>Setting efax as fax print server includes few problems
+As I worked it out few times, I decided to collect this wisdom
+in this small mini-HOWTO, comments are welcome at <CODE>&lt;erez@newplaces.com&gt;</CODE>.
+I describe them here and the solutions, and all the instruction in short steps:
+<P>
+<H3>The efax Software</H3>
+
+<P>make sure you have the efax package.
+<P>On RPM based system use the command 'rpm -qv efax'.
+<P>You can get the efax sources in tar.gz format from sunsite:
+ftp://sunsite.unc.edu/pub/Linux/apps/serialcomm/fax/efax08a.tar.gz
+or binary rpm package:
+ftp://ftp.redhat.com/pub/redhat/redhat-4.2/i386/RedHat/RPMS/efax-0.8a-3.i386.rpm
+<H3>The printcap entry.</H3>
+
+<P>The efax documentation is missing the :  at the end of the printcap entry.
+<P>Solution: Add the following <CODE>/etc/printcap</CODE> entry:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+fax:\
+        :lp=/dev/null:\
+        :sd=/var/spool/fax:\
+        :if=/usr/bin/faxlpr:
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>The fax command</H3>
+
+<P> Use hard link and not symbolic link to the fax command.
+<P>Run the command:
+<BLOCKQUOTE><CODE>
+<PRE>
+ln /usr/bin/fax /usr/bin/faxlpr
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>The /usr/bin/fax file.</H3>
+
+<P> Edit the /usr/bin/fax to your preferences:
+<P> choose the right Fax Class for your modem:
+<BLOCKQUOTE><CODE>
+<PRE>
+CLASS=2.0
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Set the FROM="your international phone number" field
+<BLOCKQUOTE><CODE>
+<PRE>
+NAME="Your Name"
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Add the line for conversion of international phone number to local
+for example in Israel you would use:
+<BLOCKQUOTE><CODE>
+<PRE>
+TELCVT='sed -e s/+972/0/ -e s/+/00/'  # Israel
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>There is a problem in the file in line 586, change the
+<CODE>cfile=...</CODE> with the following two lines:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+cfile=`/usr/bin/tail -1 lock`
+cfile=`cat $cfile`
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>at lines 586,587 there shouldn't be '-' signs the lines are:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+0) echo "$l" | mail -s "fax to $num succeeded" $user@$host ;;
+*) echo "$l" | mail -s "fax to $num failed   " $user@$host ;;
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>The /var/spool/fax directory.</H3>
+
+<P> create the directory /var/spool/fax
+<BLOCKQUOTE><CODE>
+<PRE>
+mkdir /var/spool/fax
+chmod 777 /var/spool/fax
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>The lock file.</H3>
+
+<P>The lock file (<CODE>/var/spool/fax/lock</CODE>) is being created with
+incorrect permissions, use the following command to set it correctly:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+touch /var/spool/fax/lock ; chmod 644 /var/spool/fax/lock
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>The /dev/modem special file.</H3>
+
+<P>The efax program is expecting real device file at the <CODE>/dev/modem</CODE>
+and will not work with symbolic link, so create a device file
+with the same major and minor number as the <CODE>/dev/cua?</CODE> the is
+connected to the modem. The file should have the rw-rw-rw- mode to enable
+any user to use the fax software.
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ls -lL /dev/modem 
+rm /dev/modem
+mknod /dev/modem c Mj Mi
+chmod 666 /dev/modem
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>Mj is 5, and Mi is 64 for the cua0, 65 for cua1 and so on.
+For example (for cua1):
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+mknod /dev/modem c 5 65
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H3>The <CODE>/var/lock</CODE> directory.</H3>
+
+<P>change the mode at the <CODE>/var/lock</CODE> directory
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+chmod 1777 /var/lock
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<H2><A NAME="ss2.3">2.3 How do I use it, for the server ?</A>
+</H2>
+
+<P>You should use the fax printer using the -P option
+and the -J option with the fax number.
+<P>use one of the following lpr commands:
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+ lpr -Pfax -J &lt;Fax-Number> [file-names]
+ any command | lpr -Pfax -J &lt;Fax-Number>
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<H2><A NAME="ss2.4">2.4 Where do I specify the target Fax number ?</A>
+</H2>
+
+<P>After the -J option.
+<H2><A NAME="ss2.5">2.5 How do I use it from other Unixes on the net ?</A>
+</H2>
+
+<P>Add the following entry into the <CODE>/etc/printcap</CODE> file and the client
+Linux systems, create the spool directory, and so on ...
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+fax:\
+        :sd=/var/spool/fax:\
+        :mx#0:\
+        :sh:\
+        :rm=host.domain:\
+        :rp=fax:
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>add the name of the client hosts into the <CODE>/etc/hosts.lpd</CODE> on the
+fax server machine.
+<P>
+<P>use it as before.
+<P>
+<P>Note:
+<P>The header string that efax adds to the fax pages is not effected
+by the user name that sends the fax. (can be updated).
+<H2><A NAME="ss2.6">2.6 Caldera, LPRng users</A>
+</H2>
+
+<P> The LPRng printing management software is using a different method to handle the control file.
+<P>Thanks to Luca Montecchiani &lt;m.luca@usa.net&gt;, who found the problem and the solution.
+Here is an update to the <CODE>/usr/bin/fax</CODE> file. The following line replace the two simple <B>cfile=...</B> lines at lines 586,587
+<P>
+<BLOCKQUOTE><CODE>
+<PRE>
+# Modified to work also with the LPRng package
+# Luca Montecchiani (08/11/97 m.luca@usa.net)
+if [ !-z "$CONTROL_FILE" ]
+    then
+        cfile=`cat tail -1 lock`
+        cfile=`cat $cfile`
+    else
+        cfile=$CONTROL_FILE
+fi                                       
+</PRE>
+</CODE></BLOCKQUOTE>
+<P>
+<P>
+<HR>
+<A HREF="Fax-Server-3.html">Next</A>
+<A HREF="Fax-Server-1.html">Previous</A>
+<A HREF="Fax-Server.html#toc2">Contents</A>
+</BODY>
+</HTML>

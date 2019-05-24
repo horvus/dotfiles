@@ -1,0 +1,533 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Installing and Configuration</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="Kerberos Infrastructure HOWTO"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="An Overview of a Kerberos Infrastructure"
+HREF="overview.html"><LINK
+REL="NEXT"
+TITLE="Time Synchronization"
+HREF="time-sync.html"></HEAD
+><BODY
+CLASS="section"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Kerberos Infrastructure HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="overview.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="time-sync.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="section"
+><H1
+CLASS="section"
+><A
+NAME="install"
+></A
+>3. Installing and Configuration</H1
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="machine-configure"
+></A
+>3.1. General Machine Configuration Overview</H2
+><P
+>&#13;This section of the document describes the installation and configuration of the machines and software which will function as the KDCs.  You may want to make some adjustments to the configurations suggested, but there are a few key points presented that are very important to remember when configuring your KDCs.  So, if you do decide on an alternative  configuration strategy make sure you understand the material presented here.
+</P
+><P
+>&#13;The machines will run the Kerberos daemon and store password and policy data.  Therefore, it's very important to the security of the network that these servers remain secure.  We should take every possible measure to prevent these servers from being compromised.  Pay particular attention to the security advice given in this section.
+</P
+><P
+>&#13;The key points of that security advice are that you should dedicate hardware to providing Kerberos KDC service.  You should physically secure that hardware, and you should harden GNU/Linux as much as possible on that hardware.  If a KDC is compromised, your entire Kerberos infrastructure is compromised.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="hardware"
+></A
+>3.2. Hardware</H2
+><P
+>&#13;Kerberos service does not place a great demand on hardware and the Kerberos services have a capability for redundancy, therefore server hardware can be minimal. For the Kerberos servers which I've deployed I've used uniprocessor PIII machines with two hardware RAID 1 drives.  These machines are meant to handle between forty and one hundred thousand authentications per day. While servers may be deployed with redundant NIC cards, having both cards active simultaneously should be avoided. Kerberos includes the IP of the KDC in tickets, therefore difficulties authenticating may occur if the KDC is contacted on multiple interfaces by a client during an authentication session.
+</P
+><P
+>&#13;It is important to note that Kerberos service should be run on dedicated hardware. Dedicating a machine to Kerberos means that only the Kerberos administrator will need to log in on those machines. It also means that no other services, except perhaps SSH, will be run on the machines. Since all of your users passwords are stored on the Kerberos servers, it is a good idea to limit access as much as possible to the hardware.  Along with dedicating servers to Kerberos, you should also physically secure your servers as much as possible.  For Kerberos servers, this may include locking the servers in a cabinet and having a dedicated terminal attached to them.
+</P
+><P
+>&#13;In order to take advantage of Kerberos' built in capability for redundancy, you must have at least two machines running as KDCs.  Kerberos is designed to be deployed with one primary master server, and one or more secondary slave servers.  You may have as many secondary servers as you would like.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="gnulinux-install"
+></A
+>3.3. GNU/Linux Installation</H2
+><P
+>&#13;The servers we're installing GNU/Linux on will be dedicated to the task of performing Kerberos service, therefore we can take some extra steps to secure them.
+</P
+><P
+>&#13;First, we'll only install software that is absolutely necessary for Kerberos service. This includes the base operating system and the Kerberos packages. We should not install X or any GUI applications. SSH is optional. SSH may be installed if you wish to be able to administer the servers remotely.  However, the servers would be significantly more secure if you only provide login access to them through an attached terminal.
+</P
+><P
+>&#13;In Fedora Core based GNU/Linux, the packages required to provide Kerberos service are:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;krb5-server
+krb5-libs
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;Documentation and development libraries should not be installed on the KDC, since we do not want to use this machine for anything but the performance of KDC service.
+</P
+><P
+>&#13;The next step will be to make sure that no ports are open that do not need to be and that any necessary security patches that are needed are applied.  The methodology to determining what security patches need to be applied is depended up what package management software is installed.  To determine what ports the machine is currently listening on, the <SPAN
+CLASS="application"
+>netstat</SPAN
+> command can be used.  For example, on a machine which only ssh running we should see the following:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;bash$ netstat -an | grep -i listen | less
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;Finally, we'll configure the server to restrict access only to servers that need to talk to it for authentication. This should be done by editing <TT
+CLASS="filename"
+>/etc/hosts.allow</TT
+> and <TT
+CLASS="filename"
+>/etc/hosts.deny</TT
+> as well as with <TT
+CLASS="filename"
+>iptables</TT
+>.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="realm"
+></A
+>3.4. Choosing A Realm</H2
+><P
+>&#13;Realm names are case sensitive and must be unique on your network. It is a standard best practice to use your second level domain name in all uppercase letters as your realm name. If you are setting up Kerberos for only a subnet rather than your entire network, you should use the trailing domain name of the subnet.
+</P
+><P
+>&#13;When determining your realm topology, you should take the overall structure of your organization into account. If your organization has one or more remote offices or independent sub groups, they may be best included under a separate realm. Kerberos realm topology should mirror system management topology rather than physical network topology.
+</P
+><P
+>&#13;Finally, legacy systems should also be taken into account. For example, legacy Kerberos deployments or existing network topology grouping which you wish to preserve (i.e. Windows NT domains).
+</P
+><P
+>&#13;If you are installing Kerberos on a network which already has Kerberos deployed in the overall network or in a subnet, you must avoid a realm name collision. The most common occurrence of deploying Kerberos on a network with a preexisting Kerberos installation occurs when working with a network that includes an IBM SP cluster.  The best solution is to create a realm specifically for the SP cluster at third or high domain name level and then use a second level domain name for your primary Kerberos realm.
+</P
+><P
+>&#13;In this document, we'll use an example to help illustrate the design and configuration of an infrastructure.  For our example, we'll use a mythical university which was founded to educate people with, and perform research in the area of, free content - Gnu University in Dublin, Ireland.  The Gnu University Dublin example will include two Kerberos servers used to authenticate students and faculty.  The TLD for the university is gnud.ie, therefore we'll use the Kerberos realm of GNUD.IE.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="configure"
+></A
+>3.5. Kerberos Software Configuration</H2
+><P
+>&#13;Now, you'll need to configure Kerberos, create an administrator, determine a policy, and initialize the Kerberos principal database.
+</P
+><P
+>&#13;The first step is to edit the <TT
+CLASS="filename"
+>/etc/krb5.conf</TT
+> configuration file.  In this file you'll need to set your realm, expand on the realm definition by specifying the Kerberos servers, and finally setting the domain realm.  For our example, this is done as follows:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;default_realm = GNUD.IE
+
+[realms]
+ GNUD.IE = {
+  kdc = kerberos1.gnud.ie:88
+  kdc = kerberos2.gnud.ie:88
+  admin_server = kerberos1.gnud.ie:749
+  default_domain = gnud.ie
+ }
+
+[domain_realm]
+ .gnud.ie = GNUD.IE
+ gnud.ie = GNUD.IE
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;To initialize and create the Kerberos database, you must run the follow command:
+<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos1}bash# /usr/Kerberos/sbin/kdb5_util create -s
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;The <EM
+>-s</EM
+> flag tell the KDC to create a stash file to authenticate itself. You may also use a <EM
+>-r</EM
+> flag to specify a realm.  Specifying a realm for the new database is only necessary if you have more than one realm defined in your <TT
+CLASS="filename"
+>krb5.conf</TT
+> file.
+</P
+><P
+>&#13;Kerberos will then ask you to set the master password for your Kerberos database.  It is very important that you do not forget this password.  You will not be able to administrate your server if you do not remember the master password.
+</P
+><P
+>&#13;Next on the KDC you must edit the acl file to grant administrative access. Typically, this file is located at <TT
+CLASS="filename"
+>/var/Kerberos/krb5kdc/kadm5.acl</TT
+>. If necessary, specify the acl file location in your <TT
+CLASS="filename"
+>kdc.conf</TT
+> file.  The location of your <TT
+CLASS="filename"
+>kdc.conf</TT
+> file is specified in your <TT
+CLASS="filename"
+>/etc/krb5.conf</TT
+> file and defaults to <TT
+CLASS="filename"
+>/var/Kerberos/krb5kdc/kdc.conf</TT
+>.  For our GNU University Dublin example, we'll modify the acl file to include the following contents:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;*/admin@GNUD.IE     *
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;The meaning of those acl contents are that any account which ends with a /admin in the <EM
+>GNUD.IE</EM
+> realm is granted full access privileges.
+</P
+><P
+>&#13;Now that we've set up access for our administrative user, we need to create that administrative user. You can do this with the <SPAN
+CLASS="application"
+>kadmin.local</SPAN
+> command from a root shell on the KDC, using the <SPAN
+CLASS="application"
+>addprinc</SPAN
+> sub command.  The standard is to name the administrative account <EM
+>admin</EM
+>.  For the Gnu University Dublin Kerberos Administrator, the following command would accomplish this:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos1}bash# /usr/Kerberos/sbin/kadmin.local -q "addprinc admin/admin"
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;The daemons that must run on the server are <SPAN
+CLASS="application"
+>krb5kdc</SPAN
+> and <SPAN
+CLASS="application"
+>kadmin</SPAN
+>. If necessary, <SPAN
+CLASS="application"
+>krb524</SPAN
+> may also be run to provide backward compatibility to Kerberos 4 clients.  However, before starting <SPAN
+CLASS="application"
+>krb524</SPAN
+> remember our security warning about Kerberos V4 and be sure that you really need to provide that functionality. On the KDCs <SPAN
+CLASS="application"
+>krb5kdc</SPAN
+> and <SPAN
+CLASS="application"
+>kadmin</SPAN
+> should be configured to start automatically by turning them on with the <SPAN
+CLASS="application"
+>chkconfig</SPAN
+> command.
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos1}bash# /sbin/chkconfig krb5kdc on
+{Kerberos1}bash# /sbin/chkconfig kadmin on
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;Finally, we can start them up manually, with the following command:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos1}bash# /etc/rc.d/init.d/krb5kdc start
+{Kerberos1}bash# /etc/rc.d/init.d/kadmin start
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;and we have a working KDC.
+</P
+></DIV
+><DIV
+CLASS="section"
+><H2
+CLASS="section"
+><A
+NAME="principal-creation"
+></A
+>3.6. Principal Creation</H2
+><P
+>&#13;You can create the first user principal in Kerberos with the following command:
+</P
+><P
+>&#13;<TABLE
+BORDER="0"
+BGCOLOR="#E0E0E0"
+WIDTH="100%"
+><TR
+><TD
+><FONT
+COLOR="#000000"
+><PRE
+CLASS="screen"
+>&#13;{Kerberos1}bash# kadmin.local
+{Kerberos1}kadmin.local: addprinc &#60;username&#62;
+</PRE
+></FONT
+></TD
+></TR
+></TABLE
+>
+</P
+><P
+>&#13;A script could be written to create principals in bulk if you have a large number of account which you will be supporting with Kerberos.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="overview.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="time-sync.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>An Overview of a Kerberos Infrastructure</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Time Synchronization</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

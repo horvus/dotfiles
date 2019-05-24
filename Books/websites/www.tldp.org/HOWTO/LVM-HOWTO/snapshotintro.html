@@ -1,0 +1,304 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Snapshots</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="LVM HOWTO"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Anatomy of LVM"
+HREF="anatomy.html"><LINK
+REL="PREVIOUS"
+TITLE="mapping modes (linear/striped)"
+HREF="mapmode.html"><LINK
+REL="NEXT"
+TITLE="Frequently Asked Questions"
+HREF="faq.html"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>LVM HOWTO</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="mapmode.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. Anatomy of LVM</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="faq.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="snapshotintro"
+></A
+>3.8. Snapshots</H1
+><P
+>&#13;        A wonderful facility provided by LVM is 'snapshots'.  This
+        allows the administrator to create a new block device which
+        presents an exact copy of a logical volume, frozen at some
+        point in time.  Typically this would be used when some batch
+        processing, a backup for instance, needs to be performed on
+        the logical volume, but you don't want to halt a live system
+        that is changing the data.  When the snapshot device has been
+        finished with the system administrator can just remove the
+        device.  This facility does require that the snapshot be made
+        at a time when the data on the logical volume is in a
+        consistent state - the VFS-lock patch for LVM1 makes sure that
+        some filesystems do this automatically when a snapshot is
+        created, and many of the filesystems in the 2.6 kernel do this
+        automatically when a snapshot is created without patching.
+      </P
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>Full snapshot are automatically disabled</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          If the snapshot logical volume becomes full it will be dropped
+          (become unusable) so it is vitally important to allocate enough space.
+          The amount of space necessary is dependent on the usage of the
+          snapshot, so there is no set recipe to follow for this. If the
+          snapshot size equals the origin size, it will never overflow.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>&#13;        LVM1 has read-only snapshots.  Read-only snapshots work by
+        creating an <EM
+>exception table</EM
+>, which is
+        used to keep track of which blocks have been changed.  If a
+        block is to be changed on the origin, it is first copied to
+        the snapshot, marked as copied in the exception table, and
+        then the new data is written to the original volume.
+      </P
+><P
+>&#13;        In LVM2, snapshots are read/write by default.  Read/write
+        snapshots work like read-only snapshots, with the additional
+        feature that if data is written to the snapshot, that block is
+        marked in the exception table as used, and never gets copied
+        from the original volume.  This opens up many new
+        possibilities that were not possible with LVM1's read-only
+        snapshots.  One example is to snapshot a volume, mount the
+        snapshot, and try an experimental program that change files on
+        that volume.  If you don't like what it did, you can unmount
+        the snapshot, remove it, and mount the original filesystem in
+        its place.  It is also useful for creating volumes for use
+        with <A
+HREF="http://www.cl.cam.ac.uk/Research/SRG/netos/xen/"
+TARGET="_top"
+>Xen</A
+>.
+        You can create a disk image, then snapshot it and modify the
+        snapshot for a particular domU instance.  You can then create
+        another snapshot of the original volume, and modify that one
+        for a different domU instance.  Since the only storage used by
+        a snapshot is blocks that were changed on the origin or the
+        snapshot, the majority of the volume is shared by the domU's.
+      </P
+><DIV
+CLASS="note"
+><P
+></P
+><TABLE
+CLASS="note"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/note.gif"
+HSPACE="5"
+ALT="Note"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;	        With the current LVM2/device-mapper code, the origin can be
+	        grown, but not shrunk.  With LVM1, you cannot resize the origin.
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="warning"
+><P
+></P
+><TABLE
+CLASS="warning"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/warning.gif"
+HSPACE="5"
+ALT="Warning"></TD
+><TH
+ALIGN="LEFT"
+VALIGN="CENTER"
+><B
+>LVM 1 -&#62; LVM 2 Upgrade Info</B
+></TH
+></TR
+><TR
+><TD
+>&nbsp;</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;          Make sure to remove snapshot LVs before upgrading from
+          LVM 1 to LVM 2.  (See <A
+HREF="lvm2faq.html"
+>Section 4.1</A
+>)
+        </P
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="mapmode.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="faq.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>mapping modes (linear/striped)</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="anatomy.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Frequently Asked Questions</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

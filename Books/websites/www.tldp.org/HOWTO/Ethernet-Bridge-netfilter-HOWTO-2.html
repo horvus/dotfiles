@@ -1,0 +1,261 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.21">
+ <TITLE>Ethernet Bridge + netfilter Howto: Required software</TITLE>
+ <LINK HREF="Ethernet-Bridge-netfilter-HOWTO-3.html" REL=next>
+ <LINK HREF="Ethernet-Bridge-netfilter-HOWTO-1.html" REL=previous>
+ <LINK HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-3.html">Next</A>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-1.html">Previous</A>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2">Contents</A>
+<HR>
+<H2><A NAME="s2">2.</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2">Required software</A></H2>
+
+<P>This software setup is needed on the ethernet bridge computer. According to our 
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-4.html#TESTING_Testing_grounds">Testing grounds</A>.</P>
+
+<H2><A NAME="kernel-2.6"></A> <A NAME="ss2.1">2.1</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2.1">Featured Linux kernel </A>
+</H2>
+
+
+<P>Use of kernel 2.6 is not yet a good idea. Yes, it's astonishing. The why the 
+bridging code 
+breaks and where it does so has not yet come to my and others attention, I 
+cannot recommend kernels of the 2.6 series. You have the clou? Assure yourself 
+the credit, mail the solution to me (e-mail address at entry page).
+See also  
+<A HREF="#kernel-notes">Kernel-Notes</A> for additional 
+information on this. So far, use kernel 2.4 series.<BR>
+As of kernel version <EM>2.4.18</EM>  there's already support for the Ethernet Bridge 
+capability built-in. No patches needed so far.
+Regarding later kernel versions, it must be stated that <EM>2.4.23</EM>  might be less recommendable, especially in conjunction with ebtables and netfilter-bridging. Later versions seem advisable.<BR>
+The following paragraph is outdated now (2005-07-12) as all we need is present in kernel. You may skip this paragraph, it is only retained for legacy:<BR>
+But if we intend to use netfilter capabilities, because we want to run iptables on our new Linux router/fw box, we still need to apply a patch.
+Any patches needed can be found and downloaded on the 
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-6.html#LINK_Bridge-home">sourceforge Ethernet Bridge homepage</A>.
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> cd /usr/src/
+root@bridge:~> wget -c http://bridge.sourceforge.net/devel/bridge-nf/bridge-nf-0.0.7-against-2.4.18.diff
+root@bridge:~> cd /usr/src/linux/
+root@bridge:~> patch -p1 -i ../bridge-nf/bridge-nf-0.0.7-against-2.4.18.diff
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+<P>Supposedly we want netfilter support on our bridge interface and we have already 
+patched the vanillal kernel we may now activate some necessary kernel configuration 
+items. On how to build a private kernel image see the 
+<A HREF="http://www.think-future.de/DOCUMENTATION/CD-Net-Install-HOWTO/CD-Net-Install-HOWTO-4.html#Kernel_Configuration">CD-Net-Install-HOWTO, Toolbox</A>. 
+Oh, yeah, it's still in German only. Hm, I should fix this some time, but time lacks... Any volunteers? (deadly silence is cracking.. ;)</P>
+<P>Nevertheless, we start by now:
+In 
+<BLOCKQUOTE><CODE>
+<PRE>
+        Code maturity level options
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+we activate
+<BLOCKQUOTE><CODE>
+<PRE>
+        [*] Prompt for development and/or incomplete code/drivers
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and in 
+<BLOCKQUOTE><CODE>
+<PRE>
+        Loadable module support
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<BLOCKQUOTE><CODE>
+<PRE>
+        [*] Enable loadable module support  
+        [*]   Set version information on all module symbols
+        [*]   Kernel module loader
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+Ok, so far so good.
+Now, we go to 
+<BLOCKQUOTE><CODE>
+<PRE>
+        Networking options
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+and mark
+<BLOCKQUOTE><CODE>
+<PRE>
+        [*] Network packet filtering (replaces ipchains)
+        [ ]   Network packet filtering debugging
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<A NAME="HINT_netfilter_debugging"></A> 
+<DL>
+<DT><B>Note:</B><DD><P>Previously, the above debugging option had been selected. For now, 
+unless you want your <CODE>/var/log/</CODE>-partition being filled up in 
+short-time distance, deactivate this option. <BR>
+If this options is activated, messages similar to the following appear 
+in counts of thousands in dmesg and <CODE>/var/log/{kern.log,debug,syslog,messages}</CODE>:
+<BLOCKQUOTE><CODE>
+<PRE>
+skb: pf=2 (unowned) dev=br0 len=52
+PROTO=6 156.136.32.121:3709 192.168.101.2:112 L=52 S=0x00 I=35470 F=0x4000 T=51 
+nf_hook: hook 1 already set.
+skb: pf=2 (unowned) dev=br0 len=52
+PROTO=6 156.136.32.121:3709 192.168.101.2:112 L=52 S=0x00 I=35470 F=0x4000 T=51 
+nf_hook: hook 0 already set.
+skb: pf=2 (unowned) dev=br0 len=52
+PROTO=6 192.168.101.11:2828 192.168.101.2:202 L=52 S=0x10 I=63 F=0x4000 T=64 
+nf_hook: hook 1 already set.
+skb: pf=2 (unowned) dev=br0 len=52
+PROTO=6 192.168.101.11:2828 192.168.101.2:202 L=52 S=0x10 I=63 F=0x4000 T=64 
+nf_hook: hook 3 already set.
+skb: pf=7 (owned) dev=eth1 len=1500
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+</DL>
+</P>
+<P>Furthermore, in 
+<BLOCKQUOTE><CODE>
+<PRE>
+          IP: Netfilter Configuration  --->
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+we mark any item we need as module.
+Now the long awaited item: activate
+<BLOCKQUOTE><CODE>
+<PRE>
+        &lt;M> 802.1d Ethernet Bridging
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+as well as
+<BLOCKQUOTE><CODE>
+<PRE>
+        [*]   netfilter (firewalling) support
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+<DL>
+<DT><B>Note:</B><DD><P>The above entry is available only if we successfully patched our kernel!</P>
+</DL>
+</P>
+<P>Finally, we just need a successful 
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> make dep clean bzImage modules modules_install
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+cycle and we're done.
+Don't forget to edit <CODE>/etc/lilo.conf</CODE> and do
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> lilo -t
+root@bridge:~> lilo
+root@bridge:~> reboot
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+, though.</P>
+<P>
+<DL>
+<DT><B>Hint:</B><DD><P>Perhaps we might mark our new kernel as the bridge kernel? We 
+<CODE>vi</CODE> the toplevel Makefile in our kernel sources and edit the head 
+line called <CODE>EXTRAVERSION =</CODE>. 
+We may actually set it to, say <EM>bridge</EM>? ;-) <BR>
+After the <CODE>modules_install</CODE> we find the fresh modules in 
+<CODE>/lib/modules/2.4.18bridge</CODE><BR>
+For debian users (eventually use <CODE>export PATCH_THE_KERNEL=YES</CODE> 
+before and --added_patches your_patches with make-kpkg):
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> make-kpkg --revision=tf.1.0 kernel_image
+          
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+</DL>
+</P>
+
+<H2><A NAME="ss2.2">2.2</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2.2">Userspace tool: <CODE>brctl</CODE></A>
+</H2>
+
+<P>Once our kernel has the capabilities needed to perform Ethernet Bridge and netfilter 
+actions, we prepare the user space tool <CODE>brctl</CODE>. <CODE>brctl</CODE> is the configuration 
+tool we use to 
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-3.html#SETUP_Linux_brctl">set up</A> anything to suit our needs.</P>
+<P>We 
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-6.html#LINK_Bridge-home">download the source tarball</A>, unpack it and 
+change directory into it.
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> wget -c http://bridge.sourceforge.net/bridge-utils/bridge-utils-0.9.5.tar.gz
+root@bridge:~> tar xvzf bridge-utils-0.9.5.tar.gz
+root@bridge:~> cd bridge-utils-0.9.5
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+At this time, read the <CODE>README</CODE> and the files in the <CODE>doc/</CODE> subdirectory. 
+Then do a simple make and copy the resulting <CODE>brctl/brctl</CODE> executable to 
+<CODE>/sbin/</CODE>.
+<BLOCKQUOTE><CODE>
+<PRE>
+root@bridge:~> make
+root@bridge:~> cp -vi brctl/brctl /sbin/
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+
+This is it. Go for 
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-3.html#SETUP_Linux_brctl">Setup</A> now.</P>
+
+<H2><A NAME="kernel-notes"></A> <A NAME="ss2.3">2.3</A> <A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2.3">Kernel-Notes </A>
+</H2>
+
+<P>Symptom: Anything during setup works but packets do no longer traverse as they did in 2.4 the bridge interfaces.<BR>
+ipuk s (qasuari_ @ _yahoo.com) wrote (about june 2005):
+<BLOCKQUOTE><CODE>
+<PRE>
+[...]
+I have to compile my kernel from 2.4.18-14 to 2.6.0 and activate
+bridge-netfilter&amp;ebtables.
+After compiling, i can't ping from a host to interface of linux box.
+Linux box just have 1 interface.whats wrong with my compilation ???
+[...]
+        
+</PRE>
+</CODE></BLOCKQUOTE>
+</P>
+
+
+<HR>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-3.html">Next</A>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO-1.html">Previous</A>
+<A HREF="Ethernet-Bridge-netfilter-HOWTO.html#toc2">Contents</A>
+</BODY>
+</HTML>
